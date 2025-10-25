@@ -12,10 +12,8 @@ from app.core.config import settings as config_settings
 from app.core.database import create_tables, AsyncSessionLocal
 from app.core.seed_super_admin import seed_super_admin
 from app.db.session import SessionLocal
-import concurrent.futures
-from app.models import Organization
-from app.services.rbac import RBACService
 from sqlalchemy import select
+from sqlalchemy.exc import ProgrammingError
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +35,14 @@ async def init_org_roles():
     from app.models.rbac_models import UserServiceRole, ServiceRole
     async with AsyncSessionLocal() as db:
         try:
+            # Check if user_service_roles table exists
+            query = "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_service_roles')"
+            result = await db.execute(query)
+            table_exists = result.scalar()
+            if not table_exists:
+                logger.warning("user_service_roles table not found, skipping role initialization")
+                return
+
             rbac = RBACService(db)
             orgs = (await db.execute(select(Organization))).scalars().all()
             for org in orgs:
@@ -63,6 +69,9 @@ async def init_org_roles():
                             db.add(assignment)
                             logger.info(f"Assigned admin role to user {admin.email} in org {org.id}")
                     await db.commit()
+        except ProgrammingError as e:
+            logger.error(f"Database error during role initialization: {str(e)}")
+            await db.rollback()
         except Exception as e:
             logger.error(f"Error initializing organization roles: {str(e)}")
             await db.rollback()
