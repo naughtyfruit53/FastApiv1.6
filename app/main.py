@@ -33,7 +33,7 @@ async def init_org_roles():
     from app.services.rbac import RBACService  # Lazy import to avoid circular import
     from app.models.user_models import User
     from app.models.rbac_models import UserServiceRole, ServiceRole
-    from app.models.organization_settings import Organization
+    from app.models.user_models import Organization  # Corrected import path
     async with AsyncSessionLocal() as db:
         try:
             # Check if user_service_roles table exists
