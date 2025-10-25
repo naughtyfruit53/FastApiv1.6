@@ -1,3 +1,4 @@
+// frontend/src/pages/vouchers/Manufacturing-Vouchers/material-requisition.tsx
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -93,10 +94,11 @@ const MaterialRequisition: React.FC = () => {
     control,
     name: "items",
   });
+  const watchedDate = watch("date");
   // Fetch material issues
   const { data: issueList, isLoading: isLoadingList } = useQuery({
     queryKey: ["material-issues"],
-    queryFn: () => api.get("/material-issues").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/material-issues").then((res) => res.data),
   });
   // Fetch products
   const { data: productList } = useQuery({
@@ -106,20 +108,20 @@ const MaterialRequisition: React.FC = () => {
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
     queryKey: ["manufacturing-orders"],
-    queryFn: () => api.get("/manufacturing-orders").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/manufacturing-orders").then((res) => res.data),
   });
   // Fetch specific material issue
   const { data: issueData, isLoading } = useQuery({
     queryKey: ["material-issue", selectedId],
     queryFn: () =>
-      api.get(`/material-issues/${selectedId}`).then((res) => res.data),
+      api.get(`/manufacturing/material-issues/${selectedId}`).then((res) => res.data),
     enabled: !!selectedId,
   });
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ["nextMaterialIssueNumber"],
     queryFn: () =>
-      api.get("/material-issues/next-number").then((res) => res.data),
+      api.get("/manufacturing/material-issues/next-number").then((res) => res.data),
     enabled: mode === "create",
   });
   const sortedIssues = issueList
@@ -152,24 +154,23 @@ const MaterialRequisition: React.FC = () => {
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {
     const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
+      if (watchedDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/material-requisitions/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/manufacturing/material-issues/next-number?voucher_date=${watchedDate}`
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/material-requisitions/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/manufacturing/material-issues/check-backdated-conflict?voucher_date=${watchedDate}`
           );
           
           if (conflictResponse.data.has_conflict) {
             setConflictInfo(conflictResponse.data);
             setShowConflictModal(true);
-            setPendingDate(currentDate);
+            setPendingDate(watchedDate);
           }
         } catch (error) {
           console.error('Error fetching voucher number:', error);
@@ -178,10 +179,10 @@ const MaterialRequisition: React.FC = () => {
     };
     
     fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
+  }, [watchedDate, mode, setValue]);
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data: MaterialIssue) => api.post("/material-issues", data),
+    mutationFn: (data: MaterialIssue) => api.post("/manufacturing/material-issues", data),
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["material-issues"] });
       setMode("create");
@@ -191,12 +192,12 @@ const MaterialRequisition: React.FC = () => {
       setValue("voucher_number", newNextNumber);
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Error creating material issue:", error);
     },
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: MaterialIssue }) =>
-      api.put(`/material-issues/${id}`, data),
+      api.put(`/manufacturing/material-issues/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["material-issues"] });
       setMode("create");
@@ -204,16 +205,16 @@ const MaterialRequisition: React.FC = () => {
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Error updating material issue:", error);
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/material-issues/${id}`),
+    mutationFn: (id: number) => api.delete(`/manufacturing/material-issues/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["material-issues"] });
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Error deleting material issue:", error);
     },
   });
   const onSubmit = (data: MaterialIssue) => {

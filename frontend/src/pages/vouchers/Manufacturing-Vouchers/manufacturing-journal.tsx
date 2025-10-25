@@ -118,21 +118,22 @@ export default function ManufacturingJournalVoucher() {
     control,
     name: "byproducts",
   });
+  const watchedDate = watch('date');
   // Fetch vouchers list
   const { data: voucherList, isLoading } = useQuery({
     queryKey: ["manufacturing-journal-vouchers"],
     queryFn: () =>
-      api.get("/manufacturing-journal-vouchers").then((res) => res.data),
+      api.get("/manufacturing/manufacturing-journal-vouchers").then((res) => res.data),
   });
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
     queryKey: ["manufacturing-orders"],
-    queryFn: () => api.get("/manufacturing-orders").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/manufacturing-orders").then((res) => res.data),
   });
   // Fetch BOMs
   const { data: bomList } = useQuery({
     queryKey: ["boms"],
-    queryFn: () => api.get("/boms").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/bom").then((res) => res.data),
   });
   // Fetch products
   const { data: productList } = useQuery({
@@ -144,7 +145,7 @@ export default function ManufacturingJournalVoucher() {
     queryKey: ["manufacturing-journal-voucher", selectedId],
     queryFn: () =>
       api
-        .get(`/manufacturing-journal-vouchers/${selectedId}`)
+        .get(`/manufacturing/manufacturing-journal-vouchers/${selectedId}`)
         .then((res) => res.data),
     enabled: !!selectedId,
   });
@@ -153,7 +154,7 @@ export default function ManufacturingJournalVoucher() {
     queryKey: ["nextManufacturingJournalNumber"],
     queryFn: () =>
       api
-        .get("/manufacturing-journal-vouchers/next-number")
+        .get("/manufacturing/manufacturing-journal-vouchers/next-number")
         .then((res) => res.data),
     enabled: mode === "create",
   });
@@ -188,24 +189,23 @@ export default function ManufacturingJournalVoucher() {
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {
     const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
+      if (watchedDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/manufacturing-journals/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/manufacturing/manufacturing-journal-vouchers/next-number?voucher_date=${watchedDate}`
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/manufacturing-journals/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/manufacturing/manufacturing-journal-vouchers/check-backdated-conflict?voucher_date=${watchedDate}`
           );
           
           if (conflictResponse.data.has_conflict) {
             setConflictInfo(conflictResponse.data);
             setShowConflictModal(true);
-            setPendingDate(currentDate);
+            setPendingDate(watchedDate);
           }
         } catch (error) {
           console.error('Error fetching voucher number:', error);
@@ -214,11 +214,11 @@ export default function ManufacturingJournalVoucher() {
     };
     
     fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
+  }, [watchedDate, mode, setValue]);
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: ManufacturingJournalVoucher) =>
-      api.post("/manufacturing-journal-vouchers", data),
+      api.post("/manufacturing/manufacturing-journal-vouchers", data),
     onSuccess: async () => {
       queryClient.invalidateQueries({
         queryKey: ["manufacturing-journal-vouchers"],
@@ -230,7 +230,7 @@ export default function ManufacturingJournalVoucher() {
       setValue("voucher_number", newNextNumber);
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Error creating manufacturing journal:", error);
     },
   });
   const updateMutation = useMutation({
@@ -240,7 +240,7 @@ export default function ManufacturingJournalVoucher() {
     }: {
       id: number;
       data: ManufacturingJournalVoucher;
-    }) => api.put(`/manufacturing-journal-vouchers/${id}`, data),
+    }) => api.put(`/manufacturing/manufacturing-journal-vouchers/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["manufacturing-journal-vouchers"],
@@ -250,12 +250,12 @@ export default function ManufacturingJournalVoucher() {
       reset(defaultValues);
     },
     onError: (error: any) => {
-      console.error(msg, err);
+      console.error("Error updating manufacturing journal:", error);
     },
   });
   const deleteMutation = useMutation({
     mutationFn: (id: number) =>
-      api.delete(`/manufacturing-journal-vouchers/${id}`),
+      api.delete(`/manufacturing/manufacturing-journal-vouchers/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["manufacturing-journal-vouchers"],

@@ -104,16 +104,17 @@ export default function MaterialReceiptVoucher() {
     control,
     name: "items",
   });
+  const watchedDate = watch("date");
   // Fetch vouchers list
   const { data: voucherList, isLoading } = useQuery({
     queryKey: ["material-receipt-vouchers"],
     queryFn: () =>
-      api.get("/material-receipt-vouchers").then((res) => res.data),
+      api.get("/manufacturing/material-receipt-vouchers").then((res) => res.data),
   });
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
     queryKey: ["manufacturing-orders"],
-    queryFn: () => api.get("/manufacturing-orders").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/manufacturing-orders").then((res) => res.data),
   });
   // Fetch products
   const { data: productList } = useQuery({
@@ -125,7 +126,7 @@ export default function MaterialReceiptVoucher() {
     queryKey: ["material-receipt-voucher", selectedId],
     queryFn: () =>
       api
-        .get(`/material-receipt-vouchers/${selectedId}`)
+        .get(`/manufacturing/material-receipt-vouchers/${selectedId}`)
         .then((res) => res.data),
     enabled: !!selectedId,
   });
@@ -133,7 +134,7 @@ export default function MaterialReceiptVoucher() {
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ["nextMaterialReceiptNumber"],
     queryFn: () =>
-      api.get("/material-receipt-vouchers/next-number").then((res) => res.data),
+      api.get("/manufacturing/material-receipt-vouchers/next-number").then((res) => res.data),
     enabled: mode === "create",
   });
   const sortedVouchers = voucherList
@@ -164,24 +165,23 @@ export default function MaterialReceiptVoucher() {
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {
     const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
+      if (watchedDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/material-receipts/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/manufacturing/material-receipt-vouchers/next-number?voucher_date=${watchedDate}`
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/material-receipts/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/manufacturing/material-receipt-vouchers/check-backdated-conflict?voucher_date=${watchedDate}`
           );
           
           if (conflictResponse.data.has_conflict) {
             setConflictInfo(conflictResponse.data);
             setShowConflictModal(true);
-            setPendingDate(currentDate);
+            setPendingDate(watchedDate);
           }
         } catch (error) {
           console.error('Error fetching voucher number:', error);
@@ -190,11 +190,11 @@ export default function MaterialReceiptVoucher() {
     };
     
     fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
+  }, [watchedDate, mode, setValue]);
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: MaterialReceiptVoucher) =>
-      api.post("/material-receipt-vouchers", data),
+      api.post("/manufacturing/material-receipt-vouchers", data),
     onSuccess: async () => {
       queryClient.invalidateQueries({
         queryKey: ["material-receipt-vouchers"],
@@ -211,7 +211,7 @@ export default function MaterialReceiptVoucher() {
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: MaterialReceiptVoucher }) =>
-      api.put(`/material-receipt-vouchers/${id}`, data),
+      api.put(`/manufacturing/material-receipt-vouchers/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["material-receipt-vouchers"],
@@ -225,7 +225,7 @@ export default function MaterialReceiptVoucher() {
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/material-receipt-vouchers/${id}`),
+    mutationFn: (id: number) => api.delete(`/manufacturing/material-receipt-vouchers/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["material-receipt-vouchers"],

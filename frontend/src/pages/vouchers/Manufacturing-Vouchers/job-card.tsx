@@ -155,10 +155,11 @@ export default function JobCardVoucher() {
     control,
     name: "received_outputs",
   });
+  const watchedDate = watch("date");
   // Fetch vouchers list
   const { data: voucherList, isLoading } = useQuery({
     queryKey: ["job-card-vouchers"],
-    queryFn: () => api.get("/job-card-vouchers").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/job-card-vouchers").then((res) => res.data),
   });
   // Fetch vendors
   const { data: vendorList } = useQuery({
@@ -168,7 +169,7 @@ export default function JobCardVoucher() {
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
     queryKey: ["manufacturing-orders"],
-    queryFn: () => api.get("/manufacturing-orders").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/manufacturing-orders").then((res) => res.data),
   });
   // Fetch products
   const { data: productList } = useQuery({
@@ -179,14 +180,14 @@ export default function JobCardVoucher() {
   const { data: voucherData } = useQuery({
     queryKey: ["job-card-voucher", selectedId],
     queryFn: () =>
-      api.get(`/job-card-vouchers/${selectedId}`).then((res) => res.data),
+      api.get(`/manufacturing/job-card-vouchers/${selectedId}`).then((res) => res.data),
     enabled: !!selectedId,
   });
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ["nextJobCardNumber"],
     queryFn: () =>
-      api.get("/job-card-vouchers/next-number").then((res) => res.data),
+      api.get("/manufacturing/job-card-vouchers/next-number").then((res) => res.data),
     enabled: mode === "create",
   });
   const sortedVouchers = voucherList
@@ -228,24 +229,23 @@ export default function JobCardVoucher() {
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {
     const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
+      if (watchedDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/job-cards/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/manufacturing/job-card-vouchers/next-number?voucher_date=${watchedDate}`
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/job-cards/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/manufacturing/job-card-vouchers/check-backdated-conflict?voucher_date=${watchedDate}`
           );
           
           if (conflictResponse.data.has_conflict) {
             setConflictInfo(conflictResponse.data);
             setShowConflictModal(true);
-            setPendingDate(currentDate);
+            setPendingDate(watchedDate);
           }
         } catch (error) {
           console.error('Error fetching voucher number:', error);
@@ -254,10 +254,10 @@ export default function JobCardVoucher() {
     };
     
     fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
+  }, [watchedDate, mode, setValue]);
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data: JobCardVoucher) => api.post("/job-card-vouchers", data),
+    mutationFn: (data: JobCardVoucher) => api.post("/manufacturing/job-card-vouchers", data),
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["job-card-vouchers"] });
       setMode("create");
@@ -272,7 +272,7 @@ export default function JobCardVoucher() {
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: JobCardVoucher }) =>
-      api.put(`/job-card-vouchers/${id}`, data),
+      api.put(`/manufacturing/job-card-vouchers/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["job-card-vouchers"] });
       setMode("create");
@@ -284,7 +284,7 @@ export default function JobCardVoucher() {
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/job-card-vouchers/${id}`),
+    mutationFn: (id: number) => api.delete(`/manufacturing/job-card-vouchers/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["job-card-vouchers"] });
       if (selectedId) {

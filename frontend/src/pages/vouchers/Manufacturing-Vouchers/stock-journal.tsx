@@ -99,20 +99,21 @@ export default function StockJournal() {
     control,
     name: "entries",
   });
+  const watchedDate = watch("date");
   // Fetch stock journals list
   const { data: journalList, isLoading } = useQuery({
     queryKey: ["stock-journals"],
-    queryFn: () => api.get("/stock-journals").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/stock-journals").then((res) => res.data),
   });
   // Fetch manufacturing orders
   const { data: manufacturingOrders } = useQuery({
     queryKey: ["manufacturing-orders"],
-    queryFn: () => api.get("/manufacturing-orders").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/manufacturing-orders").then((res) => res.data),
   });
   // Fetch BOMs
   const { data: bomList } = useQuery({
     queryKey: ["boms"],
-    queryFn: () => api.get("/boms").then((res) => res.data),
+    queryFn: () => api.get("/manufacturing/boms").then((res) => res.data),
   });
   // Fetch products
   const { data: productList } = useQuery({
@@ -123,14 +124,14 @@ export default function StockJournal() {
   const { data: journalData } = useQuery({
     queryKey: ["stock-journal", selectedId],
     queryFn: () =>
-      api.get(`/stock-journals/${selectedId}`).then((res) => res.data),
+      api.get(`/manufacturing/stock-journals/${selectedId}`).then((res) => res.data),
     enabled: !!selectedId,
   });
   // Fetch next voucher number
   const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
     queryKey: ["nextStockJournalNumber"],
     queryFn: () =>
-      api.get("/stock-journals/next-number").then((res) => res.data),
+      api.get("/manufacturing/stock-journals/next-number").then((res) => res.data),
     enabled: mode === "create",
   });
   const sortedJournals = journalList
@@ -162,24 +163,23 @@ export default function StockJournal() {
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {
     const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
+      if (watchedDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/stock-journals/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/manufacturing/stock-journals/next-number?voucher_date=${watchedDate}`
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/stock-journals/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/manufacturing/stock-journals/check-backdated-conflict?voucher_date=${watchedDate}`
           );
           
           if (conflictResponse.data.has_conflict) {
             setConflictInfo(conflictResponse.data);
             setShowConflictModal(true);
-            setPendingDate(currentDate);
+            setPendingDate(watchedDate);
           }
         } catch (error) {
           console.error('Error fetching voucher number:', error);
@@ -188,10 +188,10 @@ export default function StockJournal() {
     };
     
     fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
+  }, [watchedDate, mode, setValue]);
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data: StockJournal) => api.post("/stock-journals", data),
+    mutationFn: (data: StockJournal) => api.post("/manufacturing/stock-journals", data),
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["stock-journals"] });
       setMode("create");
@@ -206,7 +206,7 @@ export default function StockJournal() {
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: StockJournal }) =>
-      api.put(`/stock-journals/${id}`, data),
+      api.put(`/manufacturing/stock-journals/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stock-journals"] });
       setMode("create");
@@ -218,7 +218,7 @@ export default function StockJournal() {
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/stock-journals/${id}`),
+    mutationFn: (id: number) => api.delete(`/manufacturing/stock-journals/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stock-journals"] });
       if (selectedId) {

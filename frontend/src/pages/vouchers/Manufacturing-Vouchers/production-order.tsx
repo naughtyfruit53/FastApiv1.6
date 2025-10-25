@@ -110,6 +110,7 @@ const ProductionOrder: React.FC = () => {
   });
   const watchedBomId = watch("bom_id");
   const watchedQuantity = watch("planned_quantity");
+  const watchedDate = watch("date");
   // Fetch manufacturing orders
   const { data: orderList, isLoading: isLoadingList } = useQuery({
     queryKey: ["manufacturing-orders"],
@@ -182,24 +183,23 @@ const ProductionOrder: React.FC = () => {
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {
     const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
+      if (watchedDate && mode === 'create') {
         try {
           // Fetch new voucher number based on date
-          const response = await axios.get(
-            `/api/v1/production-orders/next-number?voucher_date=${currentDate}`
+          const response = await api.get(
+            `/manufacturing/manufacturing-orders/next-number?voucher_date=${watchedDate}`
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
-          const conflictResponse = await axios.get(
-            `/api/v1/production-orders/check-backdated-conflict?voucher_date=${currentDate}`
+          const conflictResponse = await api.get(
+            `/manufacturing/manufacturing-orders/check-backdated-conflict?voucher_date=${watchedDate}`
           );
           
           if (conflictResponse.data.has_conflict) {
             setConflictInfo(conflictResponse.data);
             setShowConflictModal(true);
-            setPendingDate(currentDate);
+            setPendingDate(watchedDate);
           }
         } catch (error) {
           console.error('Error fetching voucher number:', error);
@@ -208,7 +208,7 @@ const ProductionOrder: React.FC = () => {
     };
     
     fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
+  }, [watchedDate, mode, setValue]);
   // Mutations
   const createMutation = useMutation({
     mutationFn: (data: ManufacturingOrder) =>
