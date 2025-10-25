@@ -36,8 +36,8 @@ log_memory_usage() {
 # Wait for database to be ready with retry
 if [ -n "$DATABASE_URL" ]; then
     echo "Waiting for database to be ready..."
-    host=$(echo $DATABASE_URL | sed -E 's/^postgres:\/\/[^:]+:[^@]+@([^:]+):[0-9]+\/.+$/\1/')
-    port=$(echo $DATABASE_URL | sed -E 's/^postgres:\/\/[^:]+:[^@]+@[^:]+:([0-9]+)\/.+$/\1/')
+    host=$(echo $DATABASE_URL | sed -E 's/.*@([^:]+):[0-9]+\/.*$/\1/')
+    port=$(echo $DATABASE_URL | sed -E 's/.*@[^:]+:([0-9]+)\/.*$/\1/')
     
     retries=30
     count=0

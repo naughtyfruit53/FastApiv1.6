@@ -158,7 +158,8 @@ else:
 connect_args = {
     "timeout": 300,
     "command_timeout": 120,
-    "server_settings": {"statement_timeout": "120s", "tcp_keepalives_idle": "60"}
+    "server_settings": {"statement_timeout": "120s", "tcp_keepalives_idle": "60"},
+    "ssl": "require"  # Enforce SSL for Supabase
 }
 
 exec_options = {}
@@ -368,7 +369,7 @@ async def create_tables():
     except ProgrammingError as e:
         if isinstance(e.orig, (pg_errors.DuplicateTable, pg_errors.DuplicateObject)):
             logger.warning(f"Some tables or indexes already exist, skipping creation: {str(e)}")
-        else:
+        else
             logger.error(f"Unexpected database error during table creation: {str(e)}")
             raise
     except Exception as e:
