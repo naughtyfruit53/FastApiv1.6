@@ -33,7 +33,8 @@ async def init_default_permissions():
 # Initialize roles and assign to org_admins for existing organizations asynchronously
 async def init_org_roles():
     from app.services.rbac import RBACService  # Lazy import to avoid circular import
-    from app.models.user_models import User, UserServiceRole, ServiceRole
+    from app.models.user_models import User
+    from app.models.rbac_models import UserServiceRole, ServiceRole
     async with AsyncSessionLocal() as db:
         try:
             rbac = RBACService(db)
