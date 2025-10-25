@@ -4,7 +4,6 @@ WORKDIR /src
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    ecdsa \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
