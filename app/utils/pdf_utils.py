@@ -6,6 +6,7 @@ Unified PDF generation utility for all voucher types
 
 import logging
 import os
+import pdfkit  # Added import for pdfkit
 from typing import Dict
 
 logger = logging.getLogger(__name__)
