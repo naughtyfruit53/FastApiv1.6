@@ -154,12 +154,13 @@ class VoucherPDFGenerator:
         
         self._add_custom_filters()
         
-        wkhtmltopdf_path = settings.WKHTMLTOPDF_PATH
-        if not os.path.exists(wkhtmltopdf_path):
-            logger.warning(f"wkhtmltopdf not found at {wkhtmltopdf_path}. Skipping PDF generation initialization.")
-            self.pdfkit_config = None
-        else:
+        # Force Linux path for Railway deployment
+        wkhtmltopdf_path = '/usr/bin/wkhtmltopdf'
+        if os.path.exists(wkhtmltopdf_path):
             self.pdfkit_config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+        else:
+            self.pdfkit_config = None
+            logger.warning(f"wkhtmltopdf not found at {wkhtmltopdf_path}. PDF generation may fail.")
     
     def _add_custom_filters(self):
         """Add custom Jinja2 filters"""
@@ -371,8 +372,8 @@ class VoucherPDFGenerator:
                     'subtotal': item_subtotal,
                     'discount_percentage': discount_percentage,
                     'discount_amount': discount_amount,
-                    'taxable_amount': taxable_amount,
                     'gst_rate': gst_rate,
+                    'taxable_amount': taxable_amount,
                     'cgst_rate': gst_calc['cgst_rate'],
                     'sgst_rate': gst_calc['sgst_rate'],
                     'igst_rate': gst_calc['igst_rate'],
@@ -466,7 +467,7 @@ class VoucherPDFGenerator:
             'items': processed_items,
             'subtotal': subtotal,
             'total_discount': total_discount,
-            'total_taxable': total_taxable,
+            'total_taxable': taxable_amount,
             'total_cgst': total_cgst,
             'total_sgst': total_sgst,
             'total_igst': total_igst,

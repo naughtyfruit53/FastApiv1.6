@@ -66,5 +66,5 @@ fi
 # Log memory before Gunicorn start
 log_memory_usage "Before Gunicorn start"
 
-# Start Gunicorn with fallback port (removed --preload for memory savings)
-exec gunicorn $GUNICORN_CMD_ARGS -b 0.0.0.0:${PORT:-8000} app.main:app
+# Start Gunicorn without -b, relying on GUNICORN_CMD_ARGS
+exec gunicorn $GUNICORN_CMD_ARGS app.main:app

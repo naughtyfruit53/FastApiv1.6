@@ -4,7 +4,27 @@
 Unified PDF generation utility for all voucher types
 """
 
+import logging
+import os
 from typing import Dict
+
+logger = logging.getLogger(__name__)
+
+# Initialize pdfkit configuration
+def initialize_pdfkit():
+    # Force Linux path for Railway
+    wkhtmltopdf_path = '/usr/bin/wkhtmltopdf'
+    
+    if os.path.exists(wkhtmltopdf_path):
+        config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+        logger.info(f"PDF generation initialized with wkhtmltopdf at {wkhtmltopdf_path}")
+        return config
+    else:
+        logger.warning(f"wkhtmltopdf not found at {wkhtmltopdf_path}. PDF generation may fail.")
+        return None
+
+# Call initialization on startup or where needed
+pdf_config = initialize_pdfkit()
 
 class VoucherPdfConfig:
     def __init__(self, voucher_type: str, voucher_title: str, show_items: bool = False, show_tax_details: bool = False, entity_type: str = None):

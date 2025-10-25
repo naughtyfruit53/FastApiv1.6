@@ -115,11 +115,19 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Set up CORS
-logger.info(f"Configuring CORS with allowed origins: {config_settings.BACKEND_CORS_ORIGINS}")
+# Set up CORS with explicit origins
+origins = [
+    "https://naughtyfruit.in",
+    "https://www.naughtyfruit.in",
+    "http://localhost:3000",
+    "http://localhost",
+    "http://127.0.0.1:3000",
+    *config_settings.BACKEND_CORS_ORIGINS  # Keep existing if any
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config_settings.BACKEND_CORS_ORIGINS,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -131,7 +139,7 @@ async def log_cors_config():
     """Log CORS configuration for debugging"""
     logger.info("=" * 50)
     logger.info("CORS Configuration:")
-    logger.info(f"  Allowed Origins: {config_settings.BACKEND_CORS_ORIGINS}")
+    logger.info(f"  Allowed Origins: {origins}")
     logger.info(f"  Allow Credentials: True")
     logger.info(f"  Allow Methods: ['*'] (all)")
     logger.info(f"  Allow Headers: ['*'] (all)")
@@ -220,18 +228,6 @@ def include_minimal_routers():
         routers.append((v1_stock.router, "/api/v1/stock", ["stock"]))
     except Exception as e:
         logger.error(f"Failed to import stock router: {str(e)}")
-    
-    try:
-        from app.api.v1.vouchers import router as vouchers_router
-        routers.append((vouchers_router, "/api/v1", ["vouchers"]))
-    except Exception as e:
-        logger.error(f"Failed to import vouchers router: {str(e)}")
-    
-    try:
-        from app.api.v1 import reports as v1_reports
-        routers.append((v1_reports.router, "/api/v1", ["reports"]))
-    except Exception as e:
-        logger.error(f"Failed to import reports router: {str(e)}")
     
     try:
         from app.api.routes import websocket as websocket_routes
