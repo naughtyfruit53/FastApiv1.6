@@ -18,7 +18,7 @@ from sqlalchemy.exc import ProgrammingError
 logger = logging.getLogger(__name__)
 
 # Initialize default permissions asynchronously
-async def init_default_permissions():
+async def init_default_permissions(background_tasks: BackgroundTasks):
     from app.services.rbac import RBACService  # Lazy import to avoid circular import
     async with AsyncSessionLocal() as db:
         try:
@@ -29,7 +29,7 @@ async def init_default_permissions():
             logger.error(f"Error initializing default permissions: {str(e)}")
 
 # Initialize roles and assign to org_admins for existing organizations asynchronously
-async def init_org_roles():
+async def init_org_roles(background_tasks: BackgroundTasks):
     from app.services.rbac import RBACService  # Lazy import to avoid circular import
     from app.models.user_models import User
     from app.models.rbac_models import UserServiceRole, ServiceRole
@@ -98,9 +98,10 @@ async def lifespan(app: FastAPI):
         app.mount("/Uploads", StaticFiles(directory="Uploads"), name="uploads")
         logger.info("Mounted /Uploads directory")
     
-    # Initialize default permissions and org roles (errors logged but startup continues)
-    await init_default_permissions()
-    await init_org_roles()
+    # Schedule non-essential inits as background tasks to speed up startup
+    background_tasks = BackgroundTasks()
+    background_tasks.add_task(init_default_permissions, background_tasks)
+    background_tasks.add_task(init_org_roles, background_tasks)
     
     yield
     # Shutdown
@@ -140,27 +141,27 @@ async def log_cors_config():
 def include_minimal_routers():
     routers = []
     
-    # Import and include each router with error handling
+    # Import and include each router with error handling (log but don't raise for optional)
     try:
         from app.api.v1 import auth as v1_auth
         routers.append((v1_auth.router, "/api/v1/auth", ["authentication-v1"]))
     except Exception as e:
         logger.error(f"Failed to import auth router: {str(e)}")
-        raise
+        raise  # Core, so raise
     
     try:
         from app.api.v1 import health as v1_health
         routers.append((v1_health.router, "/api/v1", ["health"]))
     except Exception as e:
         logger.error(f"Failed to import health router: {str(e)}")
-        raise
+        raise  # Core
     
     try:
         from app.api.v1 import user as v1_user
         routers.append((v1_user.router, "/api/v1/users", ["users"]))
     except Exception as e:
         logger.error(f"Failed to import user router: {str(e)}")
-        raise
+        raise  # Core
     
     try:
         from app.api.v1 import api_v1_router, register_subrouters
@@ -168,77 +169,69 @@ def include_minimal_routers():
         routers.append((api_v1_router, "/api/v1", ["v1-api"]))
     except Exception as e:
         logger.error(f"Failed to import v1 API router: {str(e)}")
-        raise
+        raise  # Core
     
     try:
         from app.api.v1 import rbac as v1_rbac
         routers.append((v1_rbac.router, "/api/v1/rbac", ["rbac"]))
     except Exception as e:
         logger.error(f"Failed to import rbac router: {str(e)}")
-        raise
+        raise  # Core
     
     try:
         from app.api.v1.organizations import router as organizations_router
         routers.append((organizations_router, "/api/v1/organizations", ["organizations"]))
     except Exception as e:
         logger.error(f"Failed to import organizations router: {str(e)}")
-        raise
+        raise  # Core
     
     try:
         from app.api import companies
         routers.append((companies.router, "/api/v1/companies", ["companies"]))
     except Exception as e:
         logger.error(f"Failed to import companies router: {str(e)}")
-        raise
     
     try:
         from app.api import vendors
         routers.append((vendors.router, "/api/v1/vendors", ["vendors"]))
     except Exception as e:
         logger.error(f"Failed to import vendors router: {str(e)}")
-        raise
     
     try:
         from app.api import customers
         routers.append((customers.router, "/api/v1/customers", ["customers"]))
     except Exception as e:
         logger.error(f"Failed to import customers router: {str(e)}")
-        raise
     
     try:
         from app.api import products
         routers.append((products.router, "/api/v1/products", ["products"]))
     except Exception as e:
         logger.error(f"Failed to import products router: {str(e)}")
-        raise
     
     try:
         from app.api.v1 import inventory as v1_inventory
         routers.append((v1_inventory.router, "/api/v1/inventory", ["inventory"]))
     except Exception as e:
         logger.error(f"Failed to import inventory router: {str(e)}")
-        raise
     
     try:
         from app.api.v1 import stock as v1_stock
         routers.append((v1_stock.router, "/api/v1/stock", ["stock"]))
     except Exception as e:
         logger.error(f"Failed to import stock router: {str(e)}")
-        raise
     
     try:
         from app.api.v1.vouchers import router as vouchers_router
         routers.append((vouchers_router, "/api/v1", ["vouchers"]))
     except Exception as e:
         logger.error(f"Failed to import vouchers router: {str(e)}")
-        raise
     
     try:
         from app.api.v1 import reports as v1_reports
         routers.append((v1_reports.router, "/api/v1", ["reports"]))
     except Exception as e:
         logger.error(f"Failed to import reports router: {str(e)}")
-        raise
     
     try:
         from app.api.routes import websocket as websocket_routes
@@ -254,20 +247,17 @@ def include_minimal_routers():
             from app.api.v1 import pdf_extraction as v1_pdf_extraction
             routers.append((v1_pdf_extraction.router, "/api/v1/pdf-extraction", ["pdf-extraction"]))
         except Exception as e:
-            logger.error(f"Failed to import pdf_extraction router: {str(e)}")
-            raise
+            logger.warning(f"Failed to import pdf_extraction router: {str(e)}")  # Optional, warn only
         try:
             from app.api.v1 import pdf_generation as v1_pdf_generation
             routers.append((v1_pdf_generation.router, "/api/v1/pdf-generation", ["pdf-generation"]))
         except Exception as e:
-            logger.error(f"Failed to import pdf_generation router: {str(e)}")
-            raise
+            logger.warning(f"Failed to import pdf_generation router: {str(e)}")
         try:
             from app.api.v1 import gst as v1_gst
             routers.append((v1_gst.router, "/api/v1/gst", ["gst"]))
         except Exception as e:
-            logger.error(f"Failed to import gst router: {str(e)}")
-            raise
+            logger.warning(f"Failed to import gst router: {str(e)}")
 
     # Conditionally include AI analytics router
     if os.getenv("ENABLE_AI_ANALYTICS", "false").lower() == "true":
@@ -275,16 +265,14 @@ def include_minimal_routers():
             from app.api.v1 import ai_analytics as v1_ai_analytics
             routers.append((v1_ai_analytics.router, "/api/v1/ai-analytics", ["ai-analytics"]))
         except Exception as e:
-            logger.error(f"Failed to import ai_analytics router: {str(e)}")
-            raise
+            logger.warning(f"Failed to import ai_analytics router: {str(e)}")
 
     for router, prefix, tags in routers:
         try:
             app.include_router(router, prefix=prefix, tags=tags)
             logger.info(f"Router included successfully at prefix: {prefix}")
         except Exception as e:
-            logger.error(f"Failed to include router at prefix {prefix}: {str(e)}")
-            raise
+            logger.warning(f"Failed to include router at prefix {prefix}: {str(e)}")  # Warn but continue
 
 # Debug middleware for logging request headers
 @app.middleware("http")

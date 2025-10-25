@@ -56,7 +56,7 @@ fi
 log_memory_usage "Before migrations"
 if [ -n "$DATABASE_URL" ]; then
     echo "Running Alembic migrations..."
-    alembic upgrade head
+    alembic upgrade head || { echo "Migrations failed"; exit 1; }
     echo "Alembic migrations completed"
     log_memory_usage "After migrations"
 else
@@ -66,5 +66,5 @@ fi
 # Log memory before Gunicorn start
 log_memory_usage "Before Gunicorn start"
 
-# Start Gunicorn with fallback port
+# Start Gunicorn with fallback port (removed --preload for memory savings)
 exec gunicorn $GUNICORN_CMD_ARGS -b 0.0.0.0:${PORT:-8000} app.main:app

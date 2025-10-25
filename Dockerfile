@@ -1,5 +1,5 @@
 # ---------- builder ----------
-FROM python:3.11-slim-bullseye AS builder
+FROM python:3.12-slim-bookworm AS builder
 WORKDIR /src
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -12,13 +12,14 @@ RUN python -m pip install --upgrade pip wheel setuptools \
  && pip wheel --wheel-dir /wheels -r requirements.txt
 
 # ---------- runtime ----------
-FROM python:3.11-slim-bullseye AS runtime
+FROM python:3.12-slim-bookworm AS runtime
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     wkhtmltopdf \
     fontconfig \
+    libfontconfig1 \
     libmupdf-dev \
     procps \
     postgresql-client \
@@ -39,7 +40,7 @@ RUN mkdir -p /app/uploads \
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=120 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker --preload" \
+    GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=300 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker" \
     ENABLE_EXTENDED_ROUTERS=false \
     ENABLE_AI_ANALYTICS=false
 
