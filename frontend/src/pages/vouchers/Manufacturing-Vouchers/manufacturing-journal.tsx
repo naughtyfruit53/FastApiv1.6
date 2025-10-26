@@ -168,15 +168,7 @@ export default function ManufacturingJournalVoucher() {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       )
     : [];
-        .then((res) => res.data),
-    enabled: mode === "create",
-  });
-  const sortedVouchers = voucherList
-    ? [...voucherList].sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      )
-    : [];
+  
   useEffect(() => {
     if (mode === "create" && nextVoucherNumber) {
       setValue("voucher_number", nextVoucherNumber);
@@ -540,4 +532,6 @@ export default function ManufacturingJournalVoucher() {
       </Grid>
     </Container>
   );
-}
+};
+
+export default ManufacturingJournalVoucher;
