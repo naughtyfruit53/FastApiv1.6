@@ -63,6 +63,15 @@ fi
 log_memory_usage "Before migrations"
 if [ -n "$DATABASE_URL" ]; then
     echo "Running Alembic migrations..."
+    if [ ! -d "/app/migrations" ]; then
+        echo "Migrations directory not found, initializing..."
+        alembic init migrations || { echo "Alembic init failed"; exit 1; }
+    fi
+    # Generate initial revision if no revisions exist
+    if [ ! -d "/app/migrations/versions" ] || [ -z "$(ls -A /app/migrations/versions)" ]; then
+        echo "No revisions found, autogenerating initial migration..."
+        alembic revision --autogenerate -m "initial" || { echo "Alembic autogenerate failed"; exit 1; }
+    fi
     alembic upgrade head || { echo "Migrations failed"; exit 1; }
     echo "Alembic migrations completed"
     log_memory_usage "After migrations"
