@@ -84,31 +84,17 @@ export const getLastVendorForProduct = async (
     return null;
   }
 };
-// Add bulkImportStock function with increased timeout and retry
-export const bulkImportStock = async (file: File): Promise<any> => {
+// Add bulkImportStock function
+export const bulkImportStock = async (file: File, config: { signal?: AbortSignal } = {}): Promise<any> => {
   const formData = new FormData();
   formData.append('file', file);
-  let attempts = 0;
-  const maxAttempts = 3; // Retry up to 3 times
-  while (attempts < maxAttempts) {
-    try {
-      const response = await api.post('/stock/bulk?mode=replace', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        timeout: 90000  // 90 seconds
-      });
-      return response.data;
-    } catch (error: any) {
-      attempts++;
-      if (error.code === 'ECONNABORTED' && attempts < maxAttempts) {
-        console.log(`Retry attempt ${attempts} after timeout`);
-        continue;
-      }
-      throw error;
-    }
-  }
-  throw new Error('Import failed after multiple attempts');
+  const response = await api.post('/stock/bulk?mode=replace', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    ...config
+  });
+  return response.data;
 };
 // NEW: Fetch stock list with params from queryKey
 export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Promise<any> => {

@@ -22,13 +22,16 @@ const StockBulkImport = () => {
       setError(null);
       setResponse(null);
       setProgress(0);
+      console.log("[StockBulkImport] File selected:", event.target.files[0].name);
     }
   };
 
   const startProgressSimulation = () => {
+    console.log("[StockBulkImport] Starting progress simulation");
     setProgress(0);
     timerRef.current = setInterval(() => {
       setProgress((oldProgress) => {
+        console.log("[StockBulkImport] Progress updated:", oldProgress + 1);
         if (oldProgress >= 99) {
           clearInterval(timerRef.current!);
           return 99;
@@ -40,6 +43,7 @@ const StockBulkImport = () => {
 
   const stopProgressSimulation = () => {
     if (timerRef.current) {
+      console.log("[StockBulkImport] Stopping progress simulation");
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
@@ -58,22 +62,24 @@ const StockBulkImport = () => {
       setError("Company setup required before importing inventory. Please complete company setup first.");
       return;
     }
+    console.log("[StockBulkImport] Starting import for file:", selectedFile.name);
     setIsUploading(true);
     setError(null);
     setResponse(null);
-    controllerRef.current = new AbortController(); // Manual abort control
+    controllerRef.current = new AbortController();
     startProgressSimulation();
 
     try {
       const res = await bulkImportStock(selectedFile, { signal: controllerRef.current.signal });
+      console.log("[StockBulkImport] Import successful:", res);
       setResponse(res);
       setError(null);
-      setProgress(100); // Complete progress
+      setProgress(100);
       if (res.message) {
         alert(`Import Successful: ${res.message}`);
       }
     } catch (err: any) {
-      console.error("Bulk import error:", err);
+      console.error("[StockBulkImport] Bulk import error:", err);
       if (err.name === 'AbortError') {
         setError("Import canceled by user.");
       } else if (err.message.includes("timeout")) {
@@ -94,6 +100,7 @@ const StockBulkImport = () => {
       stopProgressSimulation();
       setIsUploading(false);
       controllerRef.current = null;
+      console.log("[StockBulkImport] Import attempt finished");
     }
   };
 
@@ -105,12 +112,14 @@ const StockBulkImport = () => {
     stopProgressSimulation();
     setProgress(0);
     setError("Import canceled by user.");
+    console.log("[StockBulkImport] Import canceled by user");
   };
 
   const handleRetry = () => {
     setError(null);
     setResponse(null);
     setProgress(0);
+    console.log("[StockBulkImport] Retrying import");
     handleSubmit();
   };
 
@@ -121,7 +130,7 @@ const StockBulkImport = () => {
   }, []);
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3 }} key={isUploading ? 'uploading' : 'idle'}>
       <Typography variant="h6">Bulk Import Stock from Excel</Typography>
       {isCompanySetupNeeded && (
         <Alert severity="warning" sx={{ mb: 2 }}>
