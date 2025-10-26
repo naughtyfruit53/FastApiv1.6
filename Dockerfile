@@ -37,12 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg62-turbo \
     xfonts-75dpi \
     xfonts-base \
-    wget \
-    ca-certificates \
-    && wget https://downloads.wkhtmltopdf.org/0.12/0.12.6-1/wkhtmltox_0.12.6-1.bookworm_amd64.deb \
-    && dpkg -i wkhtmltox_0.12.6-1.bookworm_amd64.deb \
-    && rm wkhtmltox_0.12.6-1.bookworm_amd64.deb \
-    && apt-get purge -y --auto-remove wget \
+    wkhtmltopdf \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
