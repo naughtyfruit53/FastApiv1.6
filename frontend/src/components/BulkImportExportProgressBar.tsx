@@ -95,8 +95,7 @@ const BulkImportExportProgressBar: React.FC<BulkImportExportProgressBarProps> = 
 
         {status === 'processing' && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            Please wait while we process your {type === 'import' ? 'import' : 'export'}. 
-            Do not close this window.
+            Please wait while we process your {type === 'import' ? 'import' : 'export'}. Do not close this window.
           </Typography>
         )}
       </Box>
