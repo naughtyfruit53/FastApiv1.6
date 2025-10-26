@@ -733,6 +733,25 @@ export default function JobCardVoucher() {
                                 <Autocomplete
                                   options={productOptions}
                                   getOptionLabel={(option) => option.name || ""}
+                                  filterOptions={(options, { inputValue }) => {
+                                    return options.filter((option) =>
+                                      option.name?.toLowerCase().includes(inputValue.toLowerCase()) ||
+                                      option.code?.toLowerCase().includes(inputValue.toLowerCase()) ||
+                                      option.sku?.toLowerCase().includes(inputValue.toLowerCase())
+                                    );
+                                  }}
+                                  renderOption={(props, option) => (
+                                    <li {...props} key={option.id}>
+                                      <Box>
+                                        <Typography variant="body2">{option.name}</Typography>
+                                        {option.code && (
+                                          <Typography variant="caption" color="text.secondary">
+                                            Code: {option.code}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                    </li>
+                                  )}
                                   value={
                                     productOptions.find(
                                       (p: any) =>
@@ -757,7 +776,7 @@ export default function JobCardVoucher() {
                                     );
                                   }}
                                   renderInput={(params) => (
-                                    <TextField {...params} size="small" />
+                                    <TextField {...params} size="small" placeholder="Search product..." />
                                   )}
                                   disabled={mode === "view"}
                                   sx={{ minWidth: 150 }}
@@ -910,6 +929,25 @@ export default function JobCardVoucher() {
                                 <Autocomplete
                                   options={productOptions}
                                   getOptionLabel={(option) => option.name || ""}
+                                  filterOptions={(options, { inputValue }) => {
+                                    return options.filter((option) =>
+                                      option.name?.toLowerCase().includes(inputValue.toLowerCase()) ||
+                                      option.code?.toLowerCase().includes(inputValue.toLowerCase()) ||
+                                      option.sku?.toLowerCase().includes(inputValue.toLowerCase())
+                                    );
+                                  }}
+                                  renderOption={(props, option) => (
+                                    <li {...props} key={option.id}>
+                                      <Box>
+                                        <Typography variant="body2">{option.name}</Typography>
+                                        {option.code && (
+                                          <Typography variant="caption" color="text.secondary">
+                                            Code: {option.code}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                    </li>
+                                  )}
                                   value={
                                     productOptions.find(
                                       (p: any) =>
@@ -934,7 +972,7 @@ export default function JobCardVoucher() {
                                     );
                                   }}
                                   renderInput={(params) => (
-                                    <TextField {...params} size="small" />
+                                    <TextField {...params} size="small" placeholder="Search product..." />
                                   )}
                                   disabled={mode === "view"}
                                   sx={{ minWidth: 150 }}
