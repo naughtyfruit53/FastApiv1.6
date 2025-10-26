@@ -1,0 +1,34 @@
+# Exclude unnecessary files to reduce Docker build context size
+node_modules
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+*.log
+Uploads/
+uploads/
+temp/
+dist/
+build/
+*.egg-info/
+.git/
+.gitignore
+.github/
+Dockerfile.snappymail
+snappymail/
+*.md
+docs/
+tests/
+frontend/
+*.sqlite3
+*.db
+*.cache
+*.pytest_cache
+*.coverage
+alembic/
+migrations/
+cloudbuild.yaml  # Exclude GCP-specific files

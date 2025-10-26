@@ -2,11 +2,13 @@
 FROM python:3.12-slim-bookworm AS builder
 WORKDIR /src
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Add retry logic for apt-get
+RUN for i in $(seq 1 5); do apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     libpq-dev \
     libyaml-dev \
+    && break || sleep 5; done \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -18,7 +20,8 @@ RUN python -m pip install --upgrade pip wheel setuptools 'cython<3' \
 FROM python:3.12-slim-bookworm AS runtime
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Add retry logic for apt-get in runtime stage
+RUN for i in $(seq 1 5); do apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     fontconfig \
     libfontconfig1 \
@@ -38,6 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xfonts-75dpi \
     xfonts-base \
     wkhtmltopdf \
+    && break || sleep 5; done \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -56,7 +60,7 @@ RUN mkdir -p /app/uploads \
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     GUNICORN_CMD_ARGS="--workers=1 --threads=1 --timeout=300 --max-requests=50 --max-requests-jitter=20 --worker-class=uvicorn.workers.UvicornWorker" \
-    ENABLE_EXTENDED_ROUTERS=false \
+    ENABLE_EXTENDED_ROUTERS=true \
     ENABLE_AI_ANALYTICS=false
 
 USER appuser
