@@ -46,6 +46,8 @@ from .erp_models import (
     GeneralLedger, CostCenter, BankAccount, BankReconciliation,
     FinancialStatement, FinancialKPI
 )
+# Import Expense Account model
+from .expense_account import ExpenseAccount
 # Import financial modeling models
 from .financial_modeling_models import (
     FinancialModel, DCFModel, ScenarioAnalysis, TradingComparables,

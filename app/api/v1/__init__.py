@@ -24,6 +24,18 @@ def register_subrouters():
         raise
 
     try:
+        from .expense_account import router as expense_account_router
+        logger.debug("Imported expense_account_router")
+        api_v1_router.include_router(expense_account_router, tags=["Expense Accounts"])
+        expense_account_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in expense_account_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered expense_account endpoints: {len(expense_account_routes)} routes")
+        for route_path in expense_account_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include expense_account_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
         from .vouchers.journal_voucher import router as journal_voucher_router
         logger.debug("Imported journal_voucher_router")
         api_v1_router.include_router(journal_voucher_router)

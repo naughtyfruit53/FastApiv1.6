@@ -383,6 +383,12 @@ class Organization(Base):
         back_populates="organization",
         uselist=False
     )
+    
+    # Expense Account relationships
+    expense_accounts: Mapped[List["ExpenseAccount"]] = relationship(
+        "ExpenseAccount",
+        back_populates="organization"
+    )
 
     # RBAC relationships
     service_roles: Mapped[List["ServiceRole"]] = relationship(
