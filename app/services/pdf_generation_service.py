@@ -154,13 +154,15 @@ class VoucherPDFGenerator:
         
         self._add_custom_filters()
         
-        # Force Linux path for Railway deployment
-        wkhtmltopdf_path = '/usr/bin/wkhtmltopdf'
+        # Use configurable path from settings
+        wkhtmltopdf_path = settings.WKHTMLTOPDF_PATH
         if os.path.exists(wkhtmltopdf_path):
             self.pdfkit_config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+            logger.info(f"wkhtmltopdf found at {wkhtmltopdf_path}")
         else:
             self.pdfkit_config = None
-            logger.warning(f"wkhtmltopdf not found at {wkhtmltopdf_path}. PDF generation may fail.")
+            logger.error(f"wkhtmltopdf not found at {wkhtmltopdf_path}. PDF generation will fail until installed.")
+            raise RuntimeError(f"wkhtmltopdf not found at {wkhtmltopdf_path}. Please install wkhtmltopdf to enable PDF generation.")
     
     def _add_custom_filters(self):
         """Add custom Jinja2 filters"""
@@ -589,6 +591,8 @@ class VoucherPDFGenerator:
                 'footer-spacing': '0',
                 'print-media-type': ''
             }
+            if not self.pdfkit_config:
+                raise RuntimeError("wkhtmltopdf is not installed or not found at /usr/bin/wkhtmltopdf. PDF generation cannot proceed.")
             pdf_bytes = pdfkit.from_string(html_content, False, configuration=self.pdfkit_config, options=pdf_options)
             
             logger.info(f"PDF generated successfully for {voucher_type}")

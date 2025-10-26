@@ -8,6 +8,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://tritiq_user:tritiq_password@db:5432/tritiq_erp
       - REDIS_URL=redis://redis:6379
+      - WKHTMLTOPDF_PATH=/usr/local/bin/wkhtmltopdf
+      - ENABLE_EXTENDED_ROUTERS=true
     depends_on:
       - db
       - redis

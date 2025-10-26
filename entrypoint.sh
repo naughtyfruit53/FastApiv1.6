@@ -22,6 +22,13 @@ log_memory_usage() {
     fi
 }
 
+# Verify wkhtmltopdf is installed
+if ! command -v wkhtmltopdf >/dev/null 2>&1; then
+    echo "Error: wkhtmltopdf not found. PDF generation will fail."
+    exit 1
+fi
+wkhtmltopdf --version || echo "wkhtmltopdf version check failed"
+
 # Wait for database to be ready with retry
 if [ -n "$DATABASE_URL" ]; then
     echo "Waiting for database to be ready..."

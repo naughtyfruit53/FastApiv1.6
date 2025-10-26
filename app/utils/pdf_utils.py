@@ -8,13 +8,13 @@ import logging
 import os
 import pdfkit  # Added import for pdfkit
 from typing import Dict
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 # Initialize pdfkit configuration
 def initialize_pdfkit():
-    # Force Linux path for Railway
-    wkhtmltopdf_path = '/usr/bin/wkhtmltopdf'
+    wkhtmltopdf_path = settings.WKHTMLTOPDF_PATH
     
     if os.path.exists(wkhtmltopdf_path):
         config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)

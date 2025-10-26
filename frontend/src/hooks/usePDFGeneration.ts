@@ -40,8 +40,8 @@ export const usePDFGeneration = () => {
 
     try {
       const endpoint = download
-        ? `/api/v1/pdf-generation/voucher/${voucherType}/${voucherId}/download`
-        : `/api/v1/pdf-generation/voucher/${voucherType}/${voucherId}`;
+        ? `/voucher/${voucherType}/${voucherId}/download`
+        : `/voucher/${voucherType}/${voucherId}`;
 
       const response = await api.post(endpoint, {}, {
         responseType: 'blob',

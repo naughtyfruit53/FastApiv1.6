@@ -141,8 +141,8 @@ async def log_cors_config():
     logger.info("CORS Configuration:")
     logger.info(f"  Allowed Origins: {origins}")
     logger.info(f"  Allow Credentials: True")
-    logger.info(f"  Allow Methods: ['*'] (all)")
-    logger.info(f"  Allow Headers: ['*'] (all)")
+    logger.info(f"  Allow Methods: [\"*\"] (all)")
+    logger.info(f"  Allow Headers: [\"*\"] (all)")
     logger.info("=" * 50)
 
 # Minimal routers to reduce memory usage
@@ -245,15 +245,19 @@ def include_minimal_routers():
         except Exception as e:
             logger.warning(f"Failed to import pdf_extraction router: {str(e)}")  # Optional, warn only
         try:
-            from app.api.v1 import pdf_generation as v1_pdf_generation
-            routers.append((v1_pdf_generation.router, "/api/v1/pdf-generation", ["pdf-generation"]))
-        except Exception as e:
-            logger.warning(f"Failed to import pdf_generation router: {str(e)}")
-        try:
             from app.api.v1 import gst as v1_gst
             routers.append((v1_gst.router, "/api/v1/gst", ["gst"]))
         except Exception as e:
             logger.warning(f"Failed to import gst router: {str(e)}")
+
+    # Always include pdf_generation router unconditionally
+    try:
+        from app.api.v1 import pdf_generation as v1_pdf_generation
+        routers.append((v1_pdf_generation.router, "/api/v1", ["pdf-generation"]))
+        logger.info("PDF generation router included unconditionally")
+    except Exception as e:
+        logger.error(f"Failed to import pdf_generation router: {str(e)}")
+        raise  # Make it core now
 
     # Conditionally include AI analytics router
     if os.getenv("ENABLE_AI_ANALYTICS", "false").lower() == "true":

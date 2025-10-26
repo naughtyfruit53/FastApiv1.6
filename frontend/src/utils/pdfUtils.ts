@@ -1,6 +1,7 @@
 // frontend/src/utils/pdfUtils.ts
 
 import api from "../lib/api";
+import { ACCESS_TOKEN_KEY } from "../constants/auth";
 
 export interface VoucherPdfConfig {
   voucherType: string;
@@ -50,15 +51,20 @@ export const generateVoucherPDF = async (
   config: VoucherPdfConfig,
 ): Promise<void> => {
   try {
-    // Check authorization before generating PDF
-    const token = localStorage.getItem("token");
+    console.log(
+      "[PDF] Generating standalone PDF for:",
+      config.voucherType,
+      voucherId,
+    );
+    // Check authorization
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       alert("You must be logged in to generate PDFs");
       return;
     }
     // Call backend API for PDF generation
     const response = await api.post(
-      `/pdf-generation/voucher/${config.voucherType}/${voucherId}/download`,
+      `/voucher/${config.voucherType}/${voucherId}/download`,
       {},
       { responseType: 'blob' }
     );
@@ -302,7 +308,7 @@ export const generateStandalonePDF = async (
       voucherId,
     );
     // Check authorization
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       alert("You must be logged in to generate PDFs");
       return;

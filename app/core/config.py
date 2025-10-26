@@ -112,6 +112,7 @@ class Settings:
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     
     WKHTMLTOPDF_PATH: str = os.getenv("WKHTMLTOPDF_PATH", "/usr/bin/wkhtmltopdf")
+    logger.info(f"wkhtmltopdf path configured: {WKHTMLTOPDF_PATH} (exists: {os.path.exists(WKHTMLTOPDF_PATH)})")
     
     FASTGST_API_URL: str = os.getenv("FASTGST_API_URL", "https://api.fastgst.in")
     
