@@ -27,7 +27,7 @@ import { useAuth } from "../context/AuthContext"; // Adjusted path
 import {
   canManageUsers,
 } from "../types/user.types"; // Adjusted path
-import organizationService from "../services/organizationService"; // Import to get managers
+import { organizationService } from "../services/organizationService"; // Changed to named import
 // To get modules
 // NEW: Import userService
 import { useSnackbar } from "notistack"; // NEW: For toast notifications (assume notistack is installed)
@@ -244,7 +244,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({
         { value: "manager", label: "Manager" },
         { value: "executive", label: "Executive" },
       ];
-    } else if (user?.role === "manager") {
+    } else if (user?.role === "management") {
       return [
         { value: "executive", label: "Executive" },
       ];

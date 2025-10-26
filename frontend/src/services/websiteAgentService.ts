@@ -1,6 +1,6 @@
 // frontend/src/services/websiteAgentService.ts
 
-import api from './api/client';
+import { apiClient as api } from './api/client'; // Changed to named import with alias
 
 export interface WebsiteProject {
   id: number;

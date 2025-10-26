@@ -60,6 +60,16 @@ export const userService = {
     }
   },
 
+  // Get user OAuth tokens
+  getUserTokens: async (): Promise<any> => {
+    try {
+      const response = await api.get('/oauth/tokens');
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get user tokens");
+    }
+  },
+
   // Refresh OAuth token
   refreshToken: async (tokenId: number): Promise<any> => {
     try {

@@ -33,7 +33,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getMailAccounts, deleteMailAccount, MailAccount } from '../../services/emailService';
-import { getUserTokens, refreshToken } from '../../services/userService'; // Added refreshToken
+import userService from '../../services/userService'; // Changed to default import
 import { useRouter } from 'next/navigation';
 import SyncStatus from './sync';
 import EmailTemplates from './templates';
@@ -57,7 +57,7 @@ const EmailAccountSettings: React.FC = () => {
   // Fetch tokens
   const { data: tokens = [], isLoading: tokensLoading } = useQuery({
     queryKey: ['userTokens'],
-    queryFn: getUserTokens,
+    queryFn: userService.getUserTokens, // Changed to userService.method
   });
 
   // Delete mutation
@@ -72,7 +72,7 @@ const EmailAccountSettings: React.FC = () => {
 
   // Refresh mutation
   const refreshMutation = useMutation({
-    mutationFn: refreshToken,
+    mutationFn: (tokenId: number) => userService.refreshToken(tokenId), // Changed to userService.method
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userTokens'] });
       setRefreshDialogOpen(false);
