@@ -2,12 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import {
   Box,
+  Button,
   Typography,
   Grid,
   CircularProgress,
   Container,
   Card,
   CardContent,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
 } from "@mui/material";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -324,9 +331,14 @@ export default function StockJournal() {
   }
   return (
     <Container maxWidth="xl">
-      <Typography variant="h4" component="h1" gutterBottom>
-        Stock Journals
-      </Typography>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Stock Journals
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Manage stock movements, transfers, and adjustments
+        </Typography>
+      </Box>
       <Grid container spacing={3}>
         {/* Journal List - Left Side */}
         <Grid size={{ xs: 12, md: 5 }}>
@@ -334,13 +346,163 @@ export default function StockJournal() {
             <CardContent>
               <Box
                 display="flex"
-                justifyContent="between"
+                justifyContent="space-between"
                 alignItems="center"
                 mb={2}
               >
                 <Typography variant="h6">Recent Journals</Typography>
-                {/* VoucherHeaderActions commented out */}
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => {
+                    setMode("create");
+                    reset(defaultValues);
+                  }}
+                  disabled={mode === "create"}
+                >
+                  New Journal
+                </Button>
               </Box>
+              <Box sx={{ maxHeight: "600px", overflowY: "auto" }}>
+                {sortedJournals.slice(0, 10).map((journal: any) => (
+                  <Card
+                    key={journal.id}
+                    variant="outlined"
+                    sx={{
+                      mb: 1,
+                      cursor: "pointer",
+                      "&:hover": { bgcolor: "action.hover" },
+                    }}
+                    onClick={() => handleView(journal)}
+                  >
+                    <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Box>
+                          <Typography variant="subtitle2">
+                            {journal.voucher_number}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(journal.date).toLocaleDateString()} • {journal.journal_type}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={journal.status}
+                          size="small"
+                          color={getJournalTypeIcon(journal.journal_type) as any}
+                        />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Journal Form - Right Side */}
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Card>
+            <CardContent>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={2}
+              >
+                <Typography variant="h6">
+                  {mode === "create" && "Create Stock Journal"}
+                  {mode === "edit" && "Edit Stock Journal"}
+                  {mode === "view" && "View Stock Journal"}
+                </Typography>
+                {mode !== "create" && (
+                  <Button variant="outlined" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                )}
+              </Box>
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <Grid container spacing={2} mb={3}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Voucher Number"
+                      {...control.register("voucher_number")}
+                      fullWidth
+                      disabled
+                      value={watch("voucher_number")}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Date"
+                      type="date"
+                      {...control.register("date")}
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                      disabled={mode === "view"}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Journal Type</InputLabel>
+                      <Select
+                        value={watch("journal_type")}
+                        onChange={(e) => setValue("journal_type", e.target.value)}
+                        disabled={mode === "view"}
+                      >
+                        {journalTypeOptions.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <TextField
+                      label="Notes"
+                      {...control.register("notes")}
+                      fullWidth
+                      multiline
+                      rows={2}
+                      disabled={mode === "view"}
+                    />
+                  </Grid>
+                </Grid>
+
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6">Journal Entries</Typography>
+                  {mode !== "view" && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={addEntry}
+                    >
+                      Add Entry
+                    </Button>
+                  )}
+                </Box>
+
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Add stock entries with debits (stock in) and credits (stock out)
+                </Typography>
+
+                {mode !== "view" && (
+                  <Box display="flex" gap={2} mt={3}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={createMutation.isPending || updateMutation.isPending}
+                    >
+                      {mode === "edit" ? "Update" : "Create"} Journal
+                    </Button>
+                    {mode !== "create" && (
+                      <Button variant="outlined" onClick={handleCancel}>
+                        Cancel
+                      </Button>
+                    )}
+                  </Box>
+                )}
+              </form>
             </CardContent>
           </Card>
         </Grid>
