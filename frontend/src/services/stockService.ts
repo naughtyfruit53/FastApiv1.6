@@ -96,7 +96,7 @@ export const bulkImportStock = async (file: File): Promise<any> => {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
-        timeout: 60000  // Increased to 60 seconds
+        timeout: 90000  // 90 seconds
       });
       return response.data;
     } catch (error: any) {
