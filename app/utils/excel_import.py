@@ -3,6 +3,7 @@ Excel import utilities with enhanced validation and error handling
 """
 import io
 import pandas as pd
+import numpy as np
 from typing import List, Dict, Any, Optional, Tuple
 from fastapi import UploadFile, HTTPException
 import logging
@@ -70,7 +71,7 @@ class ExcelImportValidator:
                 try:
                     if expected_type == float:
                         converted = float(value)
-                        if pd.isna(converted) or not pd.isfinite(converted):
+                        if pd.isna(converted) or not np.isfinite(converted):
                             errors.append((idx + 2, col_name, f"Invalid number format: '{value}'. Expected a valid decimal number."))
                     elif expected_type == int:
                         converted = int(float(value))  # Handle decimal inputs that should be integers
@@ -153,12 +154,30 @@ class StockExcelImporter:
             
             # Parse Excel file
             try:
-                df = pd.read_excel(io.BytesIO(content))
+                excel_file = pd.ExcelFile(io.BytesIO(content))
             except Exception as e:
                 raise HTTPException(
                     status_code=400,
                     detail=f"Failed to parse Excel file: {str(e)}"
                 )
+            
+            # Find the sheet with required columns
+            data_sheet = None
+            for sheet_name in excel_file.sheet_names:
+                temp_df = excel_file.parse(sheet_name, header=0)
+                missing = ExcelImportValidator.validate_required_columns(temp_df, cls.REQUIRED_COLUMNS)
+                if not missing:
+                    data_sheet = sheet_name
+                    break
+            
+            if data_sheet is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"No sheet found with required columns: {', '.join(cls.REQUIRED_COLUMNS)}"
+                )
+            
+            # Read the data sheet
+            df = excel_file.parse(data_sheet, header=0)
             
             # Check if file is empty
             if df.empty:
@@ -170,7 +189,7 @@ class StockExcelImporter:
             # Clean the DataFrame
             df = ExcelImportValidator.clean_dataframe(df)
             
-            # Validate required columns
+            # Validate required columns (redundant but safe)
             missing_columns = ExcelImportValidator.validate_required_columns(df, cls.REQUIRED_COLUMNS)
             if missing_columns:
                 raise HTTPException(
@@ -388,7 +407,7 @@ def get_excel_template_data(entity_type: str) -> List[Dict[str, Any]]:
                 'GST Rate': 18.0,
                 'Reorder Level': 50,
                 'Quantity': 100,
-                'Location': 'Warehouse A'
+                'Location': 'Warehouse A-1'
             }
         ],
         'company': [

@@ -323,4 +323,16 @@ def register_subrouters():
         logger.error(f"Failed to import/include vouchers_router: {str(e)}\n{traceback.format_exc()}")
         raise
 
+    try:
+        from ..products import router as products_router
+        logger.debug("Imported products_router")
+        api_v1_router.include_router(products_router, prefix="/products", tags=["products"])
+        products_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in products_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered products endpoints: {len(products_routes)} routes")
+        for route_path in products_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include products_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
 register_subrouters()

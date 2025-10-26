@@ -234,6 +234,146 @@ class ExcelService:
             headers=headers
         )
 
+class ProductExcelService(ExcelService):
+    REQUIRED_COLUMNS = [
+        "product_name",
+        "hsn_code",
+        "part_number",
+        "unit",
+        "unit_price",
+        "gst_rate",
+        "is_gst_inclusive",
+        "reorder_level",
+        "description",
+        "is_manufactured"
+    ]
+
+    @staticmethod
+    def create_template() -> io.BytesIO:
+        """Create Excel template for product import with styling and sample data"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Product Import Template"
+
+        # Define styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Add headers
+        headers = ProductExcelService.REQUIRED_COLUMNS
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add sample data
+        sample_data = [
+            "Sample Product",     # product_name
+            "12345678",           # hsn_code
+            "SP-001",             # part_number
+            "PCS",                # unit
+            100.00,               # unit_price
+            18.0,                 # gst_rate
+            True,                 # is_gst_inclusive
+            50,                   # reorder_level
+            "Sample description", # description
+            False                 # is_manufactured
+        ]
+
+        for col, value in enumerate(sample_data, 1):
+            cell = ws.cell(row=2, column=col, value=value)
+            cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Add instructions sheet
+        ws_instructions = wb.create_sheet("Instructions", 0)
+        instructions = [
+            "Instructions for Product Import:",
+            "1. Required columns must be present and spelled exactly as in the template.",
+            "2. Product Name is mandatory and must be unique per organization.",
+            "3. If product doesn't exist, it will be created automatically.",
+            "4. Unit Price and GST Rate should be numbers.",
+            "5. Reorder Level should be an integer.",
+            "6. Description is optional.",
+            "7. Do not modify the header row.",
+            "8. Save as .xlsx format."
+        ]
+
+        for row, text in enumerate(instructions, 1):
+            ws_instructions.cell(row=row, column=1, value=text)
+
+        # Save to BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        logger.info("Product Excel template generated successfully")
+        return excel_buffer
+
+    @staticmethod
+    def export_products(products_data: List[Dict]) -> io.BytesIO:
+        """Export products data to Excel with styling"""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Products Export"
+
+        # Define styles (same as template)
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="0072B2", end_color="0072B2", fill_type="solid")
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                             top=Side(style='thin'), bottom=Side(style='thin'))
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Add headers
+        headers = [
+            "Product Name", "HSN Code", "Part Number", "Unit", "Unit Price",
+            "GST Rate", "GST Inclusive", "Reorder Level", "Description", "Manufactured"
+        ]
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Add data
+        for row_idx, item in enumerate(products_data, 2):
+            row_data = [
+                item.get("product_name"),
+                item.get("hsn_code"),
+                item.get("part_number"),
+                item.get("unit"),
+                item.get("unit_price"),
+                item.get("gst_rate"),
+                item.get("is_gst_inclusive"),
+                item.get("reorder_level"),
+                item.get("description"),
+                item.get("is_manufactured")
+            ]
+            for col, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_idx, column=col, value=value)
+                cell.border = thin_border
+
+        # Adjust column widths
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 20
+
+        # Save to BytesIO
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        
+        logger.info(f"Products data exported successfully: {len(products_data)} records")
+        return excel_buffer
+
 class StockExcelService(ExcelService):
     REQUIRED_COLUMNS = [
         "Product Name",
