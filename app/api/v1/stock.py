@@ -634,7 +634,7 @@ async def bulk_import_stock(
         )
     
     try:
-        records = await ExcelService.parse_excel_file(file, StockExcelService.REQUIRED_COLUMNS, "Stock Import Template")
+        records, import_errors = await StockExcelImporter.import_from_file(file)
         
         if not records:
             raise HTTPException(
@@ -707,7 +707,7 @@ async def bulk_import_stock(
                 logger.debug(f"Processing row {i}: product_name={product_name}, unit={unit}, quantity={quantity}")
                 
                 stmt = select(Product).where(
-                    Product.product_name == product_name,
+                    Product.product_name.ilike(product_name),
                     Product.organization_id == org_id
                 )
                 result = await db.execute(stmt)
