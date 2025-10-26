@@ -10,6 +10,7 @@ const StockBulkImport = () => {
   const [response, setResponse] = useState(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
   const { user } = useAuth();
   const { isCompanySetupNeeded } = useCompany();
 
@@ -39,10 +40,14 @@ const StockBulkImport = () => {
       return;
     }
     setIsUploading(true);
+    setShowProgress(true); // Show progress immediately
     setError(null);
     setResponse(null);
+    const controller = new AbortController(); // Manual abort control
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
     try {
-      const res = await bulkImportStock(selectedFile);
+      const res = await bulkImportStock(selectedFile, { signal: controller.signal });
       setResponse(res);
       setError(null);
       // Show success message
@@ -51,8 +56,8 @@ const StockBulkImport = () => {
       }
     } catch (err: any) {
       console.error("Bulk import error:", err);
-      if (err.message.includes("timeout")) {
-        setError("Request timed out. The import may still be processing; please check your stock list or try again.");
+      if (err.name === 'AbortError' || err.message.includes("timeout")) {
+        setError("Request timed out (60s). The import may have completed; refresh and check your stock list, or retry with a smaller file.");
       } else {
         handleApiError(
           err,
@@ -78,8 +83,16 @@ const StockBulkImport = () => {
         }
       }
     } finally {
+      clearTimeout(timeoutId);
       setIsUploading(false);
+      setShowProgress(false);
     }
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    setResponse(null);
+    handleSubmit();
   };
 
   return (
@@ -93,6 +106,11 @@ const StockBulkImport = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
+          {error.includes("timed out") && (
+            <Button size="small" onClick={handleRetry} sx={{ ml: 1 }}>
+              Retry
+            </Button>
+          )}
         </Alert>
       )}
       {response && (
@@ -118,11 +136,11 @@ const StockBulkImport = () => {
             ? "Company Setup Required"
             : "Import"}
       </Button>
-      {isUploading && (
+      {showProgress && (
         <Box sx={{ mt: 2 }}>
-          <LinearProgress />
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            Importing... this may take up to 1 minute for large files.
+          <LinearProgress sx={{ mb: 1 }} />
+          <Typography variant="body2" color="textSecondary">
+            Importing... this may take up to 1 minute for large files (120+ rows).
           </Typography>
         </Box>
       )}
