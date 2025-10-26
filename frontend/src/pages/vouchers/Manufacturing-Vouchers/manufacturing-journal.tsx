@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import {
   Box,
+  Button,
   Typography,
   Grid,
   CircularProgress,
   Container,
   Card,
   CardContent,
+  TextField,
+  Chip,
 } from "@mui/material";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -155,6 +158,16 @@ export default function ManufacturingJournalVoucher() {
     queryFn: () =>
       api
         .get("/manufacturing/manufacturing-journal-vouchers/next-number")
+        .then((res) => res.data),
+    enabled: mode === "create",
+  });
+  
+  const sortedVouchers = voucherList
+    ? [...voucherList].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+    : [];
         .then((res) => res.data),
     enabled: mode === "create",
   });
@@ -332,9 +345,14 @@ export default function ManufacturingJournalVoucher() {
   }
   return (
     <Container maxWidth="xl">
-      <Typography variant="h4" component="h1" gutterBottom>
-        Manufacturing Journal Vouchers
-      </Typography>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Manufacturing Journal Vouchers
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Record manufacturing activities, material consumption, and finished goods production
+        </Typography>
+      </Box>
       <Grid container spacing={3}>
         {/* Voucher List - Left Side */}
         <Grid size={{ xs: 12, md: 5 }}>
@@ -342,13 +360,180 @@ export default function ManufacturingJournalVoucher() {
             <CardContent>
               <Box
                 display="flex"
-                justifyContent="between"
+                justifyContent="space-between"
                 alignItems="center"
                 mb={2}
               >
                 <Typography variant="h6">Recent Vouchers</Typography>
-                {/* VoucherHeaderActions commented out */}
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => {
+                    setMode("create");
+                    reset(defaultValues);
+                  }}
+                  disabled={mode === "create"}
+                >
+                  New Voucher
+                </Button>
               </Box>
+              <Box sx={{ maxHeight: "600px", overflowY: "auto" }}>
+                {sortedVouchers.slice(0, 10).map((voucher: any) => (
+                  <Card
+                    key={voucher.id}
+                    variant="outlined"
+                    sx={{
+                      mb: 1,
+                      cursor: "pointer",
+                      "&:hover": { bgcolor: "action.hover" },
+                    }}
+                    onClick={() => handleView(voucher)}
+                  >
+                    <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Box>
+                          <Typography variant="subtitle2">
+                            {voucher.voucher_number}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(voucher.date).toLocaleDateString()} • Qty: {voucher.finished_quantity}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={voucher.status}
+                          size="small"
+                          color={voucher.status === "approved" ? "success" : "default"}
+                        />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Voucher Form - Right Side */}
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Card>
+            <CardContent>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={2}
+              >
+                <Typography variant="h6">
+                  {mode === "create" && "Create Manufacturing Journal"}
+                  {mode === "edit" && "Edit Manufacturing Journal"}
+                  {mode === "view" && "View Manufacturing Journal"}
+                </Typography>
+                {mode !== "create" && (
+                  <Button variant="outlined" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                )}
+              </Box>
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <Grid container spacing={2} mb={3}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Voucher Number"
+                      {...control.register("voucher_number")}
+                      fullWidth
+                      disabled
+                      value={watch("voucher_number")}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Date"
+                      type="date"
+                      {...control.register("date")}
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                      disabled={mode === "view"}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Date of Manufacture"
+                      type="date"
+                      {...control.register("date_of_manufacture")}
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                      disabled={mode === "view"}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      label="Finished Quantity"
+                      type="number"
+                      {...control.register("finished_quantity")}
+                      fullWidth
+                      disabled={mode === "view"}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <TextField
+                      label="Scrap Quantity"
+                      type="number"
+                      {...control.register("scrap_quantity")}
+                      fullWidth
+                      disabled={mode === "view"}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <TextField
+                      label="Material Cost"
+                      type="number"
+                      {...control.register("material_cost")}
+                      fullWidth
+                      disabled={mode === "view"}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 4 }}>
+                    <TextField
+                      label="Labor Cost"
+                      type="number"
+                      {...control.register("labor_cost")}
+                      fullWidth
+                      disabled={mode === "view"}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <TextField
+                      label="Narration"
+                      {...control.register("narration")}
+                      fullWidth
+                      multiline
+                      rows={2}
+                      disabled={mode === "view"}
+                    />
+                  </Grid>
+                </Grid>
+
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Manufacturing journal records production activities and costs
+                </Typography>
+
+                {mode !== "view" && (
+                  <Box display="flex" gap={2} mt={3}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={createMutation.isPending || updateMutation.isPending}
+                    >
+                      {mode === "edit" ? "Update" : "Create"} Voucher
+                    </Button>
+                    {mode !== "create" && (
+                      <Button variant="outlined" onClick={handleCancel}>
+                        Cancel
+                      </Button>
+                    )}
+                  </Box>
+                )}
+              </form>
             </CardContent>
           </Card>
         </Grid>
