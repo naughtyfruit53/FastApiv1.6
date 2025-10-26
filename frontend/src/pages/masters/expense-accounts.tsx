@@ -29,6 +29,9 @@ import {
   FormControlLabel,
   Checkbox,
   Autocomplete,
+  Menu,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   Add,
@@ -38,10 +41,14 @@ import {
   AccountBalance,
   TrendingUp,
   Folder,
+  MoreVert,
+  FileUpload,
+  FileDownload,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/api";
 import { useSnackbar } from "notistack";
+import BulkImportExportProgressBar from "../../components/BulkImportExportProgressBar";
 
 interface ExpenseAccount {
   id?: number;
@@ -68,6 +75,16 @@ const ExpenseAccountsPage: React.FC = () => {
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<ExpenseAccount | null>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [importExportState, setImportExportState] = useState({
+    isProcessing: false,
+    progress: 0,
+    type: 'import' as 'import' | 'export',
+    status: 'idle' as 'idle' | 'processing' | 'success' | 'error',
+    message: '',
+    error: '',
+    fileName: '',
+  });
   const [formData, setFormData] = useState<Partial<ExpenseAccount>>({
     account_code: "",
     account_name: "",
@@ -210,6 +227,132 @@ const ExpenseAccountsPage: React.FC = () => {
     }
   };
 
+  const handleImportClick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv,.xlsx';
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        setImportExportState({
+          isProcessing: true,
+          progress: 0,
+          type: 'import',
+          status: 'processing',
+          message: '',
+          error: '',
+          fileName: file.name,
+        });
+
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          // Simulate progress
+          const progressInterval = setInterval(() => {
+            setImportExportState((prev) => ({
+              ...prev,
+              progress: Math.min(prev.progress + 10, 90),
+            }));
+          }, 500);
+
+          const response = await api.post('/v1/expense-accounts/import', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+
+          clearInterval(progressInterval);
+          
+          setImportExportState({
+            isProcessing: false,
+            progress: 100,
+            type: 'import',
+            status: 'success',
+            message: `Successfully imported ${response.data.count || 0} expense accounts`,
+            error: '',
+            fileName: file.name,
+          });
+
+          queryClient.invalidateQueries({ queryKey: ['expense-accounts'] });
+          
+          setTimeout(() => {
+            setImportExportState((prev) => ({ ...prev, status: 'idle' }));
+          }, 5000);
+        } catch (error: any) {
+          setImportExportState({
+            isProcessing: false,
+            progress: 0,
+            type: 'import',
+            status: 'error',
+            message: '',
+            error: error.response?.data?.detail || 'Failed to import expense accounts',
+            fileName: file.name,
+          });
+        }
+      }
+    };
+    input.click();
+  };
+
+  const handleExportClick = async () => {
+    setImportExportState({
+      isProcessing: true,
+      progress: 0,
+      type: 'export',
+      status: 'processing',
+      message: '',
+      error: '',
+      fileName: 'expense-accounts.csv',
+    });
+
+    try {
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setImportExportState((prev) => ({
+          ...prev,
+          progress: Math.min(prev.progress + 10, 90),
+        }));
+      }, 500);
+
+      const response = await api.get('/v1/expense-accounts/export', {
+        responseType: 'blob',
+      });
+
+      clearInterval(progressInterval);
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'expense-accounts.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setImportExportState({
+        isProcessing: false,
+        progress: 100,
+        type: 'export',
+        status: 'success',
+        message: 'Successfully exported expense accounts',
+        error: '',
+        fileName: 'expense-accounts.csv',
+      });
+
+      setTimeout(() => {
+        setImportExportState((prev) => ({ ...prev, status: 'idle' }));
+      }, 5000);
+    } catch (error: any) {
+      setImportExportState({
+        isProcessing: false,
+        progress: 0,
+        type: 'export',
+        status: 'error',
+        message: '',
+        error: error.response?.data?.detail || 'Failed to export expense accounts',
+        fileName: 'expense-accounts.csv',
+      });
+    }
+  };
+
   const filteredAccounts = accounts.filter(
     (account: ExpenseAccount) =>
       account.account_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -247,13 +390,42 @@ const ExpenseAccountsPage: React.FC = () => {
               Manage and categorize business expense accounts
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleAddClick}
-          >
-            Add Expense Account
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <IconButton onClick={(e) => setAnchorEl(e.currentTarget)}>
+              <MoreVert />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={() => setAnchorEl(null)}
+            >
+              <MenuItem onClick={() => {
+                handleImportClick();
+                setAnchorEl(null);
+              }}>
+                <ListItemIcon>
+                  <FileUpload fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Import Accounts</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => {
+                handleExportClick();
+                setAnchorEl(null);
+              }}>
+                <ListItemIcon>
+                  <FileDownload fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Export Accounts</ListItemText>
+              </MenuItem>
+            </Menu>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleAddClick}
+            >
+              Add Expense Account
+            </Button>
+          </Box>
         </Box>
 
         <Alert severity="info" sx={{ mb: 3 }}>
@@ -261,6 +433,17 @@ const ExpenseAccountsPage: React.FC = () => {
           financial management and reporting. Group accounts can have sub-accounts
           for hierarchical organization.
         </Alert>
+
+        {/* Bulk Import/Export Progress Bar */}
+        <BulkImportExportProgressBar
+          isProcessing={importExportState.isProcessing}
+          progress={importExportState.progress}
+          type={importExportState.type}
+          status={importExportState.status}
+          message={importExportState.message}
+          error={importExportState.error}
+          fileName={importExportState.fileName}
+        />
 
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
