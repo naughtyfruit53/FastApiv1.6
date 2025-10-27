@@ -80,8 +80,14 @@ async def init_org_roles(background_tasks: BackgroundTasks):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    await create_tables()
-    logger.info("Database tables created successfully")
+    try:
+        await create_tables()
+        logger.info("Database tables created successfully")
+    except ProgrammingError as e:
+        logger.warning(f"Some tables or indexes already exist, skipping creation: {str(e)}")
+    except Exception as e:
+        logger.error(f"Failed to create database tables: {str(e)}")
+        raise
     from app.core.seed_super_admin import check_database_schema_updated
     async with AsyncSessionLocal() as db:
         if await check_database_schema_updated(db):

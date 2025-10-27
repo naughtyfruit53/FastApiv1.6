@@ -2,21 +2,21 @@
 Database configuration and session management
 """
 
+import logging
+import os
+import json
+import asyncio
+import urllib.parse
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
-from app.core.config import settings
-import logging
-import psutil
-import os
-import json
-from fastapi import HTTPException
-from sqlalchemy.exc import SQLAlchemyError, OperationalError
-import psycopg.errors as pg_errors
-import asyncio
-import urllib.parse
 from sqlalchemy.engine.url import make_url
+from fastapi import HTTPException
+from sqlalchemy.exc import SQLAlchemyError, OperationalError, ProgrammingError
+import psycopg.errors as pg_errors
+from app.core.config import settings
+import psutil  # Ensure psutil is imported for log_memory_usage
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,6 @@ def save_schema_cache():
         logger.warning(f"Failed to save schema cache: {str(e)}")
 
 async def check_database_initialized(db: AsyncSession) -> bool:
-    log_memory_usage("Checking database initialization")
     try:
         query = text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'schema_version')")
         result = await db.execute(query)
@@ -293,7 +292,6 @@ async def execute_with_retry(operation_func, max_retries: int = 5, *args, **kwar
 async def check_table_exists(db: AsyncSession, table_name: str) -> bool:
     if table_name in _table_existence_cache:
         return _table_existence_cache[table_name]
-    log_memory_usage(f"Checking table {table_name}")
     try:
         async with asyncio.timeout(_REFLECTION_TIMEOUT_SECONDS):
             query = text(
@@ -319,7 +317,6 @@ async def check_table_exists(db: AsyncSession, table_name: str) -> bool:
 async def check_type_exists(db: AsyncSession, type_name: str) -> bool:
     if type_name in _type_existence_cache:
         return _type_existence_cache[type_name]
-    log_memory_usage(f"Checking type {type_name}")
     try:
         async with asyncio.timeout(_REFLECTION_TIMEOUT_SECONDS):
             query = text(
@@ -345,7 +342,10 @@ async def check_type_exists(db: AsyncSession, type_name: str) -> bool:
         return False
 
 async def create_tables():
-    log_memory_usage("Before table creation")
+    try:
+        log_memory_usage("Before table creation")
+    except NameError:
+        logger.warning("log_memory_usage not available, skipping memory logging")
     load_schema_cache()
     skip_reflection = os.getenv("SKIP_SCHEMA_REFLECTION", "false").lower() == "true"
     if skip_reflection:
@@ -360,14 +360,27 @@ async def create_tables():
             async with AsyncSessionLocal() as db:
                 critical_tables = ['users', 'organizations', 'platform_users', 'purchase_orders']
                 critical_types = ['ratelimittype', 'webhookstatus', 'integrationtype']
-                tables_exist = all(await check_table_exists(db, table) for table in critical_tables)
-                types_exist = all(await check_type_exists(db, type_name) for type_name in critical_types)
+                # Use asyncio.gather to handle async generator
+                tables_exist_checks = await asyncio.gather(
+                    *(check_table_exists(db, table) for table in critical_tables)
+                )
+                tables_exist = all(tables_exist_checks)
+                types_exist_checks = await asyncio.gather(
+                    *(check_type_exists(db, type_name) for type_name in critical_types)
+                )
+                types_exist = all(types_exist_checks)
                 if not (tables_exist and types_exist):
                     logger.info("Creating database tables for critical models...")
-                    log_memory_usage("Before model imports")
+                    try:
+                        log_memory_usage("Before model imports")
+                    except NameError:
+                        logger.warning("log_memory_usage not available, skipping memory logging")
                     from app.models.vouchers.purchase import PurchaseOrder, GoodsReceiptNote, PurchaseVoucher, PurchaseReturn
                     from app.models.user_models import User
-                    log_memory_usage("After model imports")
+                    try:
+                        log_memory_usage("After model imports")
+                    except NameError:
+                        logger.warning("log_memory_usage not available, skipping memory logging")
                     Base.metadata.create_all(
                         bind=sync_engine,
                         tables=[
@@ -396,4 +409,7 @@ async def create_tables():
         logger.error(f"Failed to create database tables: {str(e)}")
         raise
     finally:
-        log_memory_usage("After table creation")
+        try:
+            log_memory_usage("After table creation")
+        except NameError:
+            logger.warning("log_memory_usage not available, skipping memory logging")

@@ -55,8 +55,8 @@ import {
 } from '@mui/icons-material';
 import { SERVICE_PERMISSIONS } from '../types/rbac.types';
 
-// Master Data - Restored as top-level menu with direct navigation
-export const menuItems = {
+// Define menu items without circular references
+const baseMenuItems = {
   masterData: {
     title: 'Master Data',
     icon: <People />,
@@ -122,7 +122,6 @@ export const menuItems = {
       {
         title: 'Production Management',
         items: [
-          { name: 'Order Book', path: '/order-book', icon: <Assignment /> },
           { name: 'Production Order', path: '/vouchers/Manufacturing-Vouchers/production-order', icon: <Build /> },
           { name: 'Work Order', path: '/vouchers/Manufacturing-Vouchers/work-order', icon: <Assessment /> },
           { name: 'Material Requisition', path: '/vouchers/Manufacturing-Vouchers/material-requisition', icon: <Storage /> },
@@ -212,85 +211,6 @@ export const menuItems = {
           { name: 'RFQ (Request for Quotation)', path: '/vouchers/Others/rfq', icon: <Assignment /> },
           { name: 'Dispatch Details', path: '/vouchers/Others/dispatch-details', icon: <LocalShipping /> },
           { name: 'Inter Department Voucher', path: '/vouchers/Others/inter-department-voucher', icon: <SwapHoriz /> }
-        ]
-      }
-    ]
-  },
-  // Finance menu (will be merged with Accounting)
-  finance: {
-    title: 'Finance',
-    icon: <AccountBalance />,
-    sections: [
-      {
-        title: 'Accounts Payable',
-        items: [
-          { name: 'Vendor Bills', path: '/accounts-payable', icon: <Receipt /> },
-          { name: 'Payment Vouchers', path: '/vouchers/Financial-Vouchers/payment-voucher', icon: <Payment /> },
-          { name: 'Vendor Aging', path: '/vendor-aging', icon: <Schedule /> }
-        ]
-      },
-      {
-        title: 'Accounts Receivable',
-        items: [
-          { name: 'Customer Invoices', path: '/accounts-receivable', icon: <ReceiptLong /> },
-          { name: 'Receipt Vouchers', path: '/vouchers/Financial-Vouchers/receipt-voucher', icon: <MonetizationOn /> },
-          { name: 'Customer Aging', path: '/customer-aging', icon: <Schedule /> }
-        ]
-      },
-      {
-        title: 'Cost Management',
-        items: [
-          { name: 'Cost Centers', path: '/cost-centers', icon: <CorporateFare /> },
-          { name: 'Budget Management', path: '/budgets', icon: <TrendingUp /> },
-          { name: 'Cost Analysis', path: '/cost-analysis', icon: <Analytics /> }
-        ]
-      },
-      {
-        title: 'Financial Reports',
-        items: [
-          { name: 'Cash Flow', path: '/reports/cash-flow', icon: <AccountBalance /> },
-          { name: 'Cash Flow Forecast', path: '/cash-flow-forecast', icon: <Assessment /> },
-          { name: 'Financial Reports Hub', path: '/financial-reports', icon: <Assessment /> }
-        ]
-      },
-      {
-        title: 'Analytics & KPIs',
-        items: [
-          { name: 'Finance Dashboard', path: '/finance-dashboard', icon: <Analytics /> },
-          { name: 'Financial KPIs', path: '/financial-kpis', icon: <TrendingUp /> },
-          { name: 'Expense Analysis', path: '/expense-analysis', icon: <BarChart /> }
-        ]
-      }
-    ]
-  },
-  // Accounting menu (will be merged with Finance)
-  accounting: {
-    title: 'Accounting',
-    icon: <AccountBalance />,
-    sections: [
-      {
-        title: 'Chart of Accounts',
-        items: [
-          { name: 'Chart of Accounts', path: '/masters/chart-of-accounts', icon: <AccountBalance /> },
-          { name: 'Account Groups', path: '/account-groups', icon: <Business /> },
-          { name: 'Opening Balances', path: '/opening-balances', icon: <TrendingUp /> }
-        ]
-      },
-      {
-        title: 'Transactions',
-        items: [
-          { name: 'General Ledger', path: '/general-ledger', icon: <ReceiptLong /> },
-          { name: 'Journal Entries', path: '/vouchers/Financial-Vouchers/journal-voucher', icon: <NoteAdd /> },
-          { name: 'Bank Reconciliation', path: '/bank-reconciliation', icon: <AccountBalance /> }
-        ]
-      },
-      {
-        title: 'Financial Reports',
-        items: [
-          { name: 'Trial Balance', path: '/reports/trial-balance', icon: <BarChart /> },
-          { name: 'Profit & Loss', path: '/reports/profit-loss', icon: <TrendingUp /> },
-          { name: 'Balance Sheet', path: '/reports/balance-sheet', icon: <Assessment /> },
-          { name: 'Cash Flow', path: '/reports/cash-flow', icon: <AccountBalance /> }
         ]
       }
     ]
@@ -653,54 +573,74 @@ export const menuItems = {
       }
     ]
   },
-  settings: {
-    title: 'Settings',
-    icon: <Settings />,
-    sections: [
-      {
-        title: 'Organization Settings',
-        items: [
-          { name: 'General Settings', path: '/settings/general-settings', icon: <Settings /> },
-          { name: 'Company Profile', path: '/settings/company', icon: <Business /> },
-          { name: 'Voucher Settings', path: '/settings/voucher-settings', icon: <ReceiptLong /> },
-          { name: 'Data Management', path: '/settings/DataManagement', icon: <Storage />, godSuperAdminOnly: true },
-          { name: 'Factory Reset', path: '/settings/FactoryReset', icon: <Build />, godSuperAdminOnly: true }
-        ]
-      },
-      {
-        title: 'Administration',
-        items: [
-          { name: 'App Users', path: '/admin/app-user-management', icon: <Groups />, superAdminOnly: true },
-          { name: 'Organization Management', path: '/admin/manage-organizations', icon: <CorporateFare />, superAdminOnly: true },
-          { name: 'Organization List', path: '/admin/organizations', icon: <CorporateFare />, superAdminOnly: true },
-          { name: 'Create Organization', path: '/admin/organizations/create', icon: <AddBusiness />, superAdminOnly: true },
-          { name: 'License Management', path: '/admin/license-management', icon: <Security />, superAdminOnly: true },
-          { name: 'Role Management', path: '/admin/rbac', icon: <SupervisorAccount />, servicePermission: SERVICE_PERMISSIONS.CRM_ADMIN },
-          { name: 'Service Settings', path: '/admin/service-settings', icon: <Settings />, servicePermission: SERVICE_PERMISSIONS.CRM_SETTINGS },
-          { name: 'Audit Logs', path: '/admin/audit-logs', icon: <History />, role: 'org_admin' },
-          { name: 'Notification Management', path: '/admin/notifications', icon: <NotificationsActive />, role: 'org_admin' },
-          { name: 'User Management', path: '/settings/user-management', icon: <People />, role: 'org_admin' }
-        ]
-      },
-      {
-        title: 'System & Utilities',
-        items: [
-          { name: 'System Reports', path: '/reports', icon: <Assessment /> },
-          { name: 'Migration Management', path: '/migration/management', icon: <SwapHoriz /> },
-          { name: 'UI Testing', path: '/ui-test', icon: <DeveloperMode /> },
-          { name: 'Notification Demo', path: '/notification-demo', icon: <NotificationsActive /> },
-          { name: 'Transport Management', path: '/transport', icon: <LocalShipping /> },
-          { name: 'Assets Management', path: '/assets', icon: <Storage /> },
-          { name: 'Bank Accounts', path: '/bank-accounts', icon: <AccountBalance /> }
-        ]
-      }
-    ]
-  },
   menu: {
     title: 'Menu',
     icon: <MenuIcon />,
     sections: [] // Placeholder, will be set dynamically
   }
+};
+
+// Function to build financeAccounting with hardcoded sections (no references to undefined properties)
+const buildFinanceAccounting = () => ({
+  title: 'Finance & Accounting',
+  icon: <AccountBalance />,
+  sections: [
+    // Finance sections (e.g., reports, analytics, forecasts)
+    {
+      title: 'Financial Reports',
+      items: [
+        { name: 'Cash Flow', path: '/reports/cash-flow', icon: <AccountBalance /> },
+        { name: 'Cash Flow Forecast', path: '/cash-flow-forecast', icon: <Assessment /> },
+        { name: 'Financial Reports Hub', path: '/financial-reports', icon: <Assessment /> }
+      ]
+    },
+    {
+      title: 'Analytics & KPIs',
+      items: [
+        { name: 'Finance Dashboard', path: '/finance-dashboard', icon: <Analytics /> },
+        { name: 'Financial KPIs', path: '/financial-kpis', icon: <TrendingUp /> },
+        { name: 'Expense Analysis', path: '/expense-analysis', icon: <BarChart /> }
+      ]
+    },
+    {
+      title: 'Cost Management',
+      items: [
+        { name: 'Cost Centers', path: '/cost-centers', icon: <CorporateFare /> },
+        { name: 'Budget Management', path: '/budgets', icon: <TrendingUp /> },
+        { name: 'Cost Analysis', path: '/cost-analysis', icon: <Analytics /> }
+      ]
+    },
+    // Accounting sections (e.g., payables, receivables)
+    {
+      title: 'Accounts Payable',
+      items: [
+        { name: 'Vendor Bills', path: '/accounts-payable', icon: <Receipt /> },
+        { name: 'Payment Vouchers', path: '/vouchers/Financial-Vouchers/payment-voucher', icon: <Payment /> },
+        { name: 'Vendor Aging', path: '/vendor-aging', icon: <Schedule /> }
+      ]
+    },
+    {
+      title: 'Accounts Receivable',
+      items: [
+        { name: 'Customer Invoices', path: '/accounts-receivable', icon: <ReceiptLong /> },
+        { name: 'Receipt Vouchers', path: '/vouchers/Financial-Vouchers/receipt-voucher', icon: <MonetizationOn /> },
+        { name: 'Customer Aging', path: '/customer-aging', icon: <Schedule /> }
+      ]
+    },
+    // Shared or additional sections
+    {
+      title: 'Order Management',
+      items: [
+        { name: 'Order Book', path: '/order-book', icon: <Assignment /> }
+      ]
+    }
+  ]
+});
+
+// Export menuItems with built financeAccounting
+export const menuItemsBuilt = {
+  ...baseMenuItems,
+  financeAccounting: buildFinanceAccounting()
 };
 
 // Create main menu sections dynamically
@@ -723,26 +663,19 @@ export const mainMenuSections = (isSuperAdmin: boolean) => {
       ]
     : [
         // Note: Dashboard top-level removed by user request
-        { title: 'Master Data', subSections: menuItems.masterData.sections },
-        { title: 'Inventory', subSections: menuItems.inventory.sections },
-        { title: 'Vouchers', subSections: menuItems.vouchers.sections },
-        { title: 'Manufacturing', subSections: menuItems.manufacturing.sections },
-        // Merge Finance & Accounting into single section
-        { 
-          title: 'Finance & Accounting', 
-          subSections: [
-            ...menuItems.finance.sections,
-            ...menuItems.accounting.sections
-          ]
-        },
-        { title: 'Reports & Analytics', subSections: menuItems.reportsAnalytics.sections },
-        { title: 'AI & Analytics', subSections: menuItems.aiAnalytics.sections },
-        { title: 'Sales', subSections: menuItems.sales.sections },
-        { title: 'Marketing', subSections: menuItems.marketing.sections },
-        { title: 'Service', subSections: menuItems.service.sections },
-        { title: 'Projects', subSections: menuItems.projects.sections },
-        { title: 'HR Management', subSections: menuItems.hrManagement.sections },
-        { title: 'Tasks & Calendar', subSections: menuItems.tasksCalendar.sections }
+        { title: 'Master Data', subSections: menuItemsBuilt.masterData.sections },
+        { title: 'Inventory', subSections: menuItemsBuilt.inventory.sections },
+        { title: 'Vouchers', subSections: menuItemsBuilt.vouchers.sections },
+        { title: 'Manufacturing', subSections: menuItemsBuilt.manufacturing.sections },
+        { title: 'Finance & Accounting', subSections: menuItemsBuilt.financeAccounting.sections },
+        { title: 'Reports & Analytics', subSections: menuItemsBuilt.reportsAnalytics.sections },
+        { title: 'AI & Analytics', subSections: menuItemsBuilt.aiAnalytics.sections },
+        { title: 'Sales', subSections: menuItemsBuilt.sales.sections },
+        { title: 'Marketing', subSections: menuItemsBuilt.marketing.sections },
+        { title: 'Service', subSections: menuItemsBuilt.service.sections },
+        { title: 'Projects', subSections: menuItemsBuilt.projects.sections },
+        { title: 'HR Management', subSections: menuItemsBuilt.hrManagement.sections },
+        { title: 'Tasks & Calendar', subSections: menuItemsBuilt.tasksCalendar.sections }
         // Email and Settings moved to top-level menu
         // ERP removed and split into Inventory and Vouchers
       ];

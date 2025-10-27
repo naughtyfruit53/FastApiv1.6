@@ -266,8 +266,8 @@ def register_subrouters():
     try:
         from .crm import router as crm_router
         logger.debug("Imported crm_router")
-        api_v1_router.include_router(crm_router, prefix="/crm", tags=["CRM"])
-        crm_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /crm{route.path}" for route in crm_router.routes if isinstance(route, APIRoute)]
+        api_v1_router.include_router(crm_router, tags=["CRM"])  # Removed prefix="/crm" to fix double prefix issue
+        crm_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in crm_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered crm endpoints: {len(crm_routes)} routes")
         for route_path in crm_routes:
             logger.debug(f"  {route_path}")

@@ -47,7 +47,6 @@ import {
   Assignment as AssignmentIcon,
 } from "@mui/icons-material";
 import { formatCurrency } from "../../utils/currencyUtils";
-import AddAccountModal from "@/components/AddAccountModal";
 interface Account {
   id: number;
   name: string;
@@ -82,9 +81,8 @@ const AccountManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [editedAccount, setEditedAccount] = useState<Account | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [addAccountOpen, setAddAccountOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"view" | "edit" | "create">(
     "view",
   );
@@ -129,25 +127,77 @@ const AccountManagement: React.FC = () => {
     return matchesSearch && matchesType && matchesStatus;
   });
   const handleViewAccount = (account: Account) => {
-    setSelectedAccount(account);
+    setEditedAccount(account);
     setDialogMode("view");
     setDialogOpen(true);
   };
   const handleEditAccount = (account: Account) => {
-    setSelectedAccount(account);
+    setEditedAccount(account);
     setDialogMode("edit");
     setDialogOpen(true);
   };
   const handleCreateAccount = () => {
-    setAddAccountOpen(true);
+    setEditedAccount({
+      id: 0,
+      name: "",
+      type: "customer",
+      industry: "",
+      size: "small",
+      revenue: 0,
+      employees: 0,
+      website: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "",
+      status: "active",
+      parentAccount: null,
+      accountManager: "",
+      source: "",
+      created_at: new Date().toISOString(),
+      lastActivity: new Date().toISOString(),
+      description: "",
+      totalContracts: 0,
+      totalRevenue: 0,
+      primaryContact: "",
+    });
+    setDialogMode("create");
+    setDialogOpen(true);
   };
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setSelectedAccount(null);
+    setEditedAccount(null);
     setTabValue(0);
   };
-  const handleAccountAdded = () => {
-    fetchAccounts(); // Refresh the accounts list
+  const handleSave = async () => {
+    if (!editedAccount) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const url = dialogMode === "create" ? "/api/v1/accounts" : `/api/v1/accounts/${editedAccount.id}`;
+      const method = dialogMode === "create" ? "POST" : "PUT";
+      const response = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(editedAccount),
+      });
+      if (response.ok) {
+        fetchAccounts();
+        handleCloseDialog();
+      } else {
+        setError("Failed to save account");
+      }
+    } catch (err) {
+      setError("Error saving account");
+    } finally {
+      setLoading(false);
+    }
   };
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -452,7 +502,7 @@ const AccountManagement: React.FC = () => {
               : "Account Details"}
         </DialogTitle>
         <DialogContent>
-          {selectedAccount && (
+          {editedAccount && (
             <Box sx={{ mt: 2 }}>
               <Tabs
                 value={tabValue}
@@ -469,14 +519,19 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Account Name"
-                      value={selectedAccount.name}
+                      value={editedAccount.name}
+                      onChange={(e) => setEditedAccount({...editedAccount, name: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <FormControl fullWidth disabled={dialogMode === "view"}>
                       <InputLabel>Account Type</InputLabel>
-                      <Select value={selectedAccount.type} label="Account Type">
+                      <Select 
+                        value={editedAccount.type} 
+                        label="Account Type"
+                        onChange={(e) => setEditedAccount({...editedAccount, type: e.target.value as "customer" | "prospect" | "partner" | "vendor"})}
+                      >
                         <MenuItem value="customer">Customer</MenuItem>
                         <MenuItem value="prospect">Prospect</MenuItem>
                         <MenuItem value="partner">Partner</MenuItem>
@@ -488,14 +543,19 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Industry"
-                      value={selectedAccount.industry}
+                      value={editedAccount.industry}
+                      onChange={(e) => setEditedAccount({...editedAccount, industry: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <FormControl fullWidth disabled={dialogMode === "view"}>
                       <InputLabel>Company Size</InputLabel>
-                      <Select value={selectedAccount.size} label="Company Size">
+                      <Select 
+                        value={editedAccount.size} 
+                        label="Company Size"
+                        onChange={(e) => setEditedAccount({...editedAccount, size: e.target.value as "small" | "medium" | "large" | "enterprise"})}
+                      >
                         <MenuItem value="small">Small (1-50)</MenuItem>
                         <MenuItem value="medium">Medium (51-500)</MenuItem>
                         <MenuItem value="large">Large (501-5000)</MenuItem>
@@ -508,7 +568,11 @@ const AccountManagement: React.FC = () => {
                   <Grid item xs={12} md={6}>
                     <FormControl fullWidth disabled={dialogMode === "view"}>
                       <InputLabel>Status</InputLabel>
-                      <Select value={selectedAccount.status} label="Status">
+                      <Select 
+                        value={editedAccount.status} 
+                        label="Status"
+                        onChange={(e) => setEditedAccount({...editedAccount, status: e.target.value as "active" | "inactive" | "prospect"})}
+                      >
                         <MenuItem value="active">Active</MenuItem>
                         <MenuItem value="prospect">Prospect</MenuItem>
                         <MenuItem value="inactive">Inactive</MenuItem>
@@ -519,7 +583,17 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Account Manager"
-                      value={selectedAccount.accountManager}
+                      value={editedAccount.accountManager}
+                      onChange={(e) => setEditedAccount({...editedAccount, accountManager: e.target.value})}
+                      disabled={dialogMode === "view"}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Parent Account"
+                      value={editedAccount.parentAccount || ""}
+                      onChange={(e) => setEditedAccount({...editedAccount, parentAccount: e.target.value || null})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -531,7 +605,8 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Phone"
-                      value={selectedAccount.phone}
+                      value={editedAccount.phone}
+                      onChange={(e) => setEditedAccount({...editedAccount, phone: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -540,7 +615,8 @@ const AccountManagement: React.FC = () => {
                       fullWidth
                       label="Email"
                       type="email"
-                      value={selectedAccount.email}
+                      value={editedAccount.email}
+                      onChange={(e) => setEditedAccount({...editedAccount, email: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -548,7 +624,8 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Website"
-                      value={selectedAccount.website}
+                      value={editedAccount.website}
+                      onChange={(e) => setEditedAccount({...editedAccount, website: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -556,7 +633,8 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Primary Contact"
-                      value={selectedAccount.primaryContact}
+                      value={editedAccount.primaryContact}
+                      onChange={(e) => setEditedAccount({...editedAccount, primaryContact: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -564,7 +642,8 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Address"
-                      value={selectedAccount.address}
+                      value={editedAccount.address}
+                      onChange={(e) => setEditedAccount({...editedAccount, address: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -572,7 +651,8 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="City"
-                      value={selectedAccount.city}
+                      value={editedAccount.city}
+                      onChange={(e) => setEditedAccount({...editedAccount, city: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -580,7 +660,8 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="State"
-                      value={selectedAccount.state}
+                      value={editedAccount.state}
+                      onChange={(e) => setEditedAccount({...editedAccount, state: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -588,7 +669,17 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Zip Code"
-                      value={selectedAccount.zipCode}
+                      value={editedAccount.zipCode}
+                      onChange={(e) => setEditedAccount({...editedAccount, zipCode: e.target.value})}
+                      disabled={dialogMode === "view"}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <TextField
+                      fullWidth
+                      label="Country"
+                      value={editedAccount.country}
+                      onChange={(e) => setEditedAccount({...editedAccount, country: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -601,7 +692,8 @@ const AccountManagement: React.FC = () => {
                       fullWidth
                       label="Annual Revenue"
                       type="number"
-                      value={selectedAccount.revenue}
+                      value={editedAccount.revenue}
+                      onChange={(e) => setEditedAccount({...editedAccount, revenue: parseFloat(e.target.value) || 0})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -610,7 +702,8 @@ const AccountManagement: React.FC = () => {
                       fullWidth
                       label="Number of Employees"
                       type="number"
-                      value={selectedAccount.employees}
+                      value={editedAccount.employees}
+                      onChange={(e) => setEditedAccount({...editedAccount, employees: parseFloat(e.target.value) || 0})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -619,7 +712,8 @@ const AccountManagement: React.FC = () => {
                       fullWidth
                       label="Total Contracts"
                       type="number"
-                      value={selectedAccount.totalContracts}
+                      value={editedAccount.totalContracts}
+                      onChange={(e) => setEditedAccount({...editedAccount, totalContracts: parseFloat(e.target.value) || 0})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -628,7 +722,8 @@ const AccountManagement: React.FC = () => {
                       fullWidth
                       label="Total Revenue with Us"
                       type="number"
-                      value={selectedAccount.totalRevenue}
+                      value={editedAccount.totalRevenue}
+                      onChange={(e) => setEditedAccount({...editedAccount, totalRevenue: parseFloat(e.target.value) || 0})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -638,7 +733,8 @@ const AccountManagement: React.FC = () => {
                       label="Description"
                       multiline
                       rows={4}
-                      value={selectedAccount.description}
+                      value={editedAccount.description}
+                      onChange={(e) => setEditedAccount({...editedAccount, description: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -650,7 +746,8 @@ const AccountManagement: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Source"
-                      value={selectedAccount.source}
+                      value={editedAccount.source}
+                      onChange={(e) => setEditedAccount({...editedAccount, source: e.target.value})}
                       disabled={dialogMode === "view"}
                     />
                   </Grid>
@@ -659,7 +756,8 @@ const AccountManagement: React.FC = () => {
                       fullWidth
                       label="Last Activity Date"
                       type="date"
-                      value={selectedAccount.lastActivity}
+                      value={editedAccount.lastActivity.split('T')[0]}
+                      onChange={(e) => setEditedAccount({...editedAccount, lastActivity: new Date(e.target.value).toISOString()})}
                       disabled={dialogMode === "view"}
                       InputLabelProps={{ shrink: true }}
                     />
@@ -710,19 +808,12 @@ const AccountManagement: React.FC = () => {
             {dialogMode === "view" ? "Close" : "Cancel"}
           </Button>
           {dialogMode !== "view" && (
-            <Button variant="contained" onClick={handleCloseDialog}>
+            <Button variant="contained" onClick={handleSave} disabled={loading}>
               {dialogMode === "create" ? "Create" : "Save"}
             </Button>
           )}
         </DialogActions>
       </Dialog>
-      
-      {/* Add Account Modal */}
-      <AddAccountModal
-        open={addAccountOpen}
-        onClose={() => setAddAccountOpen(false)}
-        onSuccess={handleAccountAdded}
-      />
     </Container>
   );
 };

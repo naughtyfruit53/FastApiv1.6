@@ -17,7 +17,9 @@ from app.schemas.vouchers import SalesOrderCreate, SalesOrderInDB, SalesOrderUpd
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 from app.services.pdf_generation_service import pdf_generator
+from app.models.order_book_models import Order  # Import Order model
 import logging
+import re  # Added for filename sanitization
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["sales-orders"])
@@ -230,6 +232,25 @@ async def create_sales_order(
         result = await db.execute(stmt)
         db_invoice = result.unique().scalar_one_or_none()
         
+        # Automatically create Order Book entry
+        new_order = Order(
+            organization_id=current_user.organization_id,
+            order_number=db_invoice.voucher_number,
+            sales_order_id=db_invoice.id,
+            customer_id=db_invoice.customer_id,
+            order_date=db_invoice.date,
+            due_date=db_invoice.due_date or datetime.now().date() + timedelta(days=30),  # Default due date if not set
+            status="pending",
+            workflow_stage="order_received",
+            total_amount=db_invoice.total_amount,
+            created_by_id=current_user.id
+        )
+        db.add(new_order)
+        await db.commit()
+        await db.refresh(new_order)
+        
+        logger.info(f"Sales order {db_invoice.voucher_number} created and added to Order Book as {new_order.order_number}")
+        
         if send_email and db_invoice.customer and db_invoice.customer.email:
             background_tasks.add_task(
                 send_voucher_email,
@@ -239,7 +260,6 @@ async def create_sales_order(
                 recipient_name=db_invoice.customer.name
             )
         
-        logger.info(f"Sales order {db_invoice.voucher_number} created by {current_user.email}")
         return db_invoice
         
     except Exception as e:
