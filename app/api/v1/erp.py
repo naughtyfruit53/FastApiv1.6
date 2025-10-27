@@ -497,6 +497,220 @@ async def get_trial_balance(
     )
 
 
+@router.get("/profit-loss", response_model=ProfitAndLossResponse)
+async def get_profit_loss(
+    from_date: date = Query(..., description="Start date for P&L report"),
+    to_date: date = Query(..., description="End date for P&L report"),
+    db: AsyncSession = Depends(get_db),
+    current_user: UserInDB = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id),
+    _ : None = Depends(validate_company_setup)
+):
+    """Generate Profit & Loss statement"""
+    # Get income accounts
+    income_stmt = select(ChartOfAccounts).where(
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.account_type == AccountTypeEnum.income,
+        ChartOfAccounts.is_active == True
+    )
+    income_result = await db.execute(income_stmt)
+    income_accounts = income_result.scalars().all()
+    
+    # Get expense accounts
+    expense_stmt = select(ChartOfAccounts).where(
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.account_type == AccountTypeEnum.expense,
+        ChartOfAccounts.is_active == True
+    )
+    expense_result = await db.execute(expense_stmt)
+    expense_accounts = expense_result.scalars().all()
+    
+    income = []
+    total_income = Decimal(0)
+    
+    for account in income_accounts:
+        amount = abs(account.current_balance)
+        if amount > 0:
+            income.append({
+                "account_code": account.account_code,
+                "account_name": account.account_name,
+                "amount": amount
+            })
+            total_income += amount
+    
+    expenses = []
+    total_expenses = Decimal(0)
+    
+    for account in expense_accounts:
+        amount = abs(account.current_balance)
+        if amount > 0:
+            expenses.append({
+                "account_code": account.account_code,
+                "account_name": account.account_name,
+                "amount": amount
+            })
+            total_expenses += amount
+    
+    net_profit_loss = total_income - total_expenses
+    
+    return ProfitAndLossResponse(
+        income=income,
+        expenses=expenses,
+        total_income=total_income,
+        total_expenses=total_expenses,
+        net_profit_loss=net_profit_loss,
+        from_date=from_date,
+        to_date=to_date
+    )
+
+
+@router.get("/balance-sheet", response_model=BalanceSheetResponse)
+async def get_balance_sheet(
+    as_of_date: date = Query(..., description="As of date for balance sheet"),
+    db: AsyncSession = Depends(get_db),
+    current_user: UserInDB = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id),
+    _ : None = Depends(validate_company_setup)
+):
+    """Generate Balance Sheet"""
+    # Get asset accounts
+    asset_stmt = select(ChartOfAccounts).where(
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.account_type == AccountTypeEnum.asset,
+        ChartOfAccounts.is_active == True
+    )
+    asset_result = await db.execute(asset_stmt)
+    asset_accounts = asset_result.scalars().all()
+    
+    # Get liability accounts
+    liability_stmt = select(ChartOfAccounts).where(
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.account_type == AccountTypeEnum.liability,
+        ChartOfAccounts.is_active == True
+    )
+    liability_result = await db.execute(liability_stmt)
+    liability_accounts = liability_result.scalars().all()
+    
+    # Get equity accounts
+    equity_stmt = select(ChartOfAccounts).where(
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.account_type == AccountTypeEnum.equity,
+        ChartOfAccounts.is_active == True
+    )
+    equity_result = await db.execute(equity_stmt)
+    equity_accounts = equity_result.scalars().all()
+    
+    assets = []
+    total_assets = Decimal(0)
+    
+    for account in asset_accounts:
+        amount = abs(account.current_balance)
+        if amount > 0:
+            assets.append({
+                "account_code": account.account_code,
+                "account_name": account.account_name,
+                "amount": amount
+            })
+            total_assets += amount
+    
+    liabilities = []
+    total_liabilities = Decimal(0)
+    
+    for account in liability_accounts:
+        amount = abs(account.current_balance)
+        if amount > 0:
+            liabilities.append({
+                "account_code": account.account_code,
+                "account_name": account.account_name,
+                "amount": amount
+            })
+            total_liabilities += amount
+    
+    equity = []
+    total_equity = Decimal(0)
+    
+    for account in equity_accounts:
+        amount = abs(account.current_balance)
+        if amount > 0:
+            equity.append({
+                "account_code": account.account_code,
+                "account_name": account.account_name,
+                "amount": amount
+            })
+            total_equity += amount
+    
+    return BalanceSheetResponse(
+        assets=assets,
+        liabilities=liabilities,
+        equity=equity,
+        total_assets=total_assets,
+        total_liabilities=total_liabilities,
+        total_equity=total_equity,
+        as_of_date=as_of_date
+    )
+
+
+@router.get("/cash-flow", response_model=CashFlowResponse)
+async def get_cash_flow(
+    from_date: date = Query(..., description="Start date for cash flow statement"),
+    to_date: date = Query(..., description="End date for cash flow statement"),
+    db: AsyncSession = Depends(get_db),
+    current_user: UserInDB = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id),
+    _ : None = Depends(validate_company_setup)
+):
+    """Generate Cash Flow Statement"""
+    # Get cash/bank accounts to calculate opening and closing balance
+    cash_stmt = select(ChartOfAccounts).where(
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.account_type.in_([AccountTypeEnum.asset]),
+        ChartOfAccounts.account_name.ilike('%cash%'),
+        ChartOfAccounts.is_active == True
+    )
+    cash_result = await db.execute(cash_stmt)
+    cash_accounts = cash_result.scalars().all()
+    
+    # Calculate opening and closing cash
+    opening_cash = Decimal(0)
+    closing_cash = Decimal(0)
+    
+    for account in cash_accounts:
+        closing_cash += abs(account.current_balance)
+    
+    # Simplified cash flow categories
+    # In a real system, you'd categorize GL entries into these activities
+    operating_activities = [
+        {"account_code": "OPS-001", "account_name": "Cash from Operations", "amount": Decimal(0)}
+    ]
+    
+    investing_activities = [
+        {"account_code": "INV-001", "account_name": "Investment Activities", "amount": Decimal(0)}
+    ]
+    
+    financing_activities = [
+        {"account_code": "FIN-001", "account_name": "Financing Activities", "amount": Decimal(0)}
+    ]
+    
+    net_operating_cash = Decimal(0)
+    net_investing_cash = Decimal(0)
+    net_financing_cash = Decimal(0)
+    net_cash_flow = closing_cash - opening_cash
+    
+    return CashFlowResponse(
+        operating_activities=operating_activities,
+        investing_activities=investing_activities,
+        financing_activities=financing_activities,
+        net_operating_cash=net_operating_cash,
+        net_investing_cash=net_investing_cash,
+        net_financing_cash=net_financing_cash,
+        net_cash_flow=net_cash_flow,
+        opening_cash=opening_cash,
+        closing_cash=closing_cash,
+        from_date=from_date,
+        to_date=to_date
+    )
+
+
 # Accounts Payable/Receivable endpoints would follow similar patterns...
 
 

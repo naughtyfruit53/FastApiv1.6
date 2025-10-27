@@ -430,3 +430,309 @@ async def get_kpi_trends(
         "period": {"start": start_date, "end": end_date},
         "kpi_trends": kpi_trends
     }
+
+
+@router.get("/analytics/vendor-aging")
+async def get_vendor_aging(
+    aging_periods: List[int] = Query([30, 60, 90], description="Aging period buckets"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get vendor aging analysis"""
+    today = date.today()
+    
+    # Get all outstanding payables
+    payables = db.query(AccountsPayable).filter(
+        AccountsPayable.organization_id == organization_id,
+        AccountsPayable.payment_status.in_(['pending', 'partial'])
+    ).all()
+    
+    # Initialize aging buckets
+    aging_buckets = {
+        "current": {"amount": 0, "count": 0, "vendors": set()},
+    }
+    
+    for period in aging_periods:
+        aging_buckets[f"{period}_days"] = {"amount": 0, "count": 0, "vendors": set()}
+    
+    aging_buckets["over_90"] = {"amount": 0, "count": 0, "vendors": set()}
+    
+    # Categorize payables into aging buckets
+    for payable in payables:
+        if payable.due_date and payable.outstanding_amount:
+            days_overdue = (today - payable.due_date).days
+            amount = float(payable.outstanding_amount)
+            
+            if days_overdue <= 0:
+                aging_buckets["current"]["amount"] += amount
+                aging_buckets["current"]["count"] += 1
+                if payable.vendor_id:
+                    aging_buckets["current"]["vendors"].add(payable.vendor_id)
+            elif days_overdue <= aging_periods[0]:
+                bucket_key = f"{aging_periods[0]}_days"
+                aging_buckets[bucket_key]["amount"] += amount
+                aging_buckets[bucket_key]["count"] += 1
+                if payable.vendor_id:
+                    aging_buckets[bucket_key]["vendors"].add(payable.vendor_id)
+            elif len(aging_periods) > 1 and days_overdue <= aging_periods[1]:
+                bucket_key = f"{aging_periods[1]}_days"
+                aging_buckets[bucket_key]["amount"] += amount
+                aging_buckets[bucket_key]["count"] += 1
+                if payable.vendor_id:
+                    aging_buckets[bucket_key]["vendors"].add(payable.vendor_id)
+            elif len(aging_periods) > 2 and days_overdue <= aging_periods[2]:
+                bucket_key = f"{aging_periods[2]}_days"
+                aging_buckets[bucket_key]["amount"] += amount
+                aging_buckets[bucket_key]["count"] += 1
+                if payable.vendor_id:
+                    aging_buckets[bucket_key]["vendors"].add(payable.vendor_id)
+            else:
+                aging_buckets["over_90"]["amount"] += amount
+                aging_buckets["over_90"]["count"] += 1
+                if payable.vendor_id:
+                    aging_buckets["over_90"]["vendors"].add(payable.vendor_id)
+    
+    # Convert sets to counts
+    for bucket in aging_buckets.values():
+        bucket["vendors"] = len(bucket["vendors"])
+    
+    total_outstanding = sum(bucket["amount"] for bucket in aging_buckets.values())
+    
+    return {
+        "as_of_date": today,
+        "aging_buckets": aging_buckets,
+        "total_outstanding": total_outstanding,
+        "summary": {
+            "total_vendors": len(payables),
+            "total_invoices": len(payables),
+            "total_outstanding": total_outstanding
+        }
+    }
+
+
+@router.get("/analytics/customer-aging")
+async def get_customer_aging(
+    aging_periods: List[int] = Query([30, 60, 90], description="Aging period buckets"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get customer aging analysis"""
+    today = date.today()
+    
+    # Get all outstanding receivables
+    receivables = db.query(AccountsReceivable).filter(
+        AccountsReceivable.organization_id == organization_id,
+        AccountsReceivable.payment_status.in_(['pending', 'partial'])
+    ).all()
+    
+    # Initialize aging buckets
+    aging_buckets = {
+        "current": {"amount": 0, "count": 0, "customers": set()},
+    }
+    
+    for period in aging_periods:
+        aging_buckets[f"{period}_days"] = {"amount": 0, "count": 0, "customers": set()}
+    
+    aging_buckets["over_90"] = {"amount": 0, "count": 0, "customers": set()}
+    
+    # Categorize receivables into aging buckets
+    for receivable in receivables:
+        if receivable.due_date and receivable.outstanding_amount:
+            days_overdue = (today - receivable.due_date).days
+            amount = float(receivable.outstanding_amount)
+            
+            if days_overdue <= 0:
+                aging_buckets["current"]["amount"] += amount
+                aging_buckets["current"]["count"] += 1
+                if receivable.customer_id:
+                    aging_buckets["current"]["customers"].add(receivable.customer_id)
+            elif days_overdue <= aging_periods[0]:
+                bucket_key = f"{aging_periods[0]}_days"
+                aging_buckets[bucket_key]["amount"] += amount
+                aging_buckets[bucket_key]["count"] += 1
+                if receivable.customer_id:
+                    aging_buckets[bucket_key]["customers"].add(receivable.customer_id)
+            elif len(aging_periods) > 1 and days_overdue <= aging_periods[1]:
+                bucket_key = f"{aging_periods[1]}_days"
+                aging_buckets[bucket_key]["amount"] += amount
+                aging_buckets[bucket_key]["count"] += 1
+                if receivable.customer_id:
+                    aging_buckets[bucket_key]["customers"].add(receivable.customer_id)
+            elif len(aging_periods) > 2 and days_overdue <= aging_periods[2]:
+                bucket_key = f"{aging_periods[2]}_days"
+                aging_buckets[bucket_key]["amount"] += amount
+                aging_buckets[bucket_key]["count"] += 1
+                if receivable.customer_id:
+                    aging_buckets[bucket_key]["customers"].add(receivable.customer_id)
+            else:
+                aging_buckets["over_90"]["amount"] += amount
+                aging_buckets["over_90"]["count"] += 1
+                if receivable.customer_id:
+                    aging_buckets["over_90"]["customers"].add(receivable.customer_id)
+    
+    # Convert sets to counts
+    for bucket in aging_buckets.values():
+        bucket["customers"] = len(bucket["customers"])
+    
+    total_outstanding = sum(bucket["amount"] for bucket in aging_buckets.values())
+    
+    return {
+        "as_of_date": today,
+        "aging_buckets": aging_buckets,
+        "total_outstanding": total_outstanding,
+        "summary": {
+            "total_customers": len(receivables),
+            "total_invoices": len(receivables),
+            "total_outstanding": total_outstanding
+        }
+    }
+
+
+@router.get("/analytics/budgets")
+async def get_budgets(
+    budget_year: Optional[int] = Query(None, description="Budget year"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get budget management data"""
+    if not budget_year:
+        budget_year = date.today().year
+    
+    # Get cost centers with budget information
+    cost_centers = db.query(CostCenter).filter(
+        CostCenter.organization_id == organization_id,
+        CostCenter.is_active == True
+    ).all()
+    
+    budget_data = []
+    total_budget = Decimal(0)
+    total_actual = Decimal(0)
+    
+    for cc in cost_centers:
+        budget_amt = cc.budget_amount or Decimal(0)
+        actual_amt = cc.actual_amount or Decimal(0)
+        variance = actual_amt - budget_amt
+        variance_percent = (variance / budget_amt * 100) if budget_amt > 0 else 0
+        
+        budget_data.append({
+            "cost_center_id": cc.id,
+            "cost_center_name": cc.cost_center_name,
+            "cost_center_code": cc.cost_center_code,
+            "budget_amount": float(budget_amt),
+            "actual_amount": float(actual_amt),
+            "variance": float(variance),
+            "variance_percent": float(variance_percent),
+            "status": "over_budget" if variance > 0 else "under_budget" if variance < 0 else "on_track"
+        })
+        
+        total_budget += budget_amt
+        total_actual += actual_amt
+    
+    return {
+        "budget_year": budget_year,
+        "cost_centers": budget_data,
+        "summary": {
+            "total_budget": float(total_budget),
+            "total_actual": float(total_actual),
+            "total_variance": float(total_actual - total_budget),
+            "variance_percent": float((total_actual - total_budget) / total_budget * 100) if total_budget > 0 else 0
+        }
+    }
+
+
+@router.get("/analytics/expense-analysis")
+async def get_expense_analysis(
+    period_months: int = Query(6, description="Number of months for analysis"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get expense analysis by category"""
+    end_date = date.today()
+    start_date = end_date - timedelta(days=period_months * 30)
+    
+    # Get expense accounts
+    expense_accounts = db.query(ChartOfAccounts).filter(
+        ChartOfAccounts.organization_id == organization_id,
+        ChartOfAccounts.account_type == 'expense',
+        ChartOfAccounts.is_active == True
+    ).all()
+    
+    expense_analysis = []
+    total_expenses = Decimal(0)
+    
+    for account in expense_accounts:
+        amount = abs(account.current_balance)
+        if amount > 0:
+            expense_analysis.append({
+                "account_code": account.account_code,
+                "account_name": account.account_name,
+                "amount": float(amount),
+                "parent_account": account.parent_account_code or "Root"
+            })
+            total_expenses += amount
+    
+    # Calculate percentages
+    for expense in expense_analysis:
+        expense["percentage"] = (expense["amount"] / float(total_expenses) * 100) if total_expenses > 0 else 0
+    
+    # Sort by amount descending
+    expense_analysis.sort(key=lambda x: x["amount"], reverse=True)
+    
+    return {
+        "period": {"start_date": start_date, "end_date": end_date},
+        "expenses": expense_analysis,
+        "summary": {
+            "total_expenses": float(total_expenses),
+            "expense_count": len(expense_analysis),
+            "top_expense": expense_analysis[0] if expense_analysis else None
+        }
+    }
+
+
+@router.get("/analytics/financial-kpis")
+async def get_financial_kpis(
+    period_months: int = Query(3, description="Number of months for KPI analysis"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    organization_id: int = Depends(require_current_organization_id)
+):
+    """Get financial KPIs dashboard"""
+    end_date = date.today()
+    start_date = end_date - timedelta(days=period_months * 30)
+    
+    # Get recent KPIs
+    kpis = db.query(FinancialKPI).filter(
+        FinancialKPI.organization_id == organization_id,
+        FinancialKPI.period_end.between(start_date, end_date)
+    ).order_by(desc(FinancialKPI.period_end)).all()
+    
+    kpi_data = []
+    for kpi in kpis:
+        kpi_data.append({
+            "kpi_code": kpi.kpi_code,
+            "kpi_name": kpi.kpi_name,
+            "kpi_category": kpi.kpi_category,
+            "value": float(kpi.kpi_value),
+            "target": float(kpi.target_value) if kpi.target_value else None,
+            "variance": float(kpi.variance_percentage) if kpi.variance_percentage else None,
+            "period_end": kpi.period_end,
+            "status": "on_track" if kpi.variance_percentage and abs(kpi.variance_percentage) < 5 else "needs_attention"
+        })
+    
+    # Calculate financial ratios
+    ratios = FinanceAnalyticsService.calculate_financial_ratios(db, organization_id)
+    
+    return {
+        "period": {"start_date": start_date, "end_date": end_date},
+        "kpis": kpi_data,
+        "financial_ratios": ratios,
+        "summary": {
+            "total_kpis": len(kpi_data),
+            "on_track_count": sum(1 for k in kpi_data if k["status"] == "on_track"),
+            "needs_attention_count": sum(1 for k in kpi_data if k["status"] == "needs_attention")
+        }
+    }
