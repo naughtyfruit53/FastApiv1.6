@@ -533,5 +533,3 @@ export default function ManufacturingJournalVoucher() {
     </Container>
   );
 };
-
-export default ManufacturingJournalVoucher;

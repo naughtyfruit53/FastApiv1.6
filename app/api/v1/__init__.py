@@ -347,4 +347,28 @@ def register_subrouters():
         logger.error(f"Failed to import/include products_router: {str(e)}\n{traceback.format_exc()}")
         raise
 
+    try:
+        from .finance_analytics import router as finance_analytics_router
+        logger.debug("Imported finance_analytics_router")
+        api_v1_router.include_router(finance_analytics_router, prefix="/finance", tags=["Finance Analytics"])
+        finance_analytics_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /finance{route.path}" for route in finance_analytics_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered finance_analytics endpoints: {len(finance_analytics_routes)} routes")
+        for route_path in finance_analytics_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include finance_analytics_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
+        from .order_book import router as order_book_router
+        logger.debug("Imported order_book_router")
+        api_v1_router.include_router(order_book_router, tags=["Order Book"])
+        order_book_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in order_book_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered order_book endpoints: {len(order_book_routes)} routes")
+        for route_path in order_book_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include order_book_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
 register_subrouters()
