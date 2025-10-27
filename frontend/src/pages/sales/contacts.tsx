@@ -42,6 +42,7 @@ import {
   Email as EmailIcon,
   Phone as PhoneIcon,
 } from "@mui/icons-material";
+import AddContactModal from "@/components/AddContactModal";
 interface Contact {
   id: number;
   firstName: string;
@@ -72,26 +73,38 @@ const ContactManagement: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [addContactOpen, setAddContactOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"view" | "edit" | "create">(
     "view",
   );
   const [tabValue, setTabValue] = useState(0);
   
-  // Fetch contacts from backend - currently no API endpoint available
-  useEffect(() => {
-    const fetchContacts = async () => {
-      try {
-        setLoading(true);
-        // TODO: Implement contact API when backend endpoint is available
-        // For now, show empty state
-        setContacts([]);
-      } catch (err) {
+  // Fetch contacts from backend
+  const fetchContacts = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("/api/v1/contacts", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setContacts(data);
+      } else {
         setError("Failed to load contacts");
-        console.error("Error fetching contacts:", err);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      setError("Failed to load contacts");
+      console.error("Error fetching contacts:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchContacts();
   }, []);
   const filteredContacts = contacts.filter((contact) => {
@@ -116,14 +129,15 @@ const ContactManagement: React.FC = () => {
     setDialogOpen(true);
   };
   const handleCreateContact = () => {
-    setSelectedContact(null);
-    setDialogMode("create");
-    setDialogOpen(true);
+    setAddContactOpen(true);
   };
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedContact(null);
     setTabValue(0);
+  };
+  const handleContactAdded = () => {
+    fetchContacts(); // Refresh the contacts list
   };
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -608,6 +622,13 @@ const ContactManagement: React.FC = () => {
           )}
         </DialogActions>
       </Dialog>
+      
+      {/* Add Contact Modal */}
+      <AddContactModal
+        open={addContactOpen}
+        onClose={() => setAddContactOpen(false)}
+        onSuccess={handleContactAdded}
+      />
     </Container>
   );
 };
