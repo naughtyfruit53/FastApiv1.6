@@ -47,6 +47,7 @@ import {
   Assignment as AssignmentIcon,
 } from "@mui/icons-material";
 import { formatCurrency } from "../../utils/currencyUtils";
+import AddAccountModal from "@/components/AddAccountModal";
 interface Account {
   id: number;
   name: string;
@@ -83,26 +84,38 @@ const AccountManagement: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [addAccountOpen, setAddAccountOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"view" | "edit" | "create">(
     "view",
   );
   const [tabValue, setTabValue] = useState(0);
   
-  // Fetch accounts from backend - currently no API endpoint available
-  useEffect(() => {
-    const fetchAccounts = async () => {
-      try {
-        setLoading(true);
-        // TODO: Implement accounts API when backend endpoint is available
-        // For now, show empty state
-        setAccounts([]);
-      } catch (err) {
+  // Fetch accounts from backend
+  const fetchAccounts = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("/api/v1/accounts", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAccounts(data);
+      } else {
         setError("Failed to load accounts");
-        console.error("Error fetching accounts:", err);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      setError("Failed to load accounts");
+      console.error("Error fetching accounts:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchAccounts();
   }, []);
   const filteredAccounts = accounts.filter((account) => {
@@ -126,14 +139,15 @@ const AccountManagement: React.FC = () => {
     setDialogOpen(true);
   };
   const handleCreateAccount = () => {
-    setSelectedAccount(null);
-    setDialogMode("create");
-    setDialogOpen(true);
+    setAddAccountOpen(true);
   };
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSelectedAccount(null);
     setTabValue(0);
+  };
+  const handleAccountAdded = () => {
+    fetchAccounts(); // Refresh the accounts list
   };
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -702,6 +716,13 @@ const AccountManagement: React.FC = () => {
           )}
         </DialogActions>
       </Dialog>
+      
+      {/* Add Account Modal */}
+      <AddAccountModal
+        open={addAccountOpen}
+        onClose={() => setAddAccountOpen(false)}
+        onSuccess={handleAccountAdded}
+      />
     </Container>
   );
 };
