@@ -51,6 +51,7 @@ export default function CRMDashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [analytics, setAnalytics] = useState<CRMAnalytics | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [openLeadDialog, setOpenLeadDialog] = useState(false);
@@ -62,32 +63,29 @@ export default function CRMDashboard() {
     setLoading(true);
     setError(null);
     try {
+      // Set default date range for analytics (last 30 days)
+      const today = new Date();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+      
+      const periodEnd = today.toISOString().split('T')[0];
+      const periodStart = thirtyDaysAgo.toISOString().split('T')[0];
+      
       const [leadsData, opportunitiesData, analyticsData] = await Promise.all([
         crmService.getLeads(),
         crmService.getOpportunities(),
-        crmService.getAnalytics(),
+        crmService.getAnalytics({ period_start: periodStart, period_end: periodEnd }),
       ]);
       setLeads(leadsData);
       setOpportunities(opportunitiesData);
       setAnalytics(analyticsData);
     } catch (err: any) {
       console.error("Error loading CRM data:", err);
-      setError(err.userMessage || "Failed to load CRM data");
+      setError(err.message || "Failed to load CRM data");
       // Fallback to empty data to prevent crashes
       setLeads([]);
       setOpportunities([]);
-      setAnalytics({
-        total_leads: 0,
-        qualified_leads: 0,
-        total_opportunities: 0,
-        won_opportunities: 0,
-        total_pipeline_value: 0,
-        avg_deal_size: 0,
-        lead_conversion_rate: 0,
-        sales_cycle_length: 0,
-        monthly_sales_target: 0,
-        monthly_sales_actual: 0,
-      });
+      setAnalytics(null);
     } finally {
       setLoading(false);
     }

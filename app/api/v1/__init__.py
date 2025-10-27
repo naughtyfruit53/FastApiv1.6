@@ -276,6 +276,30 @@ def register_subrouters():
         raise
 
     try:
+        from .contacts import router as contacts_router
+        logger.debug("Imported contacts_router")
+        api_v1_router.include_router(contacts_router, tags=["Contacts"])
+        contacts_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in contacts_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered contacts endpoints: {len(contacts_routes)} routes")
+        for route_path in contacts_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include contacts_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
+        from .accounts import router as accounts_router
+        logger.debug("Imported accounts_router")
+        api_v1_router.include_router(accounts_router, tags=["Accounts"])
+        accounts_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in accounts_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered accounts endpoints: {len(accounts_routes)} routes")
+        for route_path in accounts_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include accounts_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
         from ..pincode import router as pincode_router
         logger.debug("Imported pincode_router")
         api_v1_router.include_router(pincode_router, prefix="/pincode", tags=["Pincode"])
@@ -369,6 +393,18 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include order_book_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
+        from .exhibition import router as exhibition_router
+        logger.debug("Imported exhibition_router")
+        api_v1_router.include_router(exhibition_router, prefix="/exhibition", tags=["Exhibition"])
+        exhibition_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /exhibition{route.path}" for route in exhibition_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered exhibition endpoints: {len(exhibition_routes)} routes")
+        for route_path in exhibition_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include exhibition_router: {str(e)}\n{traceback.format_exc()}")
         raise
 
 register_subrouters()
