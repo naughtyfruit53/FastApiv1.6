@@ -7,6 +7,8 @@ Handles OTP request and verification for secure authentication
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import timedelta
 from typing import Optional
 
@@ -31,15 +33,16 @@ router = APIRouter()
 async def request_otp(
     otp_request: OTPRequest,
     request: Request = None,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Request OTP for email authentication with audit logging"""
     try:
         # Check if user exists
-        user = UserService.get_user_by_email(db, otp_request.email)
+        result = await db.execute(select(User).where(User.email == otp_request.email))
+        user = result.scalar_one_or_none()
         
         # Log OTP request
-        AuditLogger.log_login_attempt(
+        await AuditLogger.log_login_attempt(
             db=db,
             email=otp_request.email,
             success=user is not None and user.is_active,
@@ -71,9 +74,10 @@ async def request_otp(
         
         # Generate and send OTP
         otp_service = OTPService(db)
-        success = otp_service.generate_and_send_otp(
+        success, otp = await otp_service.generate_and_send_otp(
             email=otp_request.email, 
             purpose=otp_request.purpose,
+            organization_id=user.organization_id,
             phone_number=otp_request.phone_number,
             delivery_method=otp_request.delivery_method
         )
@@ -111,19 +115,20 @@ async def request_otp(
 async def verify_otp(
     otp_verify: OTPVerifyRequest,
     request: Request = None,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Verify OTP and generate access token with audit logging"""
     try:
         # Verify OTP
         otp_service = OTPService(db)
-        otp_valid = otp_service.verify_otp(otp_verify.email, otp_verify.otp, otp_verify.purpose)
+        otp_valid = await otp_service.verify_otp(otp_verify.email, otp_verify.otp, otp_verify.purpose)
         
         # Find user
-        user = UserService.get_user_by_email(db, otp_verify.email)
+        result = await db.execute(select(User).where(User.email == otp_verify.email))
+        user = result.scalar_one_or_none()
         
         # Log OTP verification attempt
-        AuditLogger.log_login_attempt(
+        await AuditLogger.log_login_attempt(
             db=db,
             email=otp_verify.email,
             success=otp_valid and user is not None and user.is_active,
@@ -160,12 +165,14 @@ async def verify_otp(
         # Reset failed login attempts
         user.failed_login_attempts = 0
         user.locked_until = None
-        db.commit()
+        await db.commit()
         
         # Create access token
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": user.username, "email": user.email, "organization_id": user.organization_id},
+            subject=user.email,
+            organization_id=user.organization_id,
+            user_role=user.role,
             expires_delta=access_token_expires
         )
         
@@ -173,7 +180,13 @@ async def verify_otp(
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            "user_id": user.id,
+            "email": user.email,
+            "organization_id": user.organization_id,
+            "must_change_password": user.must_change_password,
+            "role": user.role,
+            "is_super_admin": user.is_super_admin
         }
         
     except HTTPException:

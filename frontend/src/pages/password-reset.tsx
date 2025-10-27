@@ -11,7 +11,10 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import { passwordService } from "../services/authService";
 import { useAuth } from "../context/AuthContext";
@@ -27,6 +30,9 @@ const PasswordResetPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
   const {
     register,
@@ -108,7 +114,7 @@ const PasswordResetPage: React.FC = () => {
           <TextField
             fullWidth
             label="Current Password"
-            type="password"
+            type={showCurrentPassword ? "text" : "password"}
             margin="normal"
             {...register("current_password", {
               required: "Current password is required",
@@ -116,13 +122,26 @@ const PasswordResetPage: React.FC = () => {
             error={!!errors.current_password}
             helperText={errors.current_password?.message}
             disabled={loading}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle current password visibility"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    edge="end"
+                  >
+                    {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
         )}
 
         <TextField
           fullWidth
           label="New Password"
-          type="password"
+          type={showNewPassword ? "text" : "password"}
           margin="normal"
           {...register("new_password", {
             required: "New password is required",
@@ -140,12 +159,25 @@ const PasswordResetPage: React.FC = () => {
           error={!!errors.new_password}
           helperText={errors.new_password?.message}
           disabled={loading}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle new password visibility"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  edge="end"
+                >
+                  {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
         />
 
         <TextField
           fullWidth
           label="Confirm New Password"
-          type="password"
+          type={showConfirmPassword ? "text" : "password"}
           margin="normal"
           {...register("confirm_password", {
             required: "Confirm password is required",
@@ -155,6 +187,19 @@ const PasswordResetPage: React.FC = () => {
           error={!!errors.confirm_password}
           helperText={errors.confirm_password?.message}
           disabled={loading}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle confirm password visibility"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  edge="end"
+                >
+                  {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
         />
 
         <Button

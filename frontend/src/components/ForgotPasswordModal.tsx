@@ -15,7 +15,10 @@ import {
   Stepper,
   Step,
   StepLabel,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useForm } from "react-hook-form";
 import { passwordService } from "../services/authService";
 
@@ -44,6 +47,8 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [email, setEmail] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register: registerForgot,
@@ -68,6 +73,8 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     setError(null);
     setStep(0);
     setEmail("");
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
     onClose();
   };
 
@@ -180,7 +187,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 <TextField
                   fullWidth
                   label="New Password"
-                  type="password"
+                  type={showNewPassword ? "text" : "password"}
                   margin="normal"
                   {...registerReset("newPassword", {
                     required: "New password is required",
@@ -192,12 +199,25 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   error={!!errorsReset.newPassword}
                   helperText={errorsReset.newPassword?.message}
                   disabled={loading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle new password visibility"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          edge="end"
+                        >
+                          {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
 
                 <TextField
                   fullWidth
                   label="Confirm New Password"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   margin="normal"
                   {...registerReset("confirmPassword", {
                     required: "Please confirm your new password",
@@ -210,6 +230,19 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   error={!!errorsReset.confirmPassword}
                   helperText={errorsReset.confirmPassword?.message}
                   disabled={loading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle confirm password visibility"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          edge="end"
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </form>
             </>
