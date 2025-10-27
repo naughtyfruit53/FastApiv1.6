@@ -271,7 +271,7 @@ export const menuItems = {
       {
         title: 'Chart of Accounts',
         items: [
-          { name: 'Chart of Accounts', path: '/chart-of-accounts', icon: <AccountBalance /> },
+          { name: 'Chart of Accounts', path: '/masters/chart-of-accounts', icon: <AccountBalance /> },
           { name: 'Account Groups', path: '/account-groups', icon: <Business /> },
           { name: 'Opening Balances', path: '/opening-balances', icon: <TrendingUp /> }
         ]
@@ -289,7 +289,8 @@ export const menuItems = {
         items: [
           { name: 'Trial Balance', path: '/reports/trial-balance', icon: <BarChart /> },
           { name: 'Profit & Loss', path: '/reports/profit-loss', icon: <TrendingUp /> },
-          { name: 'Balance Sheet', path: '/reports/balance-sheet', icon: <Assessment /> }
+          { name: 'Balance Sheet', path: '/reports/balance-sheet', icon: <Assessment /> },
+          { name: 'Cash Flow', path: '/reports/cash-flow', icon: <AccountBalance /> }
         ]
       }
     ]
