@@ -122,6 +122,7 @@ export const menuItems = {
       {
         title: 'Production Management',
         items: [
+          { name: 'Order Book', path: '/order-book', icon: <Assignment /> },
           { name: 'Production Order', path: '/vouchers/Manufacturing-Vouchers/production-order', icon: <Build /> },
           { name: 'Work Order', path: '/vouchers/Manufacturing-Vouchers/work-order', icon: <Assessment /> },
           { name: 'Material Requisition', path: '/vouchers/Manufacturing-Vouchers/material-requisition', icon: <Storage /> },
