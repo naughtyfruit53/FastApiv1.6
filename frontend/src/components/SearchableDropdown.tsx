@@ -43,6 +43,8 @@ interface SearchableDropdownProps {
   showAddButton?: boolean;
   showRefreshButton?: boolean;
   renderOption?: (props: any, option: Option) => React.ReactNode;
+  entityName?: string; // Name of the entity for "Add New [Entity]" option
+  showAddAsFirstOption?: boolean; // Show "Add New" as first option in dropdown
 }
 
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
@@ -68,15 +70,31 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   showAddButton = false,
   showRefreshButton = false,
   renderOption,
+  entityName = 'Item',
+  showAddAsFirstOption = false,
 }) => {
   const [options, setOptions] = useState<Option[]>(initialOptions);
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedOption, setSelectedOption] = useState<Option | null>(null);
 
+  // Get options with "Add New" option prepended if needed
+  const getOptionsWithAddNew = useCallback((opts: Option[]) => {
+    if (showAddAsFirstOption && onAddNew) {
+      // Special option for "Add New"
+      const ADD_NEW_OPTION: Option = {
+        label: `+ Add New ${entityName}`,
+        value: '__ADD_NEW__',
+        isAddNew: true,
+      };
+      return [ADD_NEW_OPTION, ...opts];
+    }
+    return opts;
+  }, [showAddAsFirstOption, onAddNew, entityName]);
+
   useEffect(() => {
-    setOptions(initialOptions);
-  }, [initialOptions]);
+    setOptions(getOptionsWithAddNew(initialOptions));
+  }, [initialOptions, getOptionsWithAddNew]);
 
   useEffect(() => {
     const option = options.find((opt) => getOptionValue(opt) === value);
@@ -92,7 +110,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         setLoading(true);
         try {
           const fetchedOptions = await fetchOptions(searchTerm);
-          setOptions(fetchedOptions);
+          setOptions(getOptionsWithAddNew(fetchedOptions));
         } catch (error) {
           console.error('Error fetching options:', error);
         } finally {
@@ -100,7 +118,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         }
       }
     }, debounceTime),
-    [fetchOptions, debounceTime]
+    [fetchOptions, debounceTime, getOptionsWithAddNew]
   );
 
   const handleInputChange = (event: React.ChangeEvent<{}>, newInputValue: string) => {
@@ -111,6 +129,12 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   };
 
   const handleChange = (event: React.ChangeEvent<{}>, newValue: Option | null) => {
+    // Check if "Add New" option was selected
+    if (newValue && newValue.value === '__ADD_NEW__' && onAddNew) {
+      onAddNew();
+      return;
+    }
+
     setSelectedOption(newValue);
     onChange(newValue ? getOptionValue(newValue) : null);
     if (newValue) {
@@ -122,9 +146,21 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
 
   const filterOptions = (options: Option[], { inputValue }: { inputValue: string }) => {
     if (!fetchOptions) {
-      return options.filter((option) =>
-        getOptionLabel(option).toLowerCase().includes(inputValue.toLowerCase())
+      const filtered = options.filter((option) =>
+        !option.isAddNew && getOptionLabel(option).toLowerCase().includes(inputValue.toLowerCase())
       );
+      
+      // Add "Add New" option at the beginning if showAddAsFirstOption is enabled
+      if (showAddAsFirstOption && onAddNew) {
+        const ADD_NEW_OPTION: Option = {
+          label: `+ Add New ${entityName}`,
+          value: '__ADD_NEW__',
+          isAddNew: true,
+        };
+        return [ADD_NEW_OPTION, ...filtered];
+      }
+      
+      return filtered;
     }
     return options;
   };
@@ -142,9 +178,27 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         filterOptions={filterOptions}
         disabled={disabled}
         noOptionsText={
-          <Typography variant="body2" color="textSecondary">
-            {noOptionsText}
-          </Typography>
+          onAddNew && inputValue ? (
+            <Box
+              sx={{ 
+                cursor: 'pointer', 
+                p: 1, 
+                '&:hover': { backgroundColor: 'action.hover' } 
+              }}
+              onClick={onAddNew}
+            >
+              <Box display="flex" alignItems="center">
+                <AddIcon sx={{ mr: 1 }} />
+                <Typography variant="body2">
+                  Add New {entityName}: &quot;{inputValue}&quot;
+                </Typography>
+              </Box>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="textSecondary">
+              {noOptionsText}
+            </Typography>
+          )
         }
         loading={loading}
         loadingText={
@@ -174,7 +228,18 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
             }}
           />
         )}
-        renderOption={renderOption}
+        renderOption={renderOption || ((props, option) => (
+          <li {...props} key={option.value}>
+            {option.isAddNew ? (
+              <Box display="flex" alignItems="center" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                <AddIcon sx={{ mr: 1 }} />
+                <Typography>{getOptionLabel(option)}</Typography>
+              </Box>
+            ) : (
+              <Typography>{getOptionLabel(option)}</Typography>
+            )}
+          </li>
+        ))}
       />
       {(showAddButton || showRefreshButton) && (
         <Box

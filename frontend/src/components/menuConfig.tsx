@@ -350,6 +350,38 @@ export const menuItems = {
       }
     ]
   },
+  // AI & Analytics Module
+  aiAnalytics: {
+    title: 'AI & Analytics',
+    icon: <SmartToy />,
+    sections: [
+      {
+        title: 'AI Assistant',
+        items: [
+          { name: 'AI Chatbot', path: '/ai-chatbot', icon: <SmartToy /> },
+          { name: 'AI Help & Guidance', path: '/ai/help', icon: <SupportAgent /> },
+          { name: 'Business Advisor', path: '/ai/advisor', icon: <Analytics /> }
+        ]
+      },
+      {
+        title: 'Advanced Analytics',
+        items: [
+          { name: 'Analytics Dashboard', path: '/analytics/advanced-analytics', icon: <Dashboard /> },
+          { name: 'Predictive Analytics', path: '/ai-analytics', icon: <TrendingUp /> },
+          { name: 'Streaming Analytics', path: '/analytics/streaming-dashboard', icon: <Timeline /> },
+          { name: 'AutoML Platform', path: '/analytics/automl', icon: <Build /> }
+        ]
+      },
+      {
+        title: 'AI Tools',
+        items: [
+          { name: 'A/B Testing', path: '/analytics/ab-testing', icon: <Poll /> },
+          { name: 'Model Explainability', path: '/ai/explainability', icon: <Assessment /> },
+          { name: 'Website Agent', path: '/service/website-agent', icon: <SmartToy /> }
+        ]
+      }
+    ]
+  },
   // Sales menu (renamed from CRM, with service options removed)
   sales: {
     title: 'Sales',
@@ -702,6 +734,7 @@ export const mainMenuSections = (isSuperAdmin: boolean) => {
           ]
         },
         { title: 'Reports & Analytics', subSections: menuItems.reportsAnalytics.sections },
+        { title: 'AI & Analytics', subSections: menuItems.aiAnalytics.sections },
         { title: 'Sales', subSections: menuItems.sales.sections },
         { title: 'Marketing', subSections: menuItems.marketing.sections },
         { title: 'Service', subSections: menuItems.service.sections },
