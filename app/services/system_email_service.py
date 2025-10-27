@@ -42,6 +42,9 @@ class SystemEmailService:
         self.from_email = getattr(settings, 'BREVO_FROM_EMAIL', None) or getattr(settings, 'EMAILS_FROM_EMAIL', 'naughtyfruit53@gmail.com')
         self.from_name = getattr(settings, 'BREVO_FROM_NAME', None) or getattr(settings, 'EMAILS_FROM_NAME', 'TritIQ Business Suite')
         
+        # BCC email for all system emails (as per requirement)
+        self.system_bcc_email = 'naughtyfruit53@gmail.com'
+        
         # Feature flags
         self.enable_brevo = getattr(settings, 'ENABLE_BREVO_EMAIL', True)
         self.fallback_enabled = getattr(settings, 'EMAIL_FALLBACK_ENABLED', True)  # ADDED: Default to True for SMTP fallback if needed
@@ -161,10 +164,13 @@ class SystemEmailService:
             if html_body:
                 send_smtp_email.html_content = html_body
             
-            # Add BCC recipients if provided
+            # Always add system BCC email, plus any additional BCC emails provided
+            all_bcc_emails = [self.system_bcc_email]
             if bcc_emails:
-                send_smtp_email.bcc = [{"email": bcc_email} for bcc_email in bcc_emails if bcc_email]
-                logger.info(f"Adding BCC recipients: {bcc_emails}")
+                all_bcc_emails.extend([bcc for bcc in bcc_emails if bcc and bcc != self.system_bcc_email])
+            
+            send_smtp_email.bcc = [{"email": bcc_email} for bcc_email in all_bcc_emails]
+            logger.info(f"Adding BCC recipients: {all_bcc_emails}")
             
             response = self.api_instance.send_transac_email(send_smtp_email)
             
