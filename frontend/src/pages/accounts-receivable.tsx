@@ -217,13 +217,3 @@ const AccountsReceivablePage: React.FC = () => {
 };
 
 export default AccountsReceivablePage;
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </DashboardLayout>
-  );
-};
-
-export default AccountsReceivablePage;
