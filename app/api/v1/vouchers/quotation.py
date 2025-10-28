@@ -9,6 +9,7 @@ from typing import List, Optional
 from datetime import datetime
 from dateutil import parser as date_parser
 from app.core.database import get_db
+from app.core.enforcement import require_access, TenantEnforcement
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.presales import Quotation, QuotationItem
@@ -30,14 +31,16 @@ async def get_quotations(
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get all quotations"""
+    current_user, org_id = auth
+    
     stmt = select(Quotation).options(
         joinedload(Quotation.customer),
         joinedload(Quotation.items).joinedload(QuotationItem.product)
     ).where(
-        Quotation.organization_id == current_user.organization_id
+        Quotation.organization_id == org_id
     )
     
     if status:
@@ -62,9 +65,11 @@ async def get_quotations(
 async def get_next_quotation_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get the next available quotation number for a given date"""
+    current_user, org_id = auth
+    
     # Parse the voucher_date if provided
     date_to_use = None
     if voucher_date:
@@ -74,20 +79,22 @@ async def get_next_quotation_number(
             pass
     
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "QTN", current_user.organization_id, Quotation, voucher_date=date_to_use
+        db, "QTN", org_id, Quotation, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Check if creating a voucher with the given date would create conflicts"""
+    current_user, org_id = auth
+    
     try:
         parsed_date = date_parser.parse(voucher_date)
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "QTN", current_user.organization_id, Quotation, parsed_date
+            db, "QTN", org_id, Quotation, parsed_date
         )
         return conflict_info
     except Exception as e:
@@ -102,13 +109,15 @@ async def create_quotation(
     background_tasks: BackgroundTasks,
     send_email: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "create"))
 ):
     """Create new quotation"""
+    current_user, org_id = auth
+    
     try:
         quotation_data = quotation.dict(exclude={'items'})
         quotation_data['created_by'] = current_user.id
-        quotation_data['organization_id'] = current_user.organization_id
+        quotation_data['organization_id'] = org_id
         
         # Get the voucher date for numbering
         voucher_date = None
@@ -125,7 +134,7 @@ async def create_quotation(
             
             # Get latest revision number
             stmt = select(func.max(Quotation.revision_number)).where(
-                Quotation.organization_id == current_user.organization_id,
+                Quotation.organization_id == org_id,
                 Quotation.voucher_number.like(f"{parent.voucher_number}%")
             )
             result = await db.execute(stmt)
@@ -138,18 +147,18 @@ async def create_quotation(
             # Generate unique voucher number if not provided or blank
             if not quotation_data.get('voucher_number') or quotation_data['voucher_number'] == '':
                 quotation_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "QTN", current_user.organization_id, Quotation, voucher_date=voucher_date
+                    db, "QTN", org_id, Quotation, voucher_date=voucher_date
                 )
             else:
                 stmt = select(Quotation).where(
-                    Quotation.organization_id == current_user.organization_id,
+                    Quotation.organization_id == org_id,
                     Quotation.voucher_number == quotation_data['voucher_number']
                 )
                 result = await db.execute(stmt)
                 existing = result.scalar_one_or_none()
                 if existing:
                     quotation_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                        db, "QTN", current_user.organization_id, Quotation, voucher_date=voucher_date
+                        db, "QTN", org_id, Quotation, voucher_date=voucher_date
                     )
         
         db_quotation = Quotation(**quotation_data)
@@ -253,14 +262,16 @@ async def create_quotation(
 async def get_quotation(
     quotation_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
+    current_user, org_id = auth
+    
     stmt = select(Quotation).options(
         joinedload(Quotation.customer),
         joinedload(Quotation.items).joinedload(QuotationItem.product)
     ).where(
         Quotation.id == quotation_id,
-        Quotation.organization_id == current_user.organization_id
+        Quotation.organization_id == org_id
     )
     result = await db.execute(stmt)
     quotation = result.unique().scalar_one_or_none()
@@ -275,15 +286,17 @@ async def get_quotation(
 async def generate_quotation_pdf(
     quotation_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(Quotation).options(
             joinedload(Quotation.customer),
             joinedload(Quotation.items).joinedload(QuotationItem.product)
         ).where(
             Quotation.id == quotation_id,
-            Quotation.organization_id == current_user.organization_id
+            Quotation.organization_id == org_id
         )
         result = await db.execute(stmt)
         voucher = result.unique().scalar_one_or_none()
@@ -294,7 +307,7 @@ async def generate_quotation_pdf(
             voucher_type="quotation",
             voucher_data=voucher.__dict__,
             db=db,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             current_user=current_user
         )
         
@@ -316,13 +329,15 @@ async def update_quotation(
     quotation_id: int,
     quotation_update: QuotationUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "update"))
 ):
+    current_user, org_id = auth
+    
     try:
         logger.debug(f"Starting update for quotation {quotation_id} by {current_user.email}")
         stmt = select(Quotation).where(
             Quotation.id == quotation_id,
-            Quotation.organization_id == current_user.organization_id
+            Quotation.organization_id == org_id
         )
         result = await db.execute(stmt)
         quotation = result.scalar_one_or_none()
@@ -416,7 +431,7 @@ async def update_quotation(
             joinedload(Quotation.items).joinedload(QuotationItem.product)
         ).where(
             Quotation.id == quotation_id,
-            Quotation.organization_id == current_user.organization_id
+            Quotation.organization_id == org_id
         )
         result = await db.execute(stmt)
         quotation = result.unique().scalar_one_or_none()
@@ -441,12 +456,14 @@ async def update_quotation(
 async def delete_quotation(
     quotation_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "delete"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(Quotation).where(
             Quotation.id == quotation_id,
-            Quotation.organization_id == current_user.organization_id
+            Quotation.organization_id == org_id
         )
         result = await db.execute(stmt)
         quotation = result.scalar_one_or_none()

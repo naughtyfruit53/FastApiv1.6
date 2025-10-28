@@ -7,6 +7,7 @@ from typing import List, Optional
 from datetime import datetime
 from dateutil import parser as date_parser
 from app.core.database import get_db
+from app.core.enforcement import require_access, TenantEnforcement
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.financial import ContraVoucher
@@ -44,11 +45,13 @@ async def get_contra_vouchers(
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get all contra vouchers with enhanced sorting and pagination"""
+    current_user, org_id = auth
+    
     stmt = select(ContraVoucher).where(
-        ContraVoucher.organization_id == current_user.organization_id
+        ContraVoucher.organization_id == org_id
     )
     
     if status:
@@ -83,9 +86,11 @@ async def get_contra_vouchers(
 async def get_next_contra_voucher_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get the next available contra voucher number for a given date"""
+    current_user, org_id = auth
+    
     date_to_use = None
     if voucher_date:
         try:
@@ -94,20 +99,22 @@ async def get_next_contra_voucher_number(
             pass
     
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "CTR", current_user.organization_id, ContraVoucher, voucher_date=date_to_use
+        db, "CTR", org_id, ContraVoucher, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Check if creating a voucher with the given date would create conflicts"""
+    current_user, org_id = auth
+    
     try:
         parsed_date = date_parser.parse(voucher_date)
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "CTR", current_user.organization_id, ContraVoucher, parsed_date
+            db, "CTR", org_id, ContraVoucher, parsed_date
         )
         return conflict_info
     except Exception as e:
@@ -118,15 +125,17 @@ async def check_backdated_conflict(
 async def create_contra_voucher(
     voucher: ContraVoucherCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "create"))
 ):
+    current_user, org_id = auth
+    
     try:
         # Validate chart account
-        chart_account = await validate_chart_account(db, voucher.chart_account_id, current_user.organization_id)
+        chart_account = await validate_chart_account(db, voucher.chart_account_id, org_id)
         
         voucher_data = voucher.dict()
         voucher_data['created_by'] = current_user.id
-        voucher_data['organization_id'] = current_user.organization_id
+        voucher_data['organization_id'] = org_id
         
         # Get the voucher date for numbering
         voucher_date = None
@@ -136,18 +145,18 @@ async def create_contra_voucher(
         # Generate unique voucher number if not provided or blank
         if not voucher_data.get('voucher_number') or voucher_data['voucher_number'] == '':
             voucher_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "CTR", current_user.organization_id, ContraVoucher, voucher_date=voucher_date
+                db, "CTR", org_id, ContraVoucher, voucher_date=voucher_date
             )
         else:
             stmt = select(ContraVoucher).where(
-                ContraVoucher.organization_id == current_user.organization_id,
+                ContraVoucher.organization_id == org_id,
                 ContraVoucher.voucher_number == voucher_data['voucher_number']
             )
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
                 voucher_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "CTR", current_user.organization_id, ContraVoucher, voucher_date=voucher_date
+                    db, "CTR", org_id, ContraVoucher, voucher_date=voucher_date
                 )
         
         db_voucher = ContraVoucher(**voucher_data)
@@ -170,11 +179,13 @@ async def create_contra_voucher(
 async def get_contra_voucher(
     voucher_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
+    current_user, org_id = auth
+    
     stmt = select(ContraVoucher).where(
         ContraVoucher.id == voucher_id,
-        ContraVoucher.organization_id == current_user.organization_id
+        ContraVoucher.organization_id == org_id
     )
     result = await db.execute(stmt)
     voucher = result.scalar_one_or_none()
@@ -196,12 +207,14 @@ async def update_contra_voucher(
     voucher_id: int,
     voucher_update: ContraVoucherUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "update"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(ContraVoucher).where(
             ContraVoucher.id == voucher_id,
-            ContraVoucher.organization_id == current_user.organization_id
+            ContraVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         voucher = result.scalar_one_or_none()
@@ -212,7 +225,7 @@ async def update_contra_voucher(
         
         # Validate chart account if being updated
         if 'chart_account_id' in update_data:
-            await validate_chart_account(db, update_data['chart_account_id'], current_user.organization_id)
+            await validate_chart_account(db, update_data['chart_account_id'], org_id)
         
         for field, value in update_data.items():
             setattr(voucher, field, value)
@@ -240,12 +253,14 @@ async def update_contra_voucher(
 async def delete_contra_voucher(
     voucher_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "delete"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(ContraVoucher).where(
             ContraVoucher.id == voucher_id,
-            ContraVoucher.organization_id == current_user.organization_id
+            ContraVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         voucher = result.scalar_one_or_none()
