@@ -31,7 +31,7 @@ async def get_stock(
     search: str = Query("", description="Search term for stock items"),
     show_zero: bool = Query(True, description="Show items with zero quantity"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read"))
 ):
     """
     Get stock information with product details
@@ -43,6 +43,8 @@ async def get_stock(
     
     This endpoint implements enhanced access control for stock module visibility.
     """
+    current_user, org_id = auth
+    
     logger.info(f"Stock endpoint accessed by user {current_user.email} (ID: {current_user.id})")
     logger.info(f"User role: {current_user.role}, is_super_admin: {getattr(current_user, 'is_super_admin', False)}")
     logger.info(f"User organization_id: {getattr(current_user, 'organization_id', None)}")
@@ -162,9 +164,11 @@ async def get_stock(
 @router.get("/low-stock", response_model=List[StockWithProduct])
 async def get_low_stock(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read"))
 ):
     """Get products with low stock (below reorder level) with product details, including products without stock entries"""
+    current_user, org_id = auth
+
     logger.info(f"Low stock endpoint accessed by user {current_user.email}")
     
     # Check stock module access for standard users
@@ -249,9 +253,11 @@ async def get_stock_movements(
     recent: bool = Query(True, description="Show only recent movements (last 30 days)"),
     product_id: Optional[int] = Query(None, description="Filter by specific product ID"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read"))
 ):
     """Get stock movement history (inventory transactions)"""
+    current_user, org_id = auth
+
     logger.info(f"Stock movements endpoint accessed by user {current_user.email}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -309,9 +315,11 @@ async def get_stock_movements(
 async def get_last_vendor_for_product(
     product_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read"))
 ):
     """Get the last vendor who supplied this product"""
+    current_user, org_id = auth
+
     logger.info(f"Last vendor endpoint accessed by user {current_user.email} for product {product_id}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -351,9 +359,11 @@ async def get_last_vendor_for_product(
 async def get_product_stock(
     product_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read"))
 ):
     """Get stock for specific product"""
+    current_user, org_id = auth
+
     logger.info(f"Product stock endpoint accessed by user {current_user.email} for product {product_id}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -399,9 +409,11 @@ async def get_product_stock(
 async def create_stock_entry(
     stock: StockCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "create"))
 ):
     """Create new stock entry"""
+    current_user, org_id = auth
+
     logger.info(f"Create stock entry accessed by user {current_user.email}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -454,9 +466,11 @@ async def update_stock(
     product_id: int,
     stock_update: StockUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "update"))
 ):
     """Update stock for a product"""
+    current_user, org_id = auth
+
     logger.info(f"Update stock endpoint accessed by user {current_user.email} for product {product_id}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -507,9 +521,11 @@ async def adjust_stock(
     product_id: int,
     adjustment: StockAdjustment,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "create"))
 ):
     """Enhanced stock quantity adjustment with detailed response"""
+    current_user, org_id = auth
+
     logger.info(f"Adjust stock endpoint accessed by user {current_user.email} for product {product_id}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -586,9 +602,11 @@ async def bulk_import_stock(
     mode: str = "replace",
     organization_id: Optional[int] = Query(None, description="Organization ID (only for super admins)"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "create"))
 ):
     """Enhanced bulk import stock entries from Excel file with comprehensive validation and mode selection"""
+    current_user, org_id = auth
+
     
     logger.info(f"[bulk_import_stock] Starting import for user {current_user.id} ({current_user.email})")
     logger.info(f"[bulk_import_stock] User role: {current_user.role}, is_super_admin: {getattr(current_user, 'is_super_admin', False)}")
@@ -886,9 +904,11 @@ async def bulk_import_stock(
 async def import_stock_excel(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "create"))
 ):
     """Import stock entries from Excel file - alias for bulk import"""
+    current_user, org_id = auth
+
     return await bulk_import_stock(file, db=db, current_user=current_user)
 
 @router.get("/template/excel")
@@ -912,9 +932,11 @@ async def export_stock_excel(
     product_id: int = None,
     low_stock_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read"))
 ):
     """Export stock to Excel"""
+    current_user, org_id = auth
+
     org_id = require_current_organization_id(current_user)
     
     stmt = select(Stock).join(Product)
