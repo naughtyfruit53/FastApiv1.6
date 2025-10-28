@@ -13,6 +13,7 @@ import logging
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.vouchers import MaterialIssue, MaterialIssueItem
 from app.services.voucher_service import VoucherNumberService
 from pydantic import BaseModel
@@ -55,17 +56,18 @@ class MaterialIssueResponse(BaseModel):
 async def get_material_issues(
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Get list of material issues at /api/v1/material-issues"""
     try:
         stmt = select(MaterialIssue).where(
-            MaterialIssue.organization_id == current_user.organization_id
+            MaterialIssue.organization_id == org_id
         ).offset(skip).limit(limit)
         result = await db.execute(stmt)
         issues = result.scalars().all()
-        logger.info(f"Fetched {len(issues)} material issues for organization {current_user.organization_id}")
+        logger.info(f"Fetched {len(issues)} material issues for organization {org_id}")
         return issues
     except Exception as e:
         logger.error(f"Error fetching material issues: {str(e)}")
@@ -73,15 +75,16 @@ async def get_material_issues(
 
 @router.get("/next-number")
 async def get_next_material_issue_number(
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Get next material issue number at /api/v1/material-issues/next-number"""
     try:
         next_number = await VoucherNumberService.generate_voucher_number_async(
-            db, "MI", current_user.organization_id, MaterialIssue
+            db, "MI", org_id, MaterialIssue
         )
-        logger.info(f"Generated next material issue number: {next_number} for organization {current_user.organization_id}")
+        logger.info(f"Generated next material issue number: {next_number} for organization {org_id}")
         return next_number
     except Exception as e:
         logger.error(f"Error generating material issue number: {str(e)}")
@@ -90,21 +93,22 @@ async def get_next_material_issue_number(
 @router.post("")
 async def create_material_issue(
     issue_data: MaterialIssueCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Create new material issue at /api/v1/material-issues"""
     try:
         # Generate voucher number
         voucher_number = await VoucherNumberService.generate_voucher_number_async(
-            db, "MI", current_user.organization_id, MaterialIssue
+            db, "MI", org_id, MaterialIssue
         )
 
         # Calculate total amount
         total_amount = sum(item.quantity * item.unit_price for item in issue_data.items)
 
         db_issue = MaterialIssue(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             voucher_number=voucher_number,
             date=datetime.now(),
             manufacturing_order_id=issue_data.manufacturing_order_id,
@@ -122,7 +126,7 @@ async def create_material_issue(
         # Add items
         for item_data in issue_data.items:
             item = MaterialIssueItem(
-                organization_id=current_user.organization_id,
+                organization_id=org_id,
                 material_issue_id=db_issue.id,
                 product_id=item_data.product_id,
                 quantity=item_data.quantity,
@@ -136,7 +140,7 @@ async def create_material_issue(
 
         await db.commit()
         await db.refresh(db_issue)
-        logger.info(f"Created material issue {voucher_number} for organization {current_user.organization_id}")
+        logger.info(f"Created material issue {voucher_number} for organization {org_id}")
         return db_issue
     except Exception as e:
         logger.error(f"Error creating material issue: {str(e)}")

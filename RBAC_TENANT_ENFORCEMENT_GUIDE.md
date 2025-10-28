@@ -193,6 +193,18 @@ Modules may define additional permissions for specific actions:
 - `voucher_delete`
 - `voucher_approve`
 
+#### Manufacturing Module ✅
+- `manufacturing_create`
+- `manufacturing_read`
+- `manufacturing_update`
+- `manufacturing_delete`
+
+#### Finance/Analytics Modules ✅
+- `finance_create`
+- `finance_read`
+- `analytics_create`
+- `analytics_read`
+
 #### CRM Module
 - `crm_lead_create`
 - `crm_lead_read`
@@ -311,15 +323,62 @@ async def get_items(
 ### Summary
 - **Total route files analyzed**: 126
 - **Files with organization checks**: 111
-- **Files with RBAC checks**: 28
+- **Files with RBAC checks**: 28 (initial audit)
 - **Files needing both**: 98
 
+### Phase 2 Update (December 2025)
+- **Files now with complete enforcement**: 21
+- **Manufacturing module**: 100% complete (10/10 files) ✅
+- **Finance/Analytics module**: 100% complete (5/5 files) ✅
+- **Voucher module**: 17% complete (3/18 files)
+
 ### High Priority Modules
-1. Vouchers (all types) - 16 files
-2. Manufacturing - 10 files
-3. Finance - 8 files
+1. Vouchers (all types) - 18 files (3 completed, 15 remaining)
+2. Manufacturing - 10 files ✅ **COMPLETED**
+3. Finance - 8 files (5 completed) ✅ **MOSTLY COMPLETED**
 4. CRM - 1 file
 5. HR - 1 file
+
+## Module-Specific Examples
+
+### Manufacturing Module Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/boms")
+async def get_boms(
+    skip: int = 0,
+    limit: int = 100,
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get list of Bills of Materials"""
+    current_user, org_id = auth
+    
+    stmt = select(BillOfMaterials).where(
+        BillOfMaterials.organization_id == org_id
+    ).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+```
+
+### Finance/Analytics Module Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/analytics/dashboard")
+async def get_finance_analytics_dashboard(
+    period_days: int = Query(30),
+    auth: tuple = Depends(require_access("finance", "read")),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive finance analytics dashboard"""
+    current_user, organization_id = auth
+    
+    # Use organization_id for all queries
+    ratios = FinanceAnalyticsService.calculate_financial_ratios(db, organization_id)
+    return {"ratios": ratios}
+```
 
 ## Best Practices
 

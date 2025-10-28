@@ -13,6 +13,7 @@ import logging
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.vouchers import ManufacturingOrder, BillOfMaterials
 from app.services.voucher_service import VoucherNumberService
 from app.services.mrp_service import MRPService
@@ -32,13 +33,14 @@ async def get_manufacturing_orders(
     skip: int = 0,
     limit: int = 100,
     status: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Get list of manufacturing orders"""
     try:
         stmt = select(ManufacturingOrder).where(
-            ManufacturingOrder.organization_id == current_user.organization_id
+            ManufacturingOrder.organization_id == org_id
         )
         
         if status:
@@ -47,7 +49,7 @@ async def get_manufacturing_orders(
         stmt = stmt.offset(skip).limit(limit)
         result = await db.execute(stmt)
         orders = result.scalars().all()
-        logger.info(f"Fetched {len(orders)} manufacturing orders for organization {current_user.organization_id}")
+        logger.info(f"Fetched {len(orders)} manufacturing orders for organization {org_id}")
         return orders
     except Exception as e:
         logger.error(f"Error fetching manufacturing orders: {str(e)}")
@@ -55,15 +57,16 @@ async def get_manufacturing_orders(
 
 @router.get("/next-number")
 async def get_next_manufacturing_order_number(
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Get next manufacturing order number"""
     try:
         next_number = await VoucherNumberService.generate_voucher_number_async(
-            db, "MO", current_user.organization_id, ManufacturingOrder
+            db, "MO", org_id, ManufacturingOrder
         )
-        logger.info(f"Generated next voucher number: {next_number} for organization {current_user.organization_id}")
+        logger.info(f"Generated next voucher number: {next_number} for organization {org_id}")
         return next_number
     except Exception as e:
         logger.error(f"Error generating voucher number: {str(e)}")
@@ -73,26 +76,27 @@ async def get_next_manufacturing_order_number(
 async def create_manufacturing_order(
     order_data: ManufacturingOrderCreate,
     check_material_availability: bool = True,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Create new manufacturing order"""
     try:
         # Verify BOM exists
         stmt = select(BillOfMaterials).where(
             BillOfMaterials.id == order_data.bom_id,
-            BillOfMaterials.organization_id == current_user.organization_id
+            BillOfMaterials.organization_id == org_id
         )
         result = await db.execute(stmt)
         bom = result.scalar_one_or_none()
         
         if not bom:
-            logger.error(f"BOM {order_data.bom_id} not found for organization {current_user.organization_id}")
+            logger.error(f"BOM {order_data.bom_id} not found for organization {org_id}")
             raise HTTPException(status_code=404, detail="BOM not found")
         
         # Generate voucher number
         voucher_number = await VoucherNumberService.generate_voucher_number_async(
-            db, "MO", current_user.organization_id, ManufacturingOrder
+            db, "MO", org_id, ManufacturingOrder
         )
         
         # Calculate estimated cost
@@ -100,7 +104,7 @@ async def create_manufacturing_order(
         estimated_cost = bom.total_cost * multiplier
         
         db_order = ManufacturingOrder(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             voucher_number=voucher_number,
             date=datetime.now(),
             bom_id=order_data.bom_id,
@@ -122,7 +126,7 @@ async def create_manufacturing_order(
         material_check_result = None
         if check_material_availability:
             is_available, shortages = await MRPService.check_material_availability_for_mo(
-                db, current_user.organization_id, db_order.id
+                db, org_id, db_order.id
             )
             material_check_result = {
                 'is_available': is_available,
@@ -137,7 +141,7 @@ async def create_manufacturing_order(
         await db.commit()
         await db.refresh(db_order)
         
-        logger.info(f"Created manufacturing order {voucher_number} for organization {current_user.organization_id}")
+        logger.info(f"Created manufacturing order {voucher_number} for organization {org_id}")
         return {
             'id': db_order.id,
             'voucher_number': db_order.voucher_number,
@@ -157,23 +161,24 @@ async def create_manufacturing_order(
 @router.get("/{order_id}", response_model=ManufacturingOrderResponse)
 async def get_manufacturing_order(
     order_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Get specific manufacturing order"""
     try:
         stmt = select(ManufacturingOrder).where(
             ManufacturingOrder.id == order_id,
-            ManufacturingOrder.organization_id == current_user.organization_id
+            ManufacturingOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
         order = result.scalar_one_or_none()
         
         if not order:
-            logger.error(f"Manufacturing order {order_id} not found for organization {current_user.organization_id}")
+            logger.error(f"Manufacturing order {order_id} not found for organization {org_id}")
             raise HTTPException(status_code=404, detail="Manufacturing order not found")
         
-        logger.info(f"Fetched manufacturing order {order_id} for organization {current_user.organization_id}")
+        logger.info(f"Fetched manufacturing order {order_id} for organization {org_id}")
         return order
     except Exception as e:
         logger.error(f"Error fetching manufacturing order {order_id}: {str(e)}")

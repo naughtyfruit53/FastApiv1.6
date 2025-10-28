@@ -55,10 +55,30 @@ stmt = select(Item).where(Item.id == id, Item.organization_id == org_id)
 
 Examples:
 - `inventory_read`
-- `voucher_create`
-- `voucher_update`
-- `voucher_delete`
-- `voucher_approve`
+- `voucher_create`, `voucher_update`, `voucher_delete`
+- `manufacturing_read`, `manufacturing_create`
+- `finance_read`, `analytics_read`
+
+## 📋 Module-Specific Examples
+
+### Vouchers
+```python
+auth: tuple = Depends(require_access("voucher", "create"))
+user, org_id = auth
+```
+
+### Manufacturing
+```python
+auth: tuple = Depends(require_access("manufacturing", "read"))
+user, org_id = auth
+stmt = select(BillOfMaterials).where(BillOfMaterials.organization_id == org_id)
+```
+
+### Finance/Analytics
+```python
+auth: tuple = Depends(require_access("finance", "read"))
+user, organization_id = auth  # Note: can use organization_id or org_id
+```
 
 ## ⚡ Quick Checklist
 
@@ -87,7 +107,11 @@ Outputs:
 
 - **Implementation Guide**: `/RBAC_TENANT_ENFORCEMENT_GUIDE.md`
 - **Full Report**: `/RBAC_ENFORCEMENT_REPORT.md`
-- **Example**: `/app/api/v1/vouchers/sales_voucher.py`
+- **Examples**:
+  - Vouchers: `/app/api/v1/vouchers/sales_voucher.py`, `purchase_voucher.py`
+  - Manufacturing: `/app/api/v1/manufacturing/bom.py`
+  - Finance: `/app/api/v1/finance_analytics.py`
+- **Tests**: `/tests/test_rbac_migration_enforcement.py`
 
 ## 🧪 Testing
 

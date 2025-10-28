@@ -12,6 +12,7 @@ from decimal import Decimal
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.core.org_restrictions import require_current_organization_id
 from app.models import (
     User, Organization, ChartOfAccounts, GeneralLedger, CostCenter,
@@ -71,11 +72,12 @@ class FinanceAnalyticsService:
 @router.get("/analytics/dashboard")
 async def get_finance_analytics_dashboard(
     period_days: int = Query(30, description="Number of days for analysis"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("finance", "read")),
+    db: Session = Depends(get_db)
 ):
     """Get comprehensive finance analytics dashboard"""
+    current_user, organization_id = auth
+    
     end_date = date.today()
     start_date = end_date - timedelta(days=period_days)
     
@@ -174,9 +176,9 @@ async def get_finance_analytics_dashboard(
 @router.get("/analytics/cash-flow-forecast")
 async def get_cash_flow_forecast(
     forecast_days: int = Query(90, description="Number of days to forecast"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("finance", "read")),
+
+    db: Session = Depends(get_db)
 ):
     """Get cash flow forecast"""
     today = date.today()
@@ -246,9 +248,9 @@ async def get_cash_flow_forecast(
 @router.get("/analytics/profit-loss-trend")
 async def get_profit_loss_trend(
     months: int = Query(12, description="Number of months for trend analysis"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("finance", "read")),
+
+    db: Session = Depends(get_db)
 ):
     """Get profit and loss trend analysis"""
     end_date = date.today()
@@ -314,9 +316,9 @@ async def get_profit_loss_trend(
 async def get_expense_breakdown(
     period_days: int = Query(30, description="Number of days for analysis"),
     group_by: str = Query("account", description="Group by: account, cost_center, or category"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("finance", "read")),
+
+    db: Session = Depends(get_db)
 ):
     """Get expense breakdown analysis"""
     end_date = date.today()
@@ -391,9 +393,9 @@ async def get_expense_breakdown(
 async def get_kpi_trends(
     kpi_codes: List[str] = Query(None, description="List of KPI codes to analyze"),
     months: int = Query(6, description="Number of months for trend analysis"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("finance", "read")),
+
+    db: Session = Depends(get_db)
 ):
     """Get KPI trend analysis"""
     end_date = date.today()
@@ -435,9 +437,9 @@ async def get_kpi_trends(
 @router.get("/analytics/vendor-aging")
 async def get_vendor_aging(
     aging_periods: List[int] = Query([30, 60, 90], description="Aging period buckets"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("finance", "read")),
+
+    db: Session = Depends(get_db)
 ):
     """Get vendor aging analysis"""
     today = date.today()
@@ -514,9 +516,9 @@ async def get_vendor_aging(
 @router.get("/analytics/customer-aging")
 async def get_customer_aging(
     aging_periods: List[int] = Query([30, 60, 90], description="Aging period buckets"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("finance", "read")),
+
+    db: Session = Depends(get_db)
 ):
     """Get customer aging analysis"""
     today = date.today()
@@ -593,9 +595,9 @@ async def get_customer_aging(
 @router.get("/analytics/budgets")
 async def get_budgets(
     budget_year: Optional[int] = Query(None, description="Budget year"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("finance", "read")),
+
+    db: Session = Depends(get_db)
 ):
     """Get budget management data"""
     if not budget_year:
@@ -646,9 +648,9 @@ async def get_budgets(
 @router.get("/analytics/expense-analysis")
 async def get_expense_analysis(
     period_months: int = Query(6, description="Number of months for analysis"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("finance", "read")),
+
+    db: Session = Depends(get_db)
 ):
     """Get expense analysis by category"""
     end_date = date.today()
@@ -696,9 +698,9 @@ async def get_expense_analysis(
 @router.get("/analytics/financial-kpis")
 async def get_financial_kpis(
     period_months: int = Query(3, description="Number of months for KPI analysis"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("finance", "read")),
+
+    db: Session = Depends(get_db)
 ):
     """Get financial KPIs dashboard"""
     end_date = date.today()

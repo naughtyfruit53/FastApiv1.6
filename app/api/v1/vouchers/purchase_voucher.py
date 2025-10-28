@@ -11,6 +11,7 @@ from dateutil import parser as date_parser
 from io import BytesIO
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models import User
 from app.models.vouchers.purchase import PurchaseVoucher, PurchaseVoucherItem
 from app.schemas.vouchers import PurchaseVoucherCreate, PurchaseVoucherInDB, PurchaseVoucherUpdate
@@ -18,6 +19,7 @@ from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 from app.services.pdf_generation_service import pdf_generator
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["purchase-vouchers"])
@@ -30,15 +32,17 @@ async def get_purchase_vouchers(
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all purchase vouchers"""
+    current_user, org_id = auth
+    
     stmt = select(PurchaseVoucher).options(
         joinedload(PurchaseVoucher.vendor),
         joinedload(PurchaseVoucher.items).joinedload(PurchaseVoucherItem.product)
     ).where(
-        PurchaseVoucher.organization_id == current_user.organization_id
+        PurchaseVoucher.organization_id == org_id
     )
     
     if status:
@@ -62,10 +66,12 @@ async def get_purchase_vouchers(
 @router.get("/next-number", response_model=str)
 async def get_next_purchase_voucher_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get the next available purchase voucher number for a given date"""
+    current_user, org_id = auth
+    
     # Parse the voucher_date if provided
     date_to_use = None
     if voucher_date:
@@ -75,20 +81,22 @@ async def get_next_purchase_voucher_number(
             pass
     
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "PV", current_user.organization_id, PurchaseVoucher, voucher_date=date_to_use
+        db, "PV", org_id, PurchaseVoucher, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Check if creating a voucher with the given date would create conflicts"""
+    current_user, org_id = auth
+    
     try:
         parsed_date = date_parser.parse(voucher_date)
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "PV", current_user.organization_id, PurchaseVoucher, parsed_date
+            db, "PV", org_id, PurchaseVoucher, parsed_date
         )
         return conflict_info
     except Exception as e:
@@ -102,14 +110,16 @@ async def create_purchase_voucher(
     invoice: PurchaseVoucherCreate,
     background_tasks: BackgroundTasks,
     send_email: bool = False,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create new purchase voucher"""
+    current_user, org_id = auth
+    
     try:
         invoice_data = invoice.dict(exclude={'items'})
         invoice_data['created_by'] = current_user.id
-        invoice_data['organization_id'] = current_user.organization_id
+        invoice_data['organization_id'] = org_id
         
         # Get the voucher date for numbering
         voucher_date = None
@@ -119,18 +129,18 @@ async def create_purchase_voucher(
         # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
             invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "PV", current_user.organization_id, PurchaseVoucher, voucher_date=voucher_date
+                db, "PV", org_id, PurchaseVoucher, voucher_date=voucher_date
             )
         else:
             stmt = select(PurchaseVoucher).where(
-                PurchaseVoucher.organization_id == current_user.organization_id,
+                PurchaseVoucher.organization_id == org_id,
                 PurchaseVoucher.voucher_number == invoice_data['voucher_number']
             )
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
                 invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "PV", current_user.organization_id, PurchaseVoucher, voucher_date=voucher_date
+                db, "PV", org_id, PurchaseVoucher, voucher_date=voucher_date
             )
         
         db_invoice = PurchaseVoucher(**invoice_data)
@@ -233,15 +243,17 @@ async def create_purchase_voucher(
 @router.get("/{invoice_id}", response_model=PurchaseVoucherInDB)
 async def get_purchase_voucher(
     invoice_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     stmt = select(PurchaseVoucher).options(
         joinedload(PurchaseVoucher.vendor),
         joinedload(PurchaseVoucher.items).joinedload(PurchaseVoucherItem.product)
     ).where(
         PurchaseVoucher.id == invoice_id,
-        PurchaseVoucher.organization_id == current_user.organization_id
+        PurchaseVoucher.organization_id == org_id
     )
     result = await db.execute(stmt)
     invoice = result.unique().scalar_one_or_none()
@@ -255,16 +267,18 @@ async def get_purchase_voucher(
 @router.get("/{invoice_id}/pdf")
 async def generate_purchase_voucher_pdf(
     invoice_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(PurchaseVoucher).options(
             joinedload(PurchaseVoucher.vendor),
             joinedload(PurchaseVoucher.items).joinedload(PurchaseVoucherItem.product)
         ).where(
             PurchaseVoucher.id == invoice_id,
-            PurchaseVoucher.organization_id == current_user.organization_id
+            PurchaseVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         voucher = result.unique().scalar_one_or_none()
@@ -275,7 +289,7 @@ async def generate_purchase_voucher_pdf(
             voucher_type="purchase_voucher",
             voucher_data=voucher.__dict__,
             db=db,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             current_user=current_user
         )
         
@@ -296,13 +310,15 @@ async def generate_purchase_voucher_pdf(
 async def update_purchase_voucher(
     invoice_id: int,
     invoice_update: PurchaseVoucherUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(PurchaseVoucher).where(
             PurchaseVoucher.id == invoice_id,
-            PurchaseVoucher.organization_id == current_user.organization_id
+            PurchaseVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         invoice = result.scalar_one_or_none()
@@ -391,7 +407,7 @@ async def update_purchase_voucher(
             joinedload(PurchaseVoucher.items).joinedload(PurchaseVoucherItem.product)
         ).where(
             PurchaseVoucher.id == invoice_id,
-            PurchaseVoucher.organization_id == current_user.organization_id
+            PurchaseVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         invoice = result.unique().scalar_one_or_none()
@@ -415,13 +431,15 @@ async def update_purchase_voucher(
 @router.delete("/{invoice_id}")
 async def delete_purchase_voucher(
     invoice_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(PurchaseVoucher).where(
             PurchaseVoucher.id == invoice_id,
-            PurchaseVoucher.organization_id == current_user.organization_id
+            PurchaseVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         invoice = result.scalar_one_or_none()
