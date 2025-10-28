@@ -142,15 +142,16 @@ async def get_items(
 
 ### Security Enhancements
 1. **Centralized Permission Checks**: All permission checks now go through a single enforcement point
-2. **Consistent Tenant Isolation**: Organization scoping enforced at the framework level
-3. **Reduced Code Duplication**: Eliminated ~180 lines of redundant auth code
+2. **Consistent Tenant Isolation**: Organization scoping enforced at the framework level for migrated endpoints
+3. **Reduced Code Duplication**: Eliminated ~90 lines of redundant auth code in fully migrated endpoints
 4. **Audit Trail**: All permission checks are logged through central enforcement
 
 ### Code Quality
-1. **Simplified Dependencies**: Reduced from 3-4 auth-related dependencies to 1
-2. **Better Readability**: Clear, consistent pattern across all endpoints
+1. **Simplified Dependencies**: Reduced auth dependencies in migrated endpoints from 3-4 to 1
+2. **Better Readability**: Clear, consistent pattern across migrated endpoints
 3. **Type Safety**: Auth tuple provides structured access to user and org_id
-4. **Maintainability**: Single source of truth for RBAC logic
+4. **Maintainability**: Single source of truth for RBAC logic in migrated code
+5. **Code Reduction**: Eliminated ~90 lines of redundant auth code in fully migrated endpoints
 
 ### Performance
 - No performance impact: Enforcement happens at dependency injection time
