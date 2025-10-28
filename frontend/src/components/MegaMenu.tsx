@@ -37,7 +37,7 @@ import { rbacService, SERVICE_PERMISSIONS } from '../services/rbacService';
 import { organizationService } from '../services/organizationService';
 import MobileNav from './MobileNav';
 import { useMobileDetection } from '../hooks/useMobileDetection';
-import { menuItemsBuilt as menuItems, mainMenuSections } from './menuConfig';
+import { menuItems, mainMenuSections } from './menuConfig';
 
 interface MegaMenuProps {
   user?: any;
@@ -396,7 +396,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             maxHeight: '70vh',
             overflow: 'hidden',
             borderRadius: 2,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
+            boxShadow: '0 14px 40px rgba(0,0,0,0.16)',
             border: '1px solid',
             borderColor: 'divider',
             display: 'flex',
@@ -409,7 +409,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             Menu
           </Typography>
           <Box sx={{ flex: 1 }} />
-          <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1 }}>
+          <Box ref={searchRef} sx={{ display: 'flex', alignItems: 'center', bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1 }}>
             <SearchIcon fontSize="small" />
             <InputBase
               inputRef={searchInputRef}
@@ -570,7 +570,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           sx: {
             ml: 1,
             borderRadius: 2,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
             border: '1px solid',
             borderColor: 'divider',
             '& .MuiMenuItem-root': {
@@ -784,7 +784,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         PaperProps={{
           sx: {
             borderRadius: 2,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
             border: '1px solid',
             borderColor: 'divider',
             minWidth: 200,
