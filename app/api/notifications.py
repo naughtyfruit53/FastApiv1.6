@@ -12,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+
 from app.core.tenant import TenantQueryMixin
-from app.core.org_restrictions import require_current_organization_id
+from app.core.enforcement import require_access
 from app.models import User, NotificationTemplate, NotificationLog
 from app.schemas.base import (
     NotificationTemplateCreate, NotificationTemplateUpdate, NotificationTemplateInDB,
@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 notification_service = NotificationService()
 
-
 # Notification Template Endpoints
 
 @router.get("/templates", response_model=List[NotificationTemplateInDB])
@@ -37,12 +36,16 @@ async def get_notification_templates(
     channel: Optional[str] = Query(None, description="Filter by notification channel"),
     template_type: Optional[str] = Query(None, description="Filter by template type"),
     is_active: Optional[bool] = Query(True, description="Filter by active status"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get notification templates for the current organization."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     templates = await notification_service.get_templates(
         db=db,
@@ -55,16 +58,19 @@ async def get_notification_templates(
     logger.info(f"Retrieved {len(templates)} notification templates for organization {org_id}")
     return templates
 
-
 @router.post("/templates", response_model=NotificationTemplateInDB)
 async def create_notification_template(
     template_data: NotificationTemplateCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "create")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Create a new notification template."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     # Validate channel
     valid_channels = ["email", "sms", "push", "in_app"]
@@ -97,16 +103,19 @@ async def create_notification_template(
             detail="Failed to create notification template"
         )
 
-
 @router.get("/templates/{template_id}", response_model=NotificationTemplateInDB)
 async def get_notification_template(
     template_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get a specific notification template."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     template = await notification_service.get_template(db, template_id, org_id)
     if not template:
@@ -117,17 +126,20 @@ async def get_notification_template(
     
     return template
 
-
 @router.put("/templates/{template_id}", response_model=NotificationTemplateInDB)
 async def update_notification_template(
     template_id: int,
     update_data: NotificationTemplateUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "update")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Update a notification template."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     # Convert to dict and filter out None values
     update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
@@ -147,16 +159,19 @@ async def update_notification_template(
     
     return template
 
-
 @router.delete("/templates/{template_id}")
 async def delete_notification_template(
     template_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "delete")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Delete (deactivate) a notification template."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     success = await notification_service.delete_template(db, template_id, org_id)
     if not success:
@@ -167,18 +182,21 @@ async def delete_notification_template(
     
     return {"message": "Notification template deleted successfully"}
 
-
 # Notification Sending Endpoints
 
 @router.post("/send", response_model=NotificationSendResponse)
 async def send_notification(
     request: NotificationSendRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "create")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Send a single notification."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     # Validate channel
     valid_channels = ["email", "sms", "push", "in_app"]
@@ -223,16 +241,19 @@ async def send_notification(
             detail="Failed to send notification"
         )
 
-
 @router.post("/send-bulk", response_model=BulkNotificationResponse)
 async def send_bulk_notification(
     request: BulkNotificationRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "create")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Send notifications to multiple recipients."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     # Validate channel
     valid_channels = ["email", "sms", "push", "in_app"]
@@ -280,7 +301,6 @@ async def send_bulk_notification(
             detail="Failed to send bulk notification"
         )
 
-
 # Notification Log Endpoints
 
 @router.get("/logs", response_model=List[NotificationLogInDB])
@@ -290,12 +310,16 @@ async def get_notification_logs(
     channel: Optional[str] = Query(None, description="Filter by channel"),
     limit: int = Query(100, ge=1, le=1000, description="Number of logs to return"),
     offset: int = Query(0, ge=0, description="Number of logs to skip"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get notification logs for the current organization."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     logs = await notification_service.get_notification_logs(
         db=db,
@@ -310,16 +334,19 @@ async def get_notification_logs(
     logger.info(f"Retrieved {len(logs)} notification logs for organization {org_id}")
     return logs
 
-
 @router.get("/logs/{log_id}", response_model=NotificationLogInDB)
 async def get_notification_log(
     log_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get a specific notification log."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     log = (await db.execute(
         select(NotificationLog).filter(
@@ -336,18 +363,21 @@ async def get_notification_log(
     
     return log
 
-
 # Analytics and Statistics
 
 @router.get("/analytics/summary")
 async def get_notification_analytics(
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get notification analytics summary."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     from datetime import datetime, timedelta
     from sqlalchemy import func, and_
@@ -397,19 +427,22 @@ async def get_notification_analytics(
         "channel_breakdown": {stat.channel: stat.count for stat in channel_stats}
     }
 
-
 # Template Testing
 
 @router.post("/templates/{template_id}/test")
 async def test_notification_template(
     template_id: int,
     test_data: Dict[str, Any],
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "create")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Test a notification template with sample data."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     template = await notification_service.get_template(db, template_id, org_id)
     if not template:
@@ -443,19 +476,22 @@ async def test_notification_template(
         "variables_used": variables
     }
 
-
 # User Preference Endpoints
 
 @router.get("/preferences/{subject_type}/{subject_id}", response_model=List[NotificationPreferenceInDB])
 async def get_user_notification_preferences(
     subject_type: str,
     subject_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get notification preferences for a user or customer."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     # Validate subject type
     valid_subject_types = ["user", "customer"]
@@ -474,16 +510,19 @@ async def get_user_notification_preferences(
     
     return preferences
 
-
 @router.post("/preferences", response_model=NotificationPreferenceInDB)
 async def create_notification_preference(
     preference_data: NotificationPreferenceCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "create")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Create or update a notification preference."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     # Validate subject type
     valid_subject_types = ["user", "customer"]
@@ -523,17 +562,20 @@ async def create_notification_preference(
             detail="Failed to create notification preference"
         )
 
-
 @router.put("/preferences/{preference_id}", response_model=NotificationPreferenceInDB)
 async def update_notification_preference(
     preference_id: int,
     update_data: NotificationPreferenceUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "update")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Update a notification preference."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     preference = await notification_service.update_user_preference(
         db=db,
@@ -550,18 +592,21 @@ async def update_notification_preference(
     
     return preference
 
-
 # Event Trigger Endpoints
 
 @router.post("/trigger")
 async def trigger_automated_notifications(
     trigger_data: Dict[str, Any],
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("notification", "create")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Trigger automated notifications based on events."""
+
+    current_user, org_id = auth
     
-    org_id = require_current_organization_id(current_user)
+    # org_id from auth tuple
     
     # Validate required fields
     if "trigger_event" not in trigger_data:

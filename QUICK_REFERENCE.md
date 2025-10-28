@@ -80,6 +80,40 @@ auth: tuple = Depends(require_access("finance", "read"))
 user, organization_id = auth  # Note: can use organization_id or org_id
 ```
 
+### CRM ✅
+```python
+auth: tuple = Depends(require_access("crm", "read"))
+user, org_id = auth
+stmt = select(Lead).where(Lead.organization_id == org_id)
+```
+
+### Service Desk ✅
+```python
+auth: tuple = Depends(require_access("service", "create"))
+user, org_id = auth
+query = db.query(Ticket).filter(Ticket.organization_id == org_id)
+```
+
+### Notification ✅
+```python
+auth: tuple = Depends(require_access("notification", "read"))
+user, org_id = auth
+```
+
+### HR ✅
+```python
+auth: tuple = Depends(require_access("hr", "update"))
+user, org_id = auth
+stmt = select(EmployeeProfile).where(EmployeeProfile.organization_id == org_id)
+```
+
+### Order Book ✅
+```python
+auth: tuple = Depends(require_access("order", "read"))
+user, organization_id = auth  # Note: Order Book uses organization_id
+query = db.query(Order).filter(Order.organization_id == organization_id)
+```
+
 ## ⚡ Quick Checklist
 
 Before committing:
@@ -111,7 +145,14 @@ Outputs:
   - Vouchers: `/app/api/v1/vouchers/sales_voucher.py`, `purchase_voucher.py`
   - Manufacturing: `/app/api/v1/manufacturing/bom.py`
   - Finance: `/app/api/v1/finance_analytics.py`
-- **Tests**: `/tests/test_rbac_migration_enforcement.py`
+  - **CRM**: `/app/api/v1/crm.py` ✅
+  - **Service Desk**: `/app/api/v1/service_desk.py` ✅
+  - **Notification**: `/app/api/notifications.py` ✅
+  - **HR**: `/app/api/v1/hr.py` ✅
+  - **Order Book**: `/app/api/v1/order_book.py` ✅
+- **Tests**: 
+  - `/tests/test_rbac_migration_enforcement.py`
+  - `/tests/test_phase3_rbac_enforcement.py` ✅
 
 ## 🧪 Testing
 

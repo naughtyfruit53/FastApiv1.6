@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, date, timedelta
 
 from app.core.database import get_db
-from app.core.tenant import require_current_organization_id
+from app.core.enforcement import require_access
 from app.models.service_models import (
     Ticket, SLAPolicy, SLATracking, ChatbotConversation, ChatbotMessage,
     SurveyTemplate, CustomerSurvey, ChannelConfiguration
@@ -62,10 +62,15 @@ async def get_tickets(
     assigned_to_id: Optional[int] = Query(None),
     customer_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "read")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Get all tickets with advanced filtering"""
+
+    current_user, org_id = auth
+
     query = db.query(Ticket).filter(Ticket.organization_id == org_id)
     
     # Apply filters
@@ -106,10 +111,12 @@ async def get_tickets(
 async def create_ticket(
     ticket_data: TicketCreate,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "create")),
+    db: Session = Depends(get_db)
 ):
     """Create a new support ticket"""
+    current_user, org_id = auth
+
     # Generate unique ticket number
     ticket_number = generate_ticket_number(db, org_id)
     
@@ -137,10 +144,15 @@ async def escalate_ticket(
     escalation_data: TicketEscalationRequest,
     background_tasks: BackgroundTasks,
     ticket_id: int = Path(...),
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "create")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Escalate a ticket"""
+
+    current_user, org_id = auth
+
     ticket = db.query(Ticket).filter(
         and_(Ticket.id == ticket_id, Ticket.organization_id == org_id)
     ).first()
@@ -182,10 +194,12 @@ async def escalate_ticket(
 @router.put("/tickets/bulk-update", response_model=BulkTicketResponse)
 async def bulk_update_tickets(
     bulk_update: BulkTicketUpdate,
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "update")),
+    db: Session = Depends(get_db)
 ):
     """Bulk update multiple tickets"""
+    current_user, org_id = auth
+
     # Verify all tickets belong to organization
     tickets = db.query(Ticket).filter(
         and_(
@@ -241,10 +255,15 @@ async def get_chatbot_conversations(
     status: Optional[str] = Query(None),
     channel: Optional[str] = Query(None),
     escalated_to_human: Optional[bool] = Query(None),
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "read")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Get chatbot conversations"""
+
+    current_user, org_id = auth
+
     query = db.query(ChatbotConversation).filter(ChatbotConversation.organization_id == org_id)
     
     # Apply filters
@@ -265,10 +284,12 @@ async def get_chatbot_conversations(
 @router.post("/chatbot/conversations", response_model=ChatbotConversationSchema)
 async def create_chatbot_conversation(
     conversation_data: ChatbotConversationCreate,
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "create")),
+    db: Session = Depends(get_db)
 ):
     """Start a new chatbot conversation"""
+    current_user, org_id = auth
+
     # Generate unique IDs
     conversation_id = generate_conversation_id()
     session_id = str(uuid.uuid4())
@@ -292,10 +313,15 @@ async def add_chatbot_message(
     message_data: ChatbotMessageCreate,
     background_tasks: BackgroundTasks,
     conversation_id: str = Path(...),
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "create")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Add a message to a chatbot conversation"""
+
+    current_user, org_id = auth
+
     # Find conversation
     conversation = db.query(ChatbotConversation).filter(
         and_(
@@ -334,10 +360,15 @@ async def escalate_conversation_to_human(
     conversation_id: str = Path(...),
     agent_id: Optional[int] = Query(None),
     reason: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "create")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Escalate chatbot conversation to human agent"""
+
+    current_user, org_id = auth
+
     conversation = db.query(ChatbotConversation).filter(
         and_(
             ChatbotConversation.conversation_id == conversation_id,
@@ -377,10 +408,15 @@ async def get_survey_templates(
     limit: int = Query(100, ge=1, le=1000),
     template_type: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "read")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Get survey templates"""
+
+    current_user, org_id = auth
+
     query = db.query(SurveyTemplate).filter(SurveyTemplate.organization_id == org_id)
     
     # Apply filters
@@ -399,10 +435,12 @@ async def get_survey_templates(
 @router.post("/survey-templates", response_model=SurveyTemplateSchema)
 async def create_survey_template(
     template_data: SurveyTemplateCreate,
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "create")),
+    db: Session = Depends(get_db)
 ):
     """Create a new survey template"""
+    current_user, org_id = auth
+
     # Check if template name already exists
     existing = db.query(SurveyTemplate).filter(
         and_(
@@ -434,10 +472,15 @@ async def send_survey(
     ticket_id: Optional[int] = Query(None),
     customer_email: Optional[str] = Query(None),
     customer_name: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "read")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Send a survey to a customer"""
+
+    current_user, org_id = auth
+
     # Verify template exists
     template = db.query(SurveyTemplate).filter(
         and_(SurveyTemplate.id == template_id, SurveyTemplate.organization_id == org_id)
@@ -540,10 +583,15 @@ async def get_channel_configurations(
     limit: int = Query(100, ge=1, le=1000),
     channel_type: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "read")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Get channel configurations"""
+
+    current_user, org_id = auth
+
     query = db.query(ChannelConfiguration).filter(ChannelConfiguration.organization_id == org_id)
     
     # Apply filters
@@ -559,10 +607,12 @@ async def get_channel_configurations(
 @router.post("/channels", response_model=ChannelConfigurationSchema)
 async def create_channel_configuration(
     channel_data: ChannelConfigurationCreate,
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "create")),
+    db: Session = Depends(get_db)
 ):
     """Create a new channel configuration"""
+    current_user, org_id = auth
+
     # Check if channel already exists
     existing = db.query(ChannelConfiguration).filter(
         and_(
@@ -592,10 +642,15 @@ async def create_channel_configuration(
 async def get_service_desk_analytics(
     period_start: date = Query(...),
     period_end: date = Query(...),
-    db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("service", "read")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Get service desk analytics"""
+
+    current_user, org_id = auth
+
     # Ticket analytics
     tickets_query = db.query(Ticket).filter(
         and_(

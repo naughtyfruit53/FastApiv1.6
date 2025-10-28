@@ -9,7 +9,7 @@ import os
 import uuid
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.hr_models import (
     EmployeeProfile, AttendanceRecord, LeaveType, 
@@ -32,15 +32,19 @@ router = APIRouter(prefix="/hr", tags=["Human Resources"])
 async def create_employee_profile(
     employee_data: EmployeeProfileCreate = Depends(),
     documents: List[UploadFile] = File(None),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "create")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Create a new employee profile with optional documents"""
+
+    current_user, org_id = auth
     
     # Check if employee profile already exists for this user
     stmt = select(EmployeeProfile).where(
         and_(
-            EmployeeProfile.organization_id == current_user.organization_id,
+            EmployeeProfile.organization_id == org_id,
             EmployeeProfile.user_id == employee_data.user_id
         )
     )
@@ -56,7 +60,7 @@ async def create_employee_profile(
     # Check if employee code is unique within organization
     stmt = select(EmployeeProfile).where(
         and_(
-            EmployeeProfile.organization_id == current_user.organization_id,
+            EmployeeProfile.organization_id == org_id,
             EmployeeProfile.employee_code == employee_data.employee_code
         )
     )
@@ -71,7 +75,7 @@ async def create_employee_profile(
     
     employee_profile = EmployeeProfile(
         **employee_data.model_dump(),
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by_id=current_user.id
     )
     
@@ -115,13 +119,17 @@ async def get_employees(
     search: Optional[str] = Query(None),
     department: Optional[str] = Query(None),
     employment_status: Optional[str] = Query(None),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "read")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Get list of employees with filtering and pagination"""
+
+    current_user, org_id = auth
     
     stmt = select(EmployeeProfile).where(
-        EmployeeProfile.organization_id == current_user.organization_id
+        EmployeeProfile.organization_id == org_id
     )
     
     # Apply filters
@@ -150,15 +158,19 @@ async def get_employees(
 @router.get("/employees/{employee_id}", response_model=EmployeeProfileResponse)
 async def get_employee(
     employee_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "read")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Get employee profile by ID"""
+
+    current_user, org_id = auth
     
     stmt = select(EmployeeProfile).where(
         and_(
             EmployeeProfile.id == employee_id,
-            EmployeeProfile.organization_id == current_user.organization_id
+            EmployeeProfile.organization_id == org_id
         )
     )
     result = await db.execute(stmt)
@@ -177,15 +189,19 @@ async def update_employee(
     employee_id: int,
     employee_data: EmployeeProfileUpdate = Depends(),
     documents: List[UploadFile] = File(None),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "update")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Update employee profile with optional new documents"""
+
+    current_user, org_id = auth
     
     stmt = select(EmployeeProfile).where(
         and_(
             EmployeeProfile.id == employee_id,
-            EmployeeProfile.organization_id == current_user.organization_id
+            EmployeeProfile.organization_id == org_id
         )
     )
     result = await db.execute(stmt)
@@ -201,7 +217,7 @@ async def update_employee(
     if employee_data.employee_code and employee_data.employee_code != employee.employee_code:
         stmt = select(EmployeeProfile).where(
             and_(
-                EmployeeProfile.organization_id == current_user.organization_id,
+                EmployeeProfile.organization_id == org_id,
                 EmployeeProfile.employee_code == employee_data.employee_code,
                 EmployeeProfile.id != employee_id
             )
@@ -249,15 +265,19 @@ async def update_employee(
 @router.post("/attendance", response_model=AttendanceRecordResponse)
 async def create_attendance_record(
     attendance_data: AttendanceRecordCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "create")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Create attendance record"""
+
+    current_user, org_id = auth
     
     # Check if attendance record already exists for this date
     stmt = select(AttendanceRecord).where(
         and_(
-            AttendanceRecord.organization_id == current_user.organization_id,
+            AttendanceRecord.organization_id == org_id,
             AttendanceRecord.employee_id == attendance_data.employee_id,
             AttendanceRecord.attendance_date == attendance_data.attendance_date
         )
@@ -273,7 +293,7 @@ async def create_attendance_record(
     
     attendance_record = AttendanceRecord(
         **attendance_data.model_dump(),
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     
     db.add(attendance_record)
@@ -290,13 +310,17 @@ async def get_attendance_records(
     status: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "read")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Get attendance records with filtering"""
+
+    current_user, org_id = auth
     
     stmt = select(AttendanceRecord).where(
-        AttendanceRecord.organization_id == current_user.organization_id
+        AttendanceRecord.organization_id == org_id
     )
     
     # Apply filters
@@ -323,15 +347,19 @@ async def get_attendance_records(
 async def update_attendance_record(
     attendance_id: int,
     attendance_data: AttendanceRecordUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "update")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Update attendance record"""
+
+    current_user, org_id = auth
     
     stmt = select(AttendanceRecord).where(
         and_(
             AttendanceRecord.id == attendance_id,
-            AttendanceRecord.organization_id == current_user.organization_id
+            AttendanceRecord.organization_id == org_id
         )
     )
     result = await db.execute(stmt)
@@ -361,15 +389,19 @@ async def update_attendance_record(
 @router.post("/leave-types", response_model=LeaveTypeResponse)
 async def create_leave_type(
     leave_type_data: LeaveTypeCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "create")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Create a new leave type"""
+
+    current_user, org_id = auth
     
     # Check if leave type code is unique within organization
     stmt = select(LeaveType).where(
         and_(
-            LeaveType.organization_id == current_user.organization_id,
+            LeaveType.organization_id == org_id,
             LeaveType.code == leave_type_data.code
         )
     )
@@ -384,7 +416,7 @@ async def create_leave_type(
     
     leave_type = LeaveType(
         **leave_type_data.model_dump(),
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     
     db.add(leave_type)
@@ -396,13 +428,17 @@ async def create_leave_type(
 @router.get("/leave-types", response_model=List[LeaveTypeResponse])
 async def get_leave_types(
     is_active: Optional[bool] = Query(None),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "read")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Get all leave types"""
+
+    current_user, org_id = auth
     
     stmt = select(LeaveType).where(
-        LeaveType.organization_id == current_user.organization_id
+        LeaveType.organization_id == org_id
     )
     
     if is_active is not None:
@@ -416,14 +452,18 @@ async def get_leave_types(
 @router.post("/leave-applications", response_model=LeaveApplicationResponse)
 async def create_leave_application(
     leave_data: LeaveApplicationCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "create")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Create a new leave application"""
+
+    current_user, org_id = auth
     
     leave_application = LeaveApplication(
         **leave_data.model_dump(),
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     
     db.add(leave_application)
@@ -440,13 +480,17 @@ async def get_leave_applications(
     end_date: Optional[date] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "read")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Get leave applications with filtering"""
+
+    current_user, org_id = auth
     
     stmt = select(LeaveApplication).where(
-        LeaveApplication.organization_id == current_user.organization_id
+        LeaveApplication.organization_id == org_id
     )
     
     # Apply filters
@@ -473,15 +517,19 @@ async def get_leave_applications(
 async def approve_leave_application(
     application_id: int,
     approval_remarks: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "update")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Approve a leave application"""
+
+    current_user, org_id = auth
     
     stmt = select(LeaveApplication).where(
         and_(
             LeaveApplication.id == application_id,
-            LeaveApplication.organization_id == current_user.organization_id
+            LeaveApplication.organization_id == org_id
         )
     )
     result = await db.execute(stmt)
@@ -512,15 +560,19 @@ async def approve_leave_application(
 async def reject_leave_application(
     application_id: int,
     approval_remarks: str,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "update")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Reject a leave application"""
+
+    current_user, org_id = auth
     
     stmt = select(LeaveApplication).where(
         and_(
             LeaveApplication.id == application_id,
-            LeaveApplication.organization_id == current_user.organization_id
+            LeaveApplication.organization_id == org_id
         )
     )
     result = await db.execute(stmt)
@@ -551,14 +603,18 @@ async def reject_leave_application(
 @router.post("/performance-reviews", response_model=PerformanceReviewResponse)
 async def create_performance_review(
     review_data: PerformanceReviewCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "create")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Create a new performance review"""
+
+    current_user, org_id = auth
     
     performance_review = PerformanceReview(
         **review_data.model_dump(),
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     
     db.add(performance_review)
@@ -575,13 +631,17 @@ async def get_performance_reviews(
     status: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "read")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Get performance reviews with filtering"""
+
+    current_user, org_id = auth
     
     stmt = select(PerformanceReview).where(
-        PerformanceReview.organization_id == current_user.organization_id
+        PerformanceReview.organization_id == org_id
     )
     
     # Apply filters
@@ -608,15 +668,19 @@ async def get_performance_reviews(
 async def update_performance_review(
     review_id: int,
     review_data: PerformanceReviewUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "update")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Update performance review"""
+
+    current_user, org_id = auth
     
     stmt = select(PerformanceReview).where(
         and_(
             PerformanceReview.id == review_id,
-            PerformanceReview.organization_id == current_user.organization_id
+            PerformanceReview.organization_id == org_id
         )
     )
     result = await db.execute(stmt)
@@ -646,14 +710,18 @@ async def update_performance_review(
 # Dashboard APIs
 @router.get("/dashboard", response_model=HRDashboard)
 async def get_hr_dashboard(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("hr", "read")),
+
     db: AsyncSession = Depends(get_db)
 ):
+
     """Get HR dashboard summary"""
+
+    current_user, org_id = auth
     
     # Total employees
     stmt = select(func.count()).select_from(EmployeeProfile).where(
-        EmployeeProfile.organization_id == current_user.organization_id
+        EmployeeProfile.organization_id == org_id
     )
     result = await db.execute(stmt)
     total_employees = result.scalar_one()
@@ -661,7 +729,7 @@ async def get_hr_dashboard(
     # Active employees
     stmt = select(func.count()).select_from(EmployeeProfile).where(
         and_(
-            EmployeeProfile.organization_id == current_user.organization_id,
+            EmployeeProfile.organization_id == org_id,
             EmployeeProfile.employment_status == "active"
         )
     )
@@ -672,7 +740,7 @@ async def get_hr_dashboard(
     today = date.today()
     stmt = select(func.count()).select_from(LeaveApplication).where(
         and_(
-            LeaveApplication.organization_id == current_user.organization_id,
+            LeaveApplication.organization_id == org_id,
             LeaveApplication.status == "approved",
             LeaveApplication.start_date <= today,
             LeaveApplication.end_date >= today
@@ -684,7 +752,7 @@ async def get_hr_dashboard(
     # Pending leave approvals
     stmt = select(func.count()).select_from(LeaveApplication).where(
         and_(
-            LeaveApplication.organization_id == current_user.organization_id,
+            LeaveApplication.organization_id == org_id,
             LeaveApplication.status == "pending"
         )
     )
@@ -695,7 +763,7 @@ async def get_hr_dashboard(
     next_month = today + timedelta(days=30)
     stmt = select(func.count()).select_from(PerformanceReview).where(
         and_(
-            PerformanceReview.organization_id == current_user.organization_id,
+            PerformanceReview.organization_id == org_id,
             PerformanceReview.status.in_(["draft", "submitted"]),
             PerformanceReview.review_period_end.between(today, next_month)
         )
@@ -707,7 +775,7 @@ async def get_hr_dashboard(
     last_month = today - timedelta(days=30)
     stmt = select(func.count()).select_from(EmployeeProfile).where(
         and_(
-            EmployeeProfile.organization_id == current_user.organization_id,
+            EmployeeProfile.organization_id == org_id,
             EmployeeProfile.hire_date >= last_month
         )
     )
@@ -717,7 +785,7 @@ async def get_hr_dashboard(
     # Employees in probation
     stmt = select(func.count()).select_from(EmployeeProfile).where(
         and_(
-            EmployeeProfile.organization_id == current_user.organization_id,
+            EmployeeProfile.organization_id == org_id,
             EmployeeProfile.employment_status == "active",
             EmployeeProfile.confirmation_date.is_(None),
             EmployeeProfile.hire_date.isnot(None)
@@ -730,7 +798,7 @@ async def get_hr_dashboard(
     current_month = today.replace(day=1)
     stmt = select(func.avg(AttendanceRecord.total_hours)).where(
         and_(
-            AttendanceRecord.organization_id == current_user.organization_id,
+            AttendanceRecord.organization_id == org_id,
             AttendanceRecord.attendance_date >= current_month,
             AttendanceRecord.attendance_status == "present"
         )

@@ -11,8 +11,8 @@ from datetime import datetime, date
 from decimal import Decimal
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+
+from app.core.enforcement import require_access
 from app.models import User, Organization, Customer
 from app.models.order_book_models import Order, OrderItem, WorkflowHistory  # Import new models
 from app.schemas.order_book import OrderSchema, OrderCreateSchema, WorkflowUpdateSchema, StatusUpdateSchema  # Assume schemas exist or create them
@@ -42,7 +42,6 @@ ORDER_STATUSES = [
     "cancelled"
 ]
 
-
 @router.get("/orders", response_model=List[OrderSchema])
 async def get_orders(
     status: Optional[str] = Query(None, description="Filter by order status"),
@@ -50,11 +49,14 @@ async def get_orders(
     customer_id: Optional[int] = Query(None, description="Filter by customer"),
     start_date: Optional[date] = Query(None, description="Filter by order date (start)"),
     end_date: Optional[date] = Query(None, description="Filter by order date (end)"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("order", "read")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Get all orders with optional filters"""
+
+    current_user, organization_id = auth
     try:
         query = db.query(Order).filter(Order.organization_id == organization_id)
         
@@ -82,15 +84,17 @@ async def get_orders(
         logger.error(f"Error fetching orders: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/orders/{order_id}", response_model=OrderSchema)
 async def get_order(
     order_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("order", "read")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Get order details by ID"""
+
+    current_user, organization_id = auth
     try:
         order = db.query(Order).filter(
             and_(Order.id == order_id, Order.organization_id == organization_id)
@@ -107,15 +111,17 @@ async def get_order(
         logger.error(f"Error fetching order {order_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.post("/orders", response_model=OrderSchema)
 async def create_order(
     order_data: OrderCreateSchema,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("order", "create")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Create a new order"""
+
+    current_user, organization_id = auth
     try:
         # Generate unique order number (simple example, improve as needed)
         last_order = db.query(Order).filter(Order.organization_id == organization_id).order_by(desc(Order.id)).first()
@@ -169,16 +175,18 @@ async def create_order(
         logger.error(f"Error creating order: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.patch("/orders/{order_id}/workflow", response_model=OrderSchema)
 async def update_workflow_stage(
     order_id: int,
     stage_data: WorkflowUpdateSchema,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("order", "update")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Update order workflow stage"""
+
+    current_user, organization_id = auth
     try:
         order = db.query(Order).filter(
             and_(Order.id == order_id, Order.organization_id == organization_id)
@@ -215,16 +223,18 @@ async def update_workflow_stage(
         logger.error(f"Error updating workflow for order {order_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.patch("/orders/{order_id}/status", response_model=OrderSchema)
 async def update_order_status(
     order_id: int,
     status_data: StatusUpdateSchema,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("order", "update")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Update order status"""
+
+    current_user, organization_id = auth
     try:
         order = db.query(Order).filter(
             and_(Order.id == order_id, Order.organization_id == organization_id)
@@ -251,7 +261,6 @@ async def update_order_status(
         logger.error(f"Error updating status for order {order_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/workflow-stages")
 async def get_workflow_stages(
     current_user: User = Depends(get_current_active_user)
@@ -267,7 +276,6 @@ async def get_workflow_stages(
             {"value": "completed", "label": "Completed", "order": 6}
         ]
     }
-
 
 @router.get("/order-statuses")
 async def get_order_statuses(
@@ -286,14 +294,16 @@ async def get_order_statuses(
         ]
     }
 
-
 @router.get("/dashboard-stats")
 async def get_dashboard_stats(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("order", "read")),
+
+    db: Session = Depends(get_db)
 ):
+
     """Get order book dashboard statistics"""
+
+    current_user, organization_id = auth
     try:
         # Total orders
         total_orders = db.query(func.count(Order.id)).filter(Order.organization_id == organization_id).scalar()
