@@ -12,10 +12,9 @@ from datetime import datetime, date
 from decimal import Decimal
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.core.tenant import TenantQueryMixin
-from app.core.org_restrictions import require_current_organization_id, validate_company_setup
-from app.core.rbac_dependencies import check_service_permission
+from app.core.org_restrictions import validate_company_setup
 from app.models import (
     User, Organization, Vendor,
     RequestForQuotation, RFQItem, VendorRFQ, VendorQuotation, QuotationItem,

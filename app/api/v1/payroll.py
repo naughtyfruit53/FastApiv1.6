@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.hr_models import EmployeeProfile, AttendanceRecord
 from app.models.payroll_models import (
@@ -33,7 +33,7 @@ router = APIRouter(prefix="/payroll", tags=["Payroll"])
 @router.post("/salary-structures", response_model=SalaryStructureResponse)
 async def create_salary_structure(
     salary_data: SalaryStructureCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new salary structure for an employee"""
@@ -42,7 +42,7 @@ async def create_salary_structure(
     employee = db.query(EmployeeProfile).filter(
         and_(
             EmployeeProfile.id == salary_data.employee_id,
-            EmployeeProfile.organization_id == current_user.organization_id
+            EmployeeProfile.organization_id == org_id
         )
     ).first()
     
@@ -55,7 +55,7 @@ async def create_salary_structure(
     # Check for overlapping active salary structures
     overlapping_structure = db.query(SalaryStructure).filter(
         and_(
-            SalaryStructure.organization_id == current_user.organization_id,
+            SalaryStructure.organization_id == org_id,
             SalaryStructure.employee_id == salary_data.employee_id,
             SalaryStructure.is_active == True,
             or_(
@@ -74,7 +74,7 @@ async def create_salary_structure(
     
     salary_structure = SalaryStructure(
         **salary_data.model_dump(),
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by_id=current_user.id
     )
     
@@ -96,7 +96,7 @@ async def get_salary_structures(
     """Get salary structures with filtering"""
     
     query = db.query(SalaryStructure).filter(
-        SalaryStructure.organization_id == current_user.organization_id
+        SalaryStructure.organization_id == org_id
     )
     
     if employee_id:
@@ -114,7 +114,7 @@ async def get_salary_structures(
 async def update_salary_structure(
     structure_id: int,
     salary_data: SalaryStructureUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "update")),
     db: Session = Depends(get_db)
 ):
     """Update salary structure"""
@@ -122,7 +122,7 @@ async def update_salary_structure(
     structure = db.query(SalaryStructure).filter(
         and_(
             SalaryStructure.id == structure_id,
-            SalaryStructure.organization_id == current_user.organization_id
+            SalaryStructure.organization_id == org_id
         )
     ).first()
     
@@ -144,7 +144,7 @@ async def update_salary_structure(
 @router.put("/salary-structures/{structure_id}/approve")
 async def approve_salary_structure(
     structure_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "update")),
     db: Session = Depends(get_db)
 ):
     """Approve salary structure"""
@@ -152,7 +152,7 @@ async def approve_salary_structure(
     structure = db.query(SalaryStructure).filter(
         and_(
             SalaryStructure.id == structure_id,
-            SalaryStructure.organization_id == current_user.organization_id
+            SalaryStructure.organization_id == org_id
         )
     ).first()
     
@@ -174,7 +174,7 @@ async def approve_salary_structure(
 @router.post("/periods", response_model=PayrollPeriodResponse)
 async def create_payroll_period(
     period_data: PayrollPeriodCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new payroll period"""
@@ -182,7 +182,7 @@ async def create_payroll_period(
     # Check for overlapping periods
     overlapping_period = db.query(PayrollPeriod).filter(
         and_(
-            PayrollPeriod.organization_id == current_user.organization_id,
+            PayrollPeriod.organization_id == org_id,
             or_(
                 and_(
                     PayrollPeriod.period_start <= period_data.period_start,
@@ -204,7 +204,7 @@ async def create_payroll_period(
     
     payroll_period = PayrollPeriod(
         **period_data.model_dump(),
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     
     db.add(payroll_period)
@@ -225,7 +225,7 @@ async def get_payroll_periods(
     """Get payroll periods with filtering"""
     
     query = db.query(PayrollPeriod).filter(
-        PayrollPeriod.organization_id == current_user.organization_id
+        PayrollPeriod.organization_id == org_id
     )
     
     if status:
@@ -242,7 +242,7 @@ async def get_payroll_periods(
 @router.put("/periods/{period_id}/process")
 async def process_payroll_period(
     period_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "update")),
     db: Session = Depends(get_db)
 ):
     """Process payroll for a period"""
@@ -250,7 +250,7 @@ async def process_payroll_period(
     period = db.query(PayrollPeriod).filter(
         and_(
             PayrollPeriod.id == period_id,
-            PayrollPeriod.organization_id == current_user.organization_id
+            PayrollPeriod.organization_id == org_id
         )
     ).first()
     
@@ -269,7 +269,7 @@ async def process_payroll_period(
     # Count eligible employees
     employees = db.query(EmployeeProfile).filter(
         and_(
-            EmployeeProfile.organization_id == current_user.organization_id,
+            EmployeeProfile.organization_id == org_id,
             EmployeeProfile.employment_status == "active"
         )
     ).all()
@@ -287,7 +287,7 @@ async def process_payroll_period(
 @router.post("/payslips", response_model=PayslipResponse)
 async def create_payslip(
     payslip_data: PayslipCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new payslip"""
@@ -295,7 +295,7 @@ async def create_payslip(
     # Check if payslip already exists for this employee and period
     existing_payslip = db.query(Payslip).filter(
         and_(
-            Payslip.organization_id == current_user.organization_id,
+            Payslip.organization_id == org_id,
             Payslip.employee_id == payslip_data.employee_id,
             Payslip.payroll_period_id == payslip_data.payroll_period_id
         )
@@ -309,7 +309,7 @@ async def create_payslip(
     
     payslip = Payslip(
         **payslip_data.model_dump(),
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     
     db.add(payslip)
@@ -331,7 +331,7 @@ async def get_payslips(
     """Get payslips with filtering"""
     
     query = db.query(Payslip).filter(
-        Payslip.organization_id == current_user.organization_id
+        Payslip.organization_id == org_id
     )
     
     if employee_id:
@@ -351,7 +351,7 @@ async def get_payslips(
 @router.post("/payslips/bulk-generate", response_model=PayslipGenerationResult)
 async def bulk_generate_payslips(
     generation_data: BulkPayslipGeneration,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db)
 ):
     """Bulk generate payslips for a payroll period"""
@@ -360,7 +360,7 @@ async def bulk_generate_payslips(
     period = db.query(PayrollPeriod).filter(
         and_(
             PayrollPeriod.id == generation_data.payroll_period_id,
-            PayrollPeriod.organization_id == current_user.organization_id
+            PayrollPeriod.organization_id == org_id
         )
     ).first()
     
@@ -373,7 +373,7 @@ async def bulk_generate_payslips(
     # Get employees to process
     query = db.query(EmployeeProfile).filter(
         and_(
-            EmployeeProfile.organization_id == current_user.organization_id,
+            EmployeeProfile.organization_id == org_id,
             EmployeeProfile.employment_status == "active"
         )
     )
@@ -392,7 +392,7 @@ async def bulk_generate_payslips(
             # Check if payslip already exists
             existing_payslip = db.query(Payslip).filter(
                 and_(
-                    Payslip.organization_id == current_user.organization_id,
+                    Payslip.organization_id == org_id,
                     Payslip.employee_id == employee.id,
                     Payslip.payroll_period_id == generation_data.payroll_period_id
                 )
@@ -406,7 +406,7 @@ async def bulk_generate_payslips(
             # Get latest salary structure
             salary_structure = db.query(SalaryStructure).filter(
                 and_(
-                    SalaryStructure.organization_id == current_user.organization_id,
+                    SalaryStructure.organization_id == org_id,
                     SalaryStructure.employee_id == employee.id,
                     SalaryStructure.is_active == True,
                     SalaryStructure.is_approved == True,
@@ -422,7 +422,7 @@ async def bulk_generate_payslips(
             # Calculate attendance data
             attendance_records = db.query(AttendanceRecord).filter(
                 and_(
-                    AttendanceRecord.organization_id == current_user.organization_id,
+                    AttendanceRecord.organization_id == org_id,
                     AttendanceRecord.employee_id == employee.id,
                     AttendanceRecord.attendance_date >= period.period_start,
                     AttendanceRecord.attendance_date <= period.period_end
@@ -440,7 +440,7 @@ async def bulk_generate_payslips(
             
             # Create payslip
             payslip = Payslip(
-                organization_id=current_user.organization_id,
+                organization_id=org_id,
                 employee_id=employee.id,
                 payroll_period_id=generation_data.payroll_period_id,
                 salary_structure_id=salary_structure.id,
@@ -503,14 +503,14 @@ async def bulk_generate_payslips(
 @router.post("/loans", response_model=EmployeeLoanResponse)
 async def create_employee_loan(
     loan_data: EmployeeLoanCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new employee loan application"""
     
     loan = EmployeeLoan(
         **loan_data.model_dump(),
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         outstanding_amount=loan_data.loan_amount,
         applied_date=date.today()
     )
@@ -534,7 +534,7 @@ async def get_employee_loans(
     """Get employee loans with filtering"""
     
     query = db.query(EmployeeLoan).filter(
-        EmployeeLoan.organization_id == current_user.organization_id
+        EmployeeLoan.organization_id == org_id
     )
     
     if employee_id:
@@ -554,7 +554,7 @@ async def get_employee_loans(
 @router.put("/loans/{loan_id}/approve")
 async def approve_employee_loan(
     loan_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "update")),
     db: Session = Depends(get_db)
 ):
     """Approve an employee loan"""
@@ -562,7 +562,7 @@ async def approve_employee_loan(
     loan = db.query(EmployeeLoan).filter(
         and_(
             EmployeeLoan.id == loan_id,
-            EmployeeLoan.organization_id == current_user.organization_id
+            EmployeeLoan.organization_id == org_id
         )
     ).first()
     
@@ -589,13 +589,13 @@ async def approve_employee_loan(
 # Payroll Settings Management
 @router.get("/settings", response_model=PayrollSettingsResponse)
 async def get_payroll_settings(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db)
 ):
     """Get organization payroll settings"""
     
     settings = db.query(PayrollSettings).filter(
-        PayrollSettings.organization_id == current_user.organization_id
+        PayrollSettings.organization_id == org_id
     ).first()
     
     if not settings:
@@ -609,19 +609,19 @@ async def get_payroll_settings(
 @router.put("/settings", response_model=PayrollSettingsResponse)
 async def update_payroll_settings(
     settings_data: PayrollSettingsUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "update")),
     db: Session = Depends(get_db)
 ):
     """Update organization payroll settings"""
     
     settings = db.query(PayrollSettings).filter(
-        PayrollSettings.organization_id == current_user.organization_id
+        PayrollSettings.organization_id == org_id
     ).first()
     
     if not settings:
         # Create new settings if not exist
         settings = PayrollSettings(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             **settings_data.model_dump(exclude_unset=True)
         )
         db.add(settings)
@@ -640,20 +640,20 @@ async def update_payroll_settings(
 # Dashboard
 @router.get("/dashboard", response_model=PayrollDashboard)
 async def get_payroll_dashboard(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db)
 ):
     """Get payroll dashboard summary"""
     
     # Get current/latest payroll period
     current_period = db.query(PayrollPeriod).filter(
-        PayrollPeriod.organization_id == current_user.organization_id
+        PayrollPeriod.organization_id == org_id
     ).order_by(desc(PayrollPeriod.period_start)).first()
     
     # Payroll summary
     total_employees = db.query(EmployeeProfile).filter(
         and_(
-            EmployeeProfile.organization_id == current_user.organization_id,
+            EmployeeProfile.organization_id == org_id,
             EmployeeProfile.employment_status == "active"
         )
     ).count()
@@ -661,7 +661,7 @@ async def get_payroll_dashboard(
     if current_period:
         payroll_processed = db.query(Payslip).filter(
             and_(
-                Payslip.organization_id == current_user.organization_id,
+                Payslip.organization_id == org_id,
                 Payslip.payroll_period_id == current_period.id
             )
         ).count()
@@ -673,7 +673,7 @@ async def get_payroll_dashboard(
             func.avg(Payslip.net_pay).label('avg_salary')
         ).filter(
             and_(
-                Payslip.organization_id == current_user.organization_id,
+                Payslip.organization_id == org_id,
                 Payslip.payroll_period_id == current_period.id
             )
         ).first()
@@ -689,21 +689,21 @@ async def get_payroll_dashboard(
     # Pending items
     pending_approvals = db.query(SalaryStructure).filter(
         and_(
-            SalaryStructure.organization_id == current_user.organization_id,
+            SalaryStructure.organization_id == org_id,
             SalaryStructure.is_approved == False
         )
     ).count()
     
     pending_payslips = db.query(Payslip).filter(
         and_(
-            Payslip.organization_id == current_user.organization_id,
+            Payslip.organization_id == org_id,
             Payslip.status == "draft"
         )
     ).count()
     
     loans_pending_approval = db.query(EmployeeLoan).filter(
         and_(
-            EmployeeLoan.organization_id == current_user.organization_id,
+            EmployeeLoan.organization_id == org_id,
             EmployeeLoan.status == "pending"
         )
     ).count()
@@ -712,7 +712,7 @@ async def get_payroll_dashboard(
     last_month = date.today() - timedelta(days=30)
     recent_salary_changes = db.query(SalaryStructure).filter(
         and_(
-            SalaryStructure.organization_id == current_user.organization_id,
+            SalaryStructure.organization_id == org_id,
             SalaryStructure.created_at >= last_month
         )
     ).count()

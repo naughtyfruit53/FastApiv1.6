@@ -14,9 +14,9 @@ from decimal import Decimal
 import logging
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.core.tenant import validate_company_setup
-from app.core.org_restrictions import require_current_organization_id
+
 from app.models.user_models import User
 from app.models.master_data_models import (
     Category, Unit, TaxCode, PaymentTermsExtended
@@ -249,7 +249,7 @@ async def get_categories(
 @router.post("/categories", response_model=CategoryResponse)
 async def create_category(
     category_data: CategoryCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "create")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -324,7 +324,7 @@ async def create_category(
 @router.get("/categories/{category_id}", response_model=CategoryResponse)
 async def get_category(
     category_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "read")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -345,7 +345,7 @@ async def get_category(
 async def update_category(
     category_id: int,
     category_data: CategoryUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "update")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -399,7 +399,7 @@ async def update_category(
 @router.delete("/categories/{category_id}")
 async def delete_category(
     category_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "delete")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -499,7 +499,7 @@ async def get_units(
 @router.post("/units", response_model=UnitResponse)
 async def create_unit(
     unit_data: UnitCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "create")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -568,7 +568,7 @@ async def create_unit(
 @router.get("/units/{unit_id}", response_model=UnitResponse)
 async def get_unit(
     unit_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "read")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -589,7 +589,7 @@ async def get_unit(
 async def update_unit(
     unit_id: int,
     unit_data: UnitUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "update")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -642,7 +642,7 @@ async def update_unit(
 @router.delete("/units/{unit_id}")
 async def delete_unit(
     unit_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "delete")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -677,7 +677,7 @@ async def delete_unit(
 @router.post("/units/convert", response_model=UnitConversion)
 async def convert_units(
     conversion_data: UnitConversion,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "create")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -774,7 +774,7 @@ async def get_tax_codes(
 @router.post("/tax-codes", response_model=TaxCodeResponse)
 async def create_tax_code(
     tax_code_data: TaxCodeCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "create")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -829,7 +829,7 @@ async def create_tax_code(
 @router.get("/tax-codes/{tax_code_id}", response_model=TaxCodeResponse)
 async def get_tax_code(
     tax_code_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "read")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -850,7 +850,7 @@ async def get_tax_code(
 async def update_tax_code(
     tax_code_id: int,
     tax_code_data: TaxCodeUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "update")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -903,7 +903,7 @@ async def update_tax_code(
 @router.delete("/tax-codes/{tax_code_id}")
 async def delete_tax_code(
     tax_code_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "delete")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -938,7 +938,7 @@ async def delete_tax_code(
 @router.post("/tax-codes/calculate", response_model=TaxCalculation)
 async def calculate_tax(
     tax_calculation: TaxCalculation,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "create")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -1028,7 +1028,7 @@ async def get_payment_terms(
 @router.post("/payment-terms", response_model=PaymentTermsExtendedResponse)
 async def create_payment_terms(
     payment_terms_data: PaymentTermsExtendedCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "create")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -1098,7 +1098,7 @@ async def create_payment_terms(
 @router.get("/payment-terms/{payment_terms_id}", response_model=PaymentTermsExtendedResponse)
 async def get_payment_terms_by_id(
     payment_terms_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "read")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -1119,7 +1119,7 @@ async def get_payment_terms_by_id(
 async def update_payment_terms(
     payment_terms_id: int,
     payment_terms_data: PaymentTermsExtendedUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "update")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -1172,7 +1172,7 @@ async def update_payment_terms(
 @router.delete("/payment-terms/{payment_terms_id}")
 async def delete_payment_terms(
     payment_terms_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "delete")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -1211,7 +1211,7 @@ async def delete_payment_terms(
 @router.post("/categories/bulk-update")
 async def bulk_update_categories(
     bulk_update: BulkCategoryUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("master", "create")),
     db: AsyncSession = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):

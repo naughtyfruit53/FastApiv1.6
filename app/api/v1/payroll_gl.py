@@ -1,4 +1,5 @@
 # app/api/v1/payroll_gl.py
+from app.core.enforcement import require_access
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -9,8 +10,7 @@ from datetime import datetime, date
 import logging
 
 from app.db.session import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+
 from app.models.user_models import User
 from app.models.payroll_models import PayrollRun, PayrollComponent, PayrollLine
 from app.models.erp_models import ChartOfAccounts
@@ -28,7 +28,7 @@ router = APIRouter()
 @router.get("/payroll/runs/{run_id}/gl-preview", response_model=PayrollGLPreview)
 async def get_payroll_gl_preview(
     run_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -165,7 +165,7 @@ async def get_payroll_gl_preview(
 async def post_payroll_to_gl(
     run_id: int,
     posting_data: PayrollGLPosting,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -250,7 +250,7 @@ async def post_payroll_to_gl(
 async def reverse_payroll_gl_posting(
     run_id: int,
     reversal_reason: str,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -316,7 +316,7 @@ async def reverse_payroll_gl_posting(
 async def generate_payment_vouchers(
     run_id: int,
     payment_date: date,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):

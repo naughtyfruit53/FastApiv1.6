@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models import User, DispatchOrder, DispatchItem, InstallationJob, InstallationTask, CompletionRecord
 from app.schemas.dispatch import (
     DispatchOrderCreate, DispatchOrderUpdate, DispatchOrderInDB, DispatchOrderFilter,
@@ -21,13 +21,6 @@ from app.schemas.dispatch import (
     CompletionRecordCreate, CompletionRecordUpdate, CompletionRecordInDB, CompletionRecordFilter
 )
 from app.services.dispatch_service import DispatchService, InstallationJobService, InstallationTaskService, CompletionRecordService
-from app.core.rbac_dependencies import (
-    require_dispatch_create, require_dispatch_read, require_dispatch_update, require_dispatch_delete,
-    require_installation_create, require_installation_read, require_installation_update, require_installation_delete,
-    require_installation_task_create, require_installation_task_read, require_installation_task_update, require_installation_task_delete,
-    require_completion_record_create, require_completion_record_read, require_completion_record_update,
-    require_technician_completion, require_assigned_technician
-)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -53,7 +46,7 @@ async def create_dispatch_order(
         order_dict = order_data.dict(exclude={'items'})
         
         dispatch_order = dispatch_service.create_dispatch_order(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             created_by_id=current_user.id,
             items=items_data,
             **order_dict
@@ -81,7 +74,7 @@ async def get_dispatch_orders(
     logger.info(f"User {current_user.id} requesting dispatch orders")
     
     query = db.query(DispatchOrder).filter(
-        DispatchOrder.organization_id == current_user.organization_id
+        DispatchOrder.organization_id == org_id
     )
     
     # Apply filters
@@ -114,7 +107,7 @@ async def get_dispatch_order(
     """Get a specific dispatch order"""
     dispatch_order = db.query(DispatchOrder).filter(
         DispatchOrder.id == order_id,
-        DispatchOrder.organization_id == current_user.organization_id
+        DispatchOrder.organization_id == org_id
     ).first()
     
     if not dispatch_order:
@@ -136,7 +129,7 @@ async def update_dispatch_order(
     """Update a dispatch order"""
     dispatch_order = db.query(DispatchOrder).filter(
         DispatchOrder.id == order_id,
-        DispatchOrder.organization_id == current_user.organization_id
+        DispatchOrder.organization_id == org_id
     ).first()
     
     if not dispatch_order:
@@ -184,7 +177,7 @@ async def delete_dispatch_order(
     """Delete a dispatch order (only if in pending status)"""
     dispatch_order = db.query(DispatchOrder).filter(
         DispatchOrder.id == order_id,
-        DispatchOrder.organization_id == current_user.organization_id
+        DispatchOrder.organization_id == org_id
     ).first()
     
     if not dispatch_order:
@@ -225,7 +218,7 @@ async def create_installation_job(
     # Verify dispatch order exists and belongs to organization
     dispatch_order = db.query(DispatchOrder).filter(
         DispatchOrder.id == job_data.dispatch_order_id,
-        DispatchOrder.organization_id == current_user.organization_id
+        DispatchOrder.organization_id == org_id
     ).first()
     
     if not dispatch_order:
@@ -239,7 +232,7 @@ async def create_installation_job(
         
         job_dict = job_data.dict(exclude={'dispatch_order_id'})
         installation_job = installation_service.create_installation_job(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             dispatch_order_id=job_data.dispatch_order_id,
             created_by_id=current_user.id,
             **job_dict
@@ -267,7 +260,7 @@ async def get_installation_jobs(
     logger.info(f"User {current_user.id} requesting installation jobs")
     
     query = db.query(InstallationJob).filter(
-        InstallationJob.organization_id == current_user.organization_id
+        InstallationJob.organization_id == org_id
     )
     
     # Apply filters
@@ -304,7 +297,7 @@ async def get_installation_job(
     """Get a specific installation job"""
     installation_job = db.query(InstallationJob).filter(
         InstallationJob.id == job_id,
-        InstallationJob.organization_id == current_user.organization_id
+        InstallationJob.organization_id == org_id
     ).first()
     
     if not installation_job:
@@ -326,7 +319,7 @@ async def update_installation_job(
     """Update an installation job"""
     installation_job = db.query(InstallationJob).filter(
         InstallationJob.id == job_id,
-        InstallationJob.organization_id == current_user.organization_id
+        InstallationJob.organization_id == org_id
     ).first()
     
     if not installation_job:
@@ -386,7 +379,7 @@ async def delete_installation_job(
     """Delete an installation job (only if in scheduled status)"""
     installation_job = db.query(InstallationJob).filter(
         InstallationJob.id == job_id,
-        InstallationJob.organization_id == current_user.organization_id
+        InstallationJob.organization_id == org_id
     ).first()
     
     if not installation_job:
@@ -442,7 +435,7 @@ async def handle_installation_schedule_prompt(
         
         job_dict = response_data.installation_job.dict(exclude={'dispatch_order_id'})
         installation_job = installation_service.create_installation_job(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             dispatch_order_id=response_data.installation_job.dispatch_order_id,
             created_by_id=current_user.id,
             **job_dict
@@ -469,7 +462,7 @@ async def get_installation_job_with_details(
     """Get installation job with tasks and completion record"""
     installation_job = db.query(InstallationJob).filter(
         InstallationJob.id == job_id,
-        InstallationJob.organization_id == current_user.organization_id
+        InstallationJob.organization_id == org_id
     ).first()
     
     if not installation_job:
@@ -494,7 +487,7 @@ async def create_installation_task(
     # Verify installation job exists and belongs to organization
     installation_job = db.query(InstallationJob).filter(
         InstallationJob.id == task_data.installation_job_id,
-        InstallationJob.organization_id == current_user.organization_id
+        InstallationJob.organization_id == org_id
     ).first()
     
     if not installation_job:
@@ -508,7 +501,7 @@ async def create_installation_task(
         
         task_dict = task_data.dict(exclude={'installation_job_id'})
         installation_task = task_service.create_installation_task(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             installation_job_id=task_data.installation_job_id,
             created_by_id=current_user.id,
             **task_dict
@@ -536,7 +529,7 @@ async def get_installation_tasks(
     logger.info(f"User {current_user.id} requesting installation tasks")
     
     query = db.query(InstallationTask).filter(
-        InstallationTask.organization_id == current_user.organization_id
+        InstallationTask.organization_id == org_id
     )
     
     # Apply filters
@@ -567,7 +560,7 @@ async def get_installation_task(
     """Get a specific installation task"""
     installation_task = db.query(InstallationTask).filter(
         InstallationTask.id == task_id,
-        InstallationTask.organization_id == current_user.organization_id
+        InstallationTask.organization_id == org_id
     ).first()
     
     if not installation_task:
@@ -589,7 +582,7 @@ async def update_installation_task(
     """Update an installation task"""
     installation_task = db.query(InstallationTask).filter(
         InstallationTask.id == task_id,
-        InstallationTask.organization_id == current_user.organization_id
+        InstallationTask.organization_id == org_id
     ).first()
     
     if not installation_task:
@@ -649,7 +642,7 @@ async def delete_installation_task(
     """Delete an installation task"""
     installation_task = db.query(InstallationTask).filter(
         InstallationTask.id == task_id,
-        InstallationTask.organization_id == current_user.organization_id
+        InstallationTask.organization_id == org_id
     ).first()
     
     if not installation_task:
@@ -696,7 +689,7 @@ async def complete_installation_job(
         
         completion_dict = completion_data.dict(exclude={'installation_job_id'})
         completion_record = completion_service.create_completion_record(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             installation_job_id=job_id,
             completed_by_id=current_user.id,
             **completion_dict
@@ -730,7 +723,7 @@ async def get_completion_records(
     logger.info(f"User {current_user.id} requesting completion records")
     
     query = db.query(CompletionRecord).filter(
-        CompletionRecord.organization_id == current_user.organization_id
+        CompletionRecord.organization_id == org_id
     )
     
     # Apply filters
@@ -765,7 +758,7 @@ async def get_completion_record(
     """Get a specific completion record"""
     completion_record = db.query(CompletionRecord).filter(
         CompletionRecord.id == record_id,
-        CompletionRecord.organization_id == current_user.organization_id
+        CompletionRecord.organization_id == org_id
     ).first()
     
     if not completion_record:
@@ -787,7 +780,7 @@ async def update_completion_record(
     """Update a completion record"""
     completion_record = db.query(CompletionRecord).filter(
         CompletionRecord.id == record_id,
-        CompletionRecord.organization_id == current_user.organization_id
+        CompletionRecord.organization_id == org_id
     ).first()
     
     if not completion_record:
@@ -803,7 +796,7 @@ async def update_completion_record(
         update_data = completion_update.dict(exclude_unset=True)
         completion_record = completion_service.update_completion_record(
             completion_record_id=record_id,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             **update_data
         )
         

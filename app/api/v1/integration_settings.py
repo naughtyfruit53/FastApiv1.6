@@ -10,9 +10,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
-from app.core.rbac_dependencies import check_service_permission
+from app.core.enforcement import require_access
+
 from app.models import User, Organization
 from app.models.tally_models import TallyConfiguration, TallyLedgerMapping, TallyVoucherMapping, TallySyncLog, TallyErrorLog
 from app.schemas.tally import (
