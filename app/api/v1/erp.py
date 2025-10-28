@@ -9,6 +9,7 @@ from datetime import datetime, date
 from decimal import Decimal
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user
 from app.core.tenant import TenantQueryMixin
 from app.core.org_restrictions import require_current_organization_id, validate_company_setup
