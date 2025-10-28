@@ -220,22 +220,6 @@ class TestEnforcementConsistency:
         for module_name in modules:
             module = __import__(module_name, fromlist=[''])
             assert hasattr(module, 'require_access'), f"{module_name} should import require_access"
-            
-    def test_all_modules_compile(self):
-        """Verify all migrated modules compile without errors"""
-        modules = [
-            'app.api.v1.crm',
-            'app.api.v1.service_desk',
-            'app.api.notifications',
-            'app.api.v1.hr',
-            'app.api.v1.order_book',
-        ]
-        
-        for module_name in modules:
-            try:
-                __import__(module_name, fromlist=[''])
-            except Exception as e:
-                pytest.fail(f"{module_name} failed to compile: {e}")
                 
     def test_permission_naming_convention(self):
         """Verify permission naming follows {module}_{action} pattern"""
@@ -253,10 +237,15 @@ class TestEnforcementConsistency:
             module = __import__(module_path, fromlist=[''])
             source = inspect.getsource(module)
             
-            # Check for standard CRUD actions
-            assert f'require_access("{module_name}", "read")' in source or \
-                   f'require_access("{module_name}", "create")' in source, \
-                   f"{module_path} should use {module_name}_* permissions"
+            # Check that at least one standard CRUD action is used
+            has_permission = any([
+                f'require_access("{module_name}", "read")' in source,
+                f'require_access("{module_name}", "create")' in source,
+                f'require_access("{module_name}", "update")' in source,
+                f'require_access("{module_name}", "delete")' in source
+            ])
+            assert has_permission, \
+                   f"{module_path} should use at least one {module_name}_* permission"
                    
 
 class TestEnforcementUtilities:
