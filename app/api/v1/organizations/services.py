@@ -306,18 +306,11 @@ class OrganizationService:
             raise HTTPException(status_code=500, detail="Internal server error")
 
     @staticmethod
+    @staticmethod
     def get_available_modules() -> Dict:
         """Get available modules in the application"""
-        available_modules = {
-            "CRM": True,
-            "ERP": True,
-            "HR": True,
-            "Inventory": True,
-            "Service": True,
-            "Analytics": True,
-            "Finance": True
-        }
-        return available_modules
+        from app.core.modules_registry import get_default_enabled_modules
+        return get_default_enabled_modules()
 
     @staticmethod
     async def get_organization_modules(db: AsyncSession, organization_id: int) -> Dict:
