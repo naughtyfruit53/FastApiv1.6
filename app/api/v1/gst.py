@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from app.services.pdf_extraction import pdf_extraction_service
+from app.core.enforcement import require_access
 from typing import Dict, Any
 import logging
 
@@ -9,10 +10,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/search/{gstin}")
-async def search_gst_details(gstin: str) -> Dict[str, Any]:
+async def search_gst_details(
+    gstin: str,
+    auth: tuple = Depends(require_access("gst", "read"))
+) -> Dict[str, Any]:
     """
     Search GST details using extracted GSTIN
     """
+    current_user, org_id = auth
+    
     try:
         # Use the service to fetch from RapidAPI
         details = await pdf_extraction_service.fetch_gst_details(gstin)
