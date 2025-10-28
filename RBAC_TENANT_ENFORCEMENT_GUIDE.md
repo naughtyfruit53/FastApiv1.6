@@ -855,6 +855,143 @@ describe('VouchersService RBAC', () => {
 
 **Full Audit**: See `FRONTEND_RBAC_INTEGRATION_AUDIT.md` for comprehensive analysis.
 
+
+### Phase 7 Module Examples (November 2025)
+
+#### Integration Settings Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/permissions")
+async def get_integration_permissions(
+    db: Session = Depends(get_db),
+    auth: tuple = Depends(require_access("integration", "read")),
+):
+    """Get integration permissions for current user"""
+    current_user, organization_id = auth
+    
+    permissions = {
+        "can_manage_tally": current_user.is_super_admin,
+        "can_view_tally": current_user.is_super_admin,
+        # ... more permissions
+    }
+    return {"permissions": permissions}
+```
+
+#### Stock Management Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("", response_model=List[StockWithProduct])
+async def get_stock(
+    skip: int = Query(0),
+    limit: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("inventory", "read"))
+):
+    """Get stock information with product details"""
+    current_user, org_id = auth
+    
+    stmt = select(Product, Stock).join_from(
+        Product, Stock, Product.id == Stock.product_id
+    ).where(Product.organization_id == org_id)
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
+```
+
+#### Admin Operations Example
+```python
+from app.core.enforcement import require_access
+
+@router.post("/users", response_model=UserInDB)
+async def create_user(
+    user_create: UserCreate,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    auth: tuple = Depends(require_access("admin", "create"))
+):
+    """Create a new user with permission checking"""
+    current_user, organization_id = auth
+    
+    # Additional permission checks can be layered
+    PermissionChecker.require_permission(
+        Permission.CREATE_USERS, 
+        current_user, 
+        db, 
+        request
+    )
+    
+    new_user = UserService.create_user(db, user_create)
+    return new_user
+```
+
+#### RBAC Management Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/permissions", response_model=List[ServicePermissionInDB])
+async def get_service_permissions(
+    module: Optional[str] = Query(None),
+    action: Optional[str] = Query(None),
+    rbac_service: RBACService = Depends(get_rbac_service),
+    auth: tuple = Depends(require_access("rbac", "read"))
+):
+    """Get all service permissions with optional filtering"""
+    current_user, organization_id = auth
+    
+    permissions = await rbac_service.get_permissions(module=module, action=action)
+    return permissions
+```
+
+#### Reports Module Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/financial-reports")
+async def get_financial_reports(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("reports", "read"))
+):
+    """Generate financial reports for organization"""
+    current_user, organization_id = auth
+    
+    # All queries scoped to organization
+    stmt = select(FinancialRecord).where(
+        FinancialRecord.organization_id == organization_id,
+        FinancialRecord.date >= start_date,
+        FinancialRecord.date <= end_date
+    )
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
+```
+
+#### ERP Core Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/chart-of-accounts", response_model=List[ChartOfAccountsResponse])
+async def get_chart_of_accounts(
+    skip: int = Query(0),
+    limit: int = Query(100),
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("erp", "read"))
+):
+    """Get chart of accounts with filtering options"""
+    current_user, organization_id = auth
+    
+    stmt = select(ChartOfAccounts).where(
+        ChartOfAccounts.organization_id == organization_id
+    ).offset(skip).limit(limit)
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
+```
+
+
 ## Best Practices
 
 ### Backend RBAC
@@ -909,6 +1046,143 @@ For questions or issues with RBAC and tenant enforcement:
 - **Frontend Audit**: FRONTEND_RBAC_INTEGRATION_AUDIT.md
 - **Phase Reports**: RBAC_ENFORCEMENT_REPORT.md
 - **Quick Reference**: QUICK_REFERENCE.md
+
+
+
+### Phase 7 Module Examples (November 2025)
+
+#### Integration Settings Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/permissions")
+async def get_integration_permissions(
+    db: Session = Depends(get_db),
+    auth: tuple = Depends(require_access("integration", "read")),
+):
+    """Get integration permissions for current user"""
+    current_user, organization_id = auth
+    
+    permissions = {
+        "can_manage_tally": current_user.is_super_admin,
+        "can_view_tally": current_user.is_super_admin,
+        # ... more permissions
+    }
+    return {"permissions": permissions}
+```
+
+#### Stock Management Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("", response_model=List[StockWithProduct])
+async def get_stock(
+    skip: int = Query(0),
+    limit: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("inventory", "read"))
+):
+    """Get stock information with product details"""
+    current_user, org_id = auth
+    
+    stmt = select(Product, Stock).join_from(
+        Product, Stock, Product.id == Stock.product_id
+    ).where(Product.organization_id == org_id)
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
+```
+
+#### Admin Operations Example
+```python
+from app.core.enforcement import require_access
+
+@router.post("/users", response_model=UserInDB)
+async def create_user(
+    user_create: UserCreate,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    auth: tuple = Depends(require_access("admin", "create"))
+):
+    """Create a new user with permission checking"""
+    current_user, organization_id = auth
+    
+    # Additional permission checks can be layered
+    PermissionChecker.require_permission(
+        Permission.CREATE_USERS, 
+        current_user, 
+        db, 
+        request
+    )
+    
+    new_user = UserService.create_user(db, user_create)
+    return new_user
+```
+
+#### RBAC Management Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/permissions", response_model=List[ServicePermissionInDB])
+async def get_service_permissions(
+    module: Optional[str] = Query(None),
+    action: Optional[str] = Query(None),
+    rbac_service: RBACService = Depends(get_rbac_service),
+    auth: tuple = Depends(require_access("rbac", "read"))
+):
+    """Get all service permissions with optional filtering"""
+    current_user, organization_id = auth
+    
+    permissions = await rbac_service.get_permissions(module=module, action=action)
+    return permissions
+```
+
+#### Reports Module Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/financial-reports")
+async def get_financial_reports(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("reports", "read"))
+):
+    """Generate financial reports for organization"""
+    current_user, organization_id = auth
+    
+    # All queries scoped to organization
+    stmt = select(FinancialRecord).where(
+        FinancialRecord.organization_id == organization_id,
+        FinancialRecord.date >= start_date,
+        FinancialRecord.date <= end_date
+    )
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
+```
+
+#### ERP Core Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/chart-of-accounts", response_model=List[ChartOfAccountsResponse])
+async def get_chart_of_accounts(
+    skip: int = Query(0),
+    limit: int = Query(100),
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("erp", "read"))
+):
+    """Get chart of accounts with filtering options"""
+    current_user, organization_id = auth
+    
+    stmt = select(ChartOfAccounts).where(
+        ChartOfAccounts.organization_id == organization_id
+    ).offset(skip).limit(limit)
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
+```
 
 
 ## Best Practices
@@ -1018,6 +1292,143 @@ async def get_employees(
     result = await db.execute(stmt)
     return result.scalars().all()
 ```
+
+
+### Phase 7 Module Examples (November 2025)
+
+#### Integration Settings Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/permissions")
+async def get_integration_permissions(
+    db: Session = Depends(get_db),
+    auth: tuple = Depends(require_access("integration", "read")),
+):
+    """Get integration permissions for current user"""
+    current_user, organization_id = auth
+    
+    permissions = {
+        "can_manage_tally": current_user.is_super_admin,
+        "can_view_tally": current_user.is_super_admin,
+        # ... more permissions
+    }
+    return {"permissions": permissions}
+```
+
+#### Stock Management Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("", response_model=List[StockWithProduct])
+async def get_stock(
+    skip: int = Query(0),
+    limit: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("inventory", "read"))
+):
+    """Get stock information with product details"""
+    current_user, org_id = auth
+    
+    stmt = select(Product, Stock).join_from(
+        Product, Stock, Product.id == Stock.product_id
+    ).where(Product.organization_id == org_id)
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
+```
+
+#### Admin Operations Example
+```python
+from app.core.enforcement import require_access
+
+@router.post("/users", response_model=UserInDB)
+async def create_user(
+    user_create: UserCreate,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    auth: tuple = Depends(require_access("admin", "create"))
+):
+    """Create a new user with permission checking"""
+    current_user, organization_id = auth
+    
+    # Additional permission checks can be layered
+    PermissionChecker.require_permission(
+        Permission.CREATE_USERS, 
+        current_user, 
+        db, 
+        request
+    )
+    
+    new_user = UserService.create_user(db, user_create)
+    return new_user
+```
+
+#### RBAC Management Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/permissions", response_model=List[ServicePermissionInDB])
+async def get_service_permissions(
+    module: Optional[str] = Query(None),
+    action: Optional[str] = Query(None),
+    rbac_service: RBACService = Depends(get_rbac_service),
+    auth: tuple = Depends(require_access("rbac", "read"))
+):
+    """Get all service permissions with optional filtering"""
+    current_user, organization_id = auth
+    
+    permissions = await rbac_service.get_permissions(module=module, action=action)
+    return permissions
+```
+
+#### Reports Module Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/financial-reports")
+async def get_financial_reports(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("reports", "read"))
+):
+    """Generate financial reports for organization"""
+    current_user, organization_id = auth
+    
+    # All queries scoped to organization
+    stmt = select(FinancialRecord).where(
+        FinancialRecord.organization_id == organization_id,
+        FinancialRecord.date >= start_date,
+        FinancialRecord.date <= end_date
+    )
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
+```
+
+#### ERP Core Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/chart-of-accounts", response_model=List[ChartOfAccountsResponse])
+async def get_chart_of_accounts(
+    skip: int = Query(0),
+    limit: int = Query(100),
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("erp", "read"))
+):
+    """Get chart of accounts with filtering options"""
+    current_user, organization_id = auth
+    
+    stmt = select(ChartOfAccounts).where(
+        ChartOfAccounts.organization_id == organization_id
+    ).offset(skip).limit(limit)
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
+```
+
 
 ## Best Practices
 

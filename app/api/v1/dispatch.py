@@ -33,9 +33,11 @@ router = APIRouter()
 async def create_dispatch_order(
     order_data: DispatchOrderCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_dispatch_create)
+    auth: tuple = Depends(require_access("dispatch", "create"))
 ):
     """Create a new dispatch order"""
+    current_user, org_id = auth
+
     logger.info(f"User {current_user.id} creating dispatch order for customer {order_data.customer_id}")
     
     try:
@@ -68,9 +70,11 @@ async def get_dispatch_orders(
     limit: int = Query(100, ge=1, le=100, description="Number of records to return"),
     filter_params: DispatchOrderFilter = Depends(),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_dispatch_read)
+    auth: tuple = Depends(require_access("dispatch", "read"))
 ):
     """Get dispatch orders for the organization"""
+    current_user, org_id = auth
+
     logger.info(f"User {current_user.id} requesting dispatch orders")
     
     query = db.query(DispatchOrder).filter(
@@ -102,9 +106,11 @@ async def get_dispatch_orders(
 async def get_dispatch_order(
     order_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_dispatch_read)
+    auth: tuple = Depends(require_access("dispatch", "read"))
 ):
     """Get a specific dispatch order"""
+    current_user, org_id = auth
+
     dispatch_order = db.query(DispatchOrder).filter(
         DispatchOrder.id == order_id,
         DispatchOrder.organization_id == org_id
@@ -124,9 +130,11 @@ async def update_dispatch_order(
     order_id: int,
     order_update: DispatchOrderUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_dispatch_update)
+    auth: tuple = Depends(require_access("dispatch", "update"))
 ):
     """Update a dispatch order"""
+    current_user, org_id = auth
+
     dispatch_order = db.query(DispatchOrder).filter(
         DispatchOrder.id == order_id,
         DispatchOrder.organization_id == org_id
@@ -172,9 +180,11 @@ async def update_dispatch_order(
 async def delete_dispatch_order(
     order_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_dispatch_delete)
+    auth: tuple = Depends(require_access("dispatch", "delete"))
 ):
     """Delete a dispatch order (only if in pending status)"""
+    current_user, org_id = auth
+
     dispatch_order = db.query(DispatchOrder).filter(
         DispatchOrder.id == order_id,
         DispatchOrder.organization_id == org_id

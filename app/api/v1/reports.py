@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user
 from app.models import User, Product, Stock, Vendor, Customer
 from app.models.vouchers import (
@@ -29,9 +30,11 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 @router.get("/dashboard-stats")
 async def get_dashboard_statistics(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """Get dashboard statistics"""
+    current_user, organization_id = auth
+
     try:
         org_id = require_current_organization_id(current_user)
         
@@ -99,9 +102,11 @@ async def get_sales_report(
     end_date: Optional[date] = None,
     customer_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """Get sales report"""
+    current_user, organization_id = auth
+
     try:
         org_id = require_current_organization_id(current_user)
         
@@ -157,9 +162,11 @@ async def get_purchase_report(
     end_date: Optional[date] = None,
     vendor_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """Get purchase report"""
+    current_user, organization_id = auth
+
     try:
         org_id = require_current_organization_id(current_user)
         
@@ -213,9 +220,11 @@ async def get_purchase_report(
 async def get_inventory_report(
     low_stock_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """Get inventory report"""
+    current_user, organization_id = auth
+
     try:
         org_id = require_current_organization_id(current_user)
         
@@ -268,9 +277,11 @@ async def get_inventory_report(
 async def get_pending_orders(
     order_type: str = "all",  # all, purchase, sales
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """Get pending orders report"""
+    current_user, organization_id = auth
+
     try:
         org_id = require_current_organization_id(current_user)
         
@@ -353,9 +364,11 @@ async def get_complete_ledger(
     account_id: Optional[str] = None,  # Changed to string to handle raw input
     voucher_type: Optional[str] = "all",
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """
+    current_user, organization_id = auth
+
     Get complete ledger showing all debit/credit account transactions.
     
     **Access Control**: Super Admin, Admin, and Standard User (with access)
@@ -411,9 +424,11 @@ async def get_outstanding_ledger(
     account_id: Optional[str] = None,  # Changed to string to handle raw input
     voucher_type: Optional[str] = "all",
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """
+    current_user, organization_id = auth
+
     Get outstanding ledger showing only open balances by account.
     
     **Access Control**: Super Admin, Admin, and Standard User (with access)
@@ -471,9 +486,11 @@ async def export_sales_report_excel(
     end_date: Optional[date] = None,
     customer_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """Export sales report to Excel"""
+    current_user, organization_id = auth
+
     try:
         # Check if user has permission to export reports
         if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
@@ -541,9 +558,11 @@ async def export_purchase_report_excel(
     end_date: Optional[date] = None,
     vendor_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """Export purchase report to Excel"""
+    current_user, organization_id = auth
+
     try:
         # Check if user has permission to export reports
         if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
@@ -609,9 +628,11 @@ async def export_purchase_report_excel(
 async def export_inventory_report_excel(
     include_zero_stock: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """Export inventory report to Excel"""
+    current_user, organization_id = auth
+
     try:
         # Check if user has permission to export reports
         if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
@@ -670,9 +691,11 @@ async def export_inventory_report_excel(
 async def export_pending_orders_excel(
     order_type: str = "all",
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """Export pending orders report to Excel"""
+    current_user, organization_id = auth
+
     try:
         # Check if user has permission to export reports
         if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
@@ -752,9 +775,11 @@ async def export_pending_orders_excel(
 @router.get("/pending-purchase-orders-with-grn-status")
 async def get_pending_purchase_orders_with_grn_status(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("reports", "read"))
 ):
     """
+    current_user, organization_id = auth
+
     Get pending purchase orders with GRN status and tracking information for inventory management.
     
     This endpoint returns ALL purchase orders that:
@@ -772,7 +797,7 @@ async def get_pending_purchase_orders_with_grn_status(
             org_id = require_current_organization_id(current_user)
         except Exception as org_err:
             logger.warning(f"Organization context error: {org_err}, using user's organization_id")
-            org_id = current_user.organization_id
+            org_id = organization_id
         
         if not org_id:
             logger.error("No organization context available")

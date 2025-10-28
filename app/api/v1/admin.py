@@ -9,6 +9,7 @@ import string
 from datetime import datetime
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user, get_current_super_admin, get_current_admin_user
 from app.core.permissions import (
     PermissionChecker, Permission, require_super_admin, require_org_admin, 
@@ -37,9 +38,11 @@ async def create_user(
     user_create: UserCreate,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("admin", "create"))
 ):
     """Create a new user with permission checking"""
+    current_user, organization_id = auth
+
     try:
         # Check permissions
         PermissionChecker.require_permission(
@@ -50,7 +53,7 @@ async def create_user(
         )
         
         # Validate organization access
-        target_org_id = user_create.organization_id or current_user.organization_id
+        target_org_id = user_create.organization_id or organization_id
         if target_org_id and not PermissionChecker.can_access_organization(current_user, target_org_id):
             PermissionChecker.require_organization_access(current_user, target_org_id, db, request)
         
@@ -62,7 +65,7 @@ async def create_user(
             db=db,
             email=current_user.email,
             success=True,
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             user_id=current_user.id,
             user_role=current_user.role,
             ip_address=get_client_ip(request),
@@ -94,9 +97,11 @@ async def update_user(
     user_update: UserUpdate,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("admin", "update"))
 ):
     """Update user with permission checking"""
+    current_user, organization_id = auth
+
     try:
         # Get target user
         target_user = db.query(User).filter(User.id == user_id).first()
@@ -131,7 +136,7 @@ async def update_user(
             db=db,
             email=current_user.email,
             success=True,
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             user_id=current_user.id,
             user_role=current_user.role,
             ip_address=get_client_ip(request),
@@ -163,9 +168,11 @@ async def admin_reset_user_password(
     background_tasks: BackgroundTasks,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_password_reset_permission)
+    auth: tuple = Depends(require_access("admin", "create"))
 ):
     """Reset password for a specific user (admin operation)"""
+    current_user, organization_id = auth
+
     try:
         # Find target user
         target_user = UserService.get_user_by_email(db, reset_request.target_email)
@@ -223,9 +230,11 @@ async def admin_bulk_password_reset(
     background_tasks: BackgroundTasks,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_password_reset_permission)
+    auth: tuple = Depends(require_access("admin", "create"))
 ):
     """Bulk password reset for organization or all organizations"""
+    current_user, organization_id = auth
+
     try:
         if reset_request.scope == ResetScope.ORGANIZATION:
             if not reset_request.organization_id:
@@ -307,9 +316,11 @@ async def set_temporary_password(
     temp_request: TemporaryPasswordRequest,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_password_reset_permission)
+    auth: tuple = Depends(require_access("admin", "create"))
 ):
     """Set temporary password for a user"""
+    current_user, organization_id = auth
+
     try:
         # Find target user
         target_user = UserService.get_user_by_email(db, temp_request.target_email)
@@ -401,9 +412,11 @@ async def list_users(
     offset: int = 0,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("admin", "read"))
 ):
     """List users with organization filtering"""
+    current_user, organization_id = auth
+
     try:
         # Check permissions
         PermissionChecker.require_permission(
@@ -440,7 +453,7 @@ async def list_users(
             db=db,
             email=current_user.email,
             success=True,
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             user_id=current_user.id,
             user_role=current_user.role,
             ip_address=get_client_ip(request),
@@ -470,9 +483,11 @@ async def get_user(
     user_id: int,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("admin", "read"))
 ):
     """Get specific user details with permission checking"""
+    current_user, organization_id = auth
+
     try:
         # Find user
         user = db.query(User).filter(User.id == user_id).first()
@@ -499,7 +514,7 @@ async def get_user(
             db=db,
             email=current_user.email,
             success=True,
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             user_id=current_user.id,
             user_role=current_user.role,
             ip_address=get_client_ip(request),
@@ -528,9 +543,11 @@ async def delete_user(
     user_id: int,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("admin", "delete"))
 ):
     """Delete user with permission checking"""
+    current_user, organization_id = auth
+
     try:
         # Find user
         user = db.query(User).filter(User.id == user_id).first()
@@ -579,7 +596,7 @@ async def delete_user(
             db=db,
             email=current_user.email,
             success=True,
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             user_id=current_user.id,
             user_role=current_user.role,
             ip_address=get_client_ip(request),
@@ -612,9 +629,11 @@ async def setup_organization_admin(
     admin_data: UserCreate,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_super_admin)
+    auth: tuple = Depends(require_access("admin", "create"))
 ):
     """Setup initial admin account for an organization (super admin only)"""
+    current_user, organization_id = auth
+
     try:
         # Verify organization exists
         organization = db.query(Organization).filter(Organization.id == organization_id).first()
@@ -636,7 +655,7 @@ async def setup_organization_admin(
             db=db,
             email=current_user.email,
             success=True,
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             user_id=current_user.id,
             user_role=current_user.role,
             ip_address=get_client_ip(request),
@@ -724,9 +743,11 @@ async def get_email_logs(
     offset: int = 0,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("admin", "read"))
 ):
     """
+    current_user, organization_id = auth
+
     Get email send audit logs (RBAC-protected)
     Requires admin permissions to view email logs
     """
