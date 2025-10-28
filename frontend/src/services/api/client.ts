@@ -50,6 +50,51 @@ class ApiClient {
             localStorage.removeItem(ACCESS_TOKEN_KEY);
             window.location.href = '/login';
           }
+        } else if (error.response?.status === 403) {
+          // Handle permission denied (RBAC enforcement)
+          const errorData = error.response.data as any;
+          const permission = errorData?.required_permission || errorData?.detail || 'unknown permission';
+          const module = errorData?.module || '';
+          
+          // Log permission denial for audit and debugging
+          console.warn('[RBAC] Permission denied:', {
+            endpoint: error.config?.url,
+            method: error.config?.method?.toUpperCase(),
+            requiredPermission: permission,
+            module: module,
+            timestamp: new Date().toISOString(),
+          });
+          
+          // Show user-friendly error message
+          if (typeof window !== 'undefined' && window.alert) {
+            const message = `Access Denied: You don't have permission to perform this action.\n\n` +
+              `Required permission: ${permission}\n` +
+              (module ? `Module: ${module}\n` : '') +
+              `\nPlease contact your administrator to request access.`;
+            
+            // You can replace window.alert with a toast notification library
+            // Example: toast.error(message);
+            console.error(message);
+          }
+        } else if (error.response?.status === 404) {
+          // Handle not found - could be access denial for cross-org resources
+          // Backend returns 404 instead of 403 to avoid information disclosure
+          const errorData = error.response.data as any;
+          
+          // Check if this is actually an access denial (some endpoints return 404 for security)
+          if (errorData?.detail && typeof errorData.detail === 'string') {
+            const isAccessDenial = errorData.detail.toLowerCase().includes('not found') ||
+                                   errorData.detail.toLowerCase().includes('access');
+            
+            if (isAccessDenial) {
+              console.warn('[RBAC] Resource not found or access denied:', {
+                endpoint: error.config?.url,
+                method: error.config?.method?.toUpperCase(),
+                detail: errorData.detail,
+                timestamp: new Date().toISOString(),
+              });
+            }
+          }
         }
         return Promise.reject(error);
       }
