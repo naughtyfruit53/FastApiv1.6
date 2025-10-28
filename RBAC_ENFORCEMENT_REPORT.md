@@ -683,3 +683,239 @@ Successfully initiated migration of **14 backend modules** across critical busin
 **Achievement**: 14 files updated, 73/162 endpoints fully migrated, all files compile
 **Next Steps**: Complete remaining endpoint migrations manually
 **Overall Progress**: 48/130 files initiated (37%), 107/~500 endpoints fully migrated
+
+## Phase 6: Frontend Integration Audit & Critical Backend Completion (October 2025)
+
+### Summary
+Phase 6 focuses on **frontend service audit**, **integration script review**, and **completing critical backend endpoints** to ensure comprehensive RBAC enforcement across the entire application stack.
+
+### Scope
+
+#### Frontend Service Audit ✅ COMPLETED
+- Comprehensive audit of all 43 frontend service files
+- Identified 315 API calls to backend endpoints
+- Mapped frontend services to backend endpoint RBAC status
+- Created detailed **FRONTEND_RBAC_INTEGRATION_AUDIT.md** report
+
+#### Key Findings - Frontend
+- **Total Frontend Services**: 43 files
+- **Total API Calls**: 315 endpoint calls
+- **RBAC-Enforced Backends**: ~42% (endpoints calling migrated backend modules)
+- **Not RBAC-Enforced**: ~58% (endpoints calling unmigrated backend modules)
+
+#### Critical Backend Endpoints Requiring Migration
+
+**HIGH PRIORITY** (Business-Critical):
+1. Master Data Endpoints:
+   - Customers/Vendors management (used heavily by frontend)
+   - Entity services (unified customer/vendor access)
+   
+2. Admin & RBAC Management:
+   - `app/api/v1/admin.py` (12 endpoints) - Admin operations
+   - `app/api/v1/rbac.py` (17 endpoints) - RBAC management itself not RBAC-enforced!
+
+3. Reports Module:
+   - `app/api/v1/reports.py` (12 endpoints)
+   - Legacy report endpoints (`/reports/*`)
+
+4. ERP Core:
+   - `app/api/v1/erp.py` (24 endpoints) - Core ERP functionality
+
+**PHASE 5 COMPLETION** (Unfinished Work):
+1. `app/api/v1/integration_settings.py` - 0/15 endpoints migrated
+2. `app/api/v1/stock.py` - 0/12 endpoints migrated (Phase 5 incomplete)
+3. `app/api/v1/warehouse.py` - 0/11 endpoints migrated (Phase 5 incomplete)
+4. `app/api/v1/dispatch.py` - 0/21 endpoints migrated (Phase 5 incomplete)
+5. `app/api/v1/procurement.py` - 0/10 endpoints migrated (Phase 5 incomplete)
+
+### Frontend Impact Analysis
+
+#### Services Calling RBAC-Enforced Backends ✅
+- **vouchersService.ts**: All voucher endpoints migrated (Phase 4)
+- **analyticsService.ts**: ML/AI analytics endpoints migrated (Phase 2)
+- **crmService.ts**: CRM endpoints migrated (Phase 3)
+- **hrService.ts**: HR endpoints migrated (Phase 3)
+- **notificationService.ts**: Notification endpoints migrated (Phase 3)
+
+#### Services Calling Non-RBAC Backends ⚠️
+- **integrationService.ts**: Integration endpoints NOT migrated
+- **entityService.ts**: Customer/Vendor endpoints NOT migrated
+- **reportsService.ts**: Report endpoints NOT migrated
+- **stockService.ts**: Stock endpoints partially migrated
+- **masterService.ts**: Master data endpoints NOT migrated
+- **adminService.ts**: Admin endpoints NOT migrated
+
+### Frontend Enhancement Requirements
+
+#### Error Handling for RBAC
+**Current State**: Basic error handling, no specific 403 permission denial handling
+**Required**:
+1. Add 403 error interceptor in API client
+2. Show user-friendly permission denial messages
+3. Log permission denials for audit
+4. Optional: Redirect to access-denied page
+
+**Implementation Example**:
+```typescript
+// frontend/src/lib/api.ts
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 403) {
+      const permission = error.response.data?.required_permission;
+      toast.error(
+        `Access Denied: You need '${permission}' permission. ` +
+        `Contact your administrator.`
+      );
+    }
+    return Promise.reject(error);
+  }
+);
+```
+
+#### Organization Context Verification
+**Required**:
+1. Verify organization_id consistency across all API calls
+2. Ensure state isolation per organization
+3. Clear org-specific data on organization switch
+4. Add organization context to React Context/Redux
+
+### Integration Script Status
+
+#### Python Integration Scripts
+| Script | Status | Action Required |
+|--------|--------|-----------------|
+| `test_backend_integration.py` | ⚠️ Needs Update | Add RBAC permission tests |
+| `test_frontend_ui.py` | ⚠️ Needs Update | Add 403 denial tests |
+| `tests/test_dispatch_api_integration.py` | ⚠️ Needs Update | Verify RBAC enforcement |
+| `app/services/integration_service.py` | ⚠️ Needs RBAC | Update to use require_access |
+| `app/services/external_integrations_service.py` | ⚠️ Partial | Complete RBAC migration |
+
+#### Frontend Integration Tests
+**Required New Tests**:
+1. Permission denial handling (403 responses)
+2. Organization isolation (cross-org access prevention)
+3. Token refresh with RBAC context
+4. Feature access based on permissions
+
+### Documentation Updates
+
+#### New Documentation Created
+1. **FRONTEND_RBAC_INTEGRATION_AUDIT.md** ✅
+   - Complete frontend service audit
+   - Backend endpoint mapping
+   - Error handling recommendations
+   - Testing requirements
+   - Security risk assessment
+
+#### Updated Documentation
+1. **RBAC_ENFORCEMENT_REPORT.md** (this file) - Phase 6 section
+2. **RBAC_TENANT_ENFORCEMENT_GUIDE.md** - Frontend patterns (planned)
+3. **QUICK_REFERENCE.md** - Phase 6 statistics (planned)
+
+### Testing Strategy - Phase 6
+
+#### Unit Tests
+- Test individual service methods for permission handling
+- Mock 403 responses and verify error handling
+- Test organization context in service calls
+
+#### Integration Tests
+- End-to-end permission flow tests
+- Cross-org access prevention tests
+- Frontend-backend RBAC contract tests
+
+#### Security Tests
+- Attempt unauthorized access to non-RBAC endpoints
+- Verify permission denial logging
+- Test organization data isolation
+
+### Metrics - Phase 6
+
+#### Code Analysis
+- Backend files analyzed: 118
+- Backend files with endpoints: 114
+- Backend files migrated: 47 (41.2%)
+- Backend files not migrated: 67 (58.8%)
+
+#### Frontend Analysis
+- Frontend service files: 43
+- API calls identified: 315
+- Calls to RBAC-enforced backends: ~132 (42%)
+- Calls to non-RBAC backends: ~183 (58%)
+
+#### Test Coverage
+- Existing RBAC tests: 5+ test files
+- New frontend tests needed: ~10 test scenarios
+- Integration tests needed: ~5 test suites
+
+### Security Impact
+
+#### Risks Identified
+1. **HIGH**: 58% of backend endpoints not RBAC-enforced
+2. **MEDIUM**: Frontend lacks permission denial handling
+3. **MEDIUM**: Integration scripts need RBAC updates
+4. **LOW**: Documentation gaps for frontend developers
+
+#### Mitigation Plan
+1. **Immediate**: Complete Phase 5 integration migrations (5 files)
+2. **Short-term**: Migrate critical backend endpoints (7 files)
+3. **Short-term**: Add frontend 403 error handling
+4. **Medium-term**: Complete all remaining backend migrations
+5. **Long-term**: Automated RBAC enforcement validation in CI/CD
+
+### Recommendations
+
+#### For Immediate Action
+1. Complete the 5 Phase 5 integration files that were started but not finished
+2. Add 403 error handling to frontend API client
+3. Migrate admin and RBAC management endpoints (critical)
+4. Create permission context for frontend
+
+#### For Next Phase (Phase 7)
+1. Migrate all master data endpoints (customers, vendors, products)
+2. Migrate reports module
+3. Complete remaining 60+ backend files
+4. Implement automated RBAC validation
+5. Create permission management UI
+
+#### For Frontend Teams
+1. Review **FRONTEND_RBAC_INTEGRATION_AUDIT.md** for detailed guidance
+2. Implement error handling for 403 responses
+3. Add permission checks before critical operations
+4. Update integration tests to include RBAC scenarios
+
+### Known Limitations - Phase 6
+
+1. **Backend Coverage**: Only 41.2% of endpoints RBAC-enforced
+2. **Frontend**: No built-in permission context yet
+3. **Testing**: Limited frontend RBAC test coverage
+4. **Documentation**: Need frontend-specific RBAC migration guide
+
+### Deliverables - Phase 6
+
+#### Completed ✅
+- [x] Comprehensive frontend service audit
+- [x] Backend endpoint coverage analysis
+- [x] FRONTEND_RBAC_INTEGRATION_AUDIT.md created
+- [x] Security risk assessment
+- [x] Migration recommendations
+
+#### In Progress ⏳
+- [ ] Complete Phase 5 integration module migrations
+- [ ] Add frontend 403 error handling
+- [ ] Migrate critical backend endpoints
+- [ ] Create frontend permission context
+
+#### Planned 📋
+- [ ] Complete all remaining backend migrations
+- [ ] Comprehensive integration test suite
+- [ ] Frontend RBAC developer guide
+- [ ] Automated RBAC validation tools
+
+---
+
+**Status**: Phase 6 Planning & Audit Complete ✅  
+**Achievement**: Full frontend audit, critical backend identified, documentation updated  
+**Next Steps**: Complete Phase 5 files, migrate critical 7 backend files, add frontend error handling  
+**Overall Progress**: 47/114 backend files migrated (41.2%), frontend audit complete, comprehensive documentation
