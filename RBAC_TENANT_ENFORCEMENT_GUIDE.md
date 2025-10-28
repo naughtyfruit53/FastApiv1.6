@@ -205,15 +205,35 @@ Modules may define additional permissions for specific actions:
 - `analytics_create`
 - `analytics_read`
 
-#### CRM Module
-- `crm_lead_create`
-- `crm_lead_read`
-- `crm_lead_update`
-- `crm_lead_delete`
-- `crm_opportunity_create`
-- `crm_opportunity_read`
-- `crm_opportunity_update`
-- `crm_opportunity_delete`
+#### CRM Module ✅
+- `crm_read` - View leads, opportunities, activities, analytics
+- `crm_create` - Create leads, opportunities, activities, commissions
+- `crm_update` - Update leads, opportunities, convert leads
+- `crm_delete` - Delete leads, opportunities, commissions
+
+#### Service Desk Module ✅
+- `service_read` - View tickets, SLAs, surveys, chatbot data
+- `service_create` - Create tickets, SLA policies, surveys
+- `service_update` - Update tickets, SLA tracking, channel configs
+- `service_delete` - Delete tickets, policies, surveys
+
+#### Notification Module ✅
+- `notification_read` - View templates and notification logs
+- `notification_create` - Create templates, send notifications
+- `notification_update` - Update templates and preferences
+- `notification_delete` - Delete templates
+
+#### HR Module ✅
+- `hr_read` - View employee profiles, attendance, leave, reviews
+- `hr_create` - Create employee profiles, attendance records, leave applications
+- `hr_update` - Update profiles, approve leave, performance reviews
+- `hr_delete` - Delete profiles and records
+
+#### Order Book Module ✅
+- `order_read` - View orders and workflow status
+- `order_create` - Create new orders
+- `order_update` - Update orders and workflow stages
+- `order_delete` - Delete orders
 
 ## Database Model Requirements
 
@@ -332,12 +352,23 @@ async def get_items(
 - **Finance/Analytics module**: 100% complete (5/5 files) ✅
 - **Voucher module**: 17% complete (3/18 files)
 
-### High Priority Modules
+### Phase 3 Update (October 2025)
+- **Files now with complete enforcement**: 26 total
+- **CRM module**: 100% complete (1/1 file, 19 endpoints) ✅
+- **Service Desk module**: 100% complete (1/1 file, 15+ endpoints) ✅
+- **Notification module**: 100% complete (1/1 file, 10+ endpoints) ✅
+- **HR module**: 100% complete (1/1 file, 12+ endpoints) ✅
+- **Order Book module**: 100% complete (1/1 file, 8+ endpoints) ✅
+
+### High Priority Modules Status
 1. Vouchers (all types) - 18 files (3 completed, 15 remaining)
 2. Manufacturing - 10 files ✅ **COMPLETED**
 3. Finance - 8 files (5 completed) ✅ **MOSTLY COMPLETED**
-4. CRM - 1 file
-5. HR - 1 file
+4. CRM - 1 file ✅ **COMPLETED**
+5. HR - 1 file ✅ **COMPLETED**
+6. Service Desk - 1 file ✅ **COMPLETED**
+7. Notification - 1 file ✅ **COMPLETED**
+8. Order Book - 1 file ✅ **COMPLETED**
 
 ## Module-Specific Examples
 
@@ -378,6 +409,73 @@ async def get_finance_analytics_dashboard(
     # Use organization_id for all queries
     ratios = FinanceAnalyticsService.calculate_financial_ratios(db, organization_id)
     return {"ratios": ratios}
+```
+
+### CRM Module Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/leads", response_model=List[LeadSchema])
+async def get_leads(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    status: Optional[str] = Query(None),
+    auth: tuple = Depends(require_access("crm", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all leads with filtering and pagination"""
+    current_user, org_id = auth
+    
+    stmt = select(Lead).where(Lead.organization_id == org_id)
+    if status:
+        stmt = stmt.where(Lead.status == status)
+    
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    return result.scalars().all()
+```
+
+### Service Desk Module Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/tickets", response_model=List[TicketSchema])
+async def get_tickets(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    status: Optional[str] = Query(None),
+    auth: tuple = Depends(require_access("service", "read")),
+    db: Session = Depends(get_db)
+):
+    """Get all tickets with advanced filtering"""
+    current_user, org_id = auth
+    
+    query = db.query(Ticket).filter(Ticket.organization_id == org_id)
+    if status:
+        query = query.filter(Ticket.status == status)
+    
+    return query.offset(skip).limit(limit).all()
+```
+
+### HR Module Example
+```python
+from app.core.enforcement import require_access
+
+@router.get("/employees", response_model=List[EmployeeProfileResponse])
+async def get_employees(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get employee profiles"""
+    current_user, org_id = auth
+    
+    stmt = select(EmployeeProfile).where(
+        EmployeeProfile.organization_id == org_id
+    ).offset(skip).limit(limit)
+    
+    result = await db.execute(stmt)
+    return result.scalars().all()
 ```
 
 ## Best Practices

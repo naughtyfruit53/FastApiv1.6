@@ -331,13 +331,128 @@ Successfully migrated **18 files** in the second phase of RBAC enforcement rollo
 - Enforcement Utilities: `/app/core/enforcement.py`
 - Test Examples: `/tests/test_rbac_tenant_enforcement.py`
 - Migration Tests: `/tests/test_rbac_migration_enforcement.py`
+- Phase 3 Tests: `/tests/test_phase3_rbac_enforcement.py`
 - Example Modules:
   - Voucher: `/app/api/v1/vouchers/sales_voucher.py`
   - Manufacturing: `/app/api/v1/manufacturing/bom.py`
   - Finance: `/app/api/v1/finance_analytics.py`
+  - CRM: `/app/api/v1/crm.py`
+  - Service Desk: `/app/api/v1/service_desk.py`
+  - HR: `/app/api/v1/hr.py`
+
+## Phase 3 Migration - CRM, Service, Notification, HR, Order Book (October 2025)
+
+### Summary
+Successfully migrated **5 major modules** in the third phase of RBAC enforcement rollout:
+- ✅ CRM module - 19 endpoints
+- ✅ Service Desk module - 15+ endpoints
+- ✅ Notification module - 10+ endpoints
+- ✅ HR module - 12+ endpoints
+- ✅ Order Book module - 8+ endpoints
+
+### Files Migrated
+
+#### CRM Module (1 file, 19 endpoints)
+1. `app/api/v1/crm.py` - Comprehensive CRM management
+   - Lead management (CRUD + conversion)
+   - Opportunity management (CRUD)
+   - Lead and opportunity activities
+   - CRM analytics and customer analytics
+   - Commission tracking
+
+#### Service Desk Module (1 file, 15+ endpoints)
+1. `app/api/v1/service_desk.py` - Complete service desk operations
+   - Ticket management (CRUD)
+   - SLA policies and tracking
+   - Chatbot conversations and messages
+   - Survey templates and customer surveys
+   - Channel configurations
+
+#### Notification Module (1 file, 10+ endpoints)
+1. `app/api/notifications.py` - Notification system
+   - Notification templates (CRUD)
+   - Notification logs and history
+   - Bulk notification sending
+   - Notification preferences
+
+#### HR Module (1 file, 12+ endpoints)
+1. `app/api/v1/hr.py` - Human resources management
+   - Employee profiles (CRUD)
+   - Attendance records
+   - Leave types and applications
+   - Performance reviews
+   - HR dashboards and analytics
+
+#### Order Book Module (1 file, 8+ endpoints)
+1. `app/api/v1/order_book.py` - Order workflow management
+   - Order management (CRUD)
+   - Workflow stage tracking
+   - Order status updates
+   - Customer-based filtering
+
+### Test Coverage
+- Created `tests/test_phase3_rbac_enforcement.py` with comprehensive tests
+- Tests validate:
+  - Import and usage of require_access
+  - Correct module permissions per endpoint
+  - Auth tuple extraction pattern
+  - Removal of old dependency patterns
+  - Syntax compilation for all modules
+  - Consistency across modules
+  - Enforcement utility availability
+
+### Permissions Introduced
+- **CRM**: `crm_read`, `crm_create`, `crm_update`, `crm_delete`
+- **Service Desk**: `service_read`, `service_create`, `service_update`, `service_delete`
+- **Notification**: `notification_read`, `notification_create`, `notification_update`, `notification_delete`
+- **HR**: `hr_read`, `hr_create`, `hr_update`, `hr_delete`
+- **Order Book**: `order_read`, `order_create`, `order_update`, `order_delete`
+
+### Migration Details
+
+#### Key Changes
+1. **Import Replacement**: 
+   - Removed: `get_current_active_user`, `require_current_organization_id`, `core_get_current_user`
+   - Added: `require_access` from `app.core.enforcement`
+
+2. **Dependency Pattern**:
+   - Old: `current_user: User = Depends(get_current_active_user), org_id: int = Depends(require_current_organization_id)`
+   - New: `auth: tuple = Depends(require_access("module", "action")), db: AsyncSession = Depends(get_db)`
+
+3. **Auth Extraction**:
+   - Added: `current_user, org_id = auth` at the beginning of each endpoint
+
+4. **RBAC Check Removal**:
+   - Removed manual `RBACService` permission checks
+   - Permission checking now centralized in `require_access`
+
+5. **Organization ID Usage**:
+   - Replaced `current_user.organization_id` with `org_id` from auth tuple
+   - Note: Order Book uses `organization_id` variable name for consistency with its existing code
+
+### Impact
+- **Total Files with RBAC enforcement**: 26 (3 from Phase 1 + 18 from Phase 2 + 5 from Phase 3)
+- **CRM coverage**: 100% (1/1 file, 19 endpoints)
+- **Service Desk coverage**: 100% (1/1 file, 15+ endpoints)
+- **Notification coverage**: 100% (1/1 file, 10+ endpoints)
+- **HR coverage**: 100% (1/1 file, 12+ endpoints)
+- **Order Book coverage**: 100% (1/1 file, 8+ endpoints)
+
+### Code Quality
+- All migrated modules compile without syntax errors ✅
+- Consistent pattern applied across all endpoints ✅
+- No legacy authentication/authorization patterns remaining ✅
+- Proper auth tuple extraction in all endpoints ✅
+
+### Security Improvements
+- **Centralized Permission Checks**: All endpoints now use the same enforcement mechanism
+- **Consistent Organization Scoping**: Every query properly filters by organization_id
+- **Removal of Duplicate Logic**: Eliminated manual RBAC checks scattered throughout code
+- **Improved Auditability**: All permission checks logged through central enforcement
+- **Defense in Depth**: Multiple layers of security (authentication → tenant isolation → permission check)
 
 ---
 
-**Status**: Phase 1 Complete ✅  
-**Next Phase**: Apply to remaining modules  
+**Status**: Phase 3 Complete ✅  
+**Next Phase**: Apply to remaining voucher and inventory modules
 **Timeline**: Systematic rollout module by module
