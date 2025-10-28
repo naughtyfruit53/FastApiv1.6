@@ -196,6 +196,17 @@ class OrganizationService:
             if result.scalars().first():
                 raise HTTPException(status_code=400, detail=f"Subdomain '{subdomain}' is already in use")
             
+            # Validate enabled_modules if provided
+            if license_data.enabled_modules:
+                from app.core.modules_registry import get_all_modules
+                valid_modules = get_all_modules()
+                for module in license_data.enabled_modules:
+                    if module not in valid_modules:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Invalid module '{module}'. Valid modules: {', '.join(valid_modules)}"
+                        )
+            
             organization = Organization(
                 name=license_data.organization_name,
                 subdomain=subdomain,
@@ -270,6 +281,18 @@ class OrganizationService:
                 logger.error(f"Admin role not found after initialization for org {organization.id}")
                 raise HTTPException(status_code=500, detail="Failed to initialize RBAC roles properly")
             
+            # Setup comprehensive RBAC for org_admin - grant full module access
+            try:
+                from app.services.user_rbac_service import UserRBACService
+                user_rbac_service = UserRBACService(db)
+                await user_rbac_service.setup_user_rbac_by_role(
+                    user_id=super_admin_user.id,
+                    role=UserRole.ORG_ADMIN
+                )
+                logger.info(f"Granted full module access to org_admin {super_admin_user.email}")
+            except Exception as rbac_error:
+                logger.warning(f"RBAC setup warning for org_admin {super_admin_user.id}: {rbac_error}")
+            
             await db.commit()
             
             log_license_creation(organization.name, license_data.superadmin_email, current_user.email)
@@ -306,18 +329,11 @@ class OrganizationService:
             raise HTTPException(status_code=500, detail="Internal server error")
 
     @staticmethod
+    @staticmethod
     def get_available_modules() -> Dict:
         """Get available modules in the application"""
-        available_modules = {
-            "CRM": True,
-            "ERP": True,
-            "HR": True,
-            "Inventory": True,
-            "Service": True,
-            "Analytics": True,
-            "Finance": True
-        }
-        return available_modules
+        from app.core.modules_registry import get_default_enabled_modules
+        return get_default_enabled_modules()
 
     @staticmethod
     async def get_organization_modules(db: AsyncSession, organization_id: int) -> Dict:

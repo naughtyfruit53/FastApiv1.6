@@ -45,15 +45,9 @@ async def get_organization_modules(
             detail="Organization not found"
         )
   
-    enabled_modules = organization.enabled_modules or {
-        "CRM": True,
-        "ERP": True,
-        "HR": True,
-        "Inventory": True,
-        "Service": True,
-        "Analytics": True,
-        "Finance": True
-    }
+    from app.core.modules_registry import get_default_enabled_modules
+    
+    enabled_modules = organization.enabled_modules or get_default_enabled_modules()
   
     return {"enabled_modules": enabled_modules}
 
@@ -80,12 +74,14 @@ async def update_organization_modules(
         )
   
     try:
-        valid_modules = ["CRM", "ERP", "HR", "Inventory", "Service", "Analytics", "Finance"]
+        from app.core.modules_registry import get_all_modules
+        
+        valid_modules = get_all_modules()
         for module in modules_data.get("enabled_modules", {}):
             if module not in valid_modules:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid module: {module}"
+                    detail=f"Invalid module: {module}. Valid modules are: {', '.join(valid_modules)}"
                 )
       
         organization.enabled_modules = modules_data.get("enabled_modules", {})
@@ -94,6 +90,8 @@ async def update_organization_modules(
         logger.info(f"Organization {organization_id} modules updated by {current_user.email}")
         return {"message": "Organization modules updated successfully", "enabled_modules": organization.enabled_modules}
       
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         logger.error(f"Error updating organization modules: {e}")

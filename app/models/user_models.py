@@ -96,6 +96,7 @@ class Organization(Base):
 
     # Module Access Control - Organization level module enablement
     enabled_modules: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {
+        # Core Business Modules
         "CRM": True,
         "ERP": True, 
         "HR": True,
@@ -103,7 +104,30 @@ class Organization(Base):
         "Service": True,
         "Analytics": True,
         "Finance": True,
-        # Removed "Mail": True as custom mail module is replaced by SnappyMail
+        
+        # Extended Modules
+        "Manufacturing": True,
+        "Procurement": True,
+        "Project": True,
+        "Asset": True,
+        "Transport": True,
+        "SEO": True,
+        "Marketing": True,
+        "Payroll": True,
+        "Talent": True,
+        
+        # Advanced Modules
+        "Workflow": True,
+        "Integration": True,
+        "AI_Analytics": True,
+        "Streaming_Analytics": True,
+        "AB_Testing": True,
+        "Website_Agent": True,
+        "Email": True,
+        "Calendar": True,
+        "Task_Management": True,
+        "Order_Book": True,
+        "Exhibition": True,
     }) # Modules enabled for this organization
 
     # Onboarding status
@@ -432,6 +456,7 @@ class User(Base):
 
     # Module Access Control - User level module assignments
     assigned_modules: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {
+        # Core Business Modules
         "CRM": True,
         "ERP": True,
         "HR": True,
@@ -439,12 +464,35 @@ class User(Base):
         "Service": True,
         "Analytics": True,
         "Finance": True,
-        # Removed "Mail": True as custom mail module is replaced by SnappyMail
+        
+        # Extended Modules
+        "Manufacturing": True,
+        "Procurement": True,
+        "Project": True,
+        "Asset": True,
+        "Transport": True,
+        "SEO": True,
+        "Marketing": True,
+        "Payroll": True,
+        "Talent": True,
+        
+        # Advanced Modules
+        "Workflow": True,
+        "Integration": True,
+        "AI_Analytics": True,
+        "Streaming_Analytics": True,
+        "AB_Testing": True,
+        "Website_Agent": True,
+        "Email": True,
+        "Calendar": True,
+        "Task_Management": True,
+        "Order_Book": True,
+        "Exhibition": True,
     }) # Modules assigned to this user (subset of org enabled modules)
 
     # Executive-specific fields
     reporting_manager_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_user_reporting_manager_id"), nullable=True, index=True)
-    sub_module_permissions: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # {module: [sub_module1, sub_module2]} for executives
+    sub_module_permissions: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # {module: {submodule: [actions]}} for executives - inherited from manager
 
     # Temporary master password support
     temp_password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Temporary password hash

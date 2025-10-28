@@ -430,66 +430,10 @@ class RBACService:
     # Initialization
     async def initialize_default_permissions(self) -> List[Permission]:
         """Initialize default permissions"""
-        default_permissions = [
-            ("service_create", "Create Services", "Create new services", "service", "create"),
-            ("service_read", "View Services", "View service information", "service", "read"),
-            ("service_update", "Update Services", "Modify service information", "service", "update"),
-            ("service_delete", "Delete Services", "Delete services", "service", "delete"),
-            ("technician_create", "Create Technicians", "Add new technicians", "technician", "create"),
-            ("technician_read", "View Technicians", "View technician information", "technician", "read"),
-            ("technician_update", "Update Technicians", "Modify technician information", "technician", "update"),
-            ("technician_delete", "Delete Technicians", "Remove technicians", "technician", "delete"),
-            ("appointment_create", "Create Appointments", "Schedule new appointments", "appointment", "create"),
-            ("appointment_read", "View Appointments", "View appointment information", "appointment", "read"),
-            ("appointment_update", "Update Appointments", "Modify appointments", "appointment", "update"),
-            ("appointment_delete", "Cancel Appointments", "Cancel appointments", "appointment", "delete"),
-            ("customer_service_create", "Create Customer Records", "Create customer service records", "customer_service", "create"),
-            ("customer_service_read", "View Customer Records", "View customer service information", "customer_service", "read"),
-            ("customer_service_update", "Update Customer Records", "Modify customer service records", "customer_service", "update"),
-            ("customer_service_delete", "Delete Customer Records", "Remove customer service records", "customer_service", "delete"),
-            ("work_order_create", "Create Work Orders", "Create new work orders", "work_order", "create"),
-            ("work_order_read", "View Work Orders", "View work order information", "work_order", "read"),
-            ("work_order_update", "Update Work Orders", "Modify work orders", "work_order", "update"),
-            ("work_order_delete", "Delete Work Orders", "Remove work orders", "work_order", "delete"),
-            ("service_reports_read", "View Service Reports", "Access service reports", "service_reports", "read"),
-            ("service_reports_export", "Export Service Reports", "Export service reports", "service_reports", "export"),
-            ("crm_admin", "CRM Administration", "Full CRM administration access", "crm_admin", "admin"),
-            ("crm_settings", "CRM Settings", "Manage CRM settings", "crm_admin", "update"),
-            ("mail:dashboard:read", "Read Mail Dashboard", "View mail dashboard statistics", "mail", "read"),
-            ("mail:accounts:read", "Read Mail Accounts", "View email accounts", "mail", "read"),
-            ("mail:accounts:create", "Create Mail Accounts", "Add new email accounts", "mail", "create"),
-            ("mail:accounts:update", "Update Mail Accounts", "Modify email accounts", "mail", "update"),
-            ("mail:accounts:delete", "Delete Mail Accounts", "Remove email accounts", "mail", "delete"),
-            ("mail:emails:read", "Read Emails", "View emails", "mail", "read"),
-            ("mail:emails:compose", "Compose Emails", "Send new emails", "mail", "create"),
-            ("mail:emails:update", "Update Emails", "Modify emails", "mail", "update"),
-            ("mail:emails:sync", "Sync Emails", "Synchronize email accounts", "mail", "update"),
-            ("mail:templates:read", "Read Templates", "View email templates", "mail", "read"),
-            ("mail:templates:create", "Create Templates", "Add new email templates", "mail", "create"),
-            ("crm_lead_read", "Read Leads", "View leads", "crm_lead", "read"),
-            ("crm_lead_create", "Create Leads", "Create new leads", "crm_lead", "create"),
-            ("crm_lead_update", "Update Leads", "Modify leads", "crm_lead", "update"),
-            ("crm_lead_delete", "Delete Leads", "Delete leads", "crm_lead", "delete"),
-            ("crm_lead_convert", "Convert Leads", "Convert leads to opportunities/customers", "crm_lead", "convert"),
-            ("crm_opportunity_read", "Read Opportunities", "View opportunities", "crm_opportunity", "read"),
-            ("crm_opportunity_create", "Create Opportunities", "Create new opportunities", "crm_opportunity", "create"),
-            ("crm_opportunity_update", "Update Opportunities", "Modify opportunities", "crm_opportunity", "update"),
-            ("crm_opportunity_delete", "Delete Opportunities", "Delete opportunities", "crm_opportunity", "delete"),
-            ("crm_activity_read", "Read Activities", "View activities", "crm_activity", "read"),
-            ("crm_activity_create", "Create Activities", "Create new activities", "crm_activity", "create"),
-            ("crm_activity_update", "Update Activities", "Modify activities", "crm_activity", "update"),
-            ("crm_activity_delete", "Delete Activities", "Delete activities", "crm_activity", "delete"),
-            ("crm_analytics_read", "Read Analytics", "View CRM analytics", "crm_analytics", "read"),
-            ("crm_analytics_export", "Export Analytics", "Export CRM analytics", "crm_analytics", "export"),
-            ("crm_settings_read", "Read Settings", "View CRM settings", "crm_settings", "read"),
-            ("crm_settings_update", "Update Settings", "Modify CRM settings", "crm_settings", "update"),
-            ("crm_import", "Import Data", "Import CRM data", "crm", "import"),
-            ("crm_export", "Export Data", "Export CRM data", "crm", "export"),
-            ("crm_commission_read", "Read Commissions", "View commissions", "crm_commission", "read"),
-            ("crm_commission_create", "Create Commissions", "Create new commissions", "crm_commission", "create"),
-            ("crm_commission_update", "Update Commissions", "Modify commissions", "crm_commission", "update"),
-            ("crm_commission_delete", "Delete Commissions", "Delete commissions", "crm_commission", "delete"),
-        ]
+        from app.services.rbac_permissions import get_comprehensive_permissions
+        
+        # Get comprehensive permissions list
+        default_permissions = get_comprehensive_permissions()
         
         # Batch check existing permissions
         stmt = select(Permission.name).where(
@@ -514,13 +458,20 @@ class RBACService:
                 })
         
         if to_create:
-            insert_stmt = insert(Permission).values(to_create)
-            result = await self.db.execute(insert_stmt.returning(Permission))
-            created_permissions = result.scalars().all()
+            # Insert in batches to avoid issues with very large inserts
+            batch_size = 100
+            for i in range(0, len(to_create), batch_size):
+                batch = to_create[i:i+batch_size]
+                insert_stmt = insert(Permission).values(batch)
+                result = await self.db.execute(insert_stmt.returning(Permission))
+                batch_created = result.scalars().all()
+                created_permissions.extend(batch_created)
+            
             await self.db.commit()
             
-            for perm in created_permissions:
-                logger.info(f"Created permission: {perm.name}")
+            logger.info(f"Created {len(created_permissions)} new permissions")
+        else:
+            logger.info("All permissions already exist")
         
         return created_permissions
     
@@ -528,74 +479,38 @@ class RBACService:
         """Initialize default roles for an organization"""
         await self.initialize_default_permissions()
         
+        from app.services.rbac_permissions import get_default_role_permissions
+        
         all_permissions = await self.get_permissions()
         permission_map = {p.name: p.id for p in all_permissions}
+        
+        # Get comprehensive role permissions
+        role_permissions_map = get_default_role_permissions()
         
         default_roles = [
             {
                 "name": RoleType.ADMIN.value,
                 "display_name": "Admin",
-                "description": "Full access to all functionality",
-                "permissions": list(permission_map.keys())
+                "description": "Full access to all functionality across all modules",
+                "permissions": role_permissions_map.get("admin", [])
             },
             {
                 "name": RoleType.MANAGER.value,
                 "display_name": "Manager",
-                "description": "Manage operations",
-                "permissions": [
-                    "service_read", "service_update", "service_create",
-                    "technician_read", "technician_update", "technician_create",
-                    "appointment_read", "appointment_update", "appointment_create",
-                    "customer_service_read", "customer_service_update",
-                    "work_order_read", "work_order_update", "work_order_create",
-                    "reports_read", "reports_export",
-                    "mail:dashboard:read", "mail:accounts:read", "mail:accounts:update", "mail:emails:read", "mail:emails:compose", "mail:emails:update", "mail:emails:sync",
-                    "crm_lead_read", "crm_lead_create", "crm_lead_update", "crm_lead_convert",
-                    "crm_opportunity_read", "crm_opportunity_create", "crm_opportunity_update",
-                    "crm_activity_read", "crm_activity_create", "crm_activity_update",
-                    "crm_analytics_read", "crm_analytics_export",
-                    "crm_settings_read", "crm_settings_update",
-                    "crm_import", "crm_export",
-                    "crm_commission_read", "crm_commission_create", "crm_commission_update",
-                ]
+                "description": "Manage operations across assigned modules",
+                "permissions": role_permissions_map.get("manager", [])
             },
             {
                 "name": RoleType.SUPPORT.value,
                 "display_name": "Support Agent",
-                "description": "Handle operations",
-                "permissions": [
-                    "service_read",
-                    "technician_read",
-                    "appointment_read", "appointment_update", "appointment_create",
-                    "customer_service_read", "customer_service_update", "customer_service_create",
-                    "work_order_read", "work_order_update",
-                    "reports_read",
-                    "mail:dashboard:read", "mail:emails:read", "mail:emails:compose",
-                    "crm_lead_read", "crm_lead_create", "crm_lead_update",
-                    "crm_opportunity_read", "crm_opportunity_update",
-                    "crm_activity_read", "crm_activity_create",
-                    "crm_analytics_read",
-                    "crm_commission_read",
-                ]
+                "description": "Handle operations with limited permissions",
+                "permissions": role_permissions_map.get("support", [])
             },
             {
                 "name": RoleType.VIEWER.value,
                 "display_name": "Viewer",
-                "description": "Read-only access",
-                "permissions": [
-                    "service_read",
-                    "technician_read",
-                    "appointment_read",
-                    "customer_service_read",
-                    "work_order_read",
-                    "reports_read",
-                    "mail:dashboard:read", "mail:emails:read",
-                    "crm_lead_read",
-                    "crm_opportunity_read",
-                    "crm_activity_read",
-                    "crm_analytics_read",
-                    "crm_commission_read",
-                ]
+                "description": "Read-only access to data",
+                "permissions": role_permissions_map.get("viewer", [])
             }
         ]
         
@@ -610,7 +525,13 @@ class RBACService:
         
         for role_data in default_roles:
             if role_data["name"] not in existing_names:
-                permission_ids = [permission_map[p] for p in role_data["permissions"] if p in permission_map]
+                # Filter permissions to only include those that exist
+                permission_ids = [
+                    permission_map[p] for p in role_data["permissions"] 
+                    if p in permission_map
+                ]
+                
+                logger.info(f"Creating role '{role_data['name']}' with {len(permission_ids)} permissions out of {len(role_data['permissions'])} requested")
                 
                 role_create = RoleCreate(
                     name=role_data["name"],

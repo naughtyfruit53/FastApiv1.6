@@ -277,6 +277,33 @@ async def create_user_in_organization(
                 logger.warning(f"Role '{new_user.role}' not found - skipping assignment")
             
             logger.info(f"User {new_user.email} created in org {org.name} by {current_user.email}")
+            
+            # Setup comprehensive RBAC for the user based on their role
+            try:
+                from app.services.user_rbac_service import UserRBACService
+                user_rbac_service = UserRBACService(db)
+                
+                # Auto-assign modules based on role
+                if new_user.role in ["org_admin", "management"]:
+                    # Grant full access to all organization modules
+                    await user_rbac_service.setup_user_rbac_by_role(
+                        user_id=new_user.id,
+                        role=new_user.role
+                    )
+                    logger.info(f"Granted full module access to {new_user.role} user {new_user.id}")
+                elif new_user.role == "manager":
+                    # Manager should already have assigned_modules from user_data
+                    if new_user.assigned_modules:
+                        logger.info(f"Manager {new_user.id} has assigned modules: {list(new_user.assigned_modules.keys())}")
+                elif new_user.role == "executive":
+                    # Executive should already have inherited from manager
+                    if new_user.reporting_manager_id:
+                        # Refresh to get the latest data
+                        await db.refresh(new_user)
+                        logger.info(f"Executive {new_user.id} reports to manager {new_user.reporting_manager_id}")
+            except Exception as rbac_error:
+                logger.warning(f"RBAC setup warning for user {new_user.id}: {rbac_error}")
+                # Don't fail user creation if RBAC setup has issues
 
             # Send welcome email with login link (OTP already sent if password was None)
             success, error = await system_email_service.send_user_creation_email(
