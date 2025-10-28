@@ -48,6 +48,7 @@ import { organizationService } from "../../services/organizationService";
 import { useAuth } from "../../context/AuthContext";
 import { getDisplayRole, canManageUsers, canResetPasswords } from "../../types/user.types";
 import AddUserDialog from "../../components/AddUserDialog";
+import { useRouter } from "next/navigation";
 
 interface User {
   id: number;
@@ -66,6 +67,7 @@ interface User {
 const UserManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const router = useRouter();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -479,6 +481,14 @@ const UserManagement: React.FC = () => {
                     >
                       <Edit />
                     </IconButton>
+                    <IconButton
+                      size="small"
+                      color="secondary"
+                      onClick={() => router.push(`/settings/user-permissions/${user.id}`)}
+                      title="Manage Permissions"
+                    >
+                      <Settings />
+                    </IconButton>
                     {canReset && (
                       <IconButton
                         size="small"
@@ -538,9 +548,38 @@ const UserManagement: React.FC = () => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Edit User</DialogTitle>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6">Edit User</Typography>
+            <Button
+              size="small"
+              startIcon={<Settings />}
+              onClick={() => {
+                setEditDialogOpen(false);
+                if (selectedUser) {
+                  router.push(`/settings/user-permissions/${selectedUser.id}`);
+                }
+              }}
+            >
+              Manage Permissions
+            </Button>
+          </Box>
+        </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
+          <Box sx={{ mb: 2, mt: 1 }}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                Module and permission access can now be managed in the dedicated Permissions page.
+                Use the "Manage Permissions" button above or the gear icon in the user table.
+              </Typography>
+            </Alert>
+          </Box>
+          
+          {/* Basic Information Section */}
+          <Typography variant="subtitle1" fontWeight="medium" sx={{ mb: 2 }}>
+            Basic Information
+          </Typography>
+          <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -566,7 +605,16 @@ const UserManagement: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+          </Grid>
+          
+          <Divider sx={{ my: 3 }} />
+          
+          {/* Email and Account Section */}
+          <Typography variant="subtitle1" fontWeight="medium" sx={{ mb: 2 }}>
+            Email & Account
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Email"
@@ -576,6 +624,7 @@ const UserManagement: React.FC = () => {
                   setFormData((prev) => ({ ...prev, email: e.target.value }))
                 }
                 required
+                helperText="Changing email will require user to verify the new email address"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -601,6 +650,27 @@ const UserManagement: React.FC = () => {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
+                label="New Password (Optional)"
+                type="password"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, password: e.target.value }))
+                }
+                helperText="Leave blank to keep current password"
+              />
+            </Grid>
+          </Grid>
+          
+          <Divider sx={{ my: 3 }} />
+          
+          {/* Organization Details Section */}
+          <Typography variant="subtitle1" fontWeight="medium" sx={{ mb: 2 }}>
+            Organization Details
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
                 label="Department"
                 value={formData.department}
                 onChange={(e) =>
@@ -623,34 +693,6 @@ const UserManagement: React.FC = () => {
                   }))
                 }
               />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Module Access
-              </Typography>
-              <FormGroup row>
-                {Object.entries(formData.modules).map(([module, checked]) => (
-                  <FormControlLabel
-                    key={module}
-                    control={
-                      <Checkbox
-                        checked={checked}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            modules: {
-                              ...prev.modules,
-                              [module]: e.target.checked,
-                            },
-                          }))
-                        }
-                        disabled={formData.role === "manager"}
-                      />
-                    }
-                    label={module.charAt(0).toUpperCase() + module.slice(1)}
-                  />
-                ))}
-              </FormGroup>
             </Grid>
           </Grid>
         </DialogContent>

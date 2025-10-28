@@ -38,6 +38,7 @@ import { organizationService } from '../services/organizationService';
 import MobileNav from './MobileNav';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { menuItems, mainMenuSections } from './menuConfig';
+import { useAuth } from '../context/AuthContext';
 
 interface MegaMenuProps {
   user?: any;
@@ -46,6 +47,7 @@ interface MegaMenuProps {
 }
 
 const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true }) => {
+  const { userPermissions } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -329,6 +331,30 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           if (item.servicePermission && isSuperAdmin) return false;
           // Hide org-role specific items for app superadmin
           if (item.role && isSuperAdmin) return false;
+          
+          // NEW: Check RBAC permissions from AuthContext
+          if (item.permission && userPermissions) {
+            // Check if user has the required permission
+            if (!userPermissions.permissions.includes(item.permission)) {
+              return false;
+            }
+          }
+          
+          // NEW: Check module access
+          if (item.requireModule && userPermissions) {
+            if (!userPermissions.modules.includes(item.requireModule)) {
+              return false;
+            }
+          }
+          
+          // NEW: Check submodule access
+          if (item.requireSubmodule && userPermissions) {
+            const { module, submodule } = item.requireSubmodule;
+            if (!userPermissions.submodules[module]?.includes(submodule)) {
+              return false;
+            }
+          }
+          
           return true;
         })
         .map((item: any) => {
