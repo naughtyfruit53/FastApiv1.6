@@ -1,4 +1,6 @@
 // frontend/src/components/CompanySetupGuard.tsx
+'use client'; // Added 'use client' for client-side hooks
+
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";

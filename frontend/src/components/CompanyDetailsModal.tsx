@@ -1,3 +1,5 @@
+'use client'; // Added 'use client' for client-side hooks
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,

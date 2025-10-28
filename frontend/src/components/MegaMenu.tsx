@@ -39,6 +39,7 @@ import MobileNav from './MobileNav';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { menuItems, mainMenuSections } from './menuConfig';
 import { useAuth } from '../context/AuthContext';
+import { useSharedPermissions } from '../hooks/useSharedPermissions';
 
 interface MegaMenuProps {
   user?: any;
@@ -47,7 +48,8 @@ interface MegaMenuProps {
 }
 
 const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true }) => {
-  const { userPermissions } = useAuth();
+  const { userPermissions: contextUserPermissions } = useAuth();
+  const { hasPermission, hasModuleAccess, hasSubmoduleAccess } = useSharedPermissions();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -101,7 +103,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   });
 
   // Query for current user's service permissions
-  const { data: userPermissions = [] } = useQuery({
+  const { data: userServicePermissions = [] } = useQuery({
     queryKey: ['userServicePermissions'],
     queryFn: rbacService.getCurrentUserPermissions,
     enabled: !!user && !isAppSuperAdmin(user),
@@ -198,14 +200,14 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   const hasServicePermission = (permission: string): boolean => {
     try {
-      return userPermissions.includes(permission);
+      return userServicePermissions.includes(permission);
     } catch {
       return false;
     }
   };
 
   const hasAnyServicePermission = (permissions: string[]): boolean => {
-    return permissions.some((permission) => userPermissions.includes(permission));
+    return permissions.some((permission) => userServicePermissions.includes(permission));
   };
 
   const canAccessService = (): boolean => {
@@ -333,24 +335,24 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           if (item.role && isSuperAdmin) return false;
           
           // NEW: Check RBAC permissions from AuthContext
-          if (item.permission && userPermissions) {
+          if (item.permission && contextUserPermissions) {
             // Check if user has the required permission
-            if (!userPermissions.permissions.includes(item.permission)) {
+            if (!hasPermission(item.permission)) {
               return false;
             }
           }
           
           // NEW: Check module access
-          if (item.requireModule && userPermissions) {
-            if (!userPermissions.modules.includes(item.requireModule)) {
+          if (item.requireModule && contextUserPermissions) {
+            if (!hasModuleAccess(item.requireModule)) {
               return false;
             }
           }
           
           // NEW: Check submodule access
-          if (item.requireSubmodule && userPermissions) {
+          if (item.requireSubmodule && contextUserPermissions) {
             const { module, submodule } = item.requireSubmodule;
-            if (!userPermissions.submodules[module]?.includes(submodule)) {
+            if (!hasSubmoduleAccess(module, submodule)) {
               return false;
             }
           }

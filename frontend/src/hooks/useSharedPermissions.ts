@@ -14,6 +14,7 @@ export interface UserPermissions {
   role: string;
   permissions: string[];
   modules: string[];
+  submodules: Record<string, string[]>;
 }
 
 export interface PermissionConfig {
@@ -110,6 +111,7 @@ export const useSharedPermissions = () => {
         role: 'guest',
         permissions: [],
         modules: [],
+        submodules: {},
       };
     }
 
@@ -124,12 +126,14 @@ export const useSharedPermissions = () => {
         role: contextPermissions.role || user.role || 'user',
         permissions: contextPermissions.permissions,
         modules: contextPermissions.modules,
+        submodules: contextPermissions.submodules,
       };
     }
 
     // Fallback to role-based permissions for backward compatibility
     let permissions: string[] = [];
     let modules: string[] = [];
+    let submodules: Record<string, string[]> = {};
 
     if (isSuperAdmin) {
       // Super admin has all permissions
@@ -146,6 +150,18 @@ export const useSharedPermissions = () => {
         'admin.*',
       ];
       modules = ['dashboard', 'finance', 'sales', 'crm', 'inventory', 'hr', 'service', 'reports', 'settings', 'admin'];
+      submodules = {
+        dashboard: ['all'],
+        finance: ['all'],
+        sales: ['all'],
+        crm: ['all'],
+        inventory: ['all'],
+        hr: ['all'],
+        service: ['all'],
+        reports: ['all'],
+        settings: ['all'],
+        admin: ['all'],
+      };
     } else if (isOrgSuperAdmin) {
       // Organization admin has most permissions except super admin functions
       permissions = [
@@ -163,34 +179,74 @@ export const useSharedPermissions = () => {
         'settings.manageOrganization',
       ];
       modules = ['dashboard', 'finance', 'sales', 'crm', 'inventory', 'hr', 'service', 'reports', 'settings'];
+      submodules = {
+        dashboard: ['all'],
+        finance: ['all'],
+        sales: ['all'],
+        crm: ['all'],
+        inventory: ['all'],
+        hr: ['all'],
+        service: ['all'],
+        reports: ['all'],
+        settings: ['all'],
+      };
     } else {
       // Regular user - permissions based on role
       switch (user.role) {
         case 'finance_manager':
           permissions = ['dashboard.view', 'finance.*', 'reports.viewFinancial'];
           modules = ['dashboard', 'finance', 'reports'];
+          submodules = {
+            dashboard: ['all'],
+            finance: ['all'],
+            reports: ['all'],
+          };
           break;
         case 'sales_manager':
           permissions = ['dashboard.view', 'sales.*', 'crm.*', 'reports.viewOperational'];
           modules = ['dashboard', 'sales', 'crm', 'reports'];
+          submodules = {
+            dashboard: ['all'],
+            sales: ['all'],
+            crm: ['all'],
+            reports: ['all'],
+          };
           break;
         case 'inventory_manager':
           permissions = ['dashboard.view', 'inventory.*', 'reports.viewOperational'];
           modules = ['dashboard', 'inventory', 'reports'];
+          submodules = {
+            dashboard: ['all'],
+            inventory: ['all'],
+            reports: ['all'],
+          };
           break;
         case 'hr_manager':
           permissions = ['dashboard.view', 'hr.*', 'reports.viewOperational'];
           modules = ['dashboard', 'hr', 'reports'];
+          submodules = {
+            dashboard: ['all'],
+            hr: ['all'],
+            reports: ['all'],
+          };
           break;
         case 'service_manager':
           permissions = ['dashboard.view', 'service.*', 'reports.viewOperational'];
           modules = ['dashboard', 'service', 'reports'];
+          submodules = {
+            dashboard: ['all'],
+            service: ['all'],
+            reports: ['all'],
+          };
           break;
         case 'user':
         case 'employee':
         default:
-          permissions = ['dashboard.view'];
+          permissions = ['standard'];
           modules = ['dashboard'];
+          submodules = {
+            dashboard: ['all'],
+          };
           break;
       }
     }
@@ -201,6 +257,7 @@ export const useSharedPermissions = () => {
       role: user.role || 'user',
       permissions,
       modules,
+      submodules,
     };
   }, [user, contextPermissions]);
 
@@ -235,7 +292,9 @@ export const useSharedPermissions = () => {
     
     // Check if we have contextPermissions with submodule data
     if (contextPermissions?.submodules && contextPermissions.submodules[module]) {
-      return contextPermissions.submodules[module].includes(submodule);
+      const subs = contextPermissions.submodules[module];
+      if (subs.includes('all')) return true;
+      return subs.includes(submodule);
     }
     
     // Fallback: if user has module access, assume they have all submodule access

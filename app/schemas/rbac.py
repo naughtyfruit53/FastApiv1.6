@@ -86,8 +86,8 @@ class ServiceModule(str, Enum):
     SERVICE_TECHNICIANS = "service_technicians"
     SERVICE_APPOINTMENTS = "service_appointments"
     SERVICE_WORK_ORDERS = "service_work_orders"
+    SERVICE_SERVICE_REPORTS = "service_reports"
     SERVICE_CUSTOMER_FEEDBACK = "service_customer_feedback"
-    SERVICE_CLOSURE = "service_closure"
     SERVICE_SLA_MANAGEMENT = "service_sla_management"
     SERVICE_ANALYTICS = "service_analytics"
     

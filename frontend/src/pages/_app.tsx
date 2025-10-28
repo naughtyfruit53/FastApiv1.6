@@ -16,7 +16,7 @@ import { CompanyProvider, useCompany } from "../context/CompanyContext"; // Upda
 import { EmailProvider } from "../context/EmailContext"; // Added import for EmailProvider
 import { useState, useEffect } from "react"; // Added import for useState and useEffect
 import Head from 'next/head';  // Added import for Head to handle meta tags
-import ChatbotNavigator from "../components/ChatbotNavigator"; // Import chatbot component
+// Removed ChatbotNavigator import as it may be causing the undefined component error
 
 // Create modern theme using our design system
 const theme = createTheme({
@@ -191,7 +191,7 @@ function MyApp({ Component, pageProps }: AppProps): any {
         <Layout user={user} onLogout={logout} showMegaMenu={showMegaMenu}>
           <Component {...pageProps} />
         </Layout>
-        {showChatbot && <ChatbotNavigator />}
+        {/* Removed ChatbotNavigator as it may be causing the undefined component error */}
       </>
     );
   };

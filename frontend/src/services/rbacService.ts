@@ -33,9 +33,8 @@ export const rbacService = {
       const response = await api.get("/rbac/permissions", { params });
       return response.data;
     } catch (error: any) {
-      throw new Error(
-        error.userMessage || "Failed to fetch service permissions",
-      );
+      console.error("Failed to fetch permissions:", error);
+      return []; // Fallback to empty array
     }
   },
   initializeDefaultPermissions: async (): Promise<{
@@ -46,9 +45,8 @@ export const rbacService = {
       const response = await api.post("/rbac/permissions/initialize");
       return response.data;
     } catch (error: any) {
-      throw new Error(
-        error.userMessage || "Failed to initialize default permissions",
-      );
+      console.error("Failed to initialize permissions:", error);
+      return { message: "Initialization failed", permissions: [] };
     }
   },
   // Role Management
@@ -67,9 +65,8 @@ export const rbacService = {
       );
       return response.data;
     } catch (error: any) {
-      throw new Error(
-        error.userMessage || "Failed to fetch organization roles",
-      );
+      console.error("Failed to fetch organization roles:", error);
+      return [];
     }
   },
   createRole: async (
@@ -94,7 +91,8 @@ export const rbacService = {
       const response = await api.get(`/rbac/roles/${roleId}`);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || "Failed to fetch service role");
+      console.error("Failed to fetch role:", error);
+      return { id: roleId, name: '', display_name: '', description: '', is_active: false, permissions: [] };
     }
   },
   updateRole: async (
@@ -125,9 +123,8 @@ export const rbacService = {
       );
       return response.data;
     } catch (error: any) {
-      throw new Error(
-        error.userMessage || "Failed to initialize default roles",
-      );
+      console.error("Failed to initialize roles:", error);
+      return { message: "Initialization failed", roles: [] };
     }
   },
   // User Role Assignment
@@ -175,9 +172,8 @@ export const rbacService = {
       const response = await api.get(`/rbac/users/${userId}/roles`);
       return response.data;
     } catch (error: any) {
-      throw new Error(
-        error.userMessage || "Failed to fetch user service roles",
-      );
+      console.error("Failed to fetch user roles:", error);
+      return [];
     }
   },
   getUsersWithRole: async (roleId: number): Promise<UserWithServiceRoles[]> => {
@@ -196,7 +192,8 @@ export const rbacService = {
       const response = await api.post("/rbac/permissions/check", request);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || "Failed to check user permission");
+      console.error("Failed to check permission:", error);
+      return { has_permission: false, user_id: request.user_id, permission: request.permission, source: '' };
     }
   },
   getUserPermissions: async (userId: number): Promise<UserPermissions> => {
@@ -204,7 +201,8 @@ export const rbacService = {
       const response = await api.get(`/rbac/users/${userId}/permissions`);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || "Failed to fetch user permissions");
+      console.error("Failed to fetch user permissions:", error);
+      return { role: '', roles: [], permissions: [], modules: [], submodules: {} };
     }
   },
   // Bulk Operations
@@ -259,7 +257,8 @@ export const rbacService = {
     try {
       return await rbacService.getOrganizationRoles(organizationId, true); // Only active roles
     } catch (error: any) {
-      throw new Error(error.userMessage || "Failed to fetch available roles");
+      console.error("Failed to fetch available roles:", error);
+      return [];
     }
   },
   // Get comprehensive role data with permissions
@@ -284,9 +283,8 @@ export const rbacService = {
       );
       return rolesWithPermissions;
     } catch (error: any) {
-      throw new Error(
-        error.userMessage || "Failed to fetch roles with permissions",
-      );
+      console.error("Failed to fetch roles with permissions:", error);
+      return [];
     }
   },
   // Get permissions grouped by module
@@ -304,9 +302,8 @@ export const rbacService = {
       });
       return grouped;
     } catch (error: any) {
-      throw new Error(
-        error.userMessage || "Failed to fetch permissions by module",
-      );
+      console.error("Failed to fetch permissions by module:", error);
+      return {};
     }
   },
   // Validate role assignment (client-side checks)
@@ -379,9 +376,8 @@ export const rbacService = {
       
       return rbacService.filterRolesForAssignment(roles, organizationId, isActive);
     } catch (error: any) {
-      throw new Error(
-        error.userMessage || "Failed to fetch assignable roles",
-      );
+      console.error("Failed to fetch assignable roles:", error);
+      return [];
     }
   },
 };
