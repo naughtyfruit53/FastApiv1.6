@@ -183,7 +183,7 @@ async def create_data_source(
     service = StreamingAnalyticsService(db)
     
     data_source = service.create_data_source(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         created_by_id=current_user.id,
         source_name=source_data.source_name,
         source_type=source_data.source_type,
@@ -206,7 +206,7 @@ async def list_data_sources(
     service = StreamingAnalyticsService(db)
     
     sources = service.list_data_sources(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         status=status,
         skip=skip,
         limit=limit
@@ -224,7 +224,7 @@ async def get_data_source(
     """Get a data source by ID"""
     service = StreamingAnalyticsService(db)
     
-    source = service.get_data_source(source_id, current_user.organization_id)
+    source = service.get_data_source(source_id, organization_id)
     if not source:
         raise HTTPException(status_code=404, detail="Data source not found")
     
@@ -244,7 +244,7 @@ async def update_data_source(
     updates = source_data.model_dump(exclude_unset=True)
     source = service.update_data_source(
         source_id=source_id,
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         **updates
     )
     
@@ -269,7 +269,7 @@ async def ingest_event(
     
     event = service.ingest_event(
         data_source_id=event_data.data_source_id,
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         event_type=event_data.event_type,
         event_data=event_data.event_data,
         event_timestamp=event_data.event_timestamp
@@ -291,7 +291,7 @@ async def get_recent_events(
     service = StreamingAnalyticsService(db)
     
     events = service.get_recent_events(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         data_source_id=data_source_id,
         event_type=event_type,
         minutes=minutes,
@@ -315,7 +315,7 @@ async def record_live_prediction(
     service = StreamingAnalyticsService(db)
     
     prediction = service.record_live_prediction(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         prediction_type=prediction_data.prediction_type,
         input_data=prediction_data.input_data,
         prediction_result=prediction_data.prediction_result,
@@ -340,7 +340,7 @@ async def get_recent_predictions(
     service = StreamingAnalyticsService(db)
     
     predictions = service.get_recent_predictions(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         prediction_type=prediction_type,
         model_id=model_id,
         minutes=minutes,
@@ -364,7 +364,7 @@ async def create_alert(
     service = StreamingAnalyticsService(db)
     
     alert = service.create_alert(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         alert_type=alert_data.alert_type,
         alert_title=alert_data.alert_title,
         alert_message=alert_data.alert_message,
@@ -389,7 +389,7 @@ async def get_alerts(
     service = StreamingAnalyticsService(db)
     
     alerts = service.get_alerts(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         status=status,
         severity=severity,
         skip=skip,
@@ -410,7 +410,7 @@ async def acknowledge_alert(
     
     alert = service.acknowledge_alert(
         alert_id=alert_data.alert_id,
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         acknowledged_by_id=current_user.id
     )
     
@@ -431,7 +431,7 @@ async def resolve_alert(
     
     alert = service.resolve_alert(
         alert_id=alert_data.alert_id,
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         resolved_by_id=current_user.id,
         resolution_notes=alert_data.resolution_notes
     )
@@ -456,7 +456,7 @@ async def record_metric(
     service = StreamingAnalyticsService(db)
     
     metric = service.record_metric(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         metric_name=metric_data.metric_name,
         metric_value=metric_data.metric_value,
         aggregation_type=metric_data.aggregation_type,
@@ -482,7 +482,7 @@ async def get_metrics(
     service = StreamingAnalyticsService(db)
     
     metrics = service.get_metrics(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         metric_name=metric_name,
         time_window=time_window,
         limit=limit
@@ -503,7 +503,7 @@ async def get_dashboard_data(
     """Get streaming analytics dashboard data"""
     service = StreamingAnalyticsService(db)
     
-    dashboard_data = service.get_dashboard_data(current_user.organization_id)
+    dashboard_data = service.get_dashboard_data(organization_id)
     
     return dashboard_data
 

@@ -39,7 +39,7 @@ async def get_ml_analytics_dashboard(
     PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = MLAnalyticsService(db)
-    dashboard_data = service.get_ml_analytics_dashboard(current_user.organization_id)
+    dashboard_data = service.get_ml_analytics_dashboard(organization_id)
     
     return MLAnalyticsDashboard(**dashboard_data)
 
@@ -59,7 +59,7 @@ async def create_predictive_model(
     
     service = MLAnalyticsService(db)
     model = service.create_predictive_model(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         model_data=model_data,
         created_by_id=current_user.id
     )
@@ -79,7 +79,7 @@ async def get_predictive_models(
     
     service = MLAnalyticsService(db)
     models = service.get_predictive_models(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         model_type=model_type,
         is_active=is_active
     )
@@ -97,7 +97,7 @@ async def get_predictive_model(
     PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = MLAnalyticsService(db)
-    model = service.get_predictive_model(current_user.organization_id, model_id)
+    model = service.get_predictive_model(organization_id, model_id)
     
     if not model:
         raise HTTPException(status_code=404, detail="Predictive model not found")
@@ -117,7 +117,7 @@ async def update_predictive_model(
     
     service = MLAnalyticsService(db)
     model = service.update_predictive_model(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         model_id=model_id,
         model_data=model_data,
         updated_by_id=current_user.id
@@ -139,7 +139,7 @@ async def delete_predictive_model(
     PermissionChecker.require_permission(current_user, "ml_analytics:delete", db)
     
     service = MLAnalyticsService(db)
-    success = service.delete_predictive_model(current_user.organization_id, model_id)
+    success = service.delete_predictive_model(organization_id, model_id)
     
     if not success:
         raise HTTPException(status_code=404, detail="Predictive model not found")
@@ -179,7 +179,7 @@ async def deploy_predictive_model(
     PermissionChecker.require_permission(current_user, "ml_analytics:update", db)
     
     service = MLAnalyticsService(db)
-    model = service.get_predictive_model(current_user.organization_id, model_id)
+    model = service.get_predictive_model(organization_id, model_id)
     
     if not model:
         raise HTTPException(status_code=404, detail="Predictive model not found")
@@ -208,7 +208,7 @@ async def create_anomaly_detection_model(
     
     service = MLAnalyticsService(db)
     model = service.create_anomaly_detection_model(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         model_data=model_data,
         created_by_id=current_user.id
     )
@@ -228,7 +228,7 @@ async def get_anomaly_detection_models(
     
     service = MLAnalyticsService(db)
     models = service.get_anomaly_detection_models(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         anomaly_type=anomaly_type,
         is_active=is_active
     )
@@ -250,7 +250,7 @@ async def get_anomaly_detection_results(
     
     service = MLAnalyticsService(db)
     results = service.get_anomaly_detection_results(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         model_id=model_id,
         is_resolved=is_resolved,
         severity=severity.value if severity else None,
@@ -272,7 +272,7 @@ async def resolve_anomaly(
     
     service = MLAnalyticsService(db)
     result = service.resolve_anomaly(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         anomaly_id=anomaly_id,
         resolution_data=resolution_data,
         resolved_by_id=current_user.id
@@ -299,7 +299,7 @@ async def create_external_data_source(
     
     service = MLAnalyticsService(db)
     source = service.create_external_data_source(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         source_data=source_data,
         created_by_id=current_user.id
     )
@@ -319,7 +319,7 @@ async def get_external_data_sources(
     
     service = MLAnalyticsService(db)
     sources = service.get_external_data_sources(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         source_type=source_type,
         is_active=is_active
     )
@@ -342,7 +342,7 @@ async def make_prediction(
     
     service = MLAnalyticsService(db)
     result = service.make_prediction(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         prediction_request=prediction_request,
         user_id=current_user.id
     )
@@ -362,7 +362,7 @@ async def get_prediction_history(
     
     service = MLAnalyticsService(db)
     history = service.get_prediction_history(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         model_id=model_id,
         limit=limit
     )
@@ -385,7 +385,7 @@ async def perform_advanced_analytics(
     
     service = MLAnalyticsService(db)
     result = service.perform_advanced_analytics(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         request=analytics_request
     )
     

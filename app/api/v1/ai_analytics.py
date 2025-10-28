@@ -35,7 +35,7 @@ async def get_ai_analytics_dashboard(
     PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     service = AIAnalyticsService(db)
-    dashboard_data = service.get_ai_analytics_dashboard(current_user.organization_id)
+    dashboard_data = service.get_ai_analytics_dashboard(organization_id)
     
     return AIAnalyticsDashboard(**dashboard_data)
 
@@ -54,7 +54,7 @@ async def create_ai_model(
     
     service = AIAnalyticsService(db)
     model = service.create_ai_model(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         model_data=model_data,
         created_by_id=current_user.id
     )
@@ -73,7 +73,7 @@ async def get_ai_models(
     
     service = AIAnalyticsService(db)
     models = service.get_ai_models(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         status=status,
         model_type=model_type
     )
@@ -90,7 +90,7 @@ async def get_ai_model(
     PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     service = AIAnalyticsService(db)
-    model = service.get_ai_model(current_user.organization_id, model_id)
+    model = service.get_ai_model(organization_id, model_id)
     
     if not model:
         raise HTTPException(status_code=404, detail="AI model not found")
@@ -108,7 +108,7 @@ async def update_ai_model(
     PermissionChecker.require_permission(current_user, "ai_analytics:update", db)
     
     service = AIAnalyticsService(db)
-    model = service.get_ai_model(current_user.organization_id, model_id)
+    model = service.get_ai_model(organization_id, model_id)
     
     if not model:
         raise HTTPException(status_code=404, detail="AI model not found")
@@ -137,7 +137,7 @@ async def train_ai_model(
     
     try:
         result = service.train_model(
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             model_id=model_id,
             training_request=training_request
         )
@@ -159,7 +159,7 @@ async def deploy_ai_model(
     
     try:
         result = service.deploy_model(
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             model_id=model_id
         )
         return result
@@ -176,7 +176,7 @@ async def get_model_performance(
     PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
     
     service = AIAnalyticsService(db)
-    model = service.get_ai_model(current_user.organization_id, model_id)
+    model = service.get_ai_model(organization_id, model_id)
     
     if not model:
         raise HTTPException(status_code=404, detail="AI model not found")
@@ -225,7 +225,7 @@ async def make_prediction(
     
     try:
         prediction_result = service.make_prediction(
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             prediction_request=prediction_request,
             user_id=current_user.id
         )
@@ -245,7 +245,7 @@ async def get_predictions(
     
     service = AIAnalyticsService(db)
     predictions = service.get_prediction_results(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         model_id=model_id,
         limit=limit
     )
@@ -266,7 +266,7 @@ async def submit_prediction_feedback(
     
     prediction = db.query(PredictionResult).filter(
         PredictionResult.prediction_id == prediction_id,
-        PredictionResult.organization_id == current_user.organization_id
+        PredictionResult.organization_id == organization_id
     ).first()
     
     if not prediction:
@@ -297,7 +297,7 @@ async def detect_anomalies(
     
     service = AIAnalyticsService(db)
     anomalies = service.detect_anomalies(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         data_source=data_source,
         time_range_hours=time_range_hours
     )
@@ -315,7 +315,7 @@ async def get_anomalies(
     
     service = AIAnalyticsService(db)
     anomalies = service.get_active_anomalies(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         severity=severity
     )
     
@@ -335,7 +335,7 @@ async def update_anomaly(
     
     anomaly = db.query(AnomalyDetection).filter(
         AnomalyDetection.id == anomaly_id,
-        AnomalyDetection.organization_id == current_user.organization_id
+        AnomalyDetection.organization_id == organization_id
     ).first()
     
     if not anomaly:
@@ -370,7 +370,7 @@ async def generate_insights(
     
     service = AIAnalyticsService(db)
     insights = service.generate_insights(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         categories=categories
     )
     
@@ -388,7 +388,7 @@ async def get_insights(
     
     service = AIAnalyticsService(db)
     insights = service.get_active_insights(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         priority=priority,
         category=category
     )
@@ -409,7 +409,7 @@ async def update_insight(
     
     insight = db.query(AIInsight).filter(
         AIInsight.id == insight_id,
-        AIInsight.organization_id == current_user.organization_id
+        AIInsight.organization_id == organization_id
     ).first()
     
     if not insight:
@@ -444,7 +444,7 @@ async def generate_predictive_analytics(
     
     try:
         result = service.generate_predictive_analytics(
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             request=request
         )
         return PredictiveAnalyticsResponse(**result)
@@ -467,7 +467,7 @@ async def create_automation_workflow(
     from app.models.ai_analytics_models import AutomationWorkflow
     
     workflow = AutomationWorkflow(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         workflow_name=workflow_data.workflow_name,
         description=workflow_data.description,
         workflow_type=workflow_data.workflow_type,
@@ -500,7 +500,7 @@ async def get_automation_workflows(
     from app.models.ai_analytics_models import AutomationWorkflow
     
     query = db.query(AutomationWorkflow).filter(
-        AutomationWorkflow.organization_id == current_user.organization_id
+        AutomationWorkflow.organization_id == organization_id
     )
     
     if workflow_type:
