@@ -25,14 +25,14 @@ import {
 } from "@mui/material";
 import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
 import {
-  ServiceRoleWithPermissions,
-  ServicePermission,
-  ServiceRoleCreate,
-  ServiceRoleUpdate,
-  ServiceRoleType,
-  SERVICE_ROLE_DEFAULTS,
+  RoleWithPermissions,
+  Permission,
+  RoleCreate,
+  RoleUpdate,
+  RoleType,
+  ROLE_DEFAULTS,
   MODULE_DISPLAY_NAMES,
-  ServiceModule,
+  Module,
 } from "../../types/rbac.types";
 import { useAuth } from "../../context/AuthContext";
 import { isAppSuperAdmin } from "../../types/user.types";
@@ -40,10 +40,10 @@ import { isAppSuperAdmin } from "../../types/user.types";
 interface RoleFormDialogProps {
   open: boolean;
   onClose: () => void;
-  role?: ServiceRoleWithPermissions | null;
-  permissions: ServicePermission[];
+  role?: RoleWithPermissions | null;
+  permissions: Permission[];
   organizationId: number;
-  onSubmit: (_data: ServiceRoleCreate | ServiceRoleUpdate) => void;
+  onSubmit: (_data: RoleCreate | RoleUpdate) => void;
 }
 
 const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
@@ -56,7 +56,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
 }) => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
-    name: ServiceRoleType.VIEWER,
+    name: RoleType.VIEWER,
     display_name: "",
     description: "",
     is_active: true,
@@ -78,11 +78,11 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     } else {
       // Creating new role - use defaults
       setFormData({
-        name: ServiceRoleType.VIEWER,
+        name: RoleType.VIEWER,
         display_name:
-          SERVICE_ROLE_DEFAULTS[ServiceRoleType.VIEWER].display_name || "",
+          ROLE_DEFAULTS[RoleType.VIEWER].display_name || "",
         description:
-          SERVICE_ROLE_DEFAULTS[ServiceRoleType.VIEWER].description || "",
+          ROLE_DEFAULTS[RoleType.VIEWER].description || "",
         is_active: true,
         permission_ids: [],
       });
@@ -90,8 +90,8 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     setErrors({});
   }, [role, open]);
 
-  const handleRoleTypeChange = (roleType: ServiceRoleType) => {
-    const defaults = SERVICE_ROLE_DEFAULTS[roleType];
+  const handleRoleTypeChange = (roleType: RoleType) => {
+    const defaults = ROLE_DEFAULTS[roleType];
     setFormData((prev) => ({
       ...prev,
       name: roleType,
@@ -109,7 +109,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     }));
   };
 
-  const handleModuleToggle = (module: ServiceModule) => {
+  const handleModuleToggle = (module: Module) => {
     const modulePermissions = permissions
       .filter((p) => p.module === module)
       .map((p) => p.id);
@@ -156,7 +156,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
     }
     if (role) {
       // Updating existing role
-      const updateData: ServiceRoleUpdate = {
+      const updateData: RoleUpdate = {
         display_name: formData.display_name,
         description: formData.description || undefined,
         is_active: formData.is_active,
@@ -165,7 +165,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
       onSubmit(updateData);
     } else {
       // Creating new role
-      const createData: ServiceRoleCreate = {
+      const createData: RoleCreate = {
         name: formData.name,
         display_name: formData.display_name,
         description: formData.description || undefined,
@@ -186,10 +186,10 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
       acc[permission.module].push(permission);
       return acc;
     },
-    {} as Record<string, ServicePermission[]>,
+    {} as Record<string, Permission[]>,
   );
 
-  const getModuleSelectionStatus = (module: ServiceModule) => {
+  const getModuleSelectionStatus = (module: Module) => {
     const modulePermissions = permissionsByModule[module] || [];
     const selectedCount = modulePermissions.filter((p) =>
       formData.permission_ids.includes(p.id),
@@ -204,14 +204,14 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
   };
 
   // Filter roles for non-super admins
-  const availableRoleTypes = Object.values(ServiceRoleType).filter(
-    (roleType) => isAppSuperAdmin(user) || roleType !== ServiceRoleType.SUPER_ADMIN
+  const availableRoleTypes = Object.values(RoleType).filter(
+    (roleType) => isAppSuperAdmin(user) || roleType !== RoleType.ADMIN  // Adjust if SUPER_ADMIN exists
   );
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        {role ? "Edit Service Role" : "Create Service Role"}
+        {role ? "Edit Role" : "Create Role"}
       </DialogTitle>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 1 }}>
@@ -226,7 +226,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
                 <Select
                   value={formData.name}
                   onChange={(e) =>
-                    handleRoleTypeChange(e.target.value as ServiceRoleType)
+                    handleRoleTypeChange(e.target.value as RoleType)
                   }
                   label="Role Type"
                 >
@@ -299,7 +299,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
             {Object.entries(permissionsByModule).map(
               ([module, modulePermissions]) => {
                 const selectionStatus = getModuleSelectionStatus(
-                  module as ServiceModule,
+                  module as Module,
                 );
                 return (
                   <Accordion
@@ -324,7 +324,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
                               checked={selectionStatus === "all"}
                               indeterminate={selectionStatus === "partial"}
                               onChange={() =>
-                                handleModuleToggle(module as ServiceModule)
+                                handleModuleToggle(module as Module)
                               }
                               onClick={(e) => e.stopPropagation()}
                             />
@@ -333,7 +333,7 @@ const RoleFormDialog: React.FC<RoleFormDialogProps> = ({
                           sx={{ mr: 0 }}
                         />
                         <Typography sx={{ flexGrow: 1 }}>
-                          {MODULE_DISPLAY_NAMES[module as ServiceModule] ||
+                          {MODULE_DISPLAY_NAMES[module as Module] ||
                             module}
                         </Typography>
                         <Chip

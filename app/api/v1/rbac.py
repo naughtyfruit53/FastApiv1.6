@@ -199,7 +199,7 @@ async def get_service_role(
             )
         
         role_dict = role.__dict__.copy()
-        role_dict['permissions'] = [rp.permission for rp in role.role_permissions]
+        role_dict['permissions'] = [rp.permission for rp in role.permissions]
         
         return role_dict
     except HTTPException:
@@ -380,7 +380,7 @@ async def get_user_service_roles(
             detail="Not enough permissions to view other users' roles"
         )
     
-    roles = await rbac_service.get_user_service_roles(user_id)
+    roles = await rbac_service.get_user_roles(user_id)
     return roles
 
 @router.get("/roles/{role_id}/users", response_model=List[UserWithServiceRoles])
@@ -396,7 +396,7 @@ async def get_users_with_role(
     
     result = []
     for user in users:
-        user_roles = await rbac_service.get_user_service_roles(user.id)
+        user_roles = await rbac_service.get_user_roles(user.id)
         result.append(UserWithServiceRoles(
             id=user.id,
             email=user.email,
@@ -429,7 +429,7 @@ async def assign_permissions_to_user(
         # Create or find a custom role for the user
         custom_role_name = f"custom_{user_id}_{current_user.id}"
         role_result = await db.execute(
-            select(ServiceRole).filter_by(organization_id=user.organization_id, name=custom_role_name)
+            select(Role).filter_by(organization_id=user.organization_id, name=custom_role_name)
         )
         custom_role = role_result.scalars().first()
         
@@ -448,7 +448,7 @@ async def assign_permissions_to_user(
         failed_permissions = []
         for perm_name in assignment.permission_names:
             perm_result = await db.execute(
-                select(ServicePermission).filter_by(name=perm_name, is_active=True)
+                select(Permission).filter_by(name=perm_name, is_active=True)
             )
             permission = perm_result.scalars().first()
             if permission:
@@ -468,7 +468,7 @@ async def assign_permissions_to_user(
         
         # Assign the custom role to the user if not already assigned
         existing_assignment = await db.execute(
-            select(UserServiceRole).filter_by(user_id=user_id, role_id=custom_role.id)
+            select(UserRole).filter_by(user_id=user_id, role_id=custom_role.id)
         )
         assignment_record = existing_assignment.scalars().first()
         
@@ -511,11 +511,11 @@ async def check_user_permission(
             detail="Not enough permissions to check other users' permissions"
         )
     
-    has_permission = await rbac_service.user_has_service_permission(request.user_id, request.permission)
+    has_permission = await rbac_service.user_has_permission(request.user_id, request.permission)
     
     source = "none"
     if has_permission:
-        user_roles = await rbac_service.get_user_service_roles(request.user_id)
+        user_roles = await rbac_service.get_user_roles(request.user_id)
         source = "service_role" if user_roles else "none"
     
     return PermissionCheckResponse(
@@ -541,8 +541,8 @@ async def get_user_permissions(
             detail="Not enough permissions to view other users' permissions"
         )
     
-    permissions = await rbac_service.get_user_service_permissions(user_id)
-    roles = await rbac_service.get_user_service_roles(user_id)
+    permissions = await rbac_service.get_user_permissions(user_id)
+    roles = await rbac_service.get_user_roles(user_id)
     
     return {
         "user_id": user_id,
@@ -568,7 +568,7 @@ async def bulk_assign_roles(
     for user_id in request.user_ids:
         try:
             if request.replace_existing:
-                await rbac_service.remove_all_service_roles_from_user(user_id)
+                await rbac_service.remove_all_roles_from_user(user_id)
             
             assignments = await rbac_service.assign_multiple_roles_to_user(
                 user_id, request.role_ids, assigned_by_id=current_user.id

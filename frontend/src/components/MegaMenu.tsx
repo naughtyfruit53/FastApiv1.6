@@ -325,12 +325,16 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           if (item.superAdminOnly && !isSuperAdmin) {
             return false;
           }
+          // Hide org-specific permission items for app superadmin
+          if (item.servicePermission && isSuperAdmin) return false;
+          // Hide org-role specific items for app superadmin
+          if (item.role && isSuperAdmin) return false;
           return true;
         })
         .map((item: any) => {
           const disabled =
             (item.role && !canManageUsers(user)) ||
-            (item.servicePermission && !hasServicePermission(item.servicePermission));
+            (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission)));
           return { ...item, __disabled: Boolean(disabled) };
         });
     };
@@ -430,7 +434,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   key={index}
                   selected={selectedSection === section.title}
                   onClick={() => {
-                    // Check if this section corresponds to a menu item with a direct path (like Email)
+                    // Check if this section has a direct path (e.g., Email)
                     const menuItemKey = Object.keys(menuItems).find(
                       (key) => menuItems[key as keyof typeof menuItems]?.title === section.title
                     );
@@ -745,7 +749,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   onChange={(e) => handleSearch(e.target.value)}
                   sx={{
                     color: 'inherit',
-                    ml: 1,
                     '& .MuiInputBase-input': {
                       padding: '6px 6px',
                       transition: 'width 0.3s',

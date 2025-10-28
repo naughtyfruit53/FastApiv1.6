@@ -1,5 +1,5 @@
 """
-RBAC service layer for Service CRM role-based access control
+RBAC service layer for Role-based access control
 """
 
 from typing import List, Optional, Dict, Set
@@ -9,14 +9,13 @@ from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
 
 from app.models import (
-    User, ServiceRole, ServicePermission, ServiceRolePermission, 
-    UserServiceRole, Organization
+    User, ServiceRole as Role, ServicePermission as Permission, ServiceRolePermission as RolePermission, 
+    UserServiceRole as UserRole, Organization
 )
 from app.schemas.rbac import (
-    ServiceRoleCreate, ServiceRoleUpdate, ServicePermissionCreate,
-    UserServiceRoleCreate, ServiceRoleType, ServiceModule, ServiceAction
+    ServiceRoleCreate as RoleCreate, ServiceRoleUpdate as RoleUpdate, ServicePermissionCreate as PermissionCreate,
+    UserServiceRoleCreate as UserRoleCreate, ServiceRoleType as RoleType, ServiceModule as Module, ServiceAction as Action
 )
-from app.core.permissions import Permission
 from app.core.database import get_db
 import logging
 
@@ -29,37 +28,37 @@ class RBACService:
         self.db = db
     
     # Permission Management
-    async def create_permission(self, permission: ServicePermissionCreate) -> ServicePermission:
-        """Create a new service permission"""
-        db_permission = ServicePermission(**permission.model_dump())
+    async def create_permission(self, permission: PermissionCreate) -> Permission:
+        """Create a new permission"""
+        db_permission = Permission(**permission.model_dump())
         self.db.add(db_permission)
         await self.db.commit()
         await self.db.refresh(db_permission)
-        logger.info(f"Created service permission: {db_permission.name}")
+        logger.info(f"Created permission: {db_permission.name}")
         return db_permission
     
     async def get_permissions(self, 
                              module: Optional[str] = None,
                              action: Optional[str] = None,
-                             is_active: bool = True) -> List[ServicePermission]:
-        """Get service permissions with optional filtering"""
-        from app.schemas.rbac import ServiceModule, ServiceAction
+                             is_active: bool = True) -> List[Permission]:
+        """Get permissions with optional filtering"""
+        from app.schemas.rbac import ServiceModule as Module, ServiceAction as Action
         
-        stmt = select(ServicePermission)
+        stmt = select(Permission)
         
         if is_active is not None:
-            stmt = stmt.where(ServicePermission.is_active == is_active)
+            stmt = stmt.where(Permission.is_active == is_active)
         if module:
-            stmt = stmt.where(ServicePermission.module == module)
+            stmt = stmt.where(Permission.module == module)
         if action:
-            stmt = stmt.where(ServicePermission.action == action)
+            stmt = stmt.where(Permission.action == action)
             
-        result = await self.db.execute(stmt.order_by(ServicePermission.module, ServicePermission.action))
+        result = await self.db.execute(stmt.order_by(Permission.module, Permission.action))
         permissions = result.scalars().all()
         
         valid_permissions = []
-        valid_modules = {m.value for m in ServiceModule}
-        valid_actions = {a.value for a in ServiceAction}
+        valid_modules = {m.value for m in Module}
+        valid_actions = {a.value for a in Action}
         
         for perm in permissions:
             if perm.module in valid_modules and perm.action in valid_actions:
@@ -69,18 +68,18 @@ class RBACService:
         
         return valid_permissions
     
-    async def get_permission_by_name(self, name: str) -> Optional[ServicePermission]:
+    async def get_permission_by_name(self, name: str) -> Optional[Permission]:
         """Get permission by name"""
         result = await self.db.execute(
-            select(ServicePermission).filter_by(name=name, is_active=True)
+            select(Permission).filter_by(name=name, is_active=True)
         )
         return result.scalars().first()
     
     # Role Management
-    async def create_role(self, role: ServiceRoleCreate, created_by_user_id: Optional[int] = None) -> ServiceRole:
-        """Create a new service role with permissions"""
+    async def create_role(self, role: RoleCreate, created_by_user_id: Optional[int] = None) -> Role:
+        """Create a new role with permissions"""
         result = await self.db.execute(
-            select(ServiceRole).filter_by(organization_id=role.organization_id, name=role.name)
+            select(Role).filter_by(organization_id=role.organization_id, name=role.name)
         )
         existing = result.scalars().first()
         
@@ -91,19 +90,19 @@ class RBACService:
             )
         
         role_data = role.model_dump(exclude={'permission_ids'})
-        db_role = ServiceRole(**role_data)
+        db_role = Role(**role_data)
         self.db.add(db_role)
         await self.db.flush()
         
         if role.permission_ids:
             for permission_id in role.permission_ids:
                 result = await self.db.execute(
-                    select(ServicePermission).filter_by(id=permission_id, is_active=True)
+                    select(Permission).filter_by(id=permission_id, is_active=True)
                 )
                 permission = result.scalars().first()
                 
                 if permission:
-                    role_permission = ServiceRolePermission(
+                    role_permission = RolePermission(
                         organization_id=role.organization_id,
                         role_id=db_role.id,
                         permission_id=permission_id
@@ -112,43 +111,43 @@ class RBACService:
         
         await self.db.commit()
         await self.db.refresh(db_role)
-        logger.info(f"Created service role: {db_role.name} for organization {db_role.organization_id}")
+        logger.info(f"Created role: {db_role.name} for organization {db_role.organization_id}")
         return db_role
     
-    async def get_roles(self, organization_id: int, is_active: bool = True) -> List[ServiceRole]:
-        """Get service roles for an organization"""
-        stmt = select(ServiceRole).filter_by(organization_id=organization_id)
+    async def get_roles(self, organization_id: int, is_active: bool = True) -> List[Role]:
+        """Get roles for an organization"""
+        stmt = select(Role).filter_by(organization_id=organization_id)
         
         if is_active is not None:
-            stmt = stmt.where(ServiceRole.is_active == is_active)
+            stmt = stmt.where(Role.is_active == is_active)
             
-        result = await self.db.execute(stmt.order_by(ServiceRole.name))
+        result = await self.db.execute(stmt.order_by(Role.name))
         return result.scalars().all()
     
-    async def get_role_by_id(self, role_id: int, organization_id: Optional[int] = None) -> Optional[ServiceRole]:
+    async def get_role_by_id(self, role_id: int, organization_id: Optional[int] = None) -> Optional[Role]:
         """Get role by ID with optional organization filtering"""
-        stmt = select(ServiceRole).filter_by(id=role_id)
+        stmt = select(Role).filter_by(id=role_id)
         
         if organization_id:
-            stmt = stmt.where(ServiceRole.organization_id == organization_id)
+            stmt = stmt.where(Role.organization_id == organization_id)
             
         result = await self.db.execute(stmt)
         return result.scalars().first()
     
-    async def get_role_with_permissions(self, role_id: int) -> Optional[ServiceRole]:
+    async def get_role_with_permissions(self, role_id: int) -> Optional[Role]:
         """Get role with its permissions loaded"""
         result = await self.db.execute(
-            select(ServiceRole).options(
-                joinedload(ServiceRole.permissions).joinedload(ServiceRolePermission.permission)
+            select(Role).options(
+                joinedload(Role.permissions).joinedload(RolePermission.permission)
             ).filter_by(id=role_id)
         )
         return result.scalars().first()
     
-    async def update_role(self, role_id: int, updates: ServiceRoleUpdate, organization_id: Optional[int] = None) -> ServiceRole:
-        """Update a service role"""
-        stmt = select(ServiceRole).filter_by(id=role_id)
+    async def update_role(self, role_id: int, updates: RoleUpdate, organization_id: Optional[int] = None) -> Role:
+        """Update a role"""
+        stmt = select(Role).filter_by(id=role_id)
         if organization_id:
-            stmt = stmt.where(ServiceRole.organization_id == organization_id)
+            stmt = stmt.where(Role.organization_id == organization_id)
             
         result = await self.db.execute(stmt)
         db_role = result.scalars().first()
@@ -161,19 +160,19 @@ class RBACService:
         
         if updates.permission_ids is not None:
             await self.db.execute(
-                ServiceRolePermission.__table__.delete().where(
-                    ServiceRolePermission.role_id == role_id
+                RolePermission.__table__.delete().where(
+                    RolePermission.role_id == role_id
                 )
             )
             
             for permission_id in updates.permission_ids:
                 perm_result = await self.db.execute(
-                    select(ServicePermission).filter_by(id=permission_id, is_active=True)
+                    select(Permission).filter_by(id=permission_id, is_active=True)
                 )
                 permission = perm_result.scalars().first()
                 
                 if permission:
-                    role_permission = ServiceRolePermission(
+                    role_permission = RolePermission(
                         organization_id=db_role.organization_id,
                         role_id=role_id,
                         permission_id=permission_id
@@ -182,22 +181,22 @@ class RBACService:
         
         await self.db.commit()
         await self.db.refresh(db_role)
-        logger.info(f"Updated service role: {db_role.name}")
+        logger.info(f"Updated role: {db_role.name}")
         return db_role
     
     async def delete_role(self, role_id: int, organization_id: Optional[int] = None) -> bool:
-        """Delete a service role (soft delete by setting is_active=False)"""
-        stmt = select(ServiceRole).filter_by(id=role_id)
+        """Delete a role (soft delete by setting is_active=False)"""
+        stmt = select(Role).filter_by(id=role_id)
         if organization_id:
-            stmt = stmt.where(ServiceRole.organization_id == organization_id)
+            stmt = stmt.where(Role.organization_id == organization_id)
             
         result = await self.db.execute(stmt)
         db_role = result.scalars().first()
         if not db_role:
             return False
         
-        count_stmt = select(func.count('*')).select_from(UserServiceRole).where(
-            UserServiceRole.role_id == role_id, UserServiceRole.is_active == True
+        count_stmt = select(func.count('*')).select_from(UserRole).where(
+            UserRole.role_id == role_id, UserRole.is_active == True
         )
         count_result = await self.db.execute(count_stmt)
         active_assignments = count_result.scalar()
@@ -210,19 +209,19 @@ class RBACService:
         
         db_role.is_active = False
         await self.db.commit()
-        logger.info(f"Deleted service role: {db_role.name}")
+        logger.info(f"Deleted role: {db_role.name}")
         return True
     
     # User Role Assignment
-    async def assign_role_to_user(self, user_id: int, role_id: int, assigned_by_id: Optional[int] = None) -> UserServiceRole:
-        """Assign a service role to a user"""
+    async def assign_role_to_user(self, user_id: int, role_id: int, assigned_by_id: Optional[int] = None) -> UserRole:
+        """Assign a role to a user"""
         user_result = await self.db.execute(select(User).filter_by(id=user_id))
         user = user_result.scalars().first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
         role_result = await self.db.execute(
-            select(ServiceRole).filter_by(id=role_id, is_active=True)
+            select(Role).filter_by(id=role_id, is_active=True)
         )
         role = role_result.scalars().first()
         if not role:
@@ -235,7 +234,7 @@ class RBACService:
             )
         
         existing_result = await self.db.execute(
-            select(UserServiceRole).filter_by(user_id=user_id, role_id=role_id)
+            select(UserRole).filter_by(user_id=user_id, role_id=role_id)
         )
         existing = existing_result.scalars().first()
         
@@ -253,7 +252,7 @@ class RBACService:
                 logger.info(f"Reactivated role assignment: user {user_id} -> role {role_id}")
                 return existing
         
-        assignment = UserServiceRole(
+        assignment = UserRole(
             organization_id=user.organization_id,
             user_id=user_id,
             role_id=role_id,
@@ -266,9 +265,9 @@ class RBACService:
         return assignment
     
     async def remove_role_from_user(self, user_id: int, role_id: int) -> bool:
-        """Remove a service role from a user"""
+        """Remove a role from a user"""
         result = await self.db.execute(
-            select(UserServiceRole).filter_by(
+            select(UserRole).filter_by(
                 user_id=user_id,
                 role_id=role_id,
                 is_active=True
@@ -284,15 +283,15 @@ class RBACService:
         logger.info(f"Removed role assignment: user {user_id} -> role {role_id}")
         return True
     
-    async def get_user_service_roles(self, user_id: int) -> List[ServiceRole]:
-        """Get all active service roles for a user"""
+    async def get_user_roles(self, user_id: int) -> List[Role]:
+        """Get all active roles for a user"""
         result = await self.db.execute(
-            select(ServiceRole)
-            .join(UserServiceRole)
+            select(Role)
+            .join(UserRole)
             .where(
-                UserServiceRole.user_id == user_id,
-                UserServiceRole.is_active == True,
-                ServiceRole.is_active == True
+                UserRole.user_id == user_id,
+                UserRole.is_active == True,
+                Role.is_active == True
             )
         )
         return result.scalars().all()
@@ -301,17 +300,17 @@ class RBACService:
         """Get all users assigned to a specific role"""
         result = await self.db.execute(
             select(User)
-            .join(UserServiceRole)
+            .join(UserRole)
             .where(
-                UserServiceRole.role_id == role_id,
-                UserServiceRole.is_active == True,
+                UserRole.role_id == role_id,
+                UserRole.is_active == True,
                 User.is_active == True
             )
         )
         return result.scalars().all()
     
-    async def user_has_service_permission(self, user_id: int, permission_name: str) -> bool:
-        """Check if user has a specific service permission through their roles"""
+    async def user_has_permission(self, user_id: int, permission_name: str) -> bool:
+        """Check if user has a specific permission through their roles"""
         await self.initialize_default_permissions()
         logger.debug(f"Checking permission '{permission_name}' for user_id {user_id}")
         
@@ -332,17 +331,17 @@ class RBACService:
                     logger.debug(f"Granted permission '{permission_name}' to org_admin user {user_id} via fallback")
                     return True
         
-        user_roles = await self.get_user_service_roles(user_id)
+        user_roles = await self.get_user_roles(user_id)
         logger.debug(f"User {user_id} active roles: {[role.name for role in user_roles]}")
         
         for role in user_roles:
             result = await self.db.execute(
-                select(ServicePermission)
-                .join(ServiceRolePermission)
+                select(Permission)
+                .join(RolePermission)
                 .where(
-                    ServiceRolePermission.role_id == role.id,
-                    ServicePermission.name == permission_name,
-                    ServicePermission.is_active == True
+                    RolePermission.role_id == role.id,
+                    Permission.name == permission_name,
+                    Permission.is_active == True
                 )
             )
             if result.scalars().first():
@@ -352,8 +351,8 @@ class RBACService:
         logger.debug(f"Denied permission '{permission_name}' for user {user_id}")
         return False
     
-    async def get_user_service_permissions(self, user_id: int) -> Set[str]:
-        """Get all service permissions for a user"""
+    async def get_user_permissions(self, user_id: int) -> Set[str]:
+        """Get all permissions for a user"""
         await self.initialize_default_permissions()
         logger.debug(f"Fetching permissions for user_id {user_id}")
         
@@ -364,30 +363,30 @@ class RBACService:
         if user and user.role == 'org_admin':
             logger.debug(f"Adding org_admin fallback permissions for user {user_id}")
             fallback_result = await self.db.execute(
-                select(ServicePermission.name).where(
+                select(Permission.name).where(
                     or_(
-                        ServicePermission.name.like('crm_%'),
-                        ServicePermission.name == 'crm_admin',
-                        ServicePermission.name.like('mail:%'),
-                        ServicePermission.name.in_(['crm_commission_read', 'crm_commission_create', 
+                        Permission.name.like('crm_%'),
+                        Permission.name == 'crm_admin',
+                        Permission.name.like('mail:%'),
+                        Permission.name.in_(['crm_commission_read', 'crm_commission_create', 
                                                   'crm_commission_update', 'crm_commission_delete'])
                     ),
-                    ServicePermission.is_active == True
+                    Permission.is_active == True
                 )
             )
             permissions.update({row[0] for row in fallback_result.fetchall()})
             logger.debug(f"Fallback permissions for org_admin: {permissions}")
         
         result = await self.db.execute(
-            select(ServicePermission.name)
-            .select_from(UserServiceRole)
-            .join(UserServiceRole.role)
-            .join(ServiceRole.permissions)
-            .join(ServiceRolePermission.permission)
+            select(Permission.name)
+            .select_from(UserRole)
+            .join(UserRole.role)
+            .join(Role.permissions)
+            .join(RolePermission.permission)
             .where(
-                UserServiceRole.user_id == user_id,
-                UserServiceRole.is_active == True,
-                ServicePermission.is_active == True
+                UserRole.user_id == user_id,
+                UserRole.is_active == True,
+                Permission.is_active == True
             )
         )
         role_permissions = {row[0] for row in result.fetchall()}
@@ -399,7 +398,7 @@ class RBACService:
         return permissions
     
     # Bulk Operations
-    async def assign_multiple_roles_to_user(self, user_id: int, role_ids: List[int], assigned_by_id: Optional[int] = None) -> List[UserServiceRole]:
+    async def assign_multiple_roles_to_user(self, user_id: int, role_ids: List[int], assigned_by_id: Optional[int] = None) -> List[UserRole]:
         """Assign multiple roles to a user"""
         assignments = []
         for role_id in role_ids:
@@ -411,10 +410,12 @@ class RBACService:
         
         return assignments
     
-    async def remove_all_service_roles_from_user(self, user_id: int) -> int:
-        """Remove all service roles from a user"""
+    async def remove_all_roles_from_user(self, user_id: int) -> int:
+        """Remove all roles from a user"""
         result = await self.db.execute(
-            select(UserServiceRole).filter_by(user_id=user_id, is_active=True)
+            select(UserRole).filter_by(
+                user_id=user_id, is_active=True
+            )
         )
         assignments = result.scalars().all()
         
@@ -427,8 +428,8 @@ class RBACService:
         return count
     
     # Initialization
-    async def initialize_default_permissions(self) -> List[ServicePermission]:
-        """Initialize default service permissions"""
+    async def initialize_default_permissions(self) -> List[Permission]:
+        """Initialize default permissions"""
         default_permissions = [
             ("service_create", "Create Services", "Create new services", "service", "create"),
             ("service_read", "View Services", "View service information", "service", "read"),
@@ -491,9 +492,9 @@ class RBACService:
         ]
         
         # Batch check existing permissions
-        stmt = select(ServicePermission.name).where(
-            ServicePermission.name.in_([name for name, _, _, _, _ in default_permissions]),
-            ServicePermission.is_active == True
+        stmt = select(Permission.name).where(
+            Permission.name.in_([name for name, _, _, _, _ in default_permissions]),
+            Permission.is_active == True
         )
         result = await self.db.execute(stmt)
         existing_names = set(result.scalars().all())
@@ -513,18 +514,18 @@ class RBACService:
                 })
         
         if to_create:
-            insert_stmt = insert(ServicePermission).values(to_create)
-            result = await self.db.execute(insert_stmt.returning(ServicePermission))
+            insert_stmt = insert(Permission).values(to_create)
+            result = await self.db.execute(insert_stmt.returning(Permission))
             created_permissions = result.scalars().all()
             await self.db.commit()
             
             for perm in created_permissions:
-                logger.info(f"Created service permission: {perm.name}")
+                logger.info(f"Created permission: {perm.name}")
         
         return created_permissions
     
-    async def initialize_default_roles(self, organization_id: int) -> List[ServiceRole]:
-        """Initialize default service roles for an organization"""
+    async def initialize_default_roles(self, organization_id: int) -> List[Role]:
+        """Initialize default roles for an organization"""
         await self.initialize_default_permissions()
         
         all_permissions = await self.get_permissions()
@@ -532,22 +533,22 @@ class RBACService:
         
         default_roles = [
             {
-                "name": ServiceRoleType.ADMIN.value,
-                "display_name": "Service Admin",
-                "description": "Full access to all service CRM functionality",
+                "name": RoleType.ADMIN.value,
+                "display_name": "Admin",
+                "description": "Full access to all functionality",
                 "permissions": list(permission_map.keys())
             },
             {
-                "name": ServiceRoleType.MANAGER.value,
-                "display_name": "Service Manager",
-                "description": "Manage services, technicians, and appointments",
+                "name": RoleType.MANAGER.value,
+                "display_name": "Manager",
+                "description": "Manage operations",
                 "permissions": [
                     "service_read", "service_update", "service_create",
                     "technician_read", "technician_update", "technician_create",
                     "appointment_read", "appointment_update", "appointment_create",
                     "customer_service_read", "customer_service_update",
                     "work_order_read", "work_order_update", "work_order_create",
-                    "service_reports_read", "service_reports_export",
+                    "reports_read", "reports_export",
                     "mail:dashboard:read", "mail:accounts:read", "mail:accounts:update", "mail:emails:read", "mail:emails:compose", "mail:emails:update", "mail:emails:sync",
                     "crm_lead_read", "crm_lead_create", "crm_lead_update", "crm_lead_convert",
                     "crm_opportunity_read", "crm_opportunity_create", "crm_opportunity_update",
@@ -559,16 +560,16 @@ class RBACService:
                 ]
             },
             {
-                "name": ServiceRoleType.SUPPORT.value,
+                "name": RoleType.SUPPORT.value,
                 "display_name": "Support Agent",
-                "description": "Handle customer service and basic operations",
+                "description": "Handle operations",
                 "permissions": [
                     "service_read",
                     "technician_read",
                     "appointment_read", "appointment_update", "appointment_create",
                     "customer_service_read", "customer_service_update", "customer_service_create",
                     "work_order_read", "work_order_update",
-                    "service_reports_read",
+                    "reports_read",
                     "mail:dashboard:read", "mail:emails:read", "mail:emails:compose",
                     "crm_lead_read", "crm_lead_create", "crm_lead_update",
                     "crm_opportunity_read", "crm_opportunity_update",
@@ -578,16 +579,16 @@ class RBACService:
                 ]
             },
             {
-                "name": ServiceRoleType.VIEWER.value,
+                "name": RoleType.VIEWER.value,
                 "display_name": "Viewer",
-                "description": "Read-only access to service information",
+                "description": "Read-only access",
                 "permissions": [
                     "service_read",
                     "technician_read",
                     "appointment_read",
                     "customer_service_read",
                     "work_order_read",
-                    "service_reports_read",
+                    "reports_read",
                     "mail:dashboard:read", "mail:emails:read",
                     "crm_lead_read",
                     "crm_opportunity_read",
@@ -599,9 +600,9 @@ class RBACService:
         ]
         
         # Batch check existing roles
-        stmt = select(ServiceRole.name).filter_by(
+        stmt = select(Role.name).filter_by(
             organization_id=organization_id
-        ).where(ServiceRole.name.in_([r["name"] for r in default_roles]))
+        ).where(Role.name.in_([r["name"] for r in default_roles]))
         result = await self.db.execute(stmt)
         existing_names = set(result.scalars().all())
         
@@ -611,7 +612,7 @@ class RBACService:
             if role_data["name"] not in existing_names:
                 permission_ids = [permission_map[p] for p in role_data["permissions"] if p in permission_map]
                 
-                role_create = ServiceRoleCreate(
+                role_create = RoleCreate(
                     name=role_data["name"],
                     display_name=role_data["display_name"],
                     description=role_data["description"],
@@ -700,8 +701,8 @@ class RBACService:
                 logger.debug(f"Granted company permission '{permission_name}' to user {user_id} as company admin")
                 return True
         
-        has_permission = await self.user_has_service_permission(user_id, permission_name)
-        logger.debug(f"Service permission check for '{permission_name}': {'granted' if has_permission else 'denied'}")
+        has_permission = await self.user_has_permission(user_id, permission_name)
+        logger.debug(f"Permission check for '{permission_name}': {'granted' if has_permission else 'denied'}")
         return has_permission
     
     async def enforce_company_access(self, user_id: int, company_id: int, permission_name: Optional[str] = None):

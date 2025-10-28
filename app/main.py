@@ -17,6 +17,21 @@ from sqlalchemy.exc import ProgrammingError
 
 logger = logging.getLogger(__name__)
 
+# Custom APIRouter to disable slash redirection
+from fastapi.routing import APIRouter as FastAPIRouter
+
+class APIRouter(FastAPIRouter):
+    def add_api_route(self, path: str, *args, **kwargs):
+        # Add without trailing slash
+        if path.endswith("/"):
+            non_slash_path = path[:-1]
+            super().add_api_route(non_slash_path, *args, **kwargs)
+            # Add redirect from slash to non-slash if needed
+        else:
+            super().add_api_route(path, *args, **kwargs)
+            slash_path = path + "/"
+            # But don't add automatic redirect
+
 # Initialize default permissions asynchronously
 async def init_default_permissions(background_tasks: BackgroundTasks):
     from app.services.rbac import RBACService  # Lazy import to avoid circular import
