@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from typing import List, Optional, Dict, Any
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id, validate_company_setup
+from app.core.enforcement import require_access
+from app.core.org_restrictions import validate_company_setup
 from app.models import User, Stock, Product, Organization, Company, InventoryTransaction, PurchaseVoucher, Vendor
 from app.schemas.stock import (
     StockCreate, StockUpdate, StockInDB, StockWithProduct,
@@ -59,7 +59,7 @@ async def get_stock(
             )
         
         is_super_admin = getattr(current_user, 'is_super_admin', False)
-        org_id = current_user.organization_id if not is_super_admin else None
+        org_id = org_id if not is_super_admin else None
         
         if not is_super_admin and org_id is None:
             logger.error(f"User {current_user.email} has no organization_id set")
@@ -185,7 +185,7 @@ async def get_low_stock(
             Product.reorder_level > 0
         )
     else:
-        org_id = current_user.organization_id
+        org_id = org_id
         if not org_id:
             logger.error(f"User {current_user.email} has no organization_id set")
             raise HTTPException(
@@ -264,7 +264,7 @@ async def get_stock_movements(
     stmt = select(InventoryTransaction)
     
     if not current_user.is_super_admin:
-        org_id = current_user.organization_id
+        org_id = org_id
         if org_id is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -332,7 +332,7 @@ async def get_last_vendor_for_product(
         return None
     
     if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(last_purchase, current_user.organization_id)
+        TenantQueryMixin.ensure_tenant_access(last_purchase, org_id)
     
     stmt_vendor = select(Vendor).where(Vendor.id == last_purchase.vendor_id)
     result_vendor = await db.execute(stmt_vendor)
@@ -378,7 +378,7 @@ async def get_product_stock(
             )
         
         if not current_user.is_super_admin:
-            TenantQueryMixin.ensure_tenant_access(product, current_user.organization_id)
+            TenantQueryMixin.ensure_tenant_access(product, org_id)
         
         return StockInDB(
             id=0,
@@ -391,7 +391,7 @@ async def get_product_stock(
         )
     
     if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(stock, current_user.organization_id)
+        TenantQueryMixin.ensure_tenant_access(stock, org_id)
     
     return stock
 
@@ -423,7 +423,7 @@ async def create_stock_entry(
         )
     
     if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(product, current_user.organization_id)
+        TenantQueryMixin.ensure_tenant_access(product, org_id)
     
     stmt = select(Stock).where(
         Stock.product_id == stock.product_id,
@@ -611,7 +611,7 @@ async def bulk_import_stock(
                 detail="Specified organization not found"
             )
     else:
-        if organization_id is not None and organization_id != current_user.organization_id:
+        if organization_id is not None and organization_id != org_id:
             logger.warning(f"[bulk_import_stock] User {current_user.email} attempted to specify different org_id: {organization_id}, ignoring")
         
         org_id = require_current_organization_id(current_user)

@@ -1,4 +1,5 @@
 # app/api/v1/payroll_components.py
+from app.core.enforcement import require_access
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -6,8 +7,7 @@ from typing import List, Optional
 import logging
 
 from app.db.session import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+
 from app.models.user_models import User
 from app.models.payroll_models import PayrollComponent
 from app.models.erp_models import ChartOfAccounts
@@ -53,7 +53,7 @@ def validate_chart_account(db: Session, chart_account_id: int, organization_id: 
 @router.post("/payroll/components", response_model=PayrollComponentResponse)
 async def create_payroll_component(
     component: PayrollComponentCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -160,7 +160,7 @@ async def get_payroll_components(
 @router.get("/payroll/components/{component_id}", response_model=PayrollComponentResponse)
 async def get_payroll_component(
     component_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -183,7 +183,7 @@ async def get_payroll_component(
 async def update_payroll_component(
     component_id: int,
     component_update: PayrollComponentUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "update")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -258,7 +258,7 @@ async def update_payroll_component(
 @router.delete("/payroll/components/{component_id}")
 async def delete_payroll_component(
     component_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "delete")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -298,7 +298,7 @@ async def update_component_chart_account_mapping(
     component_id: int,
     expense_account_id: Optional[int] = None,
     payable_account_id: Optional[int] = None,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):

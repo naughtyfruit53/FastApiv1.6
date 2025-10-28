@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 import logging
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.integration import Integration, IntegrationMessage, IntegrationWebhook, IntegrationWebhookEvent
 
@@ -132,7 +132,7 @@ class IntegrationWebhookResponse(BaseModel):
 @router.post("/", response_model=IntegrationResponse, status_code=status.HTTP_201_CREATED)
 async def create_integration(
     integration_data: IntegrationCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("integration", "create")),
     db: Session = Depends(get_db)
 ):
     """
@@ -140,7 +140,7 @@ async def create_integration(
     """
     try:
         integration = Integration(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             name=integration_data.name,
             provider=integration_data.provider,
             description=integration_data.description,
@@ -184,7 +184,7 @@ async def list_integrations(
     """
     try:
         query = db.query(Integration).filter(
-            Integration.organization_id == current_user.organization_id
+            Integration.organization_id == org_id
         )
         
         if provider:
@@ -209,7 +209,7 @@ async def list_integrations(
 @router.get("/{integration_id}", response_model=IntegrationResponse)
 async def get_integration(
     integration_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("integration", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -219,7 +219,7 @@ async def get_integration(
         integration = db.query(Integration).filter(
             and_(
                 Integration.id == integration_id,
-                Integration.organization_id == current_user.organization_id
+                Integration.organization_id == org_id
             )
         ).first()
         
@@ -245,7 +245,7 @@ async def get_integration(
 async def update_integration(
     integration_id: int,
     integration_data: IntegrationUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("integration", "update")),
     db: Session = Depends(get_db)
 ):
     """
@@ -255,7 +255,7 @@ async def update_integration(
         integration = db.query(Integration).filter(
             and_(
                 Integration.id == integration_id,
-                Integration.organization_id == current_user.organization_id
+                Integration.organization_id == org_id
             )
         ).first()
         
@@ -290,7 +290,7 @@ async def update_integration(
 @router.delete("/{integration_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_integration(
     integration_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("integration", "delete")),
     db: Session = Depends(get_db)
 ):
     """
@@ -300,7 +300,7 @@ async def delete_integration(
         integration = db.query(Integration).filter(
             and_(
                 Integration.id == integration_id,
-                Integration.organization_id == current_user.organization_id
+                Integration.organization_id == org_id
             )
         ).first()
         
@@ -333,7 +333,7 @@ async def delete_integration(
 @router.post("/messages", response_model=IntegrationMessageResponse, status_code=status.HTTP_201_CREATED)
 async def send_message(
     message_data: IntegrationMessageCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("integration", "create")),
     db: Session = Depends(get_db)
 ):
     """
@@ -344,7 +344,7 @@ async def send_message(
         integration = db.query(Integration).filter(
             and_(
                 Integration.id == message_data.integration_id,
-                Integration.organization_id == current_user.organization_id
+                Integration.organization_id == org_id
             )
         ).first()
         
@@ -355,7 +355,7 @@ async def send_message(
             )
         
         message = IntegrationMessage(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             integration_id=message_data.integration_id,
             direction=message_data.direction,
             message_type=message_data.message_type,
@@ -412,7 +412,7 @@ async def list_messages(
     """
     try:
         query = db.query(IntegrationMessage).filter(
-            IntegrationMessage.organization_id == current_user.organization_id
+            IntegrationMessage.organization_id == org_id
         )
         
         if integration_id:
@@ -440,7 +440,7 @@ async def list_messages(
 @router.post("/webhooks", response_model=IntegrationWebhookResponse, status_code=status.HTTP_201_CREATED)
 async def create_webhook(
     webhook_data: IntegrationWebhookCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("integration", "create")),
     db: Session = Depends(get_db)
 ):
     """
@@ -451,7 +451,7 @@ async def create_webhook(
         integration = db.query(Integration).filter(
             and_(
                 Integration.id == webhook_data.integration_id,
-                Integration.organization_id == current_user.organization_id
+                Integration.organization_id == org_id
             )
         ).first()
         
@@ -462,7 +462,7 @@ async def create_webhook(
             )
         
         webhook = IntegrationWebhook(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             integration_id=webhook_data.integration_id,
             webhook_url=webhook_data.webhook_url,
             webhook_secret=webhook_data.webhook_secret,
@@ -502,7 +502,7 @@ async def list_webhooks(
     """
     try:
         query = db.query(IntegrationWebhook).filter(
-            IntegrationWebhook.organization_id == current_user.organization_id
+            IntegrationWebhook.organization_id == org_id
         )
         
         if integration_id:

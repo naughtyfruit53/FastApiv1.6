@@ -11,6 +11,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user as get_current_user
 from app.models.user_models import User
 from app.models.integration_models import (
@@ -31,7 +32,6 @@ from app.schemas.integration import (
     IntegrationExportRequest, IntegrationImportRequest, IntegrationImportResponse
 )
 from app.services.rbac import RBACService
-from app.core.rbac_dependencies import check_service_permission
 
 router = APIRouter()
 
@@ -43,7 +43,7 @@ async def get_integration_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get Integration dashboard statistics"""
-    org_id = current_user.organization_id
+    org_id = org_id
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -161,12 +161,12 @@ async def get_integration_dashboard(
 @router.post("/integrations", response_model=ExternalIntegrationResponse)
 async def create_integration(
     integration_data: ExternalIntegrationCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("external", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new external integration"""
     check_service_permission(current_user, "integration", "create", db)
-    org_id = current_user.organization_id
+    org_id = org_id
     rbac = RBACService(db)
     
     # Validate company access
@@ -228,7 +228,7 @@ async def list_integrations(
     db: Session = Depends(get_db)
 ):
     """List external integrations with filtering and pagination"""
-    org_id = current_user.organization_id
+    org_id = org_id
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -351,11 +351,11 @@ async def list_integrations(
 @router.get("/integrations/{integration_id}", response_model=ExternalIntegrationWithDetails)
 async def get_integration(
     integration_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("external", "read")),
     db: Session = Depends(get_db)
 ):
     """Get a specific integration by ID"""
-    org_id = current_user.organization_id
+    org_id = org_id
     rbac = RBACService(db)
     
     integration = db.query(ExternalIntegration).filter(
@@ -428,12 +428,12 @@ async def get_integration(
 async def update_integration(
     integration_id: int,
     integration_update: ExternalIntegrationUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("external", "update")),
     db: Session = Depends(get_db)
 ):
     """Update an integration"""
     check_service_permission(current_user, "integration", "update", db)
-    org_id = current_user.organization_id
+    org_id = org_id
     rbac = RBACService(db)
     
     integration = db.query(ExternalIntegration).filter(
@@ -470,12 +470,12 @@ async def update_integration(
 @router.delete("/integrations/{integration_id}")
 async def delete_integration(
     integration_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("external", "delete")),
     db: Session = Depends(get_db)
 ):
     """Delete an integration"""
     check_service_permission(current_user, "integration", "delete", db)
-    org_id = current_user.organization_id
+    org_id = org_id
     rbac = RBACService(db)
     
     integration = db.query(ExternalIntegration).filter(
@@ -507,12 +507,12 @@ async def delete_integration(
 async def create_integration_mapping(
     integration_id: int,
     mapping_data: IntegrationMappingCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("external", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new integration mapping"""
     check_service_permission(current_user, "integration", "update", db)
-    org_id = current_user.organization_id
+    org_id = org_id
     rbac = RBACService(db)
     
     # Verify integration exists and user has access
@@ -568,7 +568,7 @@ async def list_integration_mappings(
     db: Session = Depends(get_db)
 ):
     """List mappings for a specific integration"""
-    org_id = current_user.organization_id
+    org_id = org_id
     rbac = RBACService(db)
     
     # Verify integration access
@@ -621,12 +621,12 @@ async def list_integration_mappings(
 async def test_integration(
     integration_id: int,
     test_request: IntegrationTestRequest,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("external", "create")),
     db: Session = Depends(get_db)
 ):
     """Test an integration connection"""
     check_service_permission(current_user, "integration", "test", db)
-    org_id = current_user.organization_id
+    org_id = org_id
     rbac = RBACService(db)
     
     # Verify integration exists and user has access
@@ -727,11 +727,11 @@ async def test_integration(
 @router.get("/integrations/{integration_id}/health", response_model=IntegrationHealthCheck)
 async def check_integration_health(
     integration_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("external", "read")),
     db: Session = Depends(get_db)
 ):
     """Get comprehensive health check for an integration"""
-    org_id = current_user.organization_id
+    org_id = org_id
     rbac = RBACService(db)
     
     # Verify integration exists and user has access

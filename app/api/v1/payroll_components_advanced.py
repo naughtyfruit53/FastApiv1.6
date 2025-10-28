@@ -1,4 +1,5 @@
 # app/api/v1/payroll_components_advanced.py
+from app.core.enforcement import require_access
 # Phase 2: Advanced Payroll Component Management with Multi-Component Support
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -9,8 +10,7 @@ from decimal import Decimal
 from datetime import datetime, date
 
 from app.db.session import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+
 from app.models.user_models import User
 from app.models.payroll_models import PayrollComponent, PayrollRun, PayrollLine
 from app.models.erp_models import ChartOfAccounts
@@ -37,7 +37,7 @@ router = APIRouter()
 @router.post("/payroll/components/bulk", response_model=BulkPayrollComponentResult)
 async def bulk_create_payroll_components(
     bulk_data: BulkPayrollComponentCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -234,7 +234,7 @@ async def get_advanced_payroll_components(
 async def update_component_chart_mapping(
     component_id: int,
     mapping_data: PayrollComponentMappingUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -328,7 +328,7 @@ async def update_component_chart_mapping(
 
 @router.get("/payroll/components/mapping-status")
 async def get_component_mapping_status(
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -399,7 +399,7 @@ async def get_component_mapping_status(
 @router.post("/payroll/settings/advanced", response_model=AdvancedPayrollSettings)
 async def update_advanced_payroll_settings(
     settings: AdvancedPayrollSettings,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
@@ -429,7 +429,7 @@ async def update_advanced_payroll_settings(
 
 @router.get("/payroll/components/validation")
 async def validate_all_components(
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
     organization_id: int = Depends(require_current_organization_id)
 ):
