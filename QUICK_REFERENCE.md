@@ -163,18 +163,32 @@ Outputs:
 
 ## 📊 Migration Progress
 
-**Baseline**: 130 total API route files requiring RBAC enforcement (excluding __init__.py, schemas, and helper modules)
+**Baseline**: 114 total API route files with endpoints requiring RBAC enforcement (updated October 2025)
 
-**Phase 4 Complete (Late October 2025)**:
-- Total files migrated: **34/130 (26.2%)**
-- Voucher modules: **18/18 (100%)** ✅
-- Manufacturing modules: **10/10 (100%)** ✅
-- Finance modules: **5/8 (62.5%)** ✅
-- CRM: **1/1 (100%)** ✅
-- HR: **1/1 (100%)** ✅
-- Service Desk: **1/1 (100%)** ✅
-- Order Book: **1/1 (100%)** ✅
-- Notifications: **1/1 (100%)** ✅
+**Phase 6 Status (October 28, 2025)**:
+- **Total files migrated**: **47/114 (41.2%)** ✅
+- **Total files not migrated**: **67/114 (58.8%)** ⚠️
+
+**By Module**:
+- Voucher modules: **18/18 (100%)** ✅ Phase 4
+- Manufacturing modules: **10/10 (100%)** ✅ Phase 2
+- Finance modules: **5/8 (62.5%)** ✅ Phase 2
+- CRM: **1/1 (100%)** ✅ Phase 3
+- HR: **1/1 (100%)** ✅ Phase 3
+- Service Desk: **1/1 (100%)** ✅ Phase 3
+- Order Book: **1/1 (100%)** ✅ Phase 3
+- Notifications: **1/1 (100%)** ✅ Phase 3
+- Inventory: **1/5 (20%)** ⚠️ Phase 5 partial
+- Payroll: **4/5 (80%)** ⚠️ Phase 5 partial
+- Master Data: **1/1 (76% endpoints)** ⚠️ Phase 5 partial
+- Integrations: **2/3 (67% endpoints)** ⚠️ Phase 5 partial
+
+**Frontend Analysis (Phase 6)** ✅:
+- Frontend service files: 43
+- API calls identified: 315
+- Calls to RBAC-enforced backends: ~42%
+- Calls to non-RBAC backends: ~58%
+- Full audit: `FRONTEND_RBAC_INTEGRATION_AUDIT.md`
 
 ## 🧪 Testing
 
@@ -205,9 +219,160 @@ user, org_id = auth
 stmt = select(Item).where(Item.organization_id == org_id)
 ```
 
+## 🌐 Frontend Integration (Phase 6)
+
+### Error Handling for 403 Responses
+
+```typescript
+// frontend/src/lib/api.ts or utils/api.ts
+import axios from 'axios';
+import { toast } from 'react-toastify';
+
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+});
+
+// Add response interceptor for RBAC errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 403) {
+      const permission = error.response.data?.required_permission;
+      const module = error.response.data?.module;
+      
+      toast.error(
+        `Access Denied: You need '${permission}' permission for ${module}. ` +
+        `Contact your administrator.`
+      );
+      
+      console.warn('[RBAC] Permission denied:', {
+        url: error.config.url,
+        method: error.config.method,
+        required: permission,
+      });
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+```
+
+### Permission Context (Optional)
+
+```typescript
+// frontend/src/context/PermissionContext.tsx
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../lib/api';
+
+interface PermissionContextType {
+  permissions: string[];
+  hasPermission: (module: string, action: string) => boolean;
+  loading: boolean;
+}
+
+const PermissionContext = createContext<PermissionContextType>({
+  permissions: [],
+  hasPermission: () => false,
+  loading: true,
+});
+
+export const PermissionProvider: React.FC = ({ children }) => {
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    loadPermissions();
+  }, []);
+  
+  const loadPermissions = async () => {
+    try {
+      const response = await api.get('/api/v1/rbac/permissions/me');
+      setPermissions(response.data.permissions || []);
+    } catch (error) {
+      console.error('Failed to load permissions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const hasPermission = (module: string, action: string) => {
+    const required = `${module}_${action}`;
+    return permissions.includes(required);
+  };
+  
+  return (
+    <PermissionContext.Provider value={{ permissions, hasPermission, loading }}>
+      {children}
+    </PermissionContext.Provider>
+  );
+};
+
+export const usePermissions = () => useContext(PermissionContext);
+
+// Usage in component:
+// const { hasPermission } = usePermissions();
+// if (!hasPermission('voucher', 'create')) return <AccessDenied />;
+```
+
+### Frontend Service Example
+
+```typescript
+// frontend/src/services/vouchersService.ts
+import api from '../lib/api';
+
+export const createVoucher = async (data: VoucherCreate) => {
+  // Optional: Check permission before API call
+  // const { hasPermission } = usePermissions();
+  // if (!hasPermission('voucher', 'create')) {
+  //   throw new Error('Insufficient permissions');
+  // }
+  
+  try {
+    const response = await api.post('/api/v1/vouchers/sales', data);
+    return response.data;
+  } catch (error) {
+    // Error handler will show toast for 403
+    throw error;
+  }
+};
+```
+
+### Frontend Services Status
+
+**✅ Calling RBAC-Enforced Backends**:
+- vouchersService.ts (all voucher types)
+- analyticsService.ts (ML/AI analytics)
+- crmService.ts (CRM operations)
+- hrService.ts (HR management)
+- notificationService.ts (notifications)
+
+**⚠️ Calling Non-RBAC Backends** (Need Backend Migration First):
+- integrationService.ts → backend NOT migrated
+- entityService.ts (customers/vendors) → backend NOT migrated
+- reportsService.ts → backend NOT migrated
+- stockService.ts → backend partially migrated
+- masterService.ts → backend NOT migrated
+
+**📄 Full Audit**: See `FRONTEND_RBAC_INTEGRATION_AUDIT.md`
+
 ## 🆘 Need Help?
 
-1. Check the implementation guide
+### Backend RBAC
+1. Check the implementation guide: `RBAC_TENANT_ENFORCEMENT_GUIDE.md`
 2. Look at sales_voucher.py example
 3. Run the analysis tool
 4. Review test examples
+
+### Frontend RBAC
+1. Review `FRONTEND_RBAC_INTEGRATION_AUDIT.md`
+2. Check error handling patterns above
+3. See PermissionContext example
+4. Test with 403 responses
+
+### Full Documentation
+- **Backend Guide**: `RBAC_TENANT_ENFORCEMENT_GUIDE.md`
+- **Frontend Audit**: `FRONTEND_RBAC_INTEGRATION_AUDIT.md`
+- **Phase Reports**: `RBAC_ENFORCEMENT_REPORT.md`
+- **Quick Reference**: This file
