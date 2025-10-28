@@ -97,9 +97,10 @@ export interface PermissionConfig {
 /**
  * Shared permissions hook for both desktop and mobile interfaces
  * Provides unified business logic for permission checking and role-based access control
+ * Now integrates with AuthContext for real-time RBAC data
  */
 export const useSharedPermissions = () => {
-  const { user } = useAuth();
+  const { user, userPermissions: contextPermissions } = useAuth();
 
   const userPermissions: UserPermissions = useMemo(() => {
     if (!user) {
@@ -115,8 +116,18 @@ export const useSharedPermissions = () => {
     const isSuperAdmin = user.is_super_admin || false;
     const isOrgSuperAdmin = user.role === 'super_admin' || user.role === 'admin';
 
-    // TODO: Integrate with real RBAC service to get user permissions
-    // For now, using role-based permissions
+    // Use permissions from AuthContext if available
+    if (contextPermissions) {
+      return {
+        isSuperAdmin,
+        isOrgSuperAdmin,
+        role: contextPermissions.role || user.role || 'user',
+        permissions: contextPermissions.permissions,
+        modules: contextPermissions.modules,
+      };
+    }
+
+    // Fallback to role-based permissions for backward compatibility
     let permissions: string[] = [];
     let modules: string[] = [];
 
@@ -191,7 +202,7 @@ export const useSharedPermissions = () => {
       permissions,
       modules,
     };
-  }, [user]);
+  }, [user, contextPermissions]);
 
   const hasPermission = useCallback((permission: string): boolean => {
     if (!user || !userPermissions.permissions.length) return false;
@@ -217,6 +228,19 @@ export const useSharedPermissions = () => {
     if (userPermissions.isSuperAdmin) return true;
     return userPermissions.modules.includes(module);
   }, [user, userPermissions]);
+
+  const hasSubmoduleAccess = useCallback((module: string, submodule: string): boolean => {
+    if (!user) return false;
+    if (userPermissions.isSuperAdmin) return true;
+    
+    // Check if we have contextPermissions with submodule data
+    if (contextPermissions?.submodules && contextPermissions.submodules[module]) {
+      return contextPermissions.submodules[module].includes(submodule);
+    }
+    
+    // Fallback: if user has module access, assume they have all submodule access
+    return hasModuleAccess(module);
+  }, [user, userPermissions, contextPermissions, hasModuleAccess]);
 
   const canAccessRoute = useCallback((route: string): boolean => {
     if (!user) return false;
@@ -451,6 +475,7 @@ export const useSharedPermissions = () => {
     userPermissions,
     hasPermission,
     hasModuleAccess,
+    hasSubmoduleAccess,
     canAccessRoute,
     validateAction,
     getPermissionConfig,
