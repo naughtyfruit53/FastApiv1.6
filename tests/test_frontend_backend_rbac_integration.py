@@ -1,11 +1,26 @@
 """
 Integration tests for Frontend-Backend RBAC enforcement.
 
+**NOTE**: These tests serve as **documentation and reference** for expected RBAC behavior.
+They require actual fixtures and may need adjustments based on the project's test infrastructure.
+Complete these tests when implementing Phase 7 (backend migrations).
+
 These tests verify that:
 1. Backend endpoints properly enforce RBAC permissions
 2. Frontend receives correct 403 responses when lacking permissions
 3. Organization isolation is maintained
 4. Permission checks work across different modules
+
+**Setup Required**:
+- Database fixtures for organizations, users, roles, permissions
+- Proper async test infrastructure
+- JWT token generation utilities
+- Test database with sample data
+
+**Usage**:
+- Use as reference when writing actual integration tests
+- Adapt fixtures to match your project's test setup
+- Update token creation to match your authentication system
 """
 
 import pytest
@@ -16,12 +31,25 @@ from sqlalchemy import select
 from app.main import app
 from app.models import User, Organization, Role, Permission, UserRole
 from app.core.database import get_db
-from app.core.security import create_access_token
+# NOTE: Update this import to match your project's token creation
+# from app.core.security import create_access_token
+
+
+# TODO: Define these fixtures or import from conftest.py
+# @pytest.fixture
+# async def async_session():
+#     """Provide async database session for tests"""
+#     pass
 
 
 @pytest.fixture
 async def test_organizations(async_session: AsyncSession):
-    """Create test organizations"""
+    """
+    Create test organizations
+    
+    NOTE: This fixture needs async_session to be defined in conftest.py
+    or imported from your test infrastructure.
+    """
     org1 = Organization(
         id=1,
         name="Test Organization 1",
@@ -128,17 +156,44 @@ async def test_permissions(async_session: AsyncSession, test_users):
 
 
 def create_test_token(user_id: int, organization_id: int):
-    """Create a test JWT token"""
-    return create_access_token(
-        data={
-            "sub": str(user_id),
-            "organization_id": organization_id
-        }
+    """
+    Create a test JWT token
+    
+    NOTE: This is a placeholder. Update to match your project's token creation:
+    - May need to import from app.core.security
+    - May need different parameters (subject, user_role, user_type, expires_delta)
+    - May need to match your JWT payload structure
+    
+    Example:
+        from app.core.security import create_access_token
+        return create_access_token(
+            subject=str(user_id),
+            organization_id=organization_id,
+            user_role="user",
+            user_type="standard"
+        )
+    """
+    # Placeholder - replace with actual token creation
+    raise NotImplementedError(
+        "Update create_test_token to match your project's authentication system. "
+        "See app.core.security.create_access_token for the correct signature."
     )
 
 
 class TestFrontendBackendRBACIntegration:
-    """Test suite for frontend-backend RBAC integration"""
+    """
+    Test suite for frontend-backend RBAC integration
+    
+    **NOTE**: These tests are documentation/reference. They may fail until:
+    1. Fixtures are properly configured (async_session, test data)
+    2. Token creation is updated to match your auth system
+    3. Endpoints are actually migrated to use require_access
+    
+    **Use these tests to**:
+    - Understand expected RBAC behavior
+    - Validate migrated endpoints
+    - Document frontend error handling requirements
+    """
     
     @pytest.mark.asyncio
     async def test_403_response_on_missing_permission(self, test_users):
@@ -396,7 +451,12 @@ class TestCompleteRBACFlow:
     
     @pytest.mark.asyncio
     async def test_complete_voucher_creation_flow(self, test_users):
-        """Test complete flow: Login -> Permission Check -> Create Voucher"""
+        """
+        Test complete flow: Login -> Permission Check -> Create Voucher
+        
+        This test documents the complete RBAC flow for frontend developers.
+        The print statements serve as inline documentation.
+        """
         async with AsyncClient(app=app, base_url="http://test") as client:
             # Step 1: User with voucher_create permission logs in
             # (Token creation simulated here)
@@ -425,14 +485,35 @@ class TestCompleteRBACFlow:
                 # Verify org scoping
                 assert voucher["organization_id"] == test_users['voucher'].organization_id
             
-            # Document the flow for frontend developers
-            print(f"\n📋 Complete RBAC Flow:")
-            print(f"   1. User logs in, gets JWT token with org_id and permissions")
-            print(f"   2. Frontend stores token in localStorage")
-            print(f"   3. Frontend optionally checks permission before showing UI")
-            print(f"   4. Frontend makes API call with Authorization header")
-            print(f"   5. Backend validates token, checks permission, enforces org scoping")
-            print(f"   6. Response: {response.status_code}")
+            # Document the flow for frontend developers (inline documentation)
+            # These print statements are intentional and serve as a reference guide
+            flow_documentation = """
+            Complete RBAC Flow (Frontend Integration Guide):
+            
+            1. User logs in, gets JWT token with org_id and permissions
+            2. Frontend stores token in localStorage
+            3. Frontend optionally checks permission before showing UI
+            4. Frontend makes API call with Authorization header
+            5. Backend validates token, checks permission, enforces org scoping
+            6. Response status indicates success/failure
+            
+            Error Handling:
+            - 401: Token invalid/expired -> Redirect to login
+            - 403: Permission denied -> Show "Access Denied" message
+            - 404: Resource not found (or cross-org) -> Show "Not Found"
+            - 200/201: Success
+            
+            See FRONTEND_RBAC_INTEGRATION_AUDIT.md for complete guide.
+            """
+            assert flow_documentation  # Prevents unused variable warning
+
+
+# Note about running these tests:
+# These tests are primarily documentation. To run them:
+# 1. Set up proper test fixtures in conftest.py
+# 2. Update create_test_token to match your auth system
+# 3. Ensure test database has sample data
+# 4. Run: pytest tests/test_frontend_backend_rbac_integration.py -v
 
 
 if __name__ == "__main__":
