@@ -6,9 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from typing import List, Optional
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user, get_current_admin_user
-from app.core.tenant import TenantQueryMixin
-from app.core.org_restrictions import require_current_organization_id
+from app.core.enforcement import require_access
 from app.models import User, Customer, CustomerFile
 from app.schemas.base import CustomerCreate, CustomerUpdate, CustomerInDB, BulkImportResponse, CustomerFileResponse
 from app.services.excel_service import CustomerExcelService, ExcelService
@@ -28,13 +26,12 @@ async def get_customers(
     search: Optional[str] = None,
     active_only: bool = True,
     company_id: Optional[int] = Query(None, description="Filter by specific company (if user has access)"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get customers with company scoping"""
     
-    # Restrict app super admins from accessing organization data  
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -93,11 +90,16 @@ async def get_customers(
 @router.get("/{customer_id}", response_model=CustomerInDB)
 async def get_customer(
     customer_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get customer by ID"""
-    stmt = select(Customer).where(Customer.id == customer_id)
+    current_user, org_id = auth
+    
+    stmt = select(Customer).where(
+        Customer.id == customer_id,
+        Customer.organization_id == org_id
+    )
     result = await db.execute(stmt)
     customer = result.scalar_one_or_none()
     if not customer:
@@ -106,20 +108,17 @@ async def get_customer(
             detail="Customer not found"
         )
     
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(customer, current_user.organization_id)
-    
     return customer
 
 @router.post("", response_model=CustomerInDB)
 async def create_customer(
     customer: CustomerCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create new customer with company scoping"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # If company_id is provided, verify user has access to it
@@ -188,12 +187,17 @@ async def create_customer(
 async def update_customer(
     customer_id: int,
     customer_update: CustomerUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update customer"""
     
-    stmt = select(Customer).where(Customer.id == customer_id)
+    current_user, org_id = auth
+    
+    stmt = select(Customer).where(
+        Customer.id == customer_id,
+        Customer.organization_id == org_id
+    )
     result = await db.execute(stmt)
     customer = result.scalar_one_or_none()
     if not customer:
@@ -201,9 +205,6 @@ async def update_customer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer not found"
         )
-    
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(customer, current_user.organization_id)
     
     # Check name uniqueness if being updated
     if customer_update.name and customer_update.name != customer.name:
@@ -232,12 +233,17 @@ async def update_customer(
 @router.delete("/{customer_id}")
 async def delete_customer(
     customer_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("customer", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Delete customer (admin only)"""
+    """Delete customer"""
     
-    stmt = select(Customer).where(Customer.id == customer_id)
+    current_user, org_id = auth
+    
+    stmt = select(Customer).where(
+        Customer.id == customer_id,
+        Customer.organization_id == org_id
+    )
     result = await db.execute(stmt)
     customer = result.scalar_one_or_none()
     if not customer:
@@ -245,9 +251,6 @@ async def delete_customer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer not found"
         )
-    
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(customer, current_user.organization_id)
     
     # TODO: Check if customer has any associated transactions/vouchers
     # before allowing deletion
@@ -262,9 +265,10 @@ async def delete_customer(
 
 @router.get("/template/excel")
 async def download_customers_template(
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "read"))
 ):
     """Download Excel template for customers bulk import"""
+    current_user, org_id = auth
     excel_data = CustomerExcelService.create_template()
     return ExcelService.create_streaming_response(excel_data, "customers_template.xlsx")
 
@@ -274,20 +278,15 @@ async def export_customers_excel(
     limit: int = 1000,
     search: Optional[str] = None,
     active_only: bool = True,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Export customers to Excel"""
     
-    # Get customers using the same logic as the list endpoint
-    stmt = select(Customer)
+    current_user, org_id = auth
     
-    # Apply tenant filtering for non-super-admin users
-    if not current_user.is_super_admin:
-        org_id = current_user.organization_id
-        if org_id is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization")
-        stmt = TenantQueryMixin.filter_by_tenant(stmt, org_id)
+    # Get customers using the same logic as the list endpoint
+    stmt = select(Customer).where(Customer.organization_id == org_id)
     
     if active_only:
         stmt = stmt.where(Customer.is_active == True)
@@ -326,12 +325,12 @@ async def export_customers_excel(
 @router.post("/import/excel", response_model=BulkImportResponse)
 async def import_customers_excel(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Import customers from Excel file"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     # Validate file type
     if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
@@ -430,12 +429,12 @@ async def upload_customer_file(
     customer_id: int,
     file: UploadFile = File(...),
     file_type: str = "general",
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Upload a file for a customer (GST certificate, PAN card, etc.)"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     # Verify customer exists and belongs to current organization
     stmt = select(Customer).where(
@@ -521,12 +520,12 @@ async def upload_customer_file(
 async def get_customer_files(
     customer_id: int,
     file_type: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all files for a customer, optionally filtered by file type"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     # Verify customer exists and belongs to current organization
     stmt = select(Customer).where(
@@ -570,12 +569,12 @@ async def get_customer_files(
 async def download_customer_file(
     customer_id: int,
     file_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Download a customer file"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     # Get file record
     stmt = select(CustomerFile).where(
@@ -609,12 +608,12 @@ async def download_customer_file(
 async def delete_customer_file(
     customer_id: int,
     file_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete a customer file"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     # Get file record
     stmt = select(CustomerFile).where(

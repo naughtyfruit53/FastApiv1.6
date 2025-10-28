@@ -6,11 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from typing import List, Optional
 from app.core.database import get_db
-from app.api.v1.auth import (
-    get_current_active_user, get_current_admin_user
-)
-from app.core.tenant import TenantQueryFilter
-from app.core.org_restrictions import require_current_organization_id
+from app.core.enforcement import require_access
 from app.models import User, Vendor, VendorFile
 from app.schemas.base import VendorCreate, VendorUpdate, VendorInDB, BulkImportResponse, VendorFileResponse
 from app.services.excel_service import VendorExcelService, ExcelService
