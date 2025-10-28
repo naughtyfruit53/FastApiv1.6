@@ -7,6 +7,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from dateutil import parser as date_parser
 from app.core.database import get_db
+from app.core.enforcement import require_access, TenantEnforcement
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.financial import PaymentVoucher
@@ -66,11 +67,13 @@ async def get_payment_vouchers(
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get all payment vouchers with enhanced sorting and pagination"""
+    current_user, org_id = auth
+    
     stmt = select(PaymentVoucher).where(
-        PaymentVoucher.organization_id == current_user.organization_id
+        PaymentVoucher.organization_id == org_id
     )
     
     if status:
@@ -106,9 +109,11 @@ async def get_payment_vouchers(
 async def get_next_payment_voucher_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get the next available payment voucher number for a given date"""
+    current_user, org_id = auth
+    
     # Parse the voucher_date if provided
     date_to_use = None
     if voucher_date:
@@ -118,20 +123,22 @@ async def get_next_payment_voucher_number(
             pass
     
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "PMT", current_user.organization_id, PaymentVoucher, voucher_date=date_to_use
+        db, "PMT", org_id, PaymentVoucher, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Check if creating a voucher with the given date would create conflicts"""
+    current_user, org_id = auth
+    
     try:
         parsed_date = date_parser.parse(voucher_date)
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "PMT", current_user.organization_id, PaymentVoucher, parsed_date
+            db, "PMT", org_id, PaymentVoucher, parsed_date
         )
         return conflict_info
     except Exception as e:
@@ -146,19 +153,21 @@ async def create_payment_voucher(
     background_tasks: BackgroundTasks,
     send_email: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "create"))
 ):
     """Create new payment voucher"""
+    current_user, org_id = auth
+    
     try:
         if voucher.entity_type not in ['Vendor', 'Customer', 'Employee']:
             raise HTTPException(status_code=400, detail="Invalid entity_type")
         
         # Validate chart account
-        chart_account = await validate_chart_account(db, voucher.chart_account_id, current_user.organization_id)
+        chart_account = await validate_chart_account(db, voucher.chart_account_id, org_id)
         
         voucher_data = voucher.dict()
         voucher_data['created_by'] = current_user.id
-        voucher_data['organization_id'] = current_user.organization_id
+        voucher_data['organization_id'] = org_id
         
         # Get the voucher date for numbering
         voucher_date = None
@@ -168,18 +177,18 @@ async def create_payment_voucher(
         # Generate unique voucher number if not provided or blank
         if not voucher_data.get('voucher_number') or voucher_data['voucher_number'] == '':
             voucher_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "PMT", current_user.organization_id, PaymentVoucher, voucher_date=voucher_date
+                db, "PMT", org_id, PaymentVoucher, voucher_date=voucher_date
             )
         else:
             stmt = select(PaymentVoucher).where(
-                PaymentVoucher.organization_id == current_user.organization_id,
+                PaymentVoucher.organization_id == org_id,
                 PaymentVoucher.voucher_number == voucher_data['voucher_number']
             )
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
                 voucher_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "PMT", current_user.organization_id, PaymentVoucher, voucher_date=voucher_date
+                    db, "PMT", org_id, PaymentVoucher, voucher_date=voucher_date
                 )
         
         db_voucher = PaymentVoucher(**voucher_data)
@@ -215,11 +224,13 @@ async def create_payment_voucher(
 async def get_payment_voucher(
     voucher_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
+    current_user, org_id = auth
+    
     stmt = select(PaymentVoucher).where(
         PaymentVoucher.id == voucher_id,
-        PaymentVoucher.organization_id == current_user.organization_id
+        PaymentVoucher.organization_id == org_id
     )
     result = await db.execute(stmt)
     voucher = result.scalar_one_or_none()
@@ -245,12 +256,14 @@ async def update_payment_voucher(
     voucher_id: int,
     voucher_update: PaymentVoucherUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "update"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(PaymentVoucher).where(
             PaymentVoucher.id == voucher_id,
-            PaymentVoucher.organization_id == current_user.organization_id
+            PaymentVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         voucher = result.scalar_one_or_none()
@@ -266,7 +279,7 @@ async def update_payment_voucher(
         
         # Validate chart account if being updated
         if 'chart_account_id' in update_data:
-            await validate_chart_account(db, update_data['chart_account_id'], current_user.organization_id)
+            await validate_chart_account(db, update_data['chart_account_id'], org_id)
         
         for field, value in update_data.items():
             setattr(voucher, field, value)
@@ -299,12 +312,14 @@ async def update_payment_voucher(
 async def delete_payment_voucher(
     voucher_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "delete"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(PaymentVoucher).where(
             PaymentVoucher.id == voucher_id,
-            PaymentVoucher.organization_id == current_user.organization_id
+            PaymentVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         voucher = result.scalar_one_or_none()

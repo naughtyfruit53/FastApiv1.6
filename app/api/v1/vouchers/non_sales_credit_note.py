@@ -5,6 +5,7 @@ from typing import List, Optional
 from datetime import datetime
 from dateutil import parser as date_parser
 from app.core.database import get_db
+from app.core.enforcement import require_access, TenantEnforcement
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.financial import NonSalesCreditNote
@@ -23,11 +24,13 @@ async def get_non_sales_credit_notes(
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get all non-sales credit notes with enhanced sorting and pagination"""
+    current_user, org_id = auth
+    
     stmt = select(NonSalesCreditNote).where(
-        NonSalesCreditNote.organization_id == current_user.organization_id
+        NonSalesCreditNote.organization_id == org_id
     )
     
     if status:
@@ -52,9 +55,11 @@ async def get_non_sales_credit_notes(
 async def get_next_non_sales_credit_note_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get the next available non-sales credit note number for a given date"""
+    current_user, org_id = auth
+    
     date_to_use = None
     if voucher_date:
         try:
@@ -63,20 +68,22 @@ async def get_next_non_sales_credit_note_number(
             pass
     
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "NSCN", current_user.organization_id, NonSalesCreditNote, voucher_date=date_to_use
+        db, "NSCN", org_id, NonSalesCreditNote, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Check if creating a voucher with the given date would create conflicts"""
+    current_user, org_id = auth
+    
     try:
         parsed_date = date_parser.parse(voucher_date)
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "NSCN", current_user.organization_id, NonSalesCreditNote, parsed_date
+            db, "NSCN", org_id, NonSalesCreditNote, parsed_date
         )
         return conflict_info
     except Exception as e:
@@ -87,12 +94,14 @@ async def check_backdated_conflict(
 async def create_non_sales_credit_note(
     note: NonSalesCreditNoteCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "create"))
 ):
+    current_user, org_id = auth
+    
     try:
         note_data = note.dict(exclude={'items'})
         note_data['created_by'] = current_user.id
-        note_data['organization_id'] = current_user.organization_id
+        note_data['organization_id'] = org_id
         
         # Get the voucher date for numbering
         voucher_date = None
@@ -102,18 +111,18 @@ async def create_non_sales_credit_note(
         # Generate unique voucher number if not provided or blank
         if not note_data.get('voucher_number') or note_data['voucher_number'] == '':
             note_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "NSCN", current_user.organization_id, NonSalesCreditNote, voucher_date=voucher_date
+                db, "NSCN", org_id, NonSalesCreditNote, voucher_date=voucher_date
             )
         else:
             stmt = select(NonSalesCreditNote).where(
-                NonSalesCreditNote.organization_id == current_user.organization_id,
+                NonSalesCreditNote.organization_id == org_id,
                 NonSalesCreditNote.voucher_number == note_data['voucher_number']
             )
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
                 note_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "NSCN", current_user.organization_id, NonSalesCreditNote, voucher_date=voucher_date
+                    db, "NSCN", org_id, NonSalesCreditNote, voucher_date=voucher_date
                 )
         
         db_note = NonSalesCreditNote(**note_data)
@@ -146,11 +155,13 @@ async def create_non_sales_credit_note(
 async def get_non_sales_credit_note(
     note_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
+    current_user, org_id = auth
+    
     stmt = select(NonSalesCreditNote).where(
         NonSalesCreditNote.id == note_id,
-        NonSalesCreditNote.organization_id == current_user.organization_id
+        NonSalesCreditNote.organization_id == org_id
     )
     result = await db.execute(stmt)
     note = result.scalar_one_or_none()
@@ -166,12 +177,14 @@ async def update_non_sales_credit_note(
     note_id: int,
     note_update: NonSalesCreditNoteUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "update"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(NonSalesCreditNote).where(
             NonSalesCreditNote.id == note_id,
-            NonSalesCreditNote.organization_id == current_user.organization_id
+            NonSalesCreditNote.organization_id == org_id
         )
         result = await db.execute(stmt)
         note = result.scalar_one_or_none()
@@ -220,12 +233,14 @@ async def update_non_sales_credit_note(
 async def delete_non_sales_credit_note(
     note_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "delete"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(NonSalesCreditNote).where(
             NonSalesCreditNote.id == note_id,
-            NonSalesCreditNote.organization_id == current_user.organization_id
+            NonSalesCreditNote.organization_id == org_id
         )
         result = await db.execute(stmt)
         note = result.scalar_one_or_none()
