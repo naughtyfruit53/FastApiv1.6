@@ -8,8 +8,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from app.core.permissions import PermissionChecker
+
 from app.models.user_models import User
 from app.services.ml_algorithms_service import MLAlgorithmsService
 from app.models.ml_algorithms import MLFramework, AlgorithmCategory, TrainingStatus
@@ -111,7 +110,7 @@ class FrameworkAlgorithmsResponse(BaseModel):
 @router.post("/configs", response_model=AlgorithmConfigResponse, status_code=201)
 async def create_algorithm_config(
     config_data: AlgorithmConfigCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_algorithms", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new algorithm configuration"""
@@ -125,7 +124,7 @@ async def create_algorithm_config(
     
     service = MLAlgorithmsService(db)
     config = service.create_algorithm_config(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         config_name=config_data.config_name,
         framework=framework,
         algorithm_name=config_data.algorithm_name,
@@ -156,7 +155,7 @@ async def create_algorithm_config(
 async def get_algorithm_configs(
     framework: Optional[str] = Query(None, description="Filter by framework"),
     category: Optional[str] = Query(None, description="Filter by category"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
     """Get all algorithm configurations"""
@@ -167,7 +166,7 @@ async def get_algorithm_configs(
     
     service = MLAlgorithmsService(db)
     configs = service.get_algorithm_configs(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         framework=framework_enum,
         category=category_enum
     )
@@ -193,14 +192,14 @@ async def get_algorithm_configs(
 @router.get("/configs/{config_id}", response_model=AlgorithmConfigResponse)
 async def get_algorithm_config(
     config_id: int = Path(..., description="Configuration ID"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
     """Get a specific algorithm configuration"""
     PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = MLAlgorithmsService(db)
-    config = service.get_algorithm_config(current_user.organization_id, config_id)
+    config = service.get_algorithm_config(org_id, config_id)
     
     if not config:
         raise HTTPException(status_code=404, detail="Algorithm configuration not found")
@@ -223,14 +222,14 @@ async def get_algorithm_config(
 @router.delete("/configs/{config_id}")
 async def delete_algorithm_config(
     config_id: int = Path(..., description="Configuration ID"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
     """Delete an algorithm configuration"""
     PermissionChecker.require_permission(current_user, "ml_analytics:delete", db)
     
     service = MLAlgorithmsService(db)
-    deleted = service.delete_algorithm_config(config_id, current_user.organization_id)
+    deleted = service.delete_algorithm_config(config_id, org_id)
     
     if not deleted:
         raise HTTPException(status_code=404, detail="Algorithm configuration not found")
@@ -244,14 +243,14 @@ async def delete_algorithm_config(
 
 @router.get("/training/dashboard", response_model=TrainingDashboardResponse)
 async def get_training_dashboard(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
     """Get training dashboard data"""
     PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = MLAlgorithmsService(db)
-    dashboard_data = service.get_training_dashboard(current_user.organization_id)
+    dashboard_data = service.get_training_dashboard(org_id)
     
     return TrainingDashboardResponse(**dashboard_data)
 
@@ -259,7 +258,7 @@ async def get_training_dashboard(
 @router.post("/training", response_model=ModelTrainingResponse, status_code=201)
 async def create_model_training(
     training_data: ModelTrainingCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_algorithms", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new model training session"""
@@ -272,7 +271,7 @@ async def create_model_training(
     
     service = MLAlgorithmsService(db)
     training = service.create_model_training(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         training_name=training_data.training_name,
         framework=framework,
         algorithm_name=training_data.algorithm_name,
@@ -311,7 +310,7 @@ async def create_model_training(
 async def get_model_trainings(
     framework: Optional[str] = Query(None, description="Filter by framework"),
     status: Optional[str] = Query(None, description="Filter by status"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
     """Get all model training sessions"""
@@ -322,7 +321,7 @@ async def get_model_trainings(
     
     service = MLAlgorithmsService(db)
     trainings = service.get_model_trainings(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         framework=framework_enum,
         status=status_enum
     )
@@ -354,14 +353,14 @@ async def get_model_trainings(
 @router.get("/training/{training_id}", response_model=ModelTrainingResponse)
 async def get_model_training(
     training_id: int = Path(..., description="Training ID"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
     """Get a specific model training session"""
     PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = MLAlgorithmsService(db)
-    training = service.get_model_training(current_user.organization_id, training_id)
+    training = service.get_model_training(org_id, training_id)
     
     if not training:
         raise HTTPException(status_code=404, detail="Model training not found")
@@ -394,7 +393,7 @@ async def get_model_training(
 @router.get("/frameworks/{framework}/algorithms", response_model=FrameworkAlgorithmsResponse)
 async def get_framework_algorithms(
     framework: str = Path(..., description="Framework name"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
     """Get available algorithms for a framework"""

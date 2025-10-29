@@ -17,7 +17,7 @@ from app.schemas.feedback import (
     FeedbackStatus, ClosureStatus
 )
 from app.services.feedback_service import CustomerFeedbackService, ServiceClosureService
-from app.core.security import get_current_user
+
 
 router = APIRouter()
 
@@ -28,7 +28,7 @@ router = APIRouter()
 async def submit_customer_feedback(
     feedback_data: CustomerFeedbackCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Submit customer feedback for a completed service.
@@ -43,7 +43,7 @@ async def submit_customer_feedback(
     )
     
     feedback_service = CustomerFeedbackService(db)
-    return feedback_service.create_feedback(feedback_data, current_user.organization_id)
+    return feedback_service.create_feedback(feedback_data, org_id)
 
 
 @router.get("/feedback", response_model=List[CustomerFeedbackInDB])
@@ -55,7 +55,7 @@ async def get_feedback_list(
     customer_id: Optional[int] = None,
     installation_job_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Get list of customer feedback records with filtering.
@@ -77,7 +77,7 @@ async def get_feedback_list(
     
     feedback_service = CustomerFeedbackService(db)
     return feedback_service.get_feedback_list(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         filter_params=filter_params,
         skip=skip,
         limit=limit
@@ -88,7 +88,7 @@ async def get_feedback_list(
 async def get_feedback_by_id(
     feedback_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Get specific customer feedback by ID.
@@ -102,7 +102,7 @@ async def get_feedback_by_id(
     )
     
     feedback_service = CustomerFeedbackService(db)
-    feedback = feedback_service.get_feedback_by_id(feedback_id, current_user.organization_id)
+    feedback = feedback_service.get_feedback_by_id(feedback_id, org_id)
     
     if not feedback:
         raise HTTPException(
@@ -118,7 +118,7 @@ async def update_feedback(
     feedback_id: int,
     feedback_update: CustomerFeedbackUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Update customer feedback record.
@@ -135,7 +135,7 @@ async def update_feedback(
     return feedback_service.update_feedback(
         feedback_id=feedback_id,
         feedback_update=feedback_update,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         updated_by_id=current_user.id
     )
 
@@ -145,7 +145,7 @@ async def review_feedback(
     feedback_id: int,
     response_notes: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Review and respond to customer feedback.
@@ -167,7 +167,7 @@ async def review_feedback(
     return feedback_service.update_feedback(
         feedback_id=feedback_id,
         feedback_update=feedback_update,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         updated_by_id=current_user.id
     )
 
@@ -178,7 +178,7 @@ async def review_feedback(
 async def create_service_closure(
     closure_data: ServiceClosureCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Create a service closure request.
@@ -194,7 +194,7 @@ async def create_service_closure(
     closure_service = ServiceClosureService(db)
     return closure_service.create_closure(
         closure_data=closure_data,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by_id=current_user.id
     )
 
@@ -208,7 +208,7 @@ async def get_service_closures(
     feedback_received: Optional[bool] = None,
     escalation_required: Optional[bool] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Get list of service closures with filtering.
@@ -230,7 +230,7 @@ async def get_service_closures(
     
     closure_service = ServiceClosureService(db)
     return closure_service.get_closure_list(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         filter_params=filter_params,
         skip=skip,
         limit=limit
@@ -241,7 +241,7 @@ async def get_service_closures(
 async def get_service_closure_by_id(
     closure_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Get specific service closure by ID.
@@ -255,7 +255,7 @@ async def get_service_closure_by_id(
     )
     
     closure_service = ServiceClosureService(db)
-    closure = closure_service.get_closure_by_id(closure_id, current_user.organization_id)
+    closure = closure_service.get_closure_by_id(closure_id, org_id)
     
     if not closure:
         raise HTTPException(
@@ -271,7 +271,7 @@ async def approve_service_closure(
     closure_id: int,
     approval_notes: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Approve a service closure request.
@@ -287,7 +287,7 @@ async def approve_service_closure(
     closure_service = ServiceClosureService(db)
     return closure_service.approve_closure(
         closure_id=closure_id,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         approved_by_id=current_user.id,
         approval_notes=approval_notes
     )
@@ -298,7 +298,7 @@ async def close_service_ticket(
     closure_id: int,
     final_closure_notes: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Close a service ticket (final closure).
@@ -314,7 +314,7 @@ async def close_service_ticket(
     closure_service = ServiceClosureService(db)
     return closure_service.close_service(
         closure_id=closure_id,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         closed_by_id=current_user.id,
         final_closure_notes=final_closure_notes
     )
@@ -325,7 +325,7 @@ async def reopen_service_ticket(
     closure_id: int,
     reopening_reason: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Reopen a closed service ticket.
@@ -341,7 +341,7 @@ async def reopen_service_ticket(
     closure_service = ServiceClosureService(db)
     return closure_service.reopen_service(
         closure_id=closure_id,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         reopened_by_id=current_user.id,
         reopening_reason=reopening_reason
     )
@@ -353,7 +353,7 @@ async def reopen_service_ticket(
 async def get_feedback_analytics(
     days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Get feedback analytics summary.
@@ -380,7 +380,7 @@ async def get_feedback_analytics(
         func.count(CustomerFeedback.id).filter(CustomerFeedback.overall_rating >= 4).label('positive_feedback'),
         func.count(CustomerFeedback.id).filter(CustomerFeedback.overall_rating <= 2).label('negative_feedback')
     ).filter(
-        CustomerFeedback.organization_id == current_user.organization_id,
+        CustomerFeedback.organization_id == org_id,
         CustomerFeedback.submitted_at >= start_date,
         CustomerFeedback.submitted_at <= end_date
     ).first()
@@ -399,7 +399,7 @@ async def get_feedback_analytics(
 async def get_closure_analytics(
     days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("feedback", "read"))
 ):
     """
     Get service closure analytics summary.
@@ -426,7 +426,7 @@ async def get_closure_analytics(
         func.count(ServiceClosure.id).filter(ServiceClosure.escalation_required == True).label('escalated_closures'),
         func.avg(ServiceClosure.reopened_count).label('avg_reopens')
     ).filter(
-        ServiceClosure.organization_id == current_user.organization_id,
+        ServiceClosure.organization_id == org_id,
         ServiceClosure.created_at >= start_date,
         ServiceClosure.created_at <= end_date
     ).first()

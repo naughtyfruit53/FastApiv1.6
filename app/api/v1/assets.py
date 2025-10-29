@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 import logging
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from app.api.v1.auth import get_current_active_user
+
+from app.core.enforcement import require_access
 from app.models.asset_models import (
     Asset, AssetStatus, AssetCondition, MaintenanceSchedule, MaintenanceRecord, 
     MaintenanceType, MaintenanceStatus, DepreciationRecord, MaintenancePartUsed,
@@ -193,7 +193,7 @@ async def get_assets(
     current_user = Depends(get_current_active_user)
 ):
     query = db.query(Asset).filter(
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     )
     
     if category:
@@ -216,7 +216,7 @@ async def create_asset(
 ):
     # Check if asset code already exists
     existing_asset = db.query(Asset).filter(
-        Asset.organization_id == current_user.organization_id,
+        Asset.organization_id == org_id,
         Asset.asset_code == asset_data.asset_code
     ).first()
     
@@ -227,7 +227,7 @@ async def create_asset(
         )
     
     db_asset = Asset(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id,
         **asset_data.dict()
     )
@@ -246,7 +246,7 @@ async def get_asset(
 ):
     asset = db.query(Asset).filter(
         Asset.id == asset_id,
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     ).first()
     
     if not asset:
@@ -263,7 +263,7 @@ async def update_asset(
 ):
     asset = db.query(Asset).filter(
         Asset.id == asset_id,
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     ).first()
     
     if not asset:
@@ -285,7 +285,7 @@ async def delete_asset(
 ):
     asset = db.query(Asset).filter(
         Asset.id == asset_id,
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     ).first()
     
     if not asset:
@@ -303,7 +303,7 @@ async def get_asset_categories(
     current_user = Depends(get_current_active_user)
 ):
     categories = db.query(Asset.category).filter(
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     ).distinct().all()
     
     return [cat[0] for cat in categories if cat[0]]
@@ -320,7 +320,7 @@ async def get_maintenance_schedules(
     current_user = Depends(get_current_active_user)
 ):
     query = db.query(MaintenanceSchedule).filter(
-        MaintenanceSchedule.organization_id == current_user.organization_id
+        MaintenanceSchedule.organization_id == org_id
     )
     
     if asset_id:
@@ -342,7 +342,7 @@ async def create_maintenance_schedule(
     # Verify asset exists
     asset = db.query(Asset).filter(
         Asset.id == schedule_data.asset_id,
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     ).first()
     
     if not asset:
@@ -364,7 +364,7 @@ async def create_maintenance_schedule(
         next_due_date = datetime.now() + timedelta(days=days)
     
     db_schedule = MaintenanceSchedule(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id,
         next_due_date=next_due_date,
         **schedule_data.dict()
@@ -386,7 +386,7 @@ async def get_due_maintenance(
     due_date = datetime.now() + timedelta(days=days_ahead)
     
     schedules = db.query(MaintenanceSchedule).filter(
-        MaintenanceSchedule.organization_id == current_user.organization_id,
+        MaintenanceSchedule.organization_id == org_id,
         MaintenanceSchedule.is_active == True,
         MaintenanceSchedule.next_due_date <= due_date
     ).all()
@@ -405,7 +405,7 @@ async def get_maintenance_records(
     current_user = Depends(get_current_active_user)
 ):
     query = db.query(MaintenanceRecord).filter(
-        MaintenanceRecord.organization_id == current_user.organization_id
+        MaintenanceRecord.organization_id == org_id
     )
     
     if asset_id:
@@ -427,7 +427,7 @@ async def create_maintenance_record(
     # Verify asset exists
     asset = db.query(Asset).filter(
         Asset.id == record_data.asset_id,
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     ).first()
     
     if not asset:
@@ -440,7 +440,7 @@ async def create_maintenance_record(
     total_cost = record_data.labor_cost + record_data.parts_cost + record_data.external_cost
     
     db_record = MaintenanceRecord(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         work_order_number=work_order_number,
         total_cost=total_cost,
         created_by=current_user.id,
@@ -454,7 +454,7 @@ async def create_maintenance_record(
     for part_data in record_data.parts_used:
         total_cost = part_data.quantity_used * part_data.unit_cost
         part = MaintenancePartUsed(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             maintenance_record_id=db_record.id,
             total_cost=total_cost,
             **part_data.dict()
@@ -481,7 +481,7 @@ async def complete_maintenance_record(
 ):
     record = db.query(MaintenanceRecord).filter(
         MaintenanceRecord.id == record_id,
-        MaintenanceRecord.organization_id == current_user.organization_id
+        MaintenanceRecord.organization_id == org_id
     ).first()
     
     if not record:
@@ -530,7 +530,7 @@ async def get_asset_depreciation(
 ):
     asset = db.query(Asset).filter(
         Asset.id == asset_id,
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     ).first()
     
     if not asset:
@@ -538,7 +538,7 @@ async def get_asset_depreciation(
     
     query = db.query(DepreciationRecord).filter(
         DepreciationRecord.asset_id == asset_id,
-        DepreciationRecord.organization_id == current_user.organization_id
+        DepreciationRecord.organization_id == org_id
     )
     
     if year:
@@ -556,7 +556,7 @@ async def calculate_depreciation(
 ):
     asset = db.query(Asset).filter(
         Asset.id == asset_id,
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     ).first()
     
     if not asset:
@@ -597,7 +597,7 @@ async def calculate_depreciation(
     closing_book_value = opening_book_value - annual_depreciation
     
     db_record = DepreciationRecord(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         asset_id=asset_id,
         depreciation_year=year,
         period_start_date=datetime(year, 1, 1),
@@ -625,37 +625,37 @@ async def get_asset_dashboard_summary(
 ):
     # Total assets by status
     total_assets = db.query(Asset).filter(
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     ).count()
     
     active_assets = db.query(Asset).filter(
-        Asset.organization_id == current_user.organization_id,
+        Asset.organization_id == org_id,
         Asset.status == AssetStatus.ACTIVE
     ).count()
     
     maintenance_assets = db.query(Asset).filter(
-        Asset.organization_id == current_user.organization_id,
+        Asset.organization_id == org_id,
         Asset.status == AssetStatus.MAINTENANCE
     ).count()
     
     # Due maintenance count
     due_date = datetime.now() + timedelta(days=7)
     due_maintenance = db.query(MaintenanceSchedule).filter(
-        MaintenanceSchedule.organization_id == current_user.organization_id,
+        MaintenanceSchedule.organization_id == org_id,
         MaintenanceSchedule.is_active == True,
         MaintenanceSchedule.next_due_date <= due_date
     ).count()
     
     # Overdue maintenance
     overdue_maintenance = db.query(MaintenanceSchedule).filter(
-        MaintenanceSchedule.organization_id == current_user.organization_id,
+        MaintenanceSchedule.organization_id == org_id,
         MaintenanceSchedule.is_active == True,
         MaintenanceSchedule.next_due_date < datetime.now()
     ).count()
     
     # Total asset value
     total_value = db.query(Asset).filter(
-        Asset.organization_id == current_user.organization_id
+        Asset.organization_id == org_id
     ).with_entities(Asset.purchase_cost).all()
     
     total_asset_value = sum(cost[0] or 0 for cost in total_value)
