@@ -1,21 +1,17 @@
 # app/api/v1/organizations/invitation_routes.py
 
-# Revised app/api/v1/organizations/invitation_routes.py
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 
 from app.core.database import get_db
 from app.core.security import get_password_hash
-from app.core.permissions import PermissionChecker, Permission
+from app.core.enforcement import require_access
 from app.models import User, Organization
 from app.schemas.user import UserRole
 from app.schemas import UserCreate, UserInDB
-from app.core.security import get_current_user
-from app.api.v1.auth import get_current_active_user
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
-from app.services.system_email_service import system_email_service  # Use system_email_service for sending emails
+from app.services.system_email_service import system_email_service
 
 import logging
 import secrets
@@ -31,22 +27,17 @@ async def list_organization_invitations(
     skip: int = 0,
     limit: int = 100,
     status: Optional[str] = None,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization_invitation", "read")),
+    db: Session = Depends(get_db)
 ):
-    """List organization invitations (org admin or super admin only)"""
+    """List organization invitations"""
+    current_user, org_id = auth
   
-    # Check access permissions
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+    # Enforce tenant isolation - return 404 for cross-org access
+    if organization_id != org_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can view invitations"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
         )
   
     # Check if organization exists
@@ -87,22 +78,17 @@ async def list_organization_invitations(
 async def resend_organization_invitation(
     organization_id: int,
     invitation_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization_invitation", "update")),
+    db: Session = Depends(get_db)
 ):
-    """Resend organization invitation (org admin or super admin only)"""
+    """Resend organization invitation"""
+    current_user, org_id = auth
   
-    # Check access permissions
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+    # Enforce tenant isolation - return 404 for cross-org access
+    if organization_id != org_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can resend invitations"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found"
         )
   
     # Find the user/invitation (using user ID as invitation ID for now)
@@ -148,22 +134,17 @@ async def resend_organization_invitation(
 async def cancel_organization_invitation(
     organization_id: int,
     invitation_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization_invitation", "delete")),
+    db: Session = Depends(get_db)
 ):
-    """Cancel organization invitation (org admin or super admin only)"""
+    """Cancel organization invitation"""
+    current_user, org_id = auth
   
-    # Check access permissions
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+    # Enforce tenant isolation - return 404 for cross-org access
+    if organization_id != org_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can cancel invitations"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found"
         )
   
     # Find the user/invitation (using user ID as invitation ID for now)
@@ -200,22 +181,17 @@ async def cancel_organization_invitation(
 async def invite_user_to_organization(
     organization_id: int,
     user_data: UserCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization_invitation", "create")),
+    db: Session = Depends(get_db)
 ):
-    """Invite user to organization (org admin only)"""
+    """Invite user to organization"""
+    current_user, org_id = auth
   
-    # Check access permissions
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+    # Enforce tenant isolation - return 404 for cross-org access
+    if organization_id != org_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can invite users"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
         )
   
     # Check if organization exists
