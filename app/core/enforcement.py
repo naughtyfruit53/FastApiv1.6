@@ -209,14 +209,14 @@ class CombinedEnforcement:
         self,
         current_user: User = Depends(get_current_active_user),
         db: Session = Depends(get_db)
-    ) -> tuple[User, int]:
+    ) -> tuple[User, Optional[int]]:
         """
         Enforce both RBAC and tenant isolation.
         
         Returns:
-            Tuple of (user, organization_id)
+            Tuple of (user, organization_id or None for super_admin)
         """
-        # Get organization ID
+        # Get organization ID (None for super_admin without context)
         org_id = require_current_organization_id(current_user)
         
         # Check permission
