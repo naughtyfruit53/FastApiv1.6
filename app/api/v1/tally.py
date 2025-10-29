@@ -13,10 +13,7 @@ import asyncio
 import json
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.tenant import TenantQueryMixin
-from app.core.org_restrictions import require_current_organization_id
-from app.core.rbac_dependencies import check_service_permission
+from app.core.enforcement import require_access
 from app.models import (
     User, Organization, ChartOfAccounts,
     TallyConfiguration, TallyLedgerMapping, TallyVoucherMapping,
@@ -168,13 +165,14 @@ class TallyIntegrationService:
 # Configuration Endpoints
 @router.get("/configuration", response_model=Optional[TallyConfigurationResponse])
 async def get_tally_configuration(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("tally", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get Tally configuration for the organization"""
+    current_user, org_id = auth
+    
     stmt = select(TallyConfiguration).where(
-        TallyConfiguration.organization_id == organization_id
+        TallyConfiguration.organization_id == org_id
     )
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
@@ -185,14 +183,15 @@ async def get_tally_configuration(
 @router.post("/configuration", response_model=TallyConfigurationResponse)
 async def create_tally_configuration(
     config_data: TallyConfigurationCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("tally", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create or update Tally configuration"""
+    current_user, org_id = auth
+    
     # Check if configuration already exists
     stmt = select(TallyConfiguration).where(
-        TallyConfiguration.organization_id == organization_id
+        TallyConfiguration.organization_id == org_id
     )
     result = await db.execute(stmt)
     existing_config = result.scalar_one_or_none()
@@ -204,7 +203,7 @@ async def create_tally_configuration(
         )
     
     config = TallyConfiguration(
-        organization_id=organization_id,
+        organization_id=org_id,
         configured_by=current_user.id,
         **config_data.dict()
     )
@@ -219,13 +218,14 @@ async def create_tally_configuration(
 @router.put("/configuration", response_model=TallyConfigurationResponse)
 async def update_tally_configuration(
     config_data: TallyConfigurationUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("tally", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update Tally configuration"""
+    current_user, org_id = auth
+    
     stmt = select(TallyConfiguration).where(
-        TallyConfiguration.organization_id == organization_id
+        TallyConfiguration.organization_id == org_id
     )
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
@@ -253,19 +253,20 @@ async def update_tally_configuration(
 @router.post("/test-connection", response_model=TallyConnectionTestResponse)
 async def test_tally_connection(
     connection_test: TallyConnectionTest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("tally", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Test connection to Tally server"""
+    current_user, org_id = auth
+    
     result = await TallyIntegrationService.test_tally_connection(connection_test)
     
     # Update configuration if exists
     stmt = select(TallyConfiguration).where(
-        TallyConfiguration.organization_id == organization_id
+        TallyConfiguration.organization_id == org_id
     )
-    result = await db.execute(stmt)
-    config = result.scalar_one_or_none()
+    config_result = await db.execute(stmt)
+    config = config_result.scalar_one_or_none()
     
     if config:
         config.connection_status = TallyConnectionStatusEnum.CONNECTED if result.success else TallyConnectionStatusEnum.ERROR
@@ -281,14 +282,15 @@ async def test_tally_connection(
 async def trigger_sync(
     sync_request: TallySyncRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("tally", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Trigger Tally sync operation"""
+    current_user, org_id = auth
+    
     # Get Tally configuration
     stmt = select(TallyConfiguration).where(
-        TallyConfiguration.organization_id == organization_id,
+        TallyConfiguration.organization_id == org_id,
         TallyConfiguration.is_active == True
     )
     result = await db.execute(stmt)
@@ -382,14 +384,15 @@ async def get_sync_logs(
     limit: int = 50,
     sync_type: Optional[str] = None,
     sync_status: Optional[SyncStatusEnum] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("tally", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get sync operation history"""
+    current_user, org_id = auth
+    
     # Get configuration first
     stmt = select(TallyConfiguration).where(
-        TallyConfiguration.organization_id == organization_id
+        TallyConfiguration.organization_id == org_id
     )
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
@@ -417,13 +420,14 @@ async def get_sync_logs(
 # Ledger Mappings
 @router.get("/ledger-mappings", response_model=List[TallyLedgerMappingResponse])
 async def get_ledger_mappings(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("tally", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get ledger mappings"""
+    current_user, org_id = auth
+    
     stmt = select(TallyConfiguration).where(
-        TallyConfiguration.organization_id == organization_id
+        TallyConfiguration.organization_id == org_id
     )
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
@@ -443,13 +447,14 @@ async def get_ledger_mappings(
 @router.post("/ledger-mappings", response_model=TallyLedgerMappingResponse)
 async def create_ledger_mapping(
     mapping_data: TallyLedgerMappingCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("tally", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create ledger mapping"""
+    current_user, org_id = auth
+    
     stmt = select(TallyConfiguration).where(
-        TallyConfiguration.organization_id == organization_id
+        TallyConfiguration.organization_id == org_id
     )
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
@@ -460,10 +465,10 @@ async def create_ledger_mapping(
             detail="Tally configuration not found"
         )
     
-    # Verify chart of accounts exists
+    # Verify chart of accounts exists and enforce tenant isolation
     stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == mapping_data.chart_of_accounts_id,
-        ChartOfAccounts.organization_id == organization_id
+        ChartOfAccounts.organization_id == org_id
     )
     result = await db.execute(stmt)
     account = result.scalar_one_or_none()
@@ -493,13 +498,14 @@ async def get_error_logs(
     limit: int = 50,
     error_type: Optional[str] = None,
     is_resolved: Optional[bool] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("tally", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get Tally integration error logs"""
+    current_user, org_id = auth
+    
     stmt = select(TallyErrorLog).where(
-        TallyErrorLog.organization_id == organization_id
+        TallyErrorLog.organization_id == org_id
     )
     
     if error_type:
@@ -518,13 +524,14 @@ async def get_error_logs(
 # Dashboard
 @router.get("/dashboard", response_model=TallyIntegrationDashboard)
 async def get_tally_dashboard(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("tally", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get Tally integration dashboard"""
+    current_user, org_id = auth
+    
     stmt = select(TallyConfiguration).where(
-        TallyConfiguration.organization_id == organization_id
+        TallyConfiguration.organization_id == org_id
     )
     result = await db.execute(stmt)
     config = result.scalar_one_or_none()
@@ -577,9 +584,9 @@ async def get_tally_dashboard(
         average_sync_duration=float(avg_duration)
     )
     
-    # Recent errors
+    # Recent errors (tenant isolated)
     stmt_errors = select(TallyErrorLog).where(
-        TallyErrorLog.organization_id == organization_id,
+        TallyErrorLog.organization_id == org_id,
         TallyErrorLog.is_resolved == False
     ).order_by(desc(TallyErrorLog.occurred_at)).limit(5)
     result_errors = await db.execute(stmt_errors)

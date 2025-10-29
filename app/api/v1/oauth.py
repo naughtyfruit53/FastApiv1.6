@@ -13,7 +13,7 @@ from typing import List, Optional
 import traceback
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.oauth_models import UserEmailToken, OAuthProvider, TokenStatus
 from app.models.email import MailAccount, EmailAccountType, EmailSyncStatus
@@ -58,12 +58,14 @@ async def get_oauth_providers():
 async def oauth_login(
     provider: str,
     request: Request,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("oauth", "create")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Initiate OAuth2 login flow for specified provider
     """
+    current_user, org_id = auth
+    
     # Validate provider
     try:
         oauth_provider = OAuthProvider(provider.upper())
