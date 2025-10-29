@@ -562,27 +562,44 @@ async def get_user_permissions(
     rbac_service: RBACService = Depends(get_rbac_service),
     auth: tuple = Depends(require_access("rbac", "read"))
 ):
-    """Get all permissions for a user, including self"""
+    """Get all permissions for a user, including self - with resilient error handling"""
     current_user, organization_id = auth
 
     logger.info(f"User {current_user.id} requesting permissions for user {user_id}")
     
-    # Allow users to view their own permissions
-    if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions to view other users' permissions"
-        )
-    
-    permissions = await rbac_service.get_user_permissions(user_id)
-    roles = await rbac_service.get_user_roles(user_id)
-    
-    return {
-        "user_id": user_id,
-        "permissions": list(permissions),
-        "service_roles": roles,
-        "total_permissions": len(permissions)
-    }
+    try:
+        # Allow users to view their own permissions
+        if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not enough permissions to view other users' permissions"
+            )
+        
+        permissions = await rbac_service.get_user_permissions(user_id)
+        roles = await rbac_service.get_user_roles(user_id)
+        
+        return {
+            "user_id": user_id,
+            "permissions": list(permissions),
+            "service_roles": roles,
+            "total_permissions": len(permissions)
+        }
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 403 Forbidden)
+        raise
+    except Exception as e:
+        # Log the error and return safe fallback payload instead of 500
+        logger.error(f"Error fetching permissions for user {user_id}: {str(e)}", exc_info=True)
+        
+        # Return safe fallback - empty permissions instead of failing
+        return {
+            "user_id": user_id,
+            "permissions": [],
+            "service_roles": [],
+            "total_permissions": 0,
+            "error": "Failed to fetch permissions",
+            "fallback": True
+        }
 
 # Bulk Operations
 @router.post("/roles/assign/bulk", response_model=BulkRoleAssignmentResponse)
