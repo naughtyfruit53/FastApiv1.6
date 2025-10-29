@@ -129,7 +129,7 @@ async def get_organization_roles(
         logger.error(f"Error fetching roles for organization {organization_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch organization roles: {str(e)}"
+            detail="Failed to fetch organization roles"
         )
 
 @router.post("/organizations/{organization_id}/roles", response_model=ServiceRoleInDB)
@@ -182,7 +182,7 @@ async def create_service_role(
         logger.error(f"Error creating service role: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create role: {str(e)}"
+            detail="Failed to create role"
         )
 
 @router.get("/roles/{role_id}", response_model=ServiceRoleWithPermissions)
@@ -219,7 +219,7 @@ async def get_service_role(
         logger.error(f"Error fetching service role {role_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch role: {str(e)}"
+            detail="Failed to fetch role"
         )
 
 @router.put("/roles/{role_id}", response_model=ServiceRoleInDB)
@@ -250,7 +250,7 @@ async def update_service_role(
         logger.error(f"Error updating service role {role_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update role: {str(e)}"
+            detail="Failed to update role"
         )
 
 @router.delete("/roles/{role_id}")
@@ -278,7 +278,7 @@ async def delete_service_role(
         logger.error(f"Error deleting service role {role_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete role: {str(e)}"
+            detail="Failed to delete role"
         )
 
 @router.post("/organizations/{organization_id}/roles/initialize")
@@ -303,7 +303,7 @@ async def initialize_default_roles(
         logger.error(f"Error initializing default roles for organization {organization_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to initialize default roles: {str(e)}"
+            detail="Failed to initialize default roles"
         )
 
 # User Role Assignment Endpoints
@@ -370,7 +370,7 @@ async def remove_role_from_user(
         logger.error(f"Error removing role {role_id} from user {user_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to remove role: {str(e)}"
+            detail="Failed to remove role"
         )
 
 @router.delete("/users/{user_id}/roles")
@@ -520,7 +520,7 @@ async def assign_permissions_to_user(
         logger.error(f"Error assigning permissions to user {user_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to assign permissions: {str(e)}"
+            detail="Failed to assign permissions"
         )
 
 # Permission Checking Endpoints
@@ -574,15 +574,26 @@ async def get_user_permissions(
             detail="Not enough permissions to view other users' permissions"
         )
     
-    permissions = await rbac_service.get_user_permissions(user_id)
-    roles = await rbac_service.get_user_roles(user_id)
+    try:
+        permissions = await rbac_service.get_user_permissions(user_id)
+        roles = await rbac_service.get_user_roles(user_id)
     
-    return {
-        "user_id": user_id,
-        "permissions": list(permissions),
-        "service_roles": roles,
-        "total_permissions": len(permissions)
-    }
+        return {
+            "user_id": user_id,
+            "permissions": list(permissions),
+            "service_roles": roles,
+            "total_permissions": len(permissions)
+        }
+    except Exception as e:
+        logger.error(f"Error fetching user permissions for {user_id}: {str(e)}", exc_info=True)
+        # Return empty permissions to avoid frontend crash
+        return {
+            "user_id": user_id,
+            "permissions": [],
+            "service_roles": [],
+            "total_permissions": 0,
+            "error": "Failed to fetch permissions"
+        }
 
 # Bulk Operations
 @router.post("/roles/assign/bulk", response_model=BulkRoleAssignmentResponse)

@@ -114,6 +114,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     },
   });
 
+  const isSuperAdmin = isAppSuperAdmin(user);
+  const isGodSuperAdmin = user?.email === 'naughtyfruit53@gmail.com';
+
   // Keyboard: Esc closes menus; Ctrl/Cmd+K focuses search
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -211,9 +214,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     router.push('/dashboard');
     handleMenuClose();
   };
-
-  const isSuperAdmin = isAppSuperAdmin(user);
-  const isGodSuperAdmin = user?.email === 'naughtyfruit53@gmail.com';
 
   const hasServicePermission = (permission: string): boolean => {
     try {

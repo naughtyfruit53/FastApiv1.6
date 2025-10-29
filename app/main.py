@@ -5,9 +5,13 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import HTTPException, RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
+from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.config import settings as config_settings
 from app.core.database import create_tables, AsyncSessionLocal
 from app.core.seed_super_admin import seed_super_admin
@@ -152,7 +156,95 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
 )
+
+# Middleware to add CORS headers to every response
+class CORSHeaderMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        origin = request.headers.get("origin")
+        if origin in origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
+app.add_middleware(CORSHeaderMiddleware)
+
+# Explicit OPTIONS handler for all routes
+@app.options("/{path:path}")
+async def options_handler(request: Request, path: str):
+    origin = request.headers.get("origin")
+    response = Response()
+    if origin in origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
+# Global exception handler to ensure CORS headers on all responses, including errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error"},
+    )
+    origin = request.headers.get("origin")
+    if origin in origins:
+        response.headers.update({
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        })
+    return response
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    response = JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+    origin = request.headers.get("origin")
+    if origin in origins:
+        response.headers.update({
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        })
+    return response
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    response = JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": exc.errors(), "body": exc.body},
+    )
+    origin = request.headers.get("origin")
+    if origin in origins:
+        response.headers.update({
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        })
+    return response
+
+# Debug middleware for logging request headers
+@app.middleware("http")
+async def log_request_headers(request: Request, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    response = await call_next(request)
+    logger.info(f"Response status: {response.status_code}")
+    logger.info(f"Response headers: {dict(response.headers)}")
+    return response
 
 # Debug CORS configuration on startup
 @app.on_event("startup")
@@ -288,14 +380,6 @@ def include_minimal_routers():
             logger.info(f"Router included successfully at prefix: {prefix}")
         except Exception as e:
             logger.warning(f"Failed to include router at prefix {prefix}: {str(e)}")  # Warn but continue
-
-# Debug middleware for logging request headers
-@app.middleware("http")
-async def log_request_headers(request: Request, call_next):
-    logger.info(f"Request: {request.method} {request.url}")
-    logger.info(f"Headers: {dict(request.headers)}")
-    response = await call_next(request)
-    return response
 
 @app.get("/")
 async def root():

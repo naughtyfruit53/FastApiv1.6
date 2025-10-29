@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     }
 
     const isSuperAdmin = user.is_super_admin || false;
-    const isOrgSuperAdmin = user.role === 'super_admin' || user.role === 'admin';
+    const isOrgSuperAdmin = ['super_admin', 'admin', 'management'].includes(user.role || '');
 
     let permissions: string[] = [];
     let modules: string[] = [];
@@ -232,19 +232,19 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       console.log("[AuthProvider] Fetching user permissions for user:", userId);
       
       // Fetch user permissions
-      const permissionsData = await rbacService.getUserPermissions(userId);
+      const permissionsData = await rbacService.getUserPermissions(userId) || { permissions: [], modules: [], submodules: {} };
       const rolesData = await rbacService.getUserServiceRoles(userId);
       
       // Compute fallback
       const fallback = computeRoleBasedPermissions(user);
       
       // Merge fetched with fallback
-      const mergedPermissions = [...new Set([...fallback.permissions, ...permissionsData.permissions])];
-      const mergedModules = [...new Set([...fallback.modules, ...permissionsData.modules])];
+      const mergedPermissions = [...new Set([...fallback.permissions, ...(permissionsData.permissions || [])])];
+      const mergedModules = [...new Set([...fallback.modules, ...(permissionsData.modules || [])])];
       const mergedSubmodules: Record<string, string[]> = {};
       
       // Merge submodules
-      const allKeys = new Set([...Object.keys(fallback.submodules), ...Object.keys(permissionsData.submodules)]);
+      const allKeys = new Set([...Object.keys(fallback.submodules), ...Object.keys(permissionsData.submodules || {})]);
       allKeys.forEach(key => {
         mergedSubmodules[key] = [...new Set([
           ...(fallback.submodules[key] || []),

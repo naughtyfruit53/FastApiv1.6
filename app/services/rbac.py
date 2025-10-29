@@ -194,9 +194,7 @@ class RBACService:
         if not db_role:
             return False
         
-        count_stmt = select(func.count('*')).select_from(UserRole).where(
-            UserRole.role_id == role_id, UserRole.is_active == True
-        )
+        count_stmt = select(func.count('*')).select_from(UserRole).where(UserRole.role_id == role_id, UserRole.is_active == True)
         count_result = await self.db.execute(count_stmt)
         active_assignments = count_result.scalar()
         
@@ -317,17 +315,17 @@ class RBACService:
         user = user_result.scalars().first()
         if user:
             logger.debug(f"User {user_id} role: {user.role}, is_super_admin: {user.is_super_admin}")
-            if user.is_super_admin or user.role == 'super_admin':
-                logger.debug(f"Granted permission '{permission_name}' to super_admin user {user_id}")
+            if user.is_super_admin or user.role in ['super_admin', 'org_admin', 'management']:
+                logger.debug(f"Granted permission '{permission_name}' to super_admin/org_admin/management user {user_id}")
                 return True
-            if user.role == 'org_admin':
-                # Extended fallback permissions for org_admin
+            if user.role in ['org_admin', 'management']:
+                # Extended fallback permissions for org_admin and management
                 if (permission_name.startswith('crm_') or 
                     permission_name == 'crm_admin' or 
                     permission_name.startswith('mail:') or 
                     permission_name in ['crm_commission_read', 'crm_commission_create', 
                                       'crm_commission_update', 'crm_commission_delete']):
-                    logger.debug(f"Granted permission '{permission_name}' to org_admin user {user_id} via fallback")
+                    logger.debug(f"Granted permission '{permission_name}' to org_admin/management user {user_id} via fallback")
                     return True
         
         user_roles = await self.get_user_roles(user_id)
@@ -359,8 +357,8 @@ class RBACService:
         user = user_result.scalars().first()
         
         permissions = set()
-        if user and user.role == 'org_admin':
-            logger.debug(f"Adding org_admin fallback permissions for user {user_id}")
+        if user and user.role in ['org_admin', 'management']:
+            logger.debug(f"Adding org_admin/management fallback permissions for user {user_id}")
             fallback_result = await self.db.execute(
                 select(Permission.name).where(
                     or_(
@@ -374,7 +372,7 @@ class RBACService:
                 )
             )
             permissions.update({row[0] for row in fallback_result.fetchall()})
-            logger.debug(f"Fallback permissions for org_admin: {permissions}")
+            logger.debug(f"Fallback permissions for org_admin/management: {permissions}")
         
         result = await self.db.execute(
             select(Permission.name)
@@ -611,7 +609,7 @@ class RBACService:
             logger.debug(f"User {user_id} not found")
             return False
         
-        if user.role in ["org_admin", "super_admin"] or user.is_super_admin:
+        if user.role in ["org_admin", "super_admin", "management"] or user.is_super_admin:
             logger.debug(f"Granted company permission '{permission_name}' to user {user_id} due to role {user.role}")
             return True
         

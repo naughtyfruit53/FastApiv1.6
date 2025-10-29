@@ -42,9 +42,19 @@ class ModuleName(str, Enum):
     TASK_MANAGEMENT = "Task_Management"
     ORDER_BOOK = "Order_Book"
     EXHIBITION = "Exhibition"
+    
+    # New from menuConfig - to match frontend
+    MASTER_DATA = "Master_Data"
+    VOUCHERS = "Vouchers"
+    ACCOUNTING = "Accounting"
+    REPORTS_ANALYTICS = "Reports_Analytics"
+    SALES = "Sales"
+    PROJECTS = "Projects"
+    HR_MANAGEMENT = "HR_Management"
+    TASKS_CALENDAR = "Tasks_Calendar"
 
 
-# Submodule definitions for each module
+# Submodule definitions for each module (expanded to match menuConfig.tsx)
 MODULE_SUBMODULES: Dict[str, List[str]] = {
     # CRM Module
     ModuleName.CRM.value: [
@@ -347,6 +357,145 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "attendees",
         "leads",
         "exhibition_analytics",
+    ],
+    
+    # New from menuConfig
+    ModuleName.MASTER_DATA.value: [
+        "vendors",
+        "customers",
+        "employees",
+        "company_details",
+        "products",
+        "categories",
+        "units",
+        "bom",
+        "chart_of_accounts",
+        "tax_codes",
+        "payment_terms",
+        "bank_account",
+    ],
+    ModuleName.VOUCHERS.value: [
+        "purchase_order",
+        "grn",
+        "purchase_voucher",
+        "purchase_return",
+        "quotation",
+        "proforma_invoice",
+        "sales_order",
+        "sales_voucher",
+        "delivery_challan",
+        "sales_return",
+        "payment_voucher",
+        "receipt_voucher",
+        "journal_voucher",
+        "contra_voucher",
+        "credit_note",
+        "debit_note",
+        "non_sales_credit_note",
+        "rfq",
+        "dispatch_details",
+        "inter_department_voucher",
+    ],
+    ModuleName.ACCOUNTING.value: [
+        "chart_of_accounts",
+        "account_groups",
+        "opening_balances",
+        "general_ledger",
+        "journal_entries",
+        "bank_reconciliation",
+        "trial_balance",
+        "profit_loss",
+        "balance_sheet",
+        "cash_flow",
+    ],
+    ModuleName.REPORTS_ANALYTICS.value: [
+        "ledgers",
+        "trial_balance",
+        "profit_loss",
+        "balance_sheet",
+        "stock_report",
+        "valuation_report",
+        "movement_report",
+        "sales_analysis",
+        "purchase_analysis",
+        "vendor_analysis",
+        "customer_analytics",
+        "sales_analytics",
+        "purchase_analytics",
+        "project_analytics",
+        "hr_analytics",
+        "service_dashboard",
+        "job_completion",
+        "technician_performance",
+        "customer_satisfaction",
+        "sla_compliance",
+    ],
+    ModuleName.SALES.value: [
+        "sales_dashboard",
+        "lead_management",
+        "opportunity_tracking",
+        "sales_pipeline",
+        "exhibition_mode",
+        "customer_database",
+        "contact_management",
+        "account_management",
+        "customer_analytics",
+        "quotations",
+        "sales_orders",
+        "commission_tracking",
+        "sales_reports",
+    ],
+    ModuleName.PROJECTS.value: [
+        "all_projects",
+        "project_planning",
+        "resource_management",
+        "document_management",
+        "create_project",
+        "project_analytics",
+        "performance_reports",
+        "resource_utilization",
+        "budget_analysis",
+        "team_dashboard",
+        "time_tracking",
+        "team_documents",
+        "project_chat",
+    ],
+    ModuleName.HR_MANAGEMENT.value: [
+        "employee_directory",
+        "employee_records",
+        "employee_onboarding",
+        "performance_management",
+        "employee_records_archive",
+        "payroll_management",
+        "salary_processing",
+        "benefits_administration",
+        "tax_management",
+        "time_tracking",
+        "leave_management",
+        "attendance_reports",
+        "shift_management",
+        "job_postings",
+        "candidate_management",
+        "interview_scheduling",
+        "hiring_pipeline",
+        "hr_analytics_dashboard",
+    ],
+    ModuleName.TASKS_CALENDAR.value: [
+        "task_dashboard",
+        "my_tasks",
+        "create_task",
+        "task_assignment",
+        "task_templates",
+        "task_reminders",
+        "task_comments",
+        "calendar_dashboard",
+        "calendar_view",
+        "my_events",
+        "create_event",
+        "appointments",
+        "meeting_rooms",
+        "event_reminders",
+        "recurring_events",
     ],
 }
 

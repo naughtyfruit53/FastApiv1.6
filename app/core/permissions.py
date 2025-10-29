@@ -146,7 +146,10 @@ class PermissionChecker:
             Permission.MANAGE_VOUCHERS,
         ],
         'management': [
+            Permission.MANAGE_USERS,
             Permission.VIEW_USERS,
+            Permission.CREATE_USERS,
+            Permission.DELETE_USERS,
             Permission.RESET_OWN_PASSWORD,
             Permission.RESET_ORG_PASSWORDS,
             Permission.RESET_OWN_DATA,
@@ -181,7 +184,7 @@ class PermissionChecker:
             Permission.RESET_ANY_PASSWORD,
             Permission.RESET_ANY_DATA,
             Permission.MANAGE_ORGANIZATIONS,
-            Permission.VIEW_ORGANIZATIONS,  # Added for list organizations access
+            Permission.VIEW_ORGANIZATIONS,
             Permission.CREATE_ORGANIZATIONS,
             Permission.DELETE_ORGANIZATIONS,
             Permission.RESET_ANY_DATA,
@@ -364,7 +367,7 @@ class PermissionChecker:
             return False
         
         # All other users (including org admins) can access org settings
-        return PermissionChecker.has_permission(user, Permission.ACCESS_ORG_SETTINGS)
+        return PermissionChecker.has_permission(user, Permission.ACCESS_ORG_SETTINGS)  # Org admins have access to org settings
     
     @staticmethod
     def can_factory_reset(user: Union[User, UserInDB]) -> bool:
@@ -403,12 +406,9 @@ class PermissionChecker:
         if current_user.role == 'manager' and target_user.role == 'executive':
             return target_user.reporting_manager_id == current_user.id
         
-        # Self-edit always allowed
-        if current_user.id == target_user.id:
-            return True
-        
-        return False
-
+        # Users can only reset their own password
+        return current_user.id == target_user.id
+    
     @staticmethod
     def can_create_user(current_user: Union[User, UserInDB], new_user_role: str) -> bool:
         """Check if current user can create a user of specific role"""
@@ -551,7 +551,7 @@ def require_password_reset_permission(
             detail="Authentication required"
         )
     
-    # Check if user has any password reset permission
+    # Check if any password reset permission
     if not (
         PermissionChecker.has_permission(current_user, Permission.RESET_ORG_PASSWORDS) or
         PermissionChecker.has_permission(current_user, Permission.RESET_ANY_PASSWORD)
@@ -578,7 +578,7 @@ def require_data_reset_permission(
             detail="Authentication required"
         )
     
-    # Check if user has any data reset permission
+    # Check if any data reset permission
     if not (
         PermissionChecker.has_permission(current_user, Permission.RESET_ORG_DATA) or
         PermissionChecker.has_permission(current_user, Permission.RESET_ANY_DATA)

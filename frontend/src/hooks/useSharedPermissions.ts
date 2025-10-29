@@ -116,7 +116,7 @@ export const useSharedPermissions = () => {
     }
 
     const isSuperAdmin = user.is_super_admin || false;
-    const isOrgSuperAdmin = user.role === 'super_admin' || user.role === 'admin' || user.role === 'org_admin';
+    const isOrgSuperAdmin = ['super_admin', 'admin', 'org_admin', 'management'].includes(user.role || '');
 
     // Use permissions from AuthContext if available
     if (contextPermissions) {
