@@ -11,7 +11,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta, date
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user as get_current_user  # Fixed import to use get_current_active_user as get_current_user
+from app.core.enforcement import require_access
 from app.models import User, Organization, CalendarEvent, EventAttendee, EventReminder, Calendar, CalendarShare, GoogleCalendarIntegration
 from app.schemas.calendar_schemas import (
     CalendarEventCreate, CalendarEventUpdate, CalendarEventResponse, CalendarEventWithDetails,
@@ -28,11 +28,11 @@ router = APIRouter()
 # Calendar Dashboard
 @router.get("/dashboard", response_model=CalendarDashboardStats)
 async def get_calendar_dashboard(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("calendar", "read")),
     db: Session = Depends(get_db)
 ):
     """Get calendar dashboard statistics for current user's organization"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
