@@ -13,8 +13,7 @@ from openpyxl.styles import Font, PatternFill
 from fastapi.responses import StreamingResponse
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.vouchers import BillOfMaterials, BOMComponent
 from app.models.vouchers.purchase import PurchaseOrderItem
 from app.models import Product
@@ -125,15 +124,16 @@ async def get_boms(
     search: Optional[str] = None,
     is_active: Optional[bool] = None,
     output_item_id: Optional[int] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("bom", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all BOMs for the organization"""
+    current_user, organization_id = auth
     stmt = select(BillOfMaterials).options(
         joinedload(BillOfMaterials.output_item).joinedload(Product.files),
         joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item).joinedload(Product.files)
     ).where(
-        BillOfMaterials.organization_id == current_user.organization_id
+        BillOfMaterials.organization_id == organization_id
     )
     
     if search:
@@ -156,16 +156,17 @@ async def get_boms(
 @router.get("/{bom_id}", response_model=BOMResponse)
 async def get_bom(
     bom_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("bom", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get a specific BOM by ID"""
+    current_user, organization_id = auth
     stmt = select(BillOfMaterials).options(
         joinedload(BillOfMaterials.output_item).joinedload(Product.files),
         joinedload(BillOfMaterials.components).joinedload(BOMComponent.component_item).joinedload(Product.files)
     ).where(
         BillOfMaterials.id == bom_id,
-        BillOfMaterials.organization_id == current_user.organization_id
+        BillOfMaterials.organization_id == organization_id
     )
     result = await db.execute(stmt)
     bom = result.unique().scalar_one_or_none()
@@ -182,15 +183,16 @@ async def get_bom(
 @router.post("/", response_model=BOMResponse)
 async def create_bom(
     bom_data: BOMCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("bom", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new BOM"""
+    current_user, organization_id = auth
     
     # Check if output item exists
     stmt = select(Product).where(
         Product.id == bom_data.output_item_id,
-        Product.organization_id == current_user.organization_id
+        Product.organization_id == organization_id
     )
     result = await db.execute(stmt)
     output_item = result.scalar_one_or_none()
@@ -203,7 +205,7 @@ async def create_bom(
     
     # Check for duplicate BOM name + version
     stmt = select(BillOfMaterials).where(
-        BillOfMaterials.organization_id == current_user.organization_id,
+        BillOfMaterials.organization_id == organization_id,
         BillOfMaterials.bom_name == bom_data.bom_name,
         BillOfMaterials.version == bom_data.version
     )
@@ -225,7 +227,7 @@ async def create_bom(
     
     # Create BOM
     db_bom = BillOfMaterials(
-        organization_id=current_user.organization_id,
+        organization_id=organization_id,
         bom_name=bom_data.bom_name,
         output_item_id=bom_data.output_item_id,
         output_quantity=bom_data.output_quantity,
@@ -249,7 +251,7 @@ async def create_bom(
         # Verify component item exists
         stmt = select(Product).where(
             Product.id == comp_data.component_item_id,
-            Product.organization_id == current_user.organization_id
+            Product.organization_id == organization_id
         )
         result = await db.execute(stmt)
         component_item = result.scalar_one_or_none()
@@ -272,7 +274,7 @@ async def create_bom(
         total_comp_cost = comp_data.quantity_required * unit_cost * (1 + comp_data.wastage_percentage / 100)
         
         component = BOMComponent(
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             bom_id=db_bom.id,
             component_item_id=comp_data.component_item_id,
             quantity_required=comp_data.quantity_required,
@@ -308,15 +310,16 @@ async def create_bom(
 async def update_bom(
     bom_id: int,
     bom_data: BOMUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("bom", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update an existing BOM"""
+    current_user, organization_id = auth
     
     # Get existing BOM
     stmt = select(BillOfMaterials).where(
         BillOfMaterials.id == bom_id,
-        BillOfMaterials.organization_id == current_user.organization_id
+        BillOfMaterials.organization_id == organization_id
     )
     result = await db.execute(stmt)
     db_bom = result.scalar_one_or_none()
@@ -331,7 +334,7 @@ async def update_bom(
     from app.models.vouchers import ManufacturingOrder
     stmt = select(ManufacturingOrder).where(
         ManufacturingOrder.bom_id == bom_id,
-        ManufacturingOrder.organization_id == current_user.organization_id,
+        ManufacturingOrder.organization_id == organization_id,
         ManufacturingOrder.production_status.in_(["planned", "in_progress"])
     )
     result = await db.execute(stmt)
@@ -361,7 +364,7 @@ async def update_bom(
             # Verify component item exists
             stmt = select(Product).where(
                 Product.id == comp_data['component_item_id'],
-                Product.organization_id == current_user.organization_id
+                Product.organization_id == organization_id
             )
             result = await db.execute(stmt)
             component_item = result.scalar_one_or_none()
@@ -385,7 +388,7 @@ async def update_bom(
             material_cost += total_comp_cost
             
             component = BOMComponent(
-                organization_id=current_user.organization_id,
+                organization_id=organization_id,
                 bom_id=db_bom.id,
                 component_item_id=comp_data['component_item_id'],
                 quantity_required=comp_data['quantity_required'],
@@ -406,7 +409,7 @@ async def update_bom(
     # Update output item: sync BOM cost as unit price to product
     stmt = select(Product).where(
         Product.id == db_bom.output_item_id,
-        Product.organization_id == current_user.organization_id
+        Product.organization_id == organization_id
     )
     result = await db.execute(stmt)
     output_item = result.scalar_one_or_none()
@@ -434,14 +437,15 @@ async def update_bom(
 async def delete_bom(
     bom_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("bom", "delete")),
 ):
     """Delete a BOM (only if not in use)"""
+    current_user, organization_id = auth
     
     # Get existing BOM
     stmt = select(BillOfMaterials).where(
         BillOfMaterials.id == bom_id,
-        BillOfMaterials.organization_id == current_user.organization_id
+        BillOfMaterials.organization_id == organization_id
     )
     result = await db.execute(stmt)
     db_bom = result.scalar_one_or_none()
@@ -456,7 +460,7 @@ async def delete_bom(
     from app.models.vouchers import ManufacturingOrder
     stmt = select(ManufacturingOrder).where(
         ManufacturingOrder.bom_id == bom_id,
-        ManufacturingOrder.organization_id == current_user.organization_id
+        ManufacturingOrder.organization_id == organization_id
     )
     result = await db.execute(stmt)
     in_use = result.scalar_one_or_none()
@@ -479,13 +483,14 @@ async def get_bom_cost_breakdown(
     bom_id: int,
     production_quantity: float = 1.0,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("bom", "read")),
 ):
     """Get detailed cost breakdown for a BOM"""
+    current_user, organization_id = auth
     
     stmt = select(BillOfMaterials).where(
         BillOfMaterials.id == bom_id,
-        BillOfMaterials.organization_id == current_user.organization_id
+        BillOfMaterials.organization_id == organization_id
     )
     result = await db.execute(stmt)
     bom = result.scalar_one_or_none()
@@ -537,9 +542,10 @@ async def get_bom_cost_breakdown(
 @router.get("/export/template")
 async def download_bom_template(
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("bom", "read")),
 ):
     """Download BOM import template Excel file"""
+    current_user, organization_id = auth
     wb = Workbook()
     ws = wb.active
     ws.title = "BOM Import Template"
@@ -597,9 +603,10 @@ async def download_bom_template(
 async def import_boms_from_excel(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("bom", "create")),
 ):
     """Import BOMs from Excel file"""
+    current_user, organization_id = auth
     import pandas as pd
     import io
     
@@ -631,7 +638,7 @@ async def import_boms_from_excel(
                 # Find or create output item
                 output_item_ref = str(first_row.get('output_item_code/name', '')).strip()
                 stmt = select(Product).where(
-                    Product.organization_id == current_user.organization_id,
+                    Product.organization_id == organization_id,
                     (Product.product_code == output_item_ref) | 
                     (Product.product_name == output_item_ref)
                 )
@@ -644,7 +651,7 @@ async def import_boms_from_excel(
                 
                 # Check if BOM already exists
                 stmt = select(BillOfMaterials).where(
-                    BillOfMaterials.organization_id == current_user.organization_id,
+                    BillOfMaterials.organization_id == organization_id,
                     BillOfMaterials.bom_name == bom_name,
                     BillOfMaterials.version == str(first_row.get('version', '1.0'))
                 )
@@ -661,7 +668,7 @@ async def import_boms_from_excel(
                 overhead_cost = float(first_row.get('overhead_cost', 0) or 0)
                 
                 new_bom = BillOfMaterials(
-                    organization_id=current_user.organization_id,
+                    organization_id=organization_id,
                     bom_name=bom_name,
                     output_item_id=output_item.id,
                     output_quantity=float(first_row.get('output_quantity', 1) or 1),
@@ -684,7 +691,7 @@ async def import_boms_from_excel(
                         continue
                     
                     stmt = select(Product).where(
-                        Product.organization_id == current_user.organization_id,
+                        Product.organization_id == organization_id,
                         (Product.product_code == component_ref) | 
                         (Product.product_name == component_ref)
                     )
@@ -701,7 +708,7 @@ async def import_boms_from_excel(
                     total_cost = qty_required * unit_cost * (1 + wastage / 100)
                     
                     component = BOMComponent(
-                        organization_id=current_user.organization_id,
+                        organization_id=organization_id,
                         bom_id=new_bom.id,
                         component_item_id=component_item.id,
                         quantity_required=qty_required,
@@ -741,13 +748,14 @@ async def import_boms_from_excel(
 @router.get("/export")
 async def export_boms_to_excel(
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("bom", "read")),
 ):
     """Export BOMs to Excel file"""
+    current_user, organization_id = auth
     
     # Get all BOMs for the organization
     stmt = select(BillOfMaterials).where(
-        BillOfMaterials.organization_id == current_user.organization_id
+        BillOfMaterials.organization_id == organization_id
     )
     result = await db.execute(stmt)
     boms = result.scalars().all()

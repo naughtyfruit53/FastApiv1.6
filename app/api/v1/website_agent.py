@@ -8,7 +8,7 @@ from datetime import datetime
 import logging
 
 from app.core.database import get_db
-from app.core.security import get_current_user, get_current_active_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.website_agent import WebsiteProject, WebsitePage, WebsiteDeployment, WebsiteMaintenanceLog
 from app.schemas import website_agent as schemas
@@ -45,15 +45,16 @@ async def list_projects(
     limit: int = Query(100, ge=1, le=100),
     status: Optional[str] = None,
     project_type: Optional[str] = None,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     List all website projects for the organization.
     """
     try:
         query = db.query(WebsiteProject).filter(
-            WebsiteProject.organization_id == current_user.organization_id
+            WebsiteProject.organization_id == organization_id
         )
         
         if status:
@@ -78,14 +79,15 @@ async def list_projects(
 @router.get("/projects/{project_id}", response_model=schemas.WebsiteProject)
 async def get_project(
     project_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     Get a specific website project by ID.
     """
     try:
-        project = check_project_access(project_id, current_user.organization_id, db)
+        project = check_project_access(project_id, organization_id, db)
         logger.info(f"User {current_user.id} retrieved website project {project_id}")
         return project
     
@@ -102,17 +104,18 @@ async def get_project(
 @router.post("/projects", response_model=schemas.WebsiteProject, status_code=status.HTTP_201_CREATED)
 async def create_project(
     project_data: schemas.WebsiteProjectCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     Create a new website project.
     """
     try:
         # Check for duplicate project name
         existing = db.query(WebsiteProject).filter(
             and_(
-                WebsiteProject.organization_id == current_user.organization_id,
+                WebsiteProject.organization_id == organization_id,
                 WebsiteProject.project_name == project_data.project_name
             )
         ).first()
@@ -126,7 +129,7 @@ async def create_project(
         # Create new project
         new_project = WebsiteProject(
             **project_data.model_dump(),
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             created_by_id=current_user.id,
             updated_by_id=current_user.id
         )
@@ -153,14 +156,15 @@ async def create_project(
 async def update_project(
     project_id: int,
     project_data: schemas.WebsiteProjectUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     Update an existing website project.
     """
     try:
-        project = check_project_access(project_id, current_user.organization_id, db)
+        project = check_project_access(project_id, organization_id, db)
         
         # Update fields
         update_data = project_data.model_dump(exclude_unset=True)
@@ -189,14 +193,15 @@ async def update_project(
 @router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
     project_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     Delete a website project.
     """
     try:
-        project = check_project_access(project_id, current_user.organization_id, db)
+        project = check_project_access(project_id, organization_id, db)
         
         db.delete(project)
         db.commit()
@@ -220,20 +225,21 @@ async def delete_project(
 @router.get("/projects/{project_id}/pages", response_model=List[schemas.WebsitePage])
 async def list_pages(
     project_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     List all pages for a website project.
     """
     try:
         # Check project access
-        check_project_access(project_id, current_user.organization_id, db)
+        check_project_access(project_id, organization_id, db)
         
         pages = db.query(WebsitePage).filter(
             and_(
                 WebsitePage.project_id == project_id,
-                WebsitePage.organization_id == current_user.organization_id
+                WebsitePage.organization_id == organization_id
             )
         ).order_by(WebsitePage.order_index).all()
         
@@ -254,15 +260,16 @@ async def list_pages(
 async def create_page(
     project_id: int,
     page_data: schemas.WebsitePageCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     Create a new page for a website project.
     """
     try:
         # Check project access
-        check_project_access(project_id, current_user.organization_id, db)
+        check_project_access(project_id, organization_id, db)
         
         # Check for duplicate page slug
         existing = db.query(WebsitePage).filter(
@@ -281,7 +288,7 @@ async def create_page(
         # Create new page
         new_page = WebsitePage(
             **page_data.model_dump(),
-            organization_id=current_user.organization_id
+            organization_id=organization_id
         )
         
         db.add(new_page)
@@ -306,17 +313,18 @@ async def create_page(
 async def update_page(
     page_id: int,
     page_data: schemas.WebsitePageUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     Update an existing website page.
     """
     try:
         page = db.query(WebsitePage).filter(
             and_(
                 WebsitePage.id == page_id,
-                WebsitePage.organization_id == current_user.organization_id
+                WebsitePage.organization_id == organization_id
             )
         ).first()
         
@@ -351,17 +359,18 @@ async def update_page(
 @router.delete("/pages/{page_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_page(
     page_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     Delete a website page.
     """
     try:
         page = db.query(WebsitePage).filter(
             and_(
                 WebsitePage.id == page_id,
-                WebsitePage.organization_id == current_user.organization_id
+                WebsitePage.organization_id == organization_id
             )
         ).first()
         
@@ -394,19 +403,20 @@ async def delete_page(
 async def deploy_project(
     project_id: int,
     deployment_data: schemas.WebsiteDeploymentCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     Deploy a website project.
     """
     try:
-        project = check_project_access(project_id, current_user.organization_id, db)
+        project = check_project_access(project_id, organization_id, db)
         
         # Create deployment record
         new_deployment = WebsiteDeployment(
             **deployment_data.model_dump(),
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             deployment_status="pending",
             deployed_by_id=current_user.id,
             started_at=datetime.now()
@@ -444,20 +454,21 @@ async def deploy_project(
 @router.get("/projects/{project_id}/deployments", response_model=List[schemas.WebsiteDeployment])
 async def list_deployments(
     project_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     List all deployments for a website project.
     """
     try:
         # Check project access
-        check_project_access(project_id, current_user.organization_id, db)
+        check_project_access(project_id, organization_id, db)
         
         deployments = db.query(WebsiteDeployment).filter(
             and_(
                 WebsiteDeployment.project_id == project_id,
-                WebsiteDeployment.organization_id == current_user.organization_id
+                WebsiteDeployment.organization_id == organization_id
             )
         ).order_by(WebsiteDeployment.created_at.desc()).all()
         
@@ -480,20 +491,21 @@ async def list_deployments(
 async def create_maintenance_log(
     project_id: int,
     log_data: schemas.WebsiteMaintenanceLogCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     Create a maintenance log entry for a website project.
     """
     try:
         # Check project access
-        check_project_access(project_id, current_user.organization_id, db)
+        check_project_access(project_id, organization_id, db)
         
         # Create maintenance log
         new_log = WebsiteMaintenanceLog(
             **log_data.model_dump(),
-            organization_id=current_user.organization_id,
+            organization_id=organization_id,
             performed_by_id=current_user.id,
             completed_at=datetime.now() if log_data.status == "completed" else None
         )
@@ -519,20 +531,21 @@ async def create_maintenance_log(
 @router.get("/projects/{project_id}/maintenance", response_model=List[schemas.WebsiteMaintenanceLog])
 async def list_maintenance_logs(
     project_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("website_agent", "read")),
     db: Session = Depends(get_db)
 ):
     """
+    current_user, organization_id = auth
     List all maintenance logs for a website project.
     """
     try:
         # Check project access
-        check_project_access(project_id, current_user.organization_id, db)
+        check_project_access(project_id, organization_id, db)
         
         logs = db.query(WebsiteMaintenanceLog).filter(
             and_(
                 WebsiteMaintenanceLog.project_id == project_id,
-                WebsiteMaintenanceLog.organization_id == current_user.organization_id
+                WebsiteMaintenanceLog.organization_id == organization_id
             )
         ).order_by(WebsiteMaintenanceLog.created_at.desc()).all()
         
