@@ -11,7 +11,7 @@ from typing import List, Optional
 from datetime import datetime, date
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user as get_current_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.project_models import (
     Project, ProjectMilestone, ProjectResource, ProjectDocument, ProjectTimeLog
@@ -33,11 +33,11 @@ router = APIRouter()
 @router.get("/dashboard", response_model=ProjectDashboardStats)
 async def get_project_dashboard(
     company_id: Optional[int] = Query(None, description="Filter by specific company"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "read")),
     db: Session = Depends(get_db)
 ):
     """Get project management dashboard statistics"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -137,7 +137,7 @@ async def get_project_dashboard(
 @router.post("/projects", response_model=ProjectResponse)
 async def create_project(
     project: ProjectCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new project"""
@@ -200,11 +200,11 @@ async def list_projects(
     per_page: int = Query(50, ge=1, le=100, description="Items per page"),
     company_id: Optional[int] = Query(None, description="Filter by company"),
     filters: ProjectFilter = Depends(),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "read")),
     db: Session = Depends(get_db)
 ):
     """List projects with filtering and pagination"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -322,11 +322,11 @@ async def list_projects(
 @router.get("/projects/{project_id}", response_model=ProjectWithDetails)
 async def get_project(
     project_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "read")),
     db: Session = Depends(get_db)
 ):
     """Get a specific project by ID"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     project = db.query(Project).filter(
@@ -386,10 +386,12 @@ async def get_project(
 async def update_project(
     project_id: int,
     project_update: ProjectUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "update")),
     db: Session = Depends(get_db)
 ):
     """Update a project"""
+    current_user, org_id = auth
+    
     check_service_permission(current_user, "project", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
@@ -428,10 +430,12 @@ async def update_project(
 @router.delete("/projects/{project_id}")
 async def delete_project(
     project_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "delete")),
     db: Session = Depends(get_db)
 ):
     """Delete a project"""
+    current_user, org_id = auth
+    
     check_service_permission(current_user, "project", "delete", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
@@ -464,10 +468,12 @@ async def delete_project(
 @router.put("/projects/bulk-update")
 async def bulk_update_projects(
     bulk_update: BulkProjectUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "update")),
     db: Session = Depends(get_db)
 ):
     """Bulk update multiple projects"""
+    current_user, org_id = auth
+    
     check_service_permission(current_user, "project", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
@@ -500,10 +506,12 @@ async def bulk_update_projects(
 @router.put("/projects/bulk-status")
 async def bulk_update_project_status(
     status_update: ProjectStatusBulkUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "update")),
     db: Session = Depends(get_db)
 ):
     """Bulk update project status"""
+    current_user, org_id = auth
+    
     check_service_permission(current_user, "project", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
@@ -537,10 +545,12 @@ async def bulk_update_project_status(
 async def create_milestone(
     project_id: int,
     milestone: MilestoneCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new project milestone"""
+    current_user, org_id = auth
+    
     check_service_permission(current_user, "project", "update", db)
     org_id = current_user.organization_id
     rbac = RBACService(db)
@@ -585,11 +595,11 @@ async def create_milestone(
 @router.get("/projects/{project_id}/milestones", response_model=List[MilestoneWithDetails])
 async def list_project_milestones(
     project_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "read")),
     db: Session = Depends(get_db)
 ):
     """List milestones for a specific project"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Verify project access
@@ -645,11 +655,11 @@ async def upload_project_document(
     file: UploadFile = File(...),
     document_type: str = Query("general", description="Document type"),
     description: Optional[str] = Query(None, description="Document description"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "create")),
     db: Session = Depends(get_db)
 ):
     """Upload a document to a project"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Verify project access
@@ -726,11 +736,11 @@ async def upload_project_document(
 async def get_project_documents(
     project_id: int,
     document_type: Optional[str] = Query(None, description="Filter by document type"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "read")),
     db: Session = Depends(get_db)
 ):
     """Get all documents for a project"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Verify project access
@@ -783,11 +793,11 @@ async def get_project_documents(
 async def get_project_document(
     project_id: int,
     document_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "read")),
     db: Session = Depends(get_db)
 ):
     """Get a specific project document"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Verify project access
@@ -837,11 +847,11 @@ async def update_project_document(
     project_id: int,
     document_id: int,
     document_data: DocumentUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "update")),
     db: Session = Depends(get_db)
 ):
     """Update project document metadata"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Verify project access
@@ -909,11 +919,11 @@ async def update_project_document(
 async def delete_project_document(
     project_id: int,
     document_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("project_management", "delete")),
     db: Session = Depends(get_db)
 ):
     """Delete a project document"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Verify project access
@@ -963,3 +973,4 @@ async def delete_project_document(
         )
     
     return milestone_details
+    current_user, org_id = auth

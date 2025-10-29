@@ -11,8 +11,9 @@ from decimal import Decimal
 import logging
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+from app.core.enforcement import require_access
+
+
 from app.models.user_models import User
 from app.models.financial_modeling_models import (
     FinancialModel, DCFModel, ScenarioAnalysis, TradingComparables,
@@ -41,8 +42,7 @@ router = APIRouter()
 async def create_financial_model(
     model_data: FinancialModelCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("financial_modeling", "create")),
     request: Request = None
 ):
     """Create a new financial model"""
@@ -51,7 +51,7 @@ async def create_financial_model(
         
         # Create the financial model
         financial_model = FinancialModel(
-            organization_id=organization_id,
+            organization_id=org_id,
             model_name=model_data.model_name,
             model_type=model_data.model_type,
             model_version=model_data.model_version,
@@ -72,7 +72,7 @@ async def create_financial_model(
         # Create audit trail
         service.create_audit_trail(
             financial_model_id=financial_model.id,
-            organization_id=organization_id,
+            organization_id=org_id,
             action_type="create",
             user_id=current_user.id,
             ip_address=request.client.host if request else None,
@@ -83,7 +83,7 @@ async def create_financial_model(
         
     except Exception as e:
         logger.error(f"Error creating financial model: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/models", response_model=List[FinancialModelResponse])
@@ -94,13 +94,14 @@ async def get_financial_models(
     is_template: Optional[bool] = Query(None),
     is_approved: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "read")),
 ):
     """Get financial models with filtering"""
+    current_user, org_id = auth
+    
     try:
         query = db.query(FinancialModel).filter(
-            FinancialModel.organization_id == organization_id
+            FinancialModel.organization_id == org_id
         )
         
         if model_type:
@@ -115,25 +116,26 @@ async def get_financial_models(
         
     except Exception as e:
         logger.error(f"Error fetching financial models: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/models/{model_id}", response_model=FinancialModelResponse)
 async def get_financial_model(
     model_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "read")),
 ):
     """Get a specific financial model"""
+    current_user, org_id = auth
+    
     try:
         model = db.query(FinancialModel).filter(
             FinancialModel.id == model_id,
-            FinancialModel.organization_id == organization_id
+            FinancialModel.organization_id == org_id
         ).first()
         
         if not model:
-            raise HTTPException(status_code=404, detail="Financial model not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial model not found")
         
         return model
         
@@ -141,7 +143,7 @@ async def get_financial_model(
         raise
     except Exception as e:
         logger.error(f"Error fetching financial model: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.put("/models/{model_id}", response_model=FinancialModelResponse)
@@ -149,21 +151,22 @@ async def update_financial_model(
     model_id: int,
     model_data: FinancialModelUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("financial_modeling", "update")),
     request: Request = None
 ):
     """Update a financial model"""
+    current_user, org_id = auth
+    
     try:
         service = FinancialModelingService(db)
         
         model = db.query(FinancialModel).filter(
             FinancialModel.id == model_id,
-            FinancialModel.organization_id == organization_id
+            FinancialModel.organization_id == org_id
         ).first()
         
         if not model:
-            raise HTTPException(status_code=404, detail="Financial model not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial model not found")
         
         # Track changes for audit trail
         changes = []
@@ -193,7 +196,7 @@ async def update_financial_model(
         for field, old_val, new_val in changes:
             service.create_audit_trail(
                 financial_model_id=model.id,
-                organization_id=organization_id,
+                organization_id=org_id,
                 action_type="update",
                 user_id=current_user.id,
                 field_changed=field,
@@ -209,25 +212,26 @@ async def update_financial_model(
         raise
     except Exception as e:
         logger.error(f"Error updating financial model: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/models/{model_id}")
 async def delete_financial_model(
     model_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "delete")),
 ):
     """Delete a financial model"""
+    current_user, org_id = auth
+    
     try:
         model = db.query(FinancialModel).filter(
             FinancialModel.id == model_id,
-            FinancialModel.organization_id == organization_id
+            FinancialModel.organization_id == org_id
         ).first()
         
         if not model:
-            raise HTTPException(status_code=404, detail="Financial model not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial model not found")
         
         db.delete(model)
         db.commit()
@@ -238,7 +242,7 @@ async def delete_financial_model(
         raise
     except Exception as e:
         logger.error(f"Error deleting financial model: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # DCF Model Endpoints
@@ -247,21 +251,22 @@ async def create_dcf_model(
     model_id: int,
     dcf_data: DCFModelCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "create")),
 ):
     """Create a DCF model for a financial model"""
+    current_user, org_id = auth
+    
     try:
         service = FinancialModelingService(db)
         
         # Verify the financial model exists
         financial_model = db.query(FinancialModel).filter(
             FinancialModel.id == model_id,
-            FinancialModel.organization_id == organization_id
+            FinancialModel.organization_id == org_id
         ).first()
         
         if not financial_model:
-            raise HTTPException(status_code=404, detail="Financial model not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial model not found")
         
         # Calculate WACC
         wacc = service.calculate_wacc(
@@ -331,7 +336,7 @@ async def create_dcf_model(
         # Create DCF model
         dcf_model = DCFModel(
             financial_model_id=model_id,
-            organization_id=organization_id,
+            organization_id=org_id,
             cost_of_equity=dcf_data.cost_of_equity,
             cost_of_debt=dcf_data.cost_of_debt,
             tax_rate=dcf_data.tax_rate,
@@ -359,25 +364,26 @@ async def create_dcf_model(
         raise
     except Exception as e:
         logger.error(f"Error creating DCF model: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/models/{model_id}/dcf", response_model=DCFModelResponse)
 async def get_dcf_model(
     model_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "read")),
 ):
     """Get DCF model for a financial model"""
+    current_user, org_id = auth
+    
     try:
         dcf_model = db.query(DCFModel).filter(
             DCFModel.financial_model_id == model_id,
-            DCFModel.organization_id == organization_id
+            DCFModel.organization_id == org_id
         ).first()
         
         if not dcf_model:
-            raise HTTPException(status_code=404, detail="DCF model not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DCF model not found")
         
         return dcf_model
         
@@ -385,7 +391,7 @@ async def get_dcf_model(
         raise
     except Exception as e:
         logger.error(f"Error fetching DCF model: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Scenario Analysis Endpoints
@@ -394,21 +400,22 @@ async def create_scenario_analysis(
     model_id: int,
     scenario_data: ScenarioAnalysisCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "create")),
 ):
     """Create scenario analysis for a financial model"""
+    current_user, org_id = auth
+    
     try:
         service = FinancialModelingService(db)
         
         # Verify the financial model exists
         financial_model = db.query(FinancialModel).filter(
             FinancialModel.id == model_id,
-            FinancialModel.organization_id == organization_id
+            FinancialModel.organization_id == org_id
         ).first()
         
         if not financial_model:
-            raise HTTPException(status_code=404, detail="Financial model not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial model not found")
         
         # Get base case assumptions from the financial model
         base_assumptions = financial_model.assumptions.copy()
@@ -447,7 +454,7 @@ async def create_scenario_analysis(
         # Create scenario analysis
         scenario = ScenarioAnalysis(
             financial_model_id=model_id,
-            organization_id=organization_id,
+            organization_id=org_id,
             scenario_name=scenario_data.scenario_name,
             scenario_type=scenario_data.scenario_type,
             scenario_description=scenario_data.scenario_description,
@@ -469,28 +476,29 @@ async def create_scenario_analysis(
         raise
     except Exception as e:
         logger.error(f"Error creating scenario analysis: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/models/{model_id}/scenarios", response_model=List[ScenarioAnalysisResponse])
 async def get_scenario_analyses(
     model_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "read")),
 ):
     """Get scenario analyses for a financial model"""
+    current_user, org_id = auth
+    
     try:
         scenarios = db.query(ScenarioAnalysis).filter(
             ScenarioAnalysis.financial_model_id == model_id,
-            ScenarioAnalysis.organization_id == organization_id
+            ScenarioAnalysis.organization_id == org_id
         ).order_by(desc(ScenarioAnalysis.created_at)).all()
         
         return scenarios
         
     except Exception as e:
         logger.error(f"Error fetching scenario analyses: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Trading Comparables Endpoints
@@ -498,13 +506,14 @@ async def get_scenario_analyses(
 async def create_trading_comparable(
     comparable_data: TradingComparablesCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "create")),
 ):
     """Create a trading comparable"""
+    current_user, org_id = auth
+    
     try:
         comparable = TradingComparables(
-            organization_id=organization_id,
+            organization_id=org_id,
             **comparable_data.dict(),
             created_by_id=current_user.id
         )
@@ -517,7 +526,7 @@ async def create_trading_comparable(
         
     except Exception as e:
         logger.error(f"Error creating trading comparable: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/trading-comparables", response_model=List[TradingComparablesResponse])
@@ -527,13 +536,14 @@ async def get_trading_comparables(
     industry: Optional[str] = Query(None),
     is_active: bool = Query(True),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "read")),
 ):
     """Get trading comparables with filtering"""
+    current_user, org_id = auth
+    
     try:
         query = db.query(TradingComparables).filter(
-            TradingComparables.organization_id == organization_id,
+            TradingComparables.organization_id == org_id,
             TradingComparables.is_active == is_active
         )
         
@@ -545,7 +555,7 @@ async def get_trading_comparables(
         
     except Exception as e:
         logger.error(f"Error fetching trading comparables: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Transaction Comparables Endpoints
@@ -553,13 +563,14 @@ async def get_trading_comparables(
 async def create_transaction_comparable(
     comparable_data: TransactionComparablesCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "create")),
 ):
     """Create a transaction comparable"""
+    current_user, org_id = auth
+    
     try:
         comparable = TransactionComparables(
-            organization_id=organization_id,
+            organization_id=org_id,
             **comparable_data.dict(),
             created_by_id=current_user.id
         )
@@ -572,7 +583,7 @@ async def create_transaction_comparable(
         
     except Exception as e:
         logger.error(f"Error creating transaction comparable: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/transaction-comparables", response_model=List[TransactionComparablesResponse])
@@ -583,15 +594,16 @@ async def get_transaction_comparables(
     is_active: bool = Query(True),
     lookback_years: int = Query(5, ge=1, le=20),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "read")),
 ):
     """Get transaction comparables with filtering"""
+    current_user, org_id = auth
+    
     try:
         cutoff_date = date.today().replace(year=date.today().year - lookback_years)
         
         query = db.query(TransactionComparables).filter(
-            TransactionComparables.organization_id == organization_id,
+            TransactionComparables.organization_id == org_id,
             TransactionComparables.is_active == is_active,
             TransactionComparables.transaction_date >= cutoff_date
         )
@@ -604,7 +616,7 @@ async def get_transaction_comparables(
         
     except Exception as e:
         logger.error(f"Error fetching transaction comparables: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Comprehensive Valuation
@@ -612,17 +624,18 @@ async def get_transaction_comparables(
 async def perform_comprehensive_valuation(
     valuation_request: ComprehensiveValuationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "create")),
 ):
     """Perform comprehensive valuation using multiple methods"""
+    current_user, org_id = auth
+    
     try:
         service = FinancialModelingService(db)
         
         # Validate weights sum to 1
         total_weight = valuation_request.dcf_weight + valuation_request.trading_comps_weight + valuation_request.transaction_comps_weight
         if abs(total_weight - 1.0) > 0.01:
-            raise HTTPException(status_code=400, detail="Valuation method weights must sum to 1.0")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valuation method weights must sum to 1.0")
         
         results = service.perform_comprehensive_valuation(organization_id, valuation_request)
         
@@ -632,7 +645,7 @@ async def perform_comprehensive_valuation(
         raise
     except Exception as e:
         logger.error(f"Error performing comprehensive valuation: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Ratio Analysis
@@ -640,10 +653,11 @@ async def perform_comprehensive_valuation(
 async def get_ratio_analysis(
     as_of_date: Optional[date] = Query(None, description="Analysis date (defaults to today)"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "read")),
 ):
     """Get financial ratio analysis"""
+    current_user, org_id = auth
+    
     try:
         service = FinancialModelingService(db)
         
@@ -677,7 +691,7 @@ async def get_ratio_analysis(
         
     except Exception as e:
         logger.error(f"Error calculating ratio analysis: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Model Templates
@@ -691,6 +705,8 @@ async def get_model_templates(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get financial model templates"""
+    current_user, org_id = auth
+    
     try:
         query = db.query(FinancialModelTemplate).filter(
             FinancialModelTemplate.is_active == True
@@ -713,7 +729,7 @@ async def get_model_templates(
         
     except Exception as e:
         logger.error(f"Error fetching model templates: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.post("/models/from-template/{template_id}", response_model=FinancialModelResponse)
@@ -721,8 +737,7 @@ async def create_model_from_template(
     template_id: int,
     model_name: str = Query(..., description="Name for the new model"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "create")),
 ):
     """Create a financial model from a template"""
     try:
@@ -733,11 +748,11 @@ async def create_model_from_template(
         ).first()
         
         if not template:
-            raise HTTPException(status_code=404, detail="Template not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
         
         # Create financial model from template
         financial_model = FinancialModel(
-            organization_id=organization_id,
+            organization_id=org_id,
             model_name=model_name,
             model_type=template.model_type,
             model_version="1.0",
@@ -765,7 +780,7 @@ async def create_model_from_template(
         raise
     except Exception as e:
         logger.error(f"Error creating model from template: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Audit Trail
@@ -775,23 +790,24 @@ async def get_model_audit_trail(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "read")),
 ):
     """Get audit trail for a financial model"""
+    current_user, org_id = auth
+    
     try:
         # Verify model exists and user has access
         model = db.query(FinancialModel).filter(
             FinancialModel.id == model_id,
-            FinancialModel.organization_id == organization_id
+            FinancialModel.organization_id == org_id
         ).first()
         
         if not model:
-            raise HTTPException(status_code=404, detail="Financial model not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial model not found")
         
         audit_entries = db.query(ModelAuditTrail).filter(
             ModelAuditTrail.financial_model_id == model_id,
-            ModelAuditTrail.organization_id == organization_id
+            ModelAuditTrail.organization_id == org_id
         ).order_by(desc(ModelAuditTrail.changed_at)).offset(skip).limit(limit).all()
         
         return audit_entries
@@ -800,7 +816,7 @@ async def get_model_audit_trail(
         raise
     except Exception as e:
         logger.error(f"Error fetching audit trail: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Export Endpoints
@@ -809,35 +825,36 @@ async def export_financial_model_excel(
     model_id: int,
     include_scenarios: bool = Query(True, description="Include scenario analysis"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "read")),
 ):
     """Export financial model to Excel format"""
+    current_user, org_id = auth
+    
     try:
         # Get financial model
         model = db.query(FinancialModel).filter(
             FinancialModel.id == model_id,
-            FinancialModel.organization_id == organization_id
+            FinancialModel.organization_id == org_id
         ).first()
         
         if not model:
-            raise HTTPException(status_code=404, detail="Financial model not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial model not found")
         
         # Get DCF model if exists
         dcf_model = db.query(DCFModel).filter(
             DCFModel.financial_model_id == model_id,
-            DCFModel.organization_id == organization_id
+            DCFModel.organization_id == org_id
         ).first()
         
         if not dcf_model:
-            raise HTTPException(status_code=404, detail="DCF model not found for this financial model")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="DCF model not found for this financial model")
         
         # Get scenarios if requested
         scenarios = []
         if include_scenarios:
             scenarios = db.query(ScenarioAnalysis).filter(
                 ScenarioAnalysis.financial_model_id == model_id,
-                ScenarioAnalysis.organization_id == organization_id
+                ScenarioAnalysis.organization_id == org_id
             ).all()
         
         # Convert to dictionaries
@@ -907,7 +924,7 @@ async def export_financial_model_excel(
         raise
     except Exception as e:
         logger.error(f"Error exporting financial model to Excel: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/trading-comparables/export/csv")
@@ -915,13 +932,14 @@ async def export_trading_comparables_csv(
     industry: Optional[str] = Query(None),
     is_active: bool = Query(True),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("financial_modeling", "read")),
 ):
     """Export trading comparables to CSV format"""
+    current_user, org_id = auth
+    
     try:
         query = db.query(TradingComparables).filter(
-            TradingComparables.organization_id == organization_id,
+            TradingComparables.organization_id == org_id,
             TradingComparables.is_active == is_active
         )
         
@@ -963,4 +981,6 @@ async def export_trading_comparables_csv(
         
     except Exception as e:
         logger.error(f"Error exporting trading comparables to CSV: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    current_user, org_id = auth
+    

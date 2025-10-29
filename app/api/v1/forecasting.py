@@ -10,8 +10,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.forecasting_models import (
     FinancialForecast, MLForecastModel, MLPrediction, BusinessDriverModel,
@@ -38,16 +37,17 @@ router = APIRouter()
 @router.post("/forecasts", response_model=FinancialForecastResponse)
 async def create_financial_forecast(
     forecast_data: FinancialForecastCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "create")),
+    db: Session = Depends(get_db)
 ):
     """Create a new financial forecast with ML modeling"""
+    current_user, org_id = auth
+    
     try:
         service = ForecastingService(db)
         
         forecast = service.create_financial_forecast(
-            organization_id=organization_id,
+            organization_id=org_id,
             forecast_data=forecast_data,
             user_id=current_user.id
         )
@@ -56,7 +56,7 @@ async def create_financial_forecast(
         
     except Exception as e:
         logger.error(f"Error creating financial forecast: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/forecasts", response_model=List[FinancialForecastResponse])
@@ -67,14 +67,15 @@ async def get_financial_forecasts(
     forecast_method: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     is_baseline: Optional[bool] = Query(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "read")),
+    db: Session = Depends(get_db)
 ):
     """Get financial forecasts with filtering"""
+    current_user, org_id = auth
+    
     try:
         query = db.query(FinancialForecast).filter(
-            FinancialForecast.organization_id == organization_id
+            FinancialForecast.organization_id == org_id
         )
         
         if forecast_type:
@@ -91,25 +92,26 @@ async def get_financial_forecasts(
         
     except Exception as e:
         logger.error(f"Error fetching financial forecasts: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/forecasts/{forecast_id}", response_model=FinancialForecastResponse)
 async def get_financial_forecast(
     forecast_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "read")),
 ):
     """Get a specific financial forecast"""
+    current_user, org_id = auth
+    
     try:
         forecast = db.query(FinancialForecast).filter(
             FinancialForecast.id == forecast_id,
-            FinancialForecast.organization_id == organization_id
+            FinancialForecast.organization_id == org_id
         ).first()
         
         if not forecast:
-            raise HTTPException(status_code=404, detail="Financial forecast not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial forecast not found")
         
         return forecast
         
@@ -117,28 +119,33 @@ async def get_financial_forecast(
         raise
     except Exception as e:
         logger.error(f"Error fetching financial forecast: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.put("/forecasts/{forecast_id}", response_model=FinancialForecastResponse)
 async def update_financial_forecast(
     forecast_id: int,
     forecast_data: FinancialForecastUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "update")),
+    db: Session = Depends(get_db)
 ):
     """Update a financial forecast"""
+    current_user, org_id = auth
+    
+    
     try:
         service = ForecastingService(db)
         
         forecast = db.query(FinancialForecast).filter(
             FinancialForecast.id == forecast_id,
-            FinancialForecast.organization_id == organization_id
+            FinancialForecast.organization_id == org_id
         ).first()
         
         if not forecast:
-            raise HTTPException(status_code=404, detail="Financial forecast not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Financial forecast not found"
+            )
         
         # Track version if significant changes
         create_version = False
@@ -168,7 +175,7 @@ async def update_financial_forecast(
             # Only one forecast can be baseline per type/org
             if forecast_data.is_baseline:
                 db.query(FinancialForecast).filter(
-                    FinancialForecast.organization_id == organization_id,
+                    FinancialForecast.organization_id == org_id,
                     FinancialForecast.forecast_type == forecast.forecast_type,
                     FinancialForecast.id != forecast_id
                 ).update({'is_baseline': False})
@@ -203,25 +210,26 @@ async def update_financial_forecast(
         raise
     except Exception as e:
         logger.error(f"Error updating financial forecast: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/forecasts/{forecast_id}")
 async def delete_financial_forecast(
     forecast_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "delete")),
+    db: Session = Depends(get_db)
 ):
     """Delete a financial forecast"""
+    current_user, org_id = auth
+    
     try:
         forecast = db.query(FinancialForecast).filter(
             FinancialForecast.id == forecast_id,
-            FinancialForecast.organization_id == organization_id
+            FinancialForecast.organization_id == org_id
         ).first()
         
         if not forecast:
-            raise HTTPException(status_code=404, detail="Financial forecast not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial forecast not found")
         
         db.delete(forecast)
         db.commit()
@@ -232,7 +240,7 @@ async def delete_financial_forecast(
         raise
     except Exception as e:
         logger.error(f"Error deleting financial forecast: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Business Drivers
@@ -240,24 +248,25 @@ async def delete_financial_forecast(
 async def create_business_driver(
     forecast_id: int,
     driver_data: BusinessDriverCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "create")),
+    db: Session = Depends(get_db)
 ):
     """Create a business driver for a forecast"""
+    current_user, org_id = auth
+    
     try:
         # Verify forecast exists
         forecast = db.query(FinancialForecast).filter(
             FinancialForecast.id == forecast_id,
-            FinancialForecast.organization_id == organization_id
+            FinancialForecast.organization_id == org_id
         ).first()
         
         if not forecast:
-            raise HTTPException(status_code=404, detail="Financial forecast not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Financial forecast not found")
         
         driver = BusinessDriverModel(
             financial_forecast_id=forecast_id,
-            organization_id=organization_id,
+            organization_id=org_id,
             **driver_data.dict(),
             created_by_id=current_user.id
         )
@@ -272,7 +281,7 @@ async def create_business_driver(
         raise
     except Exception as e:
         logger.error(f"Error creating business driver: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/forecasts/{forecast_id}/drivers", response_model=List[BusinessDriverResponse])
@@ -281,14 +290,15 @@ async def get_business_drivers(
     driver_category: Optional[str] = Query(None),
     is_active: bool = Query(True),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "read")),
 ):
     """Get business drivers for a forecast"""
+    current_user, org_id = auth
+    
     try:
         query = db.query(BusinessDriverModel).filter(
             BusinessDriverModel.financial_forecast_id == forecast_id,
-            BusinessDriverModel.organization_id == organization_id,
+            BusinessDriverModel.organization_id == org_id,
             BusinessDriverModel.is_active == is_active
         )
         
@@ -300,7 +310,7 @@ async def get_business_drivers(
         
     except Exception as e:
         logger.error(f"Error fetching business drivers: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # ML Models
@@ -308,16 +318,17 @@ async def get_business_drivers(
 async def create_ml_forecast_model(
     model_data: MLForecastModelCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "create")),
 ):
     """Create and train an ML forecast model"""
+    current_user, org_id = auth
+    
     try:
         service = ForecastingService(db)
         
         # Create ML model record
         ml_model = MLForecastModel(
-            organization_id=organization_id,
+            organization_id=org_id,
             **model_data.dict(exclude={'training_data'}),
             training_data_size=len(model_data.training_data.get('values', [])),
             created_by_id=current_user.id
@@ -349,7 +360,7 @@ async def create_ml_forecast_model(
         
     except Exception as e:
         logger.error(f"Error creating ML forecast model: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/ml-models", response_model=List[MLForecastModelResponse])
@@ -361,13 +372,14 @@ async def get_ml_forecast_models(
     is_active: bool = Query(True),
     is_production: Optional[bool] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "read")),
 ):
     """Get ML forecast models with filtering"""
+    current_user, org_id = auth
+    
     try:
         query = db.query(MLForecastModel).filter(
-            MLForecastModel.organization_id == organization_id,
+            MLForecastModel.organization_id == org_id,
             MLForecastModel.is_active == is_active
         )
         
@@ -383,27 +395,28 @@ async def get_ml_forecast_models(
         
     except Exception as e:
         logger.error(f"Error fetching ML forecast models: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.post("/predictions", response_model=MLPredictionResponse)
 async def create_prediction(
     prediction_request: PredictionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "create")),
 ):
     """Generate a prediction using an ML model"""
+    current_user, org_id = auth
+    
     try:
         # Verify ML model exists and is active
         ml_model = db.query(MLForecastModel).filter(
             MLForecastModel.id == prediction_request.model_id,
-            MLForecastModel.organization_id == organization_id,
+            MLForecastModel.organization_id == org_id,
             MLForecastModel.is_active == True
         ).first()
         
         if not ml_model:
-            raise HTTPException(status_code=404, detail="ML model not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ML model not found")
         
         # Generate prediction (simplified - would use actual trained model)
         # For demo purposes, we'll create a prediction based on input features
@@ -426,7 +439,7 @@ async def create_prediction(
         
         prediction = MLPrediction(
             ml_model_id=prediction_request.model_id,
-            organization_id=organization_id,
+            organization_id=org_id,
             prediction_date=prediction_request.prediction_date,
             predicted_value=predicted_value,
             confidence_score=confidence_score,
@@ -445,7 +458,7 @@ async def create_prediction(
         raise
     except Exception as e:
         logger.error(f"Error creating prediction: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/predictions", response_model=List[MLPredictionResponse])
@@ -456,13 +469,14 @@ async def get_predictions(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "read")),
 ):
     """Get predictions with filtering"""
+    current_user, org_id = auth
+    
     try:
         query = db.query(MLPrediction).filter(
-            MLPrediction.organization_id == organization_id
+            MLPrediction.organization_id == org_id
         )
         
         if model_id:
@@ -477,7 +491,7 @@ async def get_predictions(
         
     except Exception as e:
         logger.error(f"Error fetching predictions: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Risk Analysis
@@ -485,10 +499,11 @@ async def get_predictions(
 async def create_risk_analysis(
     risk_data: RiskAnalysisCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "create")),
 ):
     """Create a risk analysis"""
+    current_user, org_id = auth
+    
     try:
         # Calculate risk score
         risk_score = (risk_data.probability * risk_data.impact_score) / 10
@@ -504,7 +519,7 @@ async def create_risk_analysis(
             alert_level = "low"
         
         risk_analysis = RiskAnalysis(
-            organization_id=organization_id,
+            organization_id=org_id,
             **risk_data.dict(),
             risk_score=Decimal(str(risk_score)),
             alert_level=alert_level,
@@ -520,7 +535,7 @@ async def create_risk_analysis(
         
     except Exception as e:
         logger.error(f"Error creating risk analysis: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/risk-analysis", response_model=List[RiskAnalysisResponse])
@@ -531,13 +546,14 @@ async def get_risk_analyses(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "read")),
 ):
     """Get risk analyses with filtering"""
+    current_user, org_id = auth
+    
     try:
         query = db.query(RiskAnalysis).filter(
-            RiskAnalysis.organization_id == organization_id
+            RiskAnalysis.organization_id == org_id
         )
         
         if risk_category:
@@ -552,7 +568,7 @@ async def get_risk_analyses(
         
     except Exception as e:
         logger.error(f"Error fetching risk analyses: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Risk Events
@@ -560,23 +576,24 @@ async def get_risk_analyses(
 async def create_risk_event(
     event_data: RiskEventCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "create")),
 ):
     """Create a risk event"""
+    current_user, org_id = auth
+    
     try:
         # Verify risk analysis exists
         risk_analysis = db.query(RiskAnalysis).filter(
             RiskAnalysis.id == event_data.risk_analysis_id,
-            RiskAnalysis.organization_id == organization_id
+            RiskAnalysis.organization_id == org_id
         ).first()
         
         if not risk_analysis:
-            raise HTTPException(status_code=404, detail="Risk analysis not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Risk analysis not found")
         
         risk_event = RiskEvent(
             **event_data.dict(),
-            organization_id=organization_id,
+            organization_id=org_id,
             reported_by_id=current_user.id
         )
         
@@ -590,7 +607,7 @@ async def create_risk_event(
         raise
     except Exception as e:
         logger.error(f"Error creating risk event: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Automated Insights
@@ -603,13 +620,14 @@ async def get_automated_insights(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "read")),
 ):
     """Get automated insights with filtering"""
+    current_user, org_id = auth
+    
     try:
         query = db.query(AutomatedInsight).filter(
-            AutomatedInsight.organization_id == organization_id
+            AutomatedInsight.organization_id == org_id
         )
         
         if insight_type:
@@ -630,7 +648,7 @@ async def get_automated_insights(
         
     except Exception as e:
         logger.error(f"Error fetching automated insights: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.post("/insights/generate")
@@ -638,15 +656,16 @@ async def generate_automated_insights(
     data_sources: List[str] = Query(..., description="Data sources to analyze"),
     analysis_period_days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "create")),
 ):
     """Generate automated insights using AI/ML analysis"""
+    current_user, org_id = auth
+    
     try:
         service = ForecastingService(db)
         
         insights = service.generate_automated_insights(
-            organization_id=organization_id,
+            organization_id=org_id,
             data_sources=data_sources,
             analysis_period_days=analysis_period_days
         )
@@ -660,7 +679,7 @@ async def generate_automated_insights(
         
     except Exception as e:
         logger.error(f"Error generating automated insights: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.put("/insights/{insight_id}", response_model=AutomatedInsightResponse)
@@ -668,18 +687,19 @@ async def update_automated_insight(
     insight_id: int,
     insight_data: AutomatedInsightUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "update")),
 ):
     """Update an automated insight (mark as reviewed, provide feedback, etc.)"""
+    current_user, org_id = auth
+    
     try:
         insight = db.query(AutomatedInsight).filter(
             AutomatedInsight.id == insight_id,
-            AutomatedInsight.organization_id == organization_id
+            AutomatedInsight.organization_id == org_id
         ).first()
         
         if not insight:
-            raise HTTPException(status_code=404, detail="Automated insight not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Automated insight not found")
         
         if insight_data.status:
             insight.status = insight_data.status
@@ -702,7 +722,7 @@ async def update_automated_insight(
         raise
     except Exception as e:
         logger.error(f"Error updating automated insight: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Advanced Analytics
@@ -710,10 +730,11 @@ async def update_automated_insight(
 async def create_multivariate_forecast(
     forecast_request: MultiVariateForecastRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "create")),
 ):
     """Create a multivariate forecast using advanced ML models"""
+    current_user, org_id = auth
+    
     try:
         # This would implement advanced multivariate forecasting
         # For now, return a placeholder response
@@ -729,26 +750,27 @@ async def create_multivariate_forecast(
         
     except Exception as e:
         logger.error(f"Error creating multivariate forecast: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.post("/sensitivity-analysis")
 async def perform_sensitivity_analysis(
     sensitivity_request: SensitivityAnalysisRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "create")),
 ):
     """Perform sensitivity analysis on a forecast"""
+    current_user, org_id = auth
+    
     try:
         # Verify forecast exists
         forecast = db.query(FinancialForecast).filter(
             FinancialForecast.id == sensitivity_request.forecast_id,
-            FinancialForecast.organization_id == organization_id
+            FinancialForecast.organization_id == org_id
         ).first()
         
         if not forecast:
-            raise HTTPException(status_code=404, detail="Forecast not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Forecast not found")
         
         # Perform sensitivity analysis (simplified implementation)
         results = {
@@ -772,7 +794,7 @@ async def perform_sensitivity_analysis(
         raise
     except Exception as e:
         logger.error(f"Error performing sensitivity analysis: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/early-warning-signals", response_model=List[EarlyWarningSignal])
@@ -780,17 +802,18 @@ async def get_early_warning_signals(
     severity: Optional[str] = Query(None),
     min_confidence: Optional[float] = Query(None, ge=0, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "read")),
 ):
     """Get early warning signals for potential issues"""
+    current_user, org_id = auth
+    
     try:
         # Generate early warning signals based on recent data
         signals = []
         
         # Check for risk alerts
         high_risk_alerts = db.query(RiskAnalysis).filter(
-            RiskAnalysis.organization_id == organization_id,
+            RiskAnalysis.organization_id == org_id,
             RiskAnalysis.alert_level.in_(["high", "critical"]),
             RiskAnalysis.is_active_alert == True
         ).all()
@@ -822,26 +845,27 @@ async def get_early_warning_signals(
         
     except Exception as e:
         logger.error(f"Error fetching early warning signals: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/dashboard", response_model=ForecastDashboardData)
 async def get_forecast_dashboard(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "read")),
 ):
     """Get forecasting dashboard data"""
+    current_user, org_id = auth
+    
     try:
         # Get active forecasts count
         active_forecasts = db.query(FinancialForecast).filter(
-            FinancialForecast.organization_id == organization_id,
+            FinancialForecast.organization_id == org_id,
             FinancialForecast.status.in_(["draft", "in_review", "approved", "published"])
         ).count()
         
         # Get forecast accuracy average
         forecasts_with_accuracy = db.query(FinancialForecast).filter(
-            FinancialForecast.organization_id == organization_id,
+            FinancialForecast.organization_id == org_id,
             FinancialForecast.validation_period_accuracy.isnot(None)
         ).all()
         
@@ -852,7 +876,7 @@ async def get_forecast_dashboard(
         
         # Get recent predictions
         recent_predictions = db.query(MLPrediction).filter(
-            MLPrediction.organization_id == organization_id
+            MLPrediction.organization_id == org_id
         ).order_by(desc(MLPrediction.predicted_at)).limit(5).all()
         
         predictions_data = [
@@ -866,7 +890,7 @@ async def get_forecast_dashboard(
         
         # Get risk alerts
         risk_alerts = db.query(RiskAnalysis).filter(
-            RiskAnalysis.organization_id == organization_id,
+            RiskAnalysis.organization_id == org_id,
             RiskAnalysis.is_active_alert == True
         ).limit(10).all()
         
@@ -881,7 +905,7 @@ async def get_forecast_dashboard(
         
         # Get key insights
         key_insights = db.query(AutomatedInsight).filter(
-            AutomatedInsight.organization_id == organization_id,
+            AutomatedInsight.organization_id == org_id,
             AutomatedInsight.importance_score >= 7.0,
             AutomatedInsight.status == "new"
         ).order_by(desc(AutomatedInsight.importance_score)).limit(5).all()
@@ -904,11 +928,11 @@ async def get_forecast_dashboard(
             key_insights=insights_data,
             performance_metrics={
                 "total_ml_models": db.query(MLForecastModel).filter(
-                    MLForecastModel.organization_id == organization_id,
+                    MLForecastModel.organization_id == org_id,
                     MLForecastModel.is_active == True
                 ).count(),
                 "predictions_this_month": db.query(MLPrediction).filter(
-                    MLPrediction.organization_id == organization_id,
+                    MLPrediction.organization_id == org_id,
                     MLPrediction.predicted_at >= datetime.utcnow().replace(day=1)
                 ).count()
             },
@@ -922,7 +946,7 @@ async def get_forecast_dashboard(
         
     except Exception as e:
         logger.error(f"Error fetching forecast dashboard: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # Forecast Versions
@@ -930,23 +954,24 @@ async def get_forecast_dashboard(
 async def get_forecast_versions(
     forecast_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "read")),
 ):
     """Get version history for a forecast"""
+    current_user, org_id = auth
+    
     try:
         # Verify forecast exists
         forecast = db.query(FinancialForecast).filter(
             FinancialForecast.id == forecast_id,
-            FinancialForecast.organization_id == organization_id
+            FinancialForecast.organization_id == org_id
         ).first()
         
         if not forecast:
-            raise HTTPException(status_code=404, detail="Forecast not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Forecast not found")
         
         versions = db.query(ForecastVersion).filter(
             ForecastVersion.financial_forecast_id == forecast_id,
-            ForecastVersion.organization_id == organization_id
+            ForecastVersion.organization_id == org_id
         ).order_by(desc(ForecastVersion.created_at)).all()
         
         return versions
@@ -955,7 +980,7 @@ async def get_forecast_versions(
         raise
     except Exception as e:
         logger.error(f"Error fetching forecast versions: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.post("/forecasts/{forecast_id}/accuracy-analysis", response_model=ForecastAccuracyReport)
@@ -963,21 +988,22 @@ async def analyze_forecast_accuracy(
     forecast_id: int,
     actual_data: Dict[str, Any],
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("forecasting", "create")),
 ):
     """Analyze forecast accuracy against actual data"""
+    current_user, org_id = auth
+    
     try:
         service = ForecastingService(db)
         
         # Verify forecast exists
         forecast = db.query(FinancialForecast).filter(
             FinancialForecast.id == forecast_id,
-            FinancialForecast.organization_id == organization_id
+            FinancialForecast.organization_id == org_id
         ).first()
         
         if not forecast:
-            raise HTTPException(status_code=404, detail="Forecast not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Forecast not found")
         
         accuracy_analysis = service.analyze_forecast_accuracy(forecast_id, actual_data)
         
@@ -1005,4 +1031,4 @@ async def analyze_forecast_accuracy(
         raise
     except Exception as e:
         logger.error(f"Error analyzing forecast accuracy: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
