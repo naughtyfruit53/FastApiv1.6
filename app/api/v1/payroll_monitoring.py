@@ -32,6 +32,8 @@ async def get_payroll_health_check(
     db: Session = Depends(get_db),
 ):
     """Get comprehensive payroll system health check"""
+    current_user, organization_id = auth
+    
     try:
         start_time = time.time()
         query_count = 0
@@ -134,6 +136,8 @@ async def get_payroll_metrics(
     db: Session = Depends(get_db),
 ):
     """Get detailed payroll metrics and analytics"""
+    current_user, organization_id = auth
+    
     try:
         start_date = datetime.utcnow() - timedelta(days=days)
         
@@ -270,6 +274,8 @@ async def get_performance_analysis(
     db: Session = Depends(get_db),
 ):
     """Get performance analysis and bottleneck identification"""
+    current_user, organization_id = auth
+    
     try:
         start_time = time.time()
         
@@ -388,6 +394,8 @@ async def get_payroll_alerts(
     db: Session = Depends(get_db),
 ):
     """Get current payroll system alerts and warnings"""
+    current_user, organization_id = auth
+    
     try:
         alerts = []
         
@@ -507,6 +515,8 @@ async def run_performance_benchmark(
     db: Session = Depends(get_db),
 ):
     """Run comprehensive performance benchmark"""
+    current_user, organization_id = auth
+    
     try:
         benchmark_results = {}
         

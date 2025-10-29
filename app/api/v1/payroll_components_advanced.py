@@ -41,6 +41,8 @@ async def bulk_create_payroll_components(
     db: Session = Depends(get_db),
 ):
     """Bulk create payroll components with chart account mappings"""
+    current_user, organization_id = auth
+    
     try:
         created_components = []
         errors = []
@@ -148,6 +150,8 @@ async def get_advanced_payroll_components(
     db: Session = Depends(get_db),
 ):
     """Get payroll components with advanced filtering and account details"""
+    current_user, organization_id = auth
+    
     try:
         query = db.query(PayrollComponent).options(
             joinedload(PayrollComponent.expense_account),
@@ -236,6 +240,8 @@ async def update_component_chart_mapping(
     db: Session = Depends(get_db),
 ):
     """Update chart account mapping for a payroll component"""
+    current_user, organization_id = auth
+    
     try:
         # Get component
         component = db.query(PayrollComponent).filter(
@@ -329,6 +335,8 @@ async def get_component_mapping_status(
     db: Session = Depends(get_db),
 ):
     """Get mapping status for all payroll components"""
+    current_user, organization_id = auth
+    
     try:
         # Get counts by mapping status
         total_components = db.query(func.count(PayrollComponent.id)).filter(
@@ -399,6 +407,8 @@ async def update_advanced_payroll_settings(
     db: Session = Depends(get_db),
 ):
     """Update advanced payroll settings with default account mappings"""
+    current_user, organization_id = auth
+    
     try:
         # This would integrate with a PayrollSettings model to store advanced configurations
         # For now, we'll return the received settings as confirmation
@@ -428,6 +438,8 @@ async def validate_all_components(
     db: Session = Depends(get_db),
 ):
     """Validate all payroll components for chart account mappings"""
+    current_user, organization_id = auth
+    
     try:
         components = db.query(PayrollComponent).options(
             joinedload(PayrollComponent.expense_account),
