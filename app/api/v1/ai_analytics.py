@@ -8,8 +8,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from app.core.permissions import PermissionChecker
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.services.ai_analytics_service import AIAnalyticsService
 from app.schemas.ai_analytics import (
@@ -28,14 +27,11 @@ router = APIRouter()
 
 @router.get("/dashboard", response_model=AIAnalyticsDashboard)
 async def get_ai_analytics_dashboard(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Get AI analytics dashboard data"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
-    
-    service = AIAnalyticsService(db)
-    dashboard_data = service.get_ai_analytics_dashboard(organization_id)
+    """Get AI analytics dashboard data"""    service = AIAnalyticsService(db)
+    dashboard_data = service.get_ai_analytics_dashboard(org_id)
     
     return AIAnalyticsDashboard(**dashboard_data)
 
@@ -46,15 +42,12 @@ async def get_ai_analytics_dashboard(
 @router.post("/models", response_model=AIModelResponse)
 async def create_ai_model(
     model_data: AIModelCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Create a new AI model"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:create", db)
-    
-    service = AIAnalyticsService(db)
+    """Create a new AI model"""    service = AIAnalyticsService(db)
     model = service.create_ai_model(
-        organization_id=organization_id,
+        organization_id=org_id,
         model_data=model_data,
         created_by_id=current_user.id
     )
@@ -65,15 +58,12 @@ async def create_ai_model(
 async def get_ai_models(
     status: Optional[ModelStatusEnum] = Query(None, description="Filter by model status"),
     model_type: Optional[PredictionTypeEnum] = Query(None, description="Filter by model type"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Get AI models for the organization"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
-    
-    service = AIAnalyticsService(db)
+    """Get AI models for the organization"""    service = AIAnalyticsService(db)
     models = service.get_ai_models(
-        organization_id=organization_id,
+        organization_id=org_id,
         status=status,
         model_type=model_type
     )
@@ -83,14 +73,11 @@ async def get_ai_models(
 @router.get("/models/{model_id}", response_model=AIModelResponse)
 async def get_ai_model(
     model_id: int = Path(..., description="AI model ID"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Get a specific AI model"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
-    
-    service = AIAnalyticsService(db)
-    model = service.get_ai_model(organization_id, model_id)
+    """Get a specific AI model"""    service = AIAnalyticsService(db)
+    model = service.get_ai_model(org_id, model_id)
     
     if not model:
         raise HTTPException(status_code=404, detail="AI model not found")
@@ -101,14 +88,11 @@ async def get_ai_model(
 async def update_ai_model(
     model_id: int,
     update_data: AIModelUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Update an AI model"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:update", db)
-    
-    service = AIAnalyticsService(db)
-    model = service.get_ai_model(organization_id, model_id)
+    """Update an AI model"""    service = AIAnalyticsService(db)
+    model = service.get_ai_model(org_id, model_id)
     
     if not model:
         raise HTTPException(status_code=404, detail="AI model not found")
@@ -127,17 +111,14 @@ async def update_ai_model(
 async def train_ai_model(
     model_id: int,
     training_request: ModelTrainingRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Train an AI model"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:manage", db)
-    
-    service = AIAnalyticsService(db)
+    """Train an AI model"""    service = AIAnalyticsService(db)
     
     try:
         result = service.train_model(
-            organization_id=organization_id,
+            organization_id=org_id,
             model_id=model_id,
             training_request=training_request
         )
@@ -149,17 +130,14 @@ async def train_ai_model(
 async def deploy_ai_model(
     model_id: int,
     deployment_request: ModelDeploymentRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Deploy an AI model to production"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:manage", db)
-    
-    service = AIAnalyticsService(db)
+    """Deploy an AI model to production"""    service = AIAnalyticsService(db)
     
     try:
         result = service.deploy_model(
-            organization_id=organization_id,
+            organization_id=org_id,
             model_id=model_id
         )
         return result
@@ -169,14 +147,11 @@ async def deploy_ai_model(
 @router.get("/models/{model_id}/performance", response_model=ModelPerformanceSummary)
 async def get_model_performance(
     model_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Get model performance metrics"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
-    
-    service = AIAnalyticsService(db)
-    model = service.get_ai_model(organization_id, model_id)
+    """Get model performance metrics"""    service = AIAnalyticsService(db)
+    model = service.get_ai_model(org_id, model_id)
     
     if not model:
         raise HTTPException(status_code=404, detail="AI model not found")
@@ -215,17 +190,14 @@ async def get_model_performance(
 @router.post("/predict", response_model=PredictionResponse)
 async def make_prediction(
     prediction_request: PredictionRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Make a prediction using a deployed AI model"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:predict", db)
-    
-    service = AIAnalyticsService(db)
+    """Make a prediction using a deployed AI model"""    service = AIAnalyticsService(db)
     
     try:
         prediction_result = service.make_prediction(
-            organization_id=organization_id,
+            organization_id=org_id,
             prediction_request=prediction_request,
             user_id=current_user.id
         )
@@ -237,15 +209,12 @@ async def make_prediction(
 async def get_predictions(
     model_id: Optional[int] = Query(None, description="Filter by model ID"),
     limit: int = Query(100, ge=1, le=1000, description="Number of results to return"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Get prediction results"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
-    
-    service = AIAnalyticsService(db)
+    """Get prediction results"""    service = AIAnalyticsService(db)
     predictions = service.get_prediction_results(
-        organization_id=organization_id,
+        organization_id=org_id,
         model_id=model_id,
         limit=limit
     )
@@ -256,13 +225,10 @@ async def get_predictions(
 async def submit_prediction_feedback(
     prediction_id: str,
     feedback: PredictionFeedback,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Submit feedback for a prediction"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:feedback", db)
-    
-    from app.models.ai_analytics_models import PredictionResult
+    """Submit feedback for a prediction"""    from app.models.ai_analytics_models import PredictionResult
     
     prediction = db.query(PredictionResult).filter(
         PredictionResult.prediction_id == prediction_id,
@@ -289,15 +255,12 @@ async def submit_prediction_feedback(
 async def detect_anomalies(
     data_source: str = Query(..., description="Data source to analyze (sales, service, customer, all)"),
     time_range_hours: int = Query(24, ge=1, le=168, description="Time range in hours"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Detect anomalies in business data"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:detect", db)
-    
-    service = AIAnalyticsService(db)
+    """Detect anomalies in business data"""    service = AIAnalyticsService(db)
     anomalies = service.detect_anomalies(
-        organization_id=organization_id,
+        organization_id=org_id,
         data_source=data_source,
         time_range_hours=time_range_hours
     )
@@ -307,15 +270,12 @@ async def detect_anomalies(
 @router.get("/anomalies", response_model=List[AnomalyDetectionResponse])
 async def get_anomalies(
     severity: Optional[SeverityLevel] = Query(None, description="Filter by severity"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Get active anomalies"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
-    
-    service = AIAnalyticsService(db)
+    """Get active anomalies"""    service = AIAnalyticsService(db)
     anomalies = service.get_active_anomalies(
-        organization_id=organization_id,
+        organization_id=org_id,
         severity=severity
     )
     
@@ -325,13 +285,10 @@ async def get_anomalies(
 async def update_anomaly(
     anomaly_id: int,
     update_request: AnomalyUpdateRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Update an anomaly alert"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:manage", db)
-    
-    from app.models.ai_analytics_models import AnomalyDetection
+    """Update an anomaly alert"""    from app.models.ai_analytics_models import AnomalyDetection
     
     anomaly = db.query(AnomalyDetection).filter(
         AnomalyDetection.id == anomaly_id,
@@ -362,15 +319,12 @@ async def update_anomaly(
 @router.post("/insights/generate")
 async def generate_insights(
     categories: Optional[List[str]] = Query(None, description="Categories to generate insights for"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Generate AI-powered business insights"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:generate", db)
-    
-    service = AIAnalyticsService(db)
+    """Generate AI-powered business insights"""    service = AIAnalyticsService(db)
     insights = service.generate_insights(
-        organization_id=organization_id,
+        organization_id=org_id,
         categories=categories
     )
     
@@ -380,15 +334,12 @@ async def generate_insights(
 async def get_insights(
     priority: Optional[str] = Query(None, description="Filter by priority"),
     category: Optional[str] = Query(None, description="Filter by category"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Get active AI insights"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
-    
-    service = AIAnalyticsService(db)
+    """Get active AI insights"""    service = AIAnalyticsService(db)
     insights = service.get_active_insights(
-        organization_id=organization_id,
+        organization_id=org_id,
         priority=priority,
         category=category
     )
@@ -399,13 +350,10 @@ async def get_insights(
 async def update_insight(
     insight_id: int,
     update_request: AIInsightUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Update an AI insight"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:manage", db)
-    
-    from app.models.ai_analytics_models import AIInsight
+    """Update an AI insight"""    from app.models.ai_analytics_models import AIInsight
     
     insight = db.query(AIInsight).filter(
         AIInsight.id == insight_id,
@@ -434,17 +382,14 @@ async def update_insight(
 @router.post("/predictive", response_model=PredictiveAnalyticsResponse)
 async def generate_predictive_analytics(
     request: PredictiveAnalyticsRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Generate predictive analytics"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:predict", db)
-    
-    service = AIAnalyticsService(db)
+    """Generate predictive analytics"""    service = AIAnalyticsService(db)
     
     try:
         result = service.generate_predictive_analytics(
-            organization_id=organization_id,
+            organization_id=org_id,
             request=request
         )
         return PredictiveAnalyticsResponse(**result)
@@ -458,16 +403,13 @@ async def generate_predictive_analytics(
 @router.post("/workflows", response_model=AutomationWorkflowResponse)
 async def create_automation_workflow(
     workflow_data: AutomationWorkflowCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Create an automation workflow"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:automation", db)
-    
-    from app.models.ai_analytics_models import AutomationWorkflow
+    """Create an automation workflow"""    from app.models.ai_analytics_models import AutomationWorkflow
     
     workflow = AutomationWorkflow(
-        organization_id=organization_id,
+        organization_id=org_id,
         workflow_name=workflow_data.workflow_name,
         description=workflow_data.description,
         workflow_type=workflow_data.workflow_type,
@@ -491,13 +433,10 @@ async def create_automation_workflow(
 async def get_automation_workflows(
     workflow_type: Optional[str] = Query(None, description="Filter by workflow type"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("ai_analytics", "read")),
+    db:  = Depends(get_db)
 ):
-    """Get automation workflows"""
-    PermissionChecker.require_permission(current_user, "ai_analytics:read", db)
-    
-    from app.models.ai_analytics_models import AutomationWorkflow
+    """Get automation workflows"""    from app.models.ai_analytics_models import AutomationWorkflow
     
     query = db.query(AutomationWorkflow).filter(
         AutomationWorkflow.organization_id == organization_id

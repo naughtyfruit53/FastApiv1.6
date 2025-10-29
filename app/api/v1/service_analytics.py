@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.models import User, InstallationJob, Customer
 from app.services.service_analytics_service import ServiceAnalyticsService, get_service_analytics_service
 from app.schemas.service_analytics import (
@@ -23,7 +24,6 @@ from app.core.rbac_dependencies import (
     require_same_organization, require_analytics_read, require_analytics_manage,
     require_analytics_export
 )
-from app.core.tenant import require_current_organization_id
 import logging
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ async def get_analytics_dashboard(
     logger.info(f"User {current_user.id} requesting analytics dashboard for organization {organization_id}")
     
     try:
-        analytics_service = ServiceAnalyticsService(db, organization_id)
+        analytics_service = ServiceAnalyticsService(db, org_id)
         dashboard = analytics_service.get_analytics_dashboard(
             period=period,
             start_date=start_date,
@@ -81,7 +81,7 @@ async def get_job_completion_metrics(
     logger.info(f"User {current_user.id} requesting job completion metrics for organization {organization_id}")
     
     try:
-        analytics_service = ServiceAnalyticsService(db, organization_id)
+        analytics_service = ServiceAnalyticsService(db, org_id)
         date_start, date_end = analytics_service.get_date_range(period, start_date, end_date)
         
         metrics = analytics_service.get_job_completion_metrics(
@@ -113,7 +113,7 @@ async def get_technician_performance_metrics(
     logger.info(f"User {current_user.id} requesting technician performance metrics for organization {organization_id}")
     
     try:
-        analytics_service = ServiceAnalyticsService(db, organization_id)
+        analytics_service = ServiceAnalyticsService(db, org_id)
         date_start, date_end = analytics_service.get_date_range(period, start_date, end_date)
         
         metrics = analytics_service.get_technician_performance_metrics(
@@ -145,7 +145,7 @@ async def get_customer_satisfaction_metrics(
     logger.info(f"User {current_user.id} requesting customer satisfaction metrics for organization {organization_id}")
     
     try:
-        analytics_service = ServiceAnalyticsService(db, organization_id)
+        analytics_service = ServiceAnalyticsService(db, org_id)
         date_start, date_end = analytics_service.get_date_range(period, start_date, end_date)
         
         metrics = analytics_service.get_customer_satisfaction_metrics(
@@ -179,7 +179,7 @@ async def get_job_volume_metrics(
     logger.info(f"User {current_user.id} requesting job volume metrics for organization {organization_id}")
     
     try:
-        analytics_service = ServiceAnalyticsService(db, organization_id)
+        analytics_service = ServiceAnalyticsService(db, org_id)
         date_start, date_end = analytics_service.get_date_range(period, start_date, end_date)
         
         metrics = analytics_service.get_job_volume_metrics(
@@ -213,7 +213,7 @@ async def get_sla_compliance_metrics(
     logger.info(f"User {current_user.id} requesting SLA compliance metrics for organization {organization_id}")
     
     try:
-        analytics_service = ServiceAnalyticsService(db, organization_id)
+        analytics_service = ServiceAnalyticsService(db, org_id)
         date_start, date_end = analytics_service.get_date_range(period, start_date, end_date)
         
         metrics = analytics_service.get_sla_compliance_metrics(

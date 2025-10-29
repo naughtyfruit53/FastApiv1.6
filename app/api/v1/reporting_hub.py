@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, date
 import json
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user as get_current_user
 from app.models.user_models import User
 from app.schemas.project import ProjectResponse
@@ -86,8 +87,8 @@ class PendingPurchaseOrderResponse(BaseModel):
 async def get_executive_dashboard(
     company_id: Optional[int] = Query(None, description="Filter by specific company"),
     date_range: int = Query(30, description="Date range in days"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("reporting_hub", "read")),
+    db:  = Depends(get_db)
 ):
     """Get executive dashboard with comprehensive business metrics"""
     org_id = current_user.organization_id
@@ -387,8 +388,8 @@ async def get_executive_dashboard(
 @router.get("/reports/projects", response_model=ModuleReport)
 async def get_project_report(
     filters: ReportFilter = Depends(),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("reporting_hub", "read")),
+    db:  = Depends(get_db)
 ):
     """Get comprehensive project management report"""
     org_id = current_user.organization_id
@@ -569,8 +570,8 @@ async def get_project_report(
 @router.get("/reports/workflow", response_model=ModuleReport)
 async def get_workflow_report(
     filters: ReportFilter = Depends(),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("reporting_hub", "read")),
+    db:  = Depends(get_db)
 ):
     """Get comprehensive workflow and approval report"""
     org_id = current_user.organization_id
@@ -705,8 +706,8 @@ async def get_workflow_report(
 @router.post("/reports/custom", response_model=ReportResponse)
 async def generate_custom_report(
     report_config: Dict[str, Any],
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("reporting_hub", "read")),
+    db:  = Depends(get_db)
 ):
     """Generate a custom report based on configuration"""
     check_service_permission(current_user, "reporting", "create", db)
@@ -748,8 +749,8 @@ async def generate_custom_report(
 async def export_dashboard(
     format: str = Query("excel", pattern="^(excel|pdf|csv)$"),
     company_id: Optional[int] = Query(None),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("reporting_hub", "read")),
+    db:  = Depends(get_db)
 ):
     """Export dashboard data in various formats"""
     # This would generate and return the exported file
@@ -763,8 +764,8 @@ async def export_dashboard(
 # Added endpoint to fix the error
 @router.get("/reports/pending-purchase-orders-with-grn-status", response_model=List[PendingPurchaseOrderResponse])
 def get_pending_purchase_orders_with_grn_status(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("reporting_hub", "read")),
+    db:  = Depends(get_db)
 ):
     """Get pending purchase orders with GRN status"""
     org_id = current_user.organization_id

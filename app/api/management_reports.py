@@ -6,16 +6,13 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models import User, Product, Stock, Vendor, Customer, Organization
 from app.models.vouchers import (
     PurchaseVoucher, SalesVoucher, PurchaseOrder, SalesOrder,
     PaymentVoucher, ReceiptVoucher
 )
 from app.models.analytics_models import ReportConfiguration
-from app.core.tenant import require_current_organization_id, TenantQueryMixin
-from app.core.permissions import PermissionChecker, Permission
-from app.core.org_restrictions import ensure_organization_context
 from app.services.excel_service import ExcelService, ReportsExcelService
 import logging
 
@@ -25,8 +22,8 @@ router = APIRouter(prefix="/management-reports", tags=["management-reports"])
 @router.get("/executive-dashboard")
 async def get_executive_dashboard(
     period: str = "month",  # day, week, month, quarter, year
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("management_reports", "read")),
+    db:  = Depends(get_db)
 ):
     """
     Get executive dashboard with key business metrics and KPIs.
@@ -34,15 +31,11 @@ async def get_executive_dashboard(
     """
     try:
         # Check permissions - only admins and authorized users can access
-        if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
+        if notFalse:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions for management reports"
-            )
-        
-        org_id = require_current_organization_id()
-        
-        # Calculate date range based on period
+            )        # Calculate date range based on period
         end_date = datetime.now().date()
         if period == "day":
             start_date = end_date
@@ -59,9 +52,7 @@ async def get_executive_dashboard(
             start_date = end_date.replace(day=1)  # Default to month
         
         # Revenue and Sales Metrics
-        sales_query = TenantQueryMixin.filter_by_tenant(
-            db.query(SalesVoucher), SalesVoucher, org_id
-        ).filter(SalesVoucher.date >= start_date)
+        sales_query = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(SalesVoucher.date >= start_date)
         
         total_revenue = sales_query.with_entities(
             func.sum(SalesVoucher.total_amount)
@@ -70,9 +61,7 @@ async def get_executive_dashboard(
         sales_count = sales_query.count()
         
         # Purchase and Cost Metrics
-        purchase_query = TenantQueryMixin.filter_by_tenant(
-            db.query(PurchaseVoucher), PurchaseVoucher, org_id
-        ).filter(PurchaseVoucher.date >= start_date)
+        purchase_query = db.query(PurchaseVoucher).filter(PurchaseVoucher.organization_id == org_id).filter(PurchaseVoucher.date >= start_date)
         
         total_costs = purchase_query.with_entities(
             func.sum(PurchaseVoucher.total_amount)
@@ -81,39 +70,27 @@ async def get_executive_dashboard(
         purchase_count = purchase_query.count()
         
         # Customer Metrics
-        active_customers = TenantQueryMixin.filter_by_tenant(
-            db.query(Customer), Customer, org_id
-        ).filter(Customer.is_active == True).count()
+        active_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(Customer.is_active == True).count()
         
-        new_customers = TenantQueryMixin.filter_by_tenant(
-            db.query(Customer), Customer, org_id
-        ).filter(
+        new_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(
             Customer.created_at >= start_date,
             Customer.is_active == True
         ).count()
         
         # Inventory Metrics
-        total_products = TenantQueryMixin.filter_by_tenant(
-            db.query(Product), Product, org_id
-        ).filter(Product.is_active == True).count()
+        total_products = db.query(Product).filter(Product.organization_id == org_id).filter(Product.is_active == True).count()
         
-        low_stock_items = TenantQueryMixin.filter_by_tenant(
-            db.query(Stock), Stock, org_id
-        ).join(Product).filter(
+        low_stock_items = db.query(Stock).filter(Stock.organization_id == org_id).join(Product).filter(
             Stock.quantity <= Product.reorder_level,
             Product.is_active == True
         ).count()
         
         # Outstanding Amounts
-        pending_receivables = TenantQueryMixin.filter_by_tenant(
-            db.query(SalesVoucher), SalesVoucher, org_id
-        ).filter(SalesVoucher.status.in_(["pending", "partial"])).with_entities(
+        pending_receivables = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(SalesVoucher.status.in_(["pending", "partial"])).with_entities(
             func.sum(SalesVoucher.total_amount)
         ).scalar() or Decimal(0)
         
-        pending_payables = TenantQueryMixin.filter_by_tenant(
-            db.query(PurchaseVoucher), PurchaseVoucher, org_id
-        ).filter(PurchaseVoucher.status.in_(["pending", "partial"])).with_entities(
+        pending_payables = db.query(PurchaseVoucher).filter(PurchaseVoucher.organization_id == org_id).filter(PurchaseVoucher.status.in_(["pending", "partial"])).with_entities(
             func.sum(PurchaseVoucher.total_amount)
         ).scalar() or Decimal(0)
         
@@ -171,23 +148,19 @@ async def get_business_intelligence(
     metric_type: str = "overview",  # overview, sales, customers, inventory, financial
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("management_reports", "read")),
+    db:  = Depends(get_db)
 ):
     """
     Get business intelligence reports with advanced analytics and insights.
     """
     try:
         # Check permissions
-        if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
+        if notFalse:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions for business intelligence reports"
-            )
-        
-        org_id = require_current_organization_id()
-        
-        # Default date range to last 6 months if not specified
+            )        # Default date range to last 6 months if not specified
         if not end_date:
             end_date = datetime.now().date()
         if not start_date:
@@ -222,23 +195,19 @@ async def get_business_intelligence(
 @router.get("/operational-kpis")
 async def get_operational_kpis(
     kpi_category: str = "all",  # all, efficiency, quality, customer, financial
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("management_reports", "read")),
+    db:  = Depends(get_db)
 ):
     """
     Get operational KPIs for performance monitoring and management insights.
     """
     try:
         # Check permissions
-        if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
+        if notFalse:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions for operational KPIs"
-            )
-        
-        org_id = require_current_organization_id()
-        
-        # Calculate current month and previous month for comparison
+            )        # Calculate current month and previous month for comparison
         current_date = datetime.now().date()
         current_month_start = current_date.replace(day=1)
         prev_month_end = current_month_start - timedelta(days=1)
@@ -286,23 +255,19 @@ async def get_operational_kpis(
 @router.post("/scheduled-reports")
 async def create_scheduled_report(
     report_config: Dict[str, Any],
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("management_reports", "read")),
+    db:  = Depends(get_db)
 ):
     """
     Create a scheduled management report configuration.
     """
     try:
         # Check permissions
-        if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
+        if notFalse:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions to create scheduled reports"
-            )
-        
-        org_id = require_current_organization_id()
-        
-        # Create report configuration
+            )        # Create report configuration
         new_config = ReportConfiguration(
             organization_id=org_id,
             name=report_config.get("name", "Management Report"),
@@ -341,15 +306,15 @@ async def create_scheduled_report(
 async def export_executive_dashboard(
     format: str = "excel",  # excel, pdf
     period: str = "month",
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("management_reports", "read")),
+    db:  = Depends(get_db)
 ):
     """
     Export executive dashboard data to Excel or PDF.
     """
     try:
         # Check permissions
-        if not PermissionChecker.has_permission(current_user, Permission.VIEW_USERS):
+        if notFalse:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions to export management reports"
@@ -382,9 +347,7 @@ async def export_executive_dashboard(
 # Helper functions for business intelligence
 async def _get_sales_intelligence(db: Session, org_id: int, start_date: date, end_date: date):
     """Get sales-specific business intelligence metrics."""
-    sales_query = TenantQueryMixin.filter_by_tenant(
-        db.query(SalesVoucher), SalesVoucher, org_id
-    ).filter(
+    sales_query = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(
         SalesVoucher.date >= start_date,
         SalesVoucher.date <= end_date
     )
@@ -418,13 +381,9 @@ async def _get_sales_intelligence(db: Session, org_id: int, start_date: date, en
 async def _get_customer_intelligence(db: Session, org_id: int, start_date: date, end_date: date):
     """Get customer-specific business intelligence metrics."""
     # Customer acquisition and retention metrics
-    total_customers = TenantQueryMixin.filter_by_tenant(
-        db.query(Customer), Customer, org_id
-    ).filter(Customer.is_active == True).count()
+    total_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(Customer.is_active == True).count()
     
-    new_customers = TenantQueryMixin.filter_by_tenant(
-        db.query(Customer), Customer, org_id
-    ).filter(
+    new_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(
         Customer.created_at >= start_date,
         Customer.is_active == True
     ).count()
@@ -439,13 +398,9 @@ async def _get_customer_intelligence(db: Session, org_id: int, start_date: date,
 async def _get_inventory_intelligence(db: Session, org_id: int, start_date: date, end_date: date):
     """Get inventory-specific business intelligence metrics."""
     # Inventory turnover and performance metrics
-    total_products = TenantQueryMixin.filter_by_tenant(
-        db.query(Product), Product, org_id
-    ).filter(Product.is_active == True).count()
+    total_products = db.query(Product).filter(Product.organization_id == org_id).filter(Product.is_active == True).count()
     
-    low_stock_count = TenantQueryMixin.filter_by_tenant(
-        db.query(Stock), Stock, org_id
-    ).join(Product).filter(
+    low_stock_count = db.query(Stock).filter(Stock.organization_id == org_id).join(Product).filter(
         Stock.quantity <= Product.reorder_level,
         Product.is_active == True
     ).count()
@@ -460,16 +415,12 @@ async def _get_inventory_intelligence(db: Session, org_id: int, start_date: date
 async def _get_financial_intelligence(db: Session, org_id: int, start_date: date, end_date: date):
     """Get financial-specific business intelligence metrics."""
     # Cash flow and financial health metrics
-    total_receivables = TenantQueryMixin.filter_by_tenant(
-        db.query(SalesVoucher), SalesVoucher, org_id
-    ).filter(
+    total_receivables = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(
         SalesVoucher.date >= start_date,
         SalesVoucher.status.in_(["pending", "partial"])
     ).with_entities(func.sum(SalesVoucher.total_amount)).scalar() or Decimal(0)
     
-    total_payables = TenantQueryMixin.filter_by_tenant(
-        db.query(PurchaseVoucher), PurchaseVoucher, org_id
-    ).filter(
+    total_payables = db.query(PurchaseVoucher).filter(PurchaseVoucher.organization_id == org_id).filter(
         PurchaseVoucher.date >= start_date,
         PurchaseVoucher.status.in_(["pending", "partial"])
     ).with_entities(func.sum(PurchaseVoucher.total_amount)).scalar() or Decimal(0)
@@ -485,13 +436,9 @@ async def _get_financial_intelligence(db: Session, org_id: int, start_date: date
 async def _calculate_efficiency_kpis(db: Session, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
     """Calculate efficiency-related KPIs."""
     # Order processing time, inventory turnover, etc.
-    current_orders = TenantQueryMixin.filter_by_tenant(
-        db.query(SalesOrder), SalesOrder, org_id
-    ).filter(SalesOrder.date >= current_start, SalesOrder.date <= current_end).count()
+    current_orders = db.query(SalesOrder).filter(SalesOrder.organization_id == org_id).filter(SalesOrder.date >= current_start, SalesOrder.date <= current_end).count()
     
-    prev_orders = TenantQueryMixin.filter_by_tenant(
-        db.query(SalesOrder), SalesOrder, org_id
-    ).filter(SalesOrder.date >= prev_start, SalesOrder.date <= prev_end).count()
+    prev_orders = db.query(SalesOrder).filter(SalesOrder.organization_id == org_id).filter(SalesOrder.date >= prev_start, SalesOrder.date <= prev_end).count()
     
     order_growth = ((current_orders - prev_orders) / prev_orders * 100) if prev_orders > 0 else 0
     
@@ -515,17 +462,13 @@ async def _calculate_quality_kpis(db: Session, org_id: int, current_start: date,
 
 async def _calculate_customer_kpis(db: Session, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
     """Calculate customer-related KPIs."""
-    current_customers = TenantQueryMixin.filter_by_tenant(
-        db.query(Customer), Customer, org_id
-    ).filter(
+    current_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(
         Customer.created_at >= current_start,
         Customer.created_at <= current_end,
         Customer.is_active == True
     ).count()
     
-    prev_customers = TenantQueryMixin.filter_by_tenant(
-        db.query(Customer), Customer, org_id
-    ).filter(
+    prev_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(
         Customer.created_at >= prev_start,
         Customer.created_at <= prev_end,
         Customer.is_active == True
@@ -544,16 +487,12 @@ async def _calculate_customer_kpis(db: Session, org_id: int, current_start: date
 
 async def _calculate_financial_kpis(db: Session, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
     """Calculate financial-related KPIs."""
-    current_revenue = TenantQueryMixin.filter_by_tenant(
-        db.query(SalesVoucher), SalesVoucher, org_id
-    ).filter(
+    current_revenue = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(
         SalesVoucher.date >= current_start,
         SalesVoucher.date <= current_end
     ).with_entities(func.sum(SalesVoucher.total_amount)).scalar() or Decimal(0)
     
-    prev_revenue = TenantQueryMixin.filter_by_tenant(
-        db.query(SalesVoucher), SalesVoucher, org_id
-    ).filter(
+    prev_revenue = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(
         SalesVoucher.date >= prev_start,
         SalesVoucher.date <= prev_end
     ).with_entities(func.sum(SalesVoucher.total_amount)).scalar() or Decimal(0)
