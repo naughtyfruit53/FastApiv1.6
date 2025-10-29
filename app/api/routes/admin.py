@@ -8,7 +8,8 @@ import string
 from datetime import datetime
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_super_admin, get_current_active_user
+from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.services.user_service import UserService
 from app.schemas.user import UserCreate, UserUpdate, UserInDB, AdminPasswordResetRequest, AdminPasswordResetResponse
 from app.core.security import get_password_hash
@@ -37,14 +38,15 @@ def generate_secure_password(length: int = 12) -> str:
 async def reset_user_password(
     reset_request: AdminPasswordResetRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_super_admin)
+    auth: tuple = Depends(require_access("admin", "update")),
+    db: Session = Depends(get_db)
 ):
     """
     Reset password for a licenseholder admin user.
-    Only super admins can perform this operation.
-    Both emails the new password (if email configured) and displays it to super admin.
+    Requires admin update permission.
+    Both emails the new password (if email configured) and displays it to admin.
     """
+    current_user, _ = auth
     try:
         # Find the target user
         target_user = db.query(User).filter(User.email == reset_request.user_email).first()
@@ -204,15 +206,21 @@ async def list_users(
     skip: int = 0,
     limit: int = 100,
     organization_id: Optional[int] = None,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_super_admin)
+    auth: tuple = Depends(require_access("admin", "read")),
+    db: Session = Depends(get_db)
 ):
-    """List users (super admin only)"""
+    """List users (admin read permission required)"""
+    current_user, org_id = auth
     try:
         query = db.query(User)
         
+        # Enforce tenant isolation - filter by user's organization unless they specify a different one
+        # For super admins with admin permission, they can optionally view other organizations
         if organization_id:
             query = query.filter(User.organization_id == organization_id)
+        else:
+            # Default to the user's own organization
+            query = query.filter(User.organization_id == org_id)
         
         users = query.offset(skip).limit(limit).all()
         
@@ -228,7 +236,9 @@ async def list_users(
         )
 
 @router.get("/users/me", response_model=UserInDB)
-async def get_current_user_me(current_user: User = Depends(get_current_active_user)):
+async def get_current_user_me(
+    current_user: User = Depends(get_current_active_user)
+):
     """Get current authenticated user details"""
     return current_user
 
@@ -236,13 +246,21 @@ async def get_current_user_me(current_user: User = Depends(get_current_active_us
 async def update_user(
     user_id: int,
     user_update: UserUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_super_admin)
+    auth: tuple = Depends(require_access("admin", "update")),
+    db: Session = Depends(get_db)
 ):
-    """Update user details (super admin only)"""
+    """Update user details (admin update permission required)"""
+    current_user, org_id = auth
     try:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Enforce tenant isolation - can only update users in the same organization
+        if user.organization_id != org_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
@@ -283,10 +301,11 @@ async def update_user(
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_super_admin)
+    auth: tuple = Depends(require_access("admin", "delete")),
+    db: Session = Depends(get_db)
 ):
-    """Delete user (super admin only)"""
+    """Delete user (admin delete permission required)"""
+    current_user, org_id = auth
     try:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
@@ -295,16 +314,23 @@ async def delete_user(
                 detail="User not found"
             )
         
-        # Prevent deletion of super admin accounts
-        if user.is_super_admin:
+        # Enforce tenant isolation - can only delete users in the same organization
+        if user.organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Prevent deletion of super admin accounts for security
+        if getattr(user, 'is_super_admin', False):
             log_security_event(
                 "User deletion denied - super admin protection",
                 user_email=current_user.email,
                 details=f"Target user: {user.email}"
             )
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Cannot delete super admin accounts"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
             )
         
         user_email = user.email
