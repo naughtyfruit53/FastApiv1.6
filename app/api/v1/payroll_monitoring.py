@@ -30,7 +30,6 @@ router = APIRouter()
 async def get_payroll_health_check(
     auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get comprehensive payroll system health check"""
     try:
@@ -131,9 +130,8 @@ async def get_payroll_health_check(
 @router.get("/payroll/monitoring/metrics")
 async def get_payroll_metrics(
     days: int = Query(30, description="Number of days to analyze"),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get detailed payroll metrics and analytics"""
     try:
@@ -270,7 +268,6 @@ async def get_payroll_metrics(
 async def get_performance_analysis(
     auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get performance analysis and bottleneck identification"""
     try:
@@ -387,9 +384,8 @@ async def get_performance_analysis(
 @router.get("/payroll/monitoring/alerts")
 async def get_payroll_alerts(
     severity: Optional[str] = Query(None, description="Filter by severity: low, medium, high, critical"),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get current payroll system alerts and warnings"""
     try:
@@ -509,7 +505,6 @@ async def get_payroll_alerts(
 async def run_performance_benchmark(
     auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Run comprehensive performance benchmark"""
     try:

@@ -39,7 +39,6 @@ async def bulk_create_payroll_components(
     bulk_data: BulkPayrollComponentCreate,
     auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Bulk create payroll components with chart account mappings"""
     try:
@@ -145,9 +144,8 @@ async def get_advanced_payroll_components(
     filter_params: PayrollComponentFilter = Depends(),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get payroll components with advanced filtering and account details"""
     try:
@@ -236,7 +234,6 @@ async def update_component_chart_mapping(
     mapping_data: PayrollComponentMappingUpdate,
     auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Update chart account mapping for a payroll component"""
     try:
@@ -330,7 +327,6 @@ async def update_component_chart_mapping(
 async def get_component_mapping_status(
     auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get mapping status for all payroll components"""
     try:
@@ -401,7 +397,6 @@ async def update_advanced_payroll_settings(
     settings: AdvancedPayrollSettings,
     auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Update advanced payroll settings with default account mappings"""
     try:
@@ -431,7 +426,6 @@ async def update_advanced_payroll_settings(
 async def validate_all_components(
     auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Validate all payroll components for chart account mappings"""
     try:
