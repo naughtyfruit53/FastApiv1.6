@@ -166,6 +166,37 @@ class ApiClient {
     // Clean up
     window.URL.revokeObjectURL(link.href);
   }
+
+  /**
+   * Get headers for API requests with optional organization ID for super admins
+   * @param orgId Optional organization ID for super admin cross-org operations
+   * @returns Headers object with Authorization and optional X-Organization-ID
+   */
+  getHeaders(orgId?: number): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add authorization token
+    const token = typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Add organization ID header if provided (for super admin operations)
+    if (orgId !== undefined && orgId !== null) {
+      headers['X-Organization-ID'] = String(orgId);
+    }
+
+    return headers;
+  }
+
+  /**
+   * Get axios instance for direct use with custom config
+   */
+  getInstance(): AxiosInstance {
+    return this.client;
+  }
 }
 
 export const apiClient = new ApiClient();
