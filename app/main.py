@@ -5,9 +5,11 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 from app.core.config import settings as config_settings
 from app.core.database import create_tables, AsyncSessionLocal
 from app.core.seed_super_admin import seed_super_admin
@@ -16,6 +18,39 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import ProgrammingError
 
 logger = logging.getLogger(__name__)
+
+# ForceCORSMiddleware: Inject CORS headers on ALL responses (including 500s and exceptions)
+class ForceCORSMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware that ensures CORS headers are present on all responses,
+    including error responses (4xx, 5xx) that might bypass standard CORS middleware.
+    """
+    def __init__(self, app: ASGIApp, allowed_origins: list):
+        super().__init__(app)
+        self.allowed_origins = allowed_origins
+    
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin")
+        
+        # Process the request
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            # If an unhandled exception occurs, create an error response with CORS headers
+            logger.error(f"Unhandled exception in request: {exc}", exc_info=True)
+            response = JSONResponse(
+                status_code=500,
+                content={"detail": "Internal server error"}
+            )
+        
+        # Add CORS headers if origin is in allowed list
+        if origin and origin in self.allowed_origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        
+        return response
 
 # Custom APIRouter to disable slash redirection
 from fastapi.routing import APIRouter as FastAPIRouter
@@ -153,6 +188,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add ForceCORSMiddleware to ensure CORS headers on ALL responses (including errors)
+app.add_middleware(ForceCORSMiddleware, allowed_origins=origins)
+
+# Global exception handler to ensure JSON error responses include CORS headers
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Global exception handler that ensures all unhandled exceptions
+    return JSON responses with proper CORS headers.
+    """
+    logger.error(f"Unhandled exception in {request.method} {request.url}: {exc}", exc_info=True)
+    
+    origin = request.headers.get("origin")
+    headers = {}
+    
+    # Add CORS headers if origin is in allowed list
+    if origin and origin in origins:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "error": str(exc) if config_settings.DEBUG else "An unexpected error occurred"
+        },
+        headers=headers
+    )
 
 # Debug CORS configuration on startup
 @app.on_event("startup")
