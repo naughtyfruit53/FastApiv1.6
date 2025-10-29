@@ -3,8 +3,7 @@
 """
 Centralized Reporting Hub API for comprehensive business intelligence and analytics
 """
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
+    from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func, desc, asc, text
 from typing import List, Optional, Dict, Any
@@ -91,7 +90,7 @@ async def get_executive_dashboard(
     db:  = Depends(get_db)
 ):
     """Get executive dashboard with comprehensive business metrics"""
-    org_id = current_user.organization_id
+    org_id = current_user.org_id
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -120,7 +119,8 @@ async def get_executive_dashboard(
         SELECT COUNT(DISTINCT user_id) FROM audit_logs 
         WHERE organization_id = :org_id 
         AND timestamp >= :today
-    """), {
+    """
+    ), {
         "org_id": org_id, 
         "today": datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     }).scalar() or 0
@@ -138,13 +138,15 @@ async def get_executive_dashboard(
             SELECT COALESCE(SUM(budget), 0) FROM projects 
             WHERE organization_id = :org_id 
             AND (:company_id IS NULL OR company_id = :company_id)
-        """), {"org_id": org_id, "company_id": company_id}).scalar() or 0
+        """
+    ), {"org_id": org_id, "company_id": company_id}).scalar() or 0
         
         total_actual_cost = db.execute(text("""
             SELECT COALESCE(SUM(actual_cost), 0) FROM projects 
             WHERE organization_id = :org_id 
             AND (:company_id IS NULL OR company_id = :company_id)
-        """), {"org_id": org_id, "company_id": company_id}).scalar() or 0
+        """
+    ), {"org_id": org_id, "company_id": company_id}).scalar() or 0
         
         budget_utilization = (total_actual_cost / total_project_budget * 100) if total_project_budget > 0 else 0
         
@@ -169,14 +171,16 @@ async def get_executive_dashboard(
             SELECT COUNT(*) FROM api_usage_logs 
             WHERE organization_id = :org_id 
             AND timestamp >= :start_date
-        """), {"org_id": org_id, "start_date": start_date}).scalar() or 0
+        """
+    ), {"org_id": org_id, "start_date": start_date}).scalar() or 0
         
         successful_requests = db.execute(text("""
             SELECT COUNT(*) FROM api_usage_logs 
             WHERE organization_id = :org_id 
             AND timestamp >= :start_date 
             AND status_code BETWEEN 200 AND 299
-        """), {"org_id": org_id, "start_date": start_date}).scalar() or 0
+        """
+    ), {"org_id": org_id, "start_date": start_date}).scalar() or 0
         
         api_success_rate = (successful_requests / total_api_requests * 100) if total_api_requests > 0 else 100
         
@@ -186,7 +190,8 @@ async def get_executive_dashboard(
             WHERE organization_id = :org_id 
             AND status = 'active'
             AND (:company_id IS NULL OR company_id = :company_id)
-        """), {"org_id": org_id, "company_id": company_id}).scalar() or 0
+        """
+    ), {"org_id": org_id, "company_id": company_id}).scalar() or 0
         
         operational_metrics = {
             "total_api_requests": total_api_requests,
@@ -208,21 +213,24 @@ async def get_executive_dashboard(
             SELECT COUNT(*) FROM projects 
             WHERE organization_id = :org_id 
             AND (:company_id IS NULL OR company_id = :company_id)
-        """), {"org_id": org_id, "company_id": company_id}).scalar() or 0
+        """
+    ), {"org_id": org_id, "company_id": company_id}).scalar() or 0
         
         active_projects = db.execute(text("""
             SELECT COUNT(*) FROM projects 
             WHERE organization_id = :org_id 
             AND status = 'active'
             AND (:company_id IS NULL OR company_id = :company_id)
-        """), {"org_id": org_id, "company_id": company_id}).scalar() or 0
+        """
+    ), {"org_id": org_id, "company_id": company_id}).scalar() or 0
         
         completed_projects = db.execute(text("""
             SELECT COUNT(*) FROM projects 
             WHERE organization_id = :org_id 
             AND status = 'completed'
             AND (:company_id IS NULL OR company_id = :company_id)
-        """), {"org_id": org_id, "company_id": company_id}).scalar() or 0
+        """
+    ), {"org_id": org_id, "company_id": company_id}).scalar() or 0
         
         overdue_projects = db.execute(text("""
             SELECT COUNT(*) FROM projects 
@@ -230,14 +238,16 @@ async def get_executive_dashboard(
             AND end_date < CURRENT_DATE 
             AND status IN ('planning', 'active')
             AND (:company_id IS NULL OR company_id = :company_id)
-        """), {"org_id": org_id, "company_id": company_id}).scalar() or 0
+        """
+    ), {"org_id": org_id, "company_id": company_id}).scalar() or 0
         
         avg_progress = db.execute(text("""
             SELECT COALESCE(AVG(progress_percentage), 0) FROM projects 
             WHERE organization_id = :org_id 
             AND status = 'active'
             AND (:company_id IS NULL OR company_id = :company_id)
-        """), {"org_id": org_id, "company_id": company_id}).scalar() or 0
+        """
+    ), {"org_id": org_id, "company_id": company_id}).scalar() or 0
         
         project_metrics = {
             "total_projects": total_projects,
@@ -264,7 +274,8 @@ async def get_executive_dashboard(
             WHERE organization_id = :org_id 
             AND status = 'pending'
             AND (:company_id IS NULL OR company_id = :company_id)
-        """), {"org_id": org_id, "company_id": company_id}).scalar() or 0
+        """
+    ), {"org_id": org_id, "company_id": company_id}).scalar() or 0
         
         overdue_approvals = db.execute(text("""
             SELECT COUNT(*) FROM approval_requests 
@@ -272,13 +283,15 @@ async def get_executive_dashboard(
             AND status = 'pending' 
             AND deadline < NOW()
             AND (:company_id IS NULL OR company_id = :company_id)
-        """), {"org_id": org_id, "company_id": company_id}).scalar() or 0
+        """
+    ), {"org_id": org_id, "company_id": company_id}).scalar() or 0
         
         total_time_logged = db.execute(text("""
             SELECT COALESCE(SUM(duration_minutes), 0) FROM project_time_logs 
             WHERE organization_id = :org_id 
             AND start_time >= :start_date
-        """), {"org_id": org_id, "start_date": start_date}).scalar() or 0
+        """
+    ), {"org_id": org_id, "start_date": start_date}).scalar() or 0
         
         team_metrics = {
             "pending_approvals": pending_approvals,
@@ -300,14 +313,16 @@ async def get_executive_dashboard(
             SELECT COUNT(*) FROM integration_sync_jobs 
             WHERE organization_id = :org_id 
             AND started_at >= CURRENT_DATE
-        """), {"org_id": org_id}).scalar() or 0
+        """
+    ), {"org_id": org_id}).scalar() or 0
         
         successful_syncs_today = db.execute(text("""
             SELECT COUNT(*) FROM integration_sync_jobs 
             WHERE organization_id = :org_id 
             AND started_at >= CURRENT_DATE 
             AND status = 'success'
-        """), {"org_id": org_id}).scalar() or 0
+        """
+    ), {"org_id": org_id}).scalar() or 0
         
         sync_success_rate = (successful_syncs_today / total_syncs_today * 100) if total_syncs_today > 0 else 100
         
@@ -392,7 +407,7 @@ async def get_project_report(
     db:  = Depends(get_db)
 ):
     """Get comprehensive project management report"""
-    org_id = current_user.organization_id
+    org_id = current_user.org_id
     rbac = RBACService(db)
     
     user_companies = rbac.get_user_companies(current_user.id)
@@ -432,7 +447,8 @@ async def get_project_report(
             COALESCE(AVG(p.progress_percentage), 0) as avg_progress
         FROM projects p
         WHERE {where_clause}
-    """), params).fetchone()
+    """
+    ), params).fetchone()
     
     # Projects by type
     projects_by_type = db.execute(text(f"""
@@ -441,7 +457,8 @@ async def get_project_report(
         WHERE {where_clause}
         GROUP BY p.project_type
         ORDER BY count DESC
-    """), params).fetchall()
+    """
+    ), params).fetchall()
     
     # Projects by priority
     projects_by_priority = db.execute(text(f"""
@@ -450,7 +467,8 @@ async def get_project_report(
         WHERE {where_clause}
         GROUP BY p.priority
         ORDER BY count DESC
-    """), params).fetchall()
+    """
+    ), params).fetchall()
     
     # Budget vs actual cost by project
     budget_analysis = db.execute(text(f"""
@@ -465,7 +483,8 @@ async def get_project_report(
         AND p.budget > 0
         ORDER BY variance DESC
         LIMIT 10
-    """), params).fetchall()
+    """
+    ), params).fetchall()
     
     # Time logging summary
     time_summary = db.execute(text(f"""
@@ -479,7 +498,8 @@ async def get_project_report(
         WHERE {where_clause.replace('p.', 'p.')}
         AND ptl.start_time >= :date_from
         AND ptl.start_time <= :date_to
-    """), params).fetchone()
+    """
+    ), params).fetchone()
     
     # Prepare report data
     report_data = {
@@ -574,7 +594,7 @@ async def get_workflow_report(
     db:  = Depends(get_db)
 ):
     """Get comprehensive workflow and approval report"""
-    org_id = current_user.organization_id
+    org_id = current_user.org_id
     rbac = RBACService(db)
     
     user_companies = rbac.get_user_companies(current_user.id)
@@ -612,7 +632,8 @@ async def get_workflow_report(
         WHERE {where_clause}
         AND ar.requested_at >= :date_from
         AND ar.requested_at <= :date_to
-    """), params).fetchone()
+    """
+    ), params).fetchone()
     
     # Approvals by entity type
     approvals_by_entity = db.execute(text(f"""
@@ -623,7 +644,8 @@ async def get_workflow_report(
         AND ar.requested_at <= :date_to
         GROUP BY ar.entity_type
         ORDER BY count DESC
-    """), params).fetchall()
+    """
+    ), params).fetchall()
     
     # Top approvers
     top_approvers = db.execute(text(f"""
@@ -640,7 +662,8 @@ async def get_workflow_report(
         GROUP BY u.id, u.full_name
         ORDER BY total_assigned DESC
         LIMIT 10
-    """), params).fetchall()
+    """
+    ), params).fetchall()
     
     report_data = {
         "summary": {
@@ -711,7 +734,7 @@ async def generate_custom_report(
 ):
     """Generate a custom report based on configuration"""
     check_service_permission(current_user, "reporting", "create", db)
-    org_id = current_user.organization_id
+    org_id = current_user.org_id
     
     # This is a simplified custom report generator
     # In a real implementation, this would have more sophisticated query building
@@ -729,7 +752,7 @@ async def generate_custom_report(
     
     metadata = {
         "generated_by": current_user.full_name,
-        "organization_id": org_id,
+        "org_id": org_id,
         "report_type": "custom",
         "execution_time_ms": 150,  # Placeholder
         "row_count": 0  # Placeholder
@@ -768,7 +791,7 @@ def get_pending_purchase_orders_with_grn_status(
     db:  = Depends(get_db)
 ):
     """Get pending purchase orders with GRN status"""
-    org_id = current_user.organization_id
+    org_id = current_user.org_id
     
     try:
         # Use ORM query for better debugging

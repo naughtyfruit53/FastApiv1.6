@@ -1,8 +1,7 @@
 """
 AI Analytics API endpoints
 """
-
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+    from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -30,7 +29,8 @@ async def get_ai_analytics_dashboard(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Get AI analytics dashboard data"""    service = AIAnalyticsService(db)
+    """Get AI analytics dashboard data"""
+    service = AIAnalyticsService(db)
     dashboard_data = service.get_ai_analytics_dashboard(org_id)
     
     return AIAnalyticsDashboard(**dashboard_data)
@@ -45,7 +45,8 @@ async def create_ai_model(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Create a new AI model"""    service = AIAnalyticsService(db)
+    """Create a new AI model"""
+    service = AIAnalyticsService(db)
     model = service.create_ai_model(
         organization_id=org_id,
         model_data=model_data,
@@ -61,7 +62,8 @@ async def get_ai_models(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Get AI models for the organization"""    service = AIAnalyticsService(db)
+    """Get AI models for the organization"""
+    service = AIAnalyticsService(db)
     models = service.get_ai_models(
         organization_id=org_id,
         status=status,
@@ -76,7 +78,8 @@ async def get_ai_model(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Get a specific AI model"""    service = AIAnalyticsService(db)
+    """Get a specific AI model"""
+    service = AIAnalyticsService(db)
     model = service.get_ai_model(org_id, model_id)
     
     if not model:
@@ -91,7 +94,8 @@ async def update_ai_model(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Update an AI model"""    service = AIAnalyticsService(db)
+    """Update an AI model"""
+    service = AIAnalyticsService(db)
     model = service.get_ai_model(org_id, model_id)
     
     if not model:
@@ -114,7 +118,8 @@ async def train_ai_model(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Train an AI model"""    service = AIAnalyticsService(db)
+    """Train an AI model"""
+    service = AIAnalyticsService(db)
     
     try:
         result = service.train_model(
@@ -133,7 +138,8 @@ async def deploy_ai_model(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Deploy an AI model to production"""    service = AIAnalyticsService(db)
+    """Deploy an AI model to production"""
+    service = AIAnalyticsService(db)
     
     try:
         result = service.deploy_model(
@@ -150,7 +156,8 @@ async def get_model_performance(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Get model performance metrics"""    service = AIAnalyticsService(db)
+    """Get model performance metrics"""
+    service = AIAnalyticsService(db)
     model = service.get_ai_model(org_id, model_id)
     
     if not model:
@@ -193,7 +200,8 @@ async def make_prediction(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Make a prediction using a deployed AI model"""    service = AIAnalyticsService(db)
+    """Make a prediction using a deployed AI model"""
+    service = AIAnalyticsService(db)
     
     try:
         prediction_result = service.make_prediction(
@@ -212,7 +220,8 @@ async def get_predictions(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Get prediction results"""    service = AIAnalyticsService(db)
+    """Get prediction results"""
+    service = AIAnalyticsService(db)
     predictions = service.get_prediction_results(
         organization_id=org_id,
         model_id=model_id,
@@ -228,11 +237,12 @@ async def submit_prediction_feedback(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Submit feedback for a prediction"""    from app.models.ai_analytics_models import PredictionResult
+    """Submit feedback for a prediction"""
+    from app.models.ai_analytics_models import PredictionResult
     
     prediction = db.query(PredictionResult).filter(
         PredictionResult.prediction_id == prediction_id,
-        PredictionResult.organization_id == organization_id
+        PredictionResult.organization_id == org_id
     ).first()
     
     if not prediction:
@@ -258,7 +268,8 @@ async def detect_anomalies(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Detect anomalies in business data"""    service = AIAnalyticsService(db)
+    """Detect anomalies in business data"""
+    service = AIAnalyticsService(db)
     anomalies = service.detect_anomalies(
         organization_id=org_id,
         data_source=data_source,
@@ -273,7 +284,8 @@ async def get_anomalies(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Get active anomalies"""    service = AIAnalyticsService(db)
+    """Get active anomalies"""
+    service = AIAnalyticsService(db)
     anomalies = service.get_active_anomalies(
         organization_id=org_id,
         severity=severity
@@ -288,11 +300,12 @@ async def update_anomaly(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Update an anomaly alert"""    from app.models.ai_analytics_models import AnomalyDetection
+    """Update an anomaly alert"""
+    from app.models.ai_analytics_models import AnomalyDetection
     
     anomaly = db.query(AnomalyDetection).filter(
         AnomalyDetection.id == anomaly_id,
-        AnomalyDetection.organization_id == organization_id
+        AnomalyDetection.organization_id == org_id
     ).first()
     
     if not anomaly:
@@ -322,7 +335,8 @@ async def generate_insights(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Generate AI-powered business insights"""    service = AIAnalyticsService(db)
+    """Generate AI-powered business insights"""
+    service = AIAnalyticsService(db)
     insights = service.generate_insights(
         organization_id=org_id,
         categories=categories
@@ -337,7 +351,8 @@ async def get_insights(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Get active AI insights"""    service = AIAnalyticsService(db)
+    """Get active AI insights"""
+    service = AIAnalyticsService(db)
     insights = service.get_active_insights(
         organization_id=org_id,
         priority=priority,
@@ -353,11 +368,12 @@ async def update_insight(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Update an AI insight"""    from app.models.ai_analytics_models import AIInsight
+    """Update an AI insight"""
+    from app.models.ai_analytics_models import AIInsight
     
     insight = db.query(AIInsight).filter(
         AIInsight.id == insight_id,
-        AIInsight.organization_id == organization_id
+        AIInsight.organization_id == org_id
     ).first()
     
     if not insight:
@@ -385,7 +401,8 @@ async def generate_predictive_analytics(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Generate predictive analytics"""    service = AIAnalyticsService(db)
+    """Generate predictive analytics"""
+    service = AIAnalyticsService(db)
     
     try:
         result = service.generate_predictive_analytics(
@@ -406,7 +423,8 @@ async def create_automation_workflow(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Create an automation workflow"""    from app.models.ai_analytics_models import AutomationWorkflow
+    """Create an automation workflow"""
+    from app.models.ai_analytics_models import AutomationWorkflow
     
     workflow = AutomationWorkflow(
         organization_id=org_id,
@@ -436,10 +454,11 @@ async def get_automation_workflows(
     auth: tuple = Depends(require_access("ai_analytics", "read")),
     db:  = Depends(get_db)
 ):
-    """Get automation workflows"""    from app.models.ai_analytics_models import AutomationWorkflow
+    """Get automation workflows"""
+    from app.models.ai_analytics_models import AutomationWorkflow
     
     query = db.query(AutomationWorkflow).filter(
-        AutomationWorkflow.organization_id == organization_id
+        AutomationWorkflow.organization_id == org_id
     )
     
     if workflow_type:

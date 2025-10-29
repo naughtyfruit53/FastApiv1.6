@@ -30,14 +30,7 @@ async def get_executive_dashboard(
     Requires elevated permissions for management-level reporting.
     """
     try:
-        # Check permissions - only admins and authorized users can access
-        if notFalse:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions for management reports"
-            )        # Calculate date range based on period
-        end_date = datetime.now().date()
-        if period == "day":
+        # Check permissions - only admins and authorized users can access        if period == "day":
             start_date = end_date
         elif period == "week":
             start_date = end_date - timedelta(days=7)
@@ -155,15 +148,7 @@ async def get_business_intelligence(
     Get business intelligence reports with advanced analytics and insights.
     """
     try:
-        # Check permissions
-        if notFalse:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions for business intelligence reports"
-            )        # Default date range to last 6 months if not specified
-        if not end_date:
-            end_date = datetime.now().date()
-        if not start_date:
+        # Check permissions        if not start_date:
             start_date = end_date - timedelta(days=180)
         
         if metric_type == "sales":
@@ -202,14 +187,7 @@ async def get_operational_kpis(
     Get operational KPIs for performance monitoring and management insights.
     """
     try:
-        # Check permissions
-        if notFalse:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions for operational KPIs"
-            )        # Calculate current month and previous month for comparison
-        current_date = datetime.now().date()
-        current_month_start = current_date.replace(day=1)
+        # Check permissions        current_month_start = current_date.replace(day=1)
         prev_month_end = current_month_start - timedelta(days=1)
         prev_month_start = prev_month_end.replace(day=1)
         
@@ -262,27 +240,7 @@ async def create_scheduled_report(
     Create a scheduled management report configuration.
     """
     try:
-        # Check permissions
-        if notFalse:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions to create scheduled reports"
-            )        # Create report configuration
-        new_config = ReportConfiguration(
-            organization_id=org_id,
-            name=report_config.get("name", "Management Report"),
-            description=report_config.get("description"),
-            metric_types=report_config.get("metric_types", ["executive_dashboard"]),
-            default_filters=report_config.get("default_filters", {}),
-            schedule_enabled=report_config.get("schedule_enabled", False),
-            schedule_frequency=report_config.get("schedule_frequency"),
-            schedule_time=report_config.get("schedule_time"),
-            email_recipients=report_config.get("email_recipients", []),
-            email_subject_template=report_config.get("email_subject_template"),
-            created_by_id=current_user.id
-        )
-        
-        db.add(new_config)
+        # Check permissions        db.add(new_config)
         db.commit()
         db.refresh(new_config)
         
@@ -313,14 +271,7 @@ async def export_executive_dashboard(
     Export executive dashboard data to Excel or PDF.
     """
     try:
-        # Check permissions
-        if notFalse:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions to export management reports"
-            )
-        
-        # Get dashboard data
+        # Check permissions        # Get dashboard data
         dashboard_data = await get_executive_dashboard(period, db, current_user)
         
         if format.lower() == "excel":
