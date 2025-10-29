@@ -10,7 +10,7 @@ from app.main import app
 from app.models.user_models import User, Organization
 from app.models.rbac_models import ServiceRole, UserServiceRole
 from app.core.modules_registry import get_default_enabled_modules
-import json
+from app.core.security import get_password_hash
 
 
 @pytest.mark.asyncio
@@ -102,8 +102,6 @@ async def test_rbac_permissions_never_500(
 ):
     """Test RBAC permissions endpoint never returns 500, even with invalid user"""
     # Create a valid user to get a token
-    from app.core.security import get_password_hash
-    
     user = User(
         email="testrbac@example.com",
         username="testrbac",
@@ -136,7 +134,8 @@ async def test_rbac_permissions_never_500(
     if response.status_code == 200:
         data = response.json()
         assert "modules" in data
-        assert "fallback" in data or "modules" in data
+        # Verify modules is a list (could be empty if fallback is used)
+        assert isinstance(data["modules"], list)
 
 
 @pytest.mark.asyncio
