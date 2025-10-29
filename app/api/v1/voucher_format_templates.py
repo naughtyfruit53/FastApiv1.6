@@ -11,8 +11,7 @@ from sqlalchemy import select
 from typing import List
 
 from app.core.database import get_db
-from app.core.permissions import require_organization_permission, Permission
-from app.core.security import get_current_user
+from app.core.enforcement import require_access
 from app.models.organization_settings import VoucherFormatTemplate
 from app.schemas.organization_settings import (
     VoucherFormatTemplateCreate,
@@ -26,10 +25,11 @@ router = APIRouter(prefix="/voucher-format-templates", tags=["voucher-format-tem
 @router.get("/", response_model=List[VoucherFormatTemplateResponse])
 async def list_voucher_format_templates(
     include_system: bool = True,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.VIEW_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_format_template", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """List all available voucher format templates (system and custom)"""
+    current_user, org_id = auth
     stmt = select(VoucherFormatTemplate).where(
         VoucherFormatTemplate.is_active == True
     )
@@ -45,10 +45,11 @@ async def list_voucher_format_templates(
 @router.get("/{template_id}", response_model=VoucherFormatTemplateResponse)
 async def get_voucher_format_template(
     template_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.VIEW_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_format_template", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get a specific voucher format template"""
+    current_user, org_id = auth
     stmt = select(VoucherFormatTemplate).where(
         VoucherFormatTemplate.id == template_id
     )
@@ -67,10 +68,11 @@ async def get_voucher_format_template(
 @router.post("/", response_model=VoucherFormatTemplateResponse, status_code=status.HTTP_201_CREATED)
 async def create_voucher_format_template(
     template_data: VoucherFormatTemplateCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.MANAGE_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_format_template", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new voucher format template (custom template)"""
+    current_user, org_id = auth
     template = VoucherFormatTemplate(**template_data.model_dump())
     db.add(template)
     await db.commit()
@@ -83,10 +85,11 @@ async def create_voucher_format_template(
 async def update_voucher_format_template(
     template_id: int,
     template_data: VoucherFormatTemplateUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.MANAGE_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_format_template", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update a voucher format template"""
+    current_user, org_id = auth
     stmt = select(VoucherFormatTemplate).where(
         VoucherFormatTemplate.id == template_id
     )
@@ -102,8 +105,8 @@ async def update_voucher_format_template(
     # Prevent modification of system templates
     if template.is_system_template:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot modify system templates"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Voucher format template not found"
         )
     
     update_data = template_data.model_dump(exclude_unset=True)
@@ -119,10 +122,11 @@ async def update_voucher_format_template(
 @router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_voucher_format_template(
     template_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.MANAGE_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_format_template", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete a voucher format template"""
+    current_user, org_id = auth
     stmt = select(VoucherFormatTemplate).where(
         VoucherFormatTemplate.id == template_id
     )
@@ -138,8 +142,8 @@ async def delete_voucher_format_template(
     # Prevent deletion of system templates
     if template.is_system_template:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot delete system templates"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Voucher format template not found"
         )
     
     await db.delete(template)
@@ -150,10 +154,11 @@ async def delete_voucher_format_template(
 
 @router.get("/system/defaults", response_model=List[VoucherFormatTemplateResponse])
 async def get_default_system_templates(
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.VIEW_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_format_template", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get default system voucher format templates"""
+    current_user, org_id = auth
     stmt = select(VoucherFormatTemplate).where(
         VoucherFormatTemplate.is_system_template == True,
         VoucherFormatTemplate.is_active == True
@@ -166,13 +171,14 @@ async def get_default_system_templates(
 @router.get("/{template_id}/preview")
 async def preview_voucher_format_template(
     template_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.VIEW_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_format_template", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Generate a preview image/PDF for a voucher format template
     Returns sample voucher rendered with the template configuration
     """
+    current_user, org_id = auth
     from fastapi.responses import StreamingResponse
     from app.services.pdf_generation_service import pdf_generator
     import io
@@ -217,7 +223,7 @@ async def preview_voucher_format_template(
             voucher_type='purchase-orders',
             voucher_data=sample_voucher_data,
             db=db,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             current_user=current_user
         )
         
