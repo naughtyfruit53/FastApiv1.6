@@ -8,9 +8,10 @@ from datetime import datetime
 from decimal import Decimal
 import logging
 
-from app.db.session import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+from app.core.database import get_db
+from app.core.enforcement import require_access
+
+
 from app.models.user_models import User
 from app.models.expense_account import ExpenseAccount
 from app.schemas.expense_account import (
@@ -27,13 +28,14 @@ async def get_expense_accounts(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     ea_filter: ExpenseAccountFilter = Depends(),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("expense_account", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get expense accounts with filtering and pagination"""
+    current_user, org_id = auth
+    
     try:
-        stmt = select(ExpenseAccount).where(ExpenseAccount.organization_id == organization_id)
+        stmt = select(ExpenseAccount).where(ExpenseAccount.organization_id == org_id)
         
         # Apply filters
         if ea_filter.category:
@@ -84,15 +86,16 @@ async def get_expense_accounts(
 @router.post("/expense-accounts", response_model=ExpenseAccountResponse)
 async def create_expense_account(
     ea_data: ExpenseAccountCreate,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("expense_account", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new expense account"""
+    current_user, org_id = auth
+    
     try:
         # Check for duplicate code
         stmt = select(ExpenseAccount).where(
-            ExpenseAccount.organization_id == organization_id,
+            ExpenseAccount.organization_id == org_id,
             ExpenseAccount.account_code == ea_data.account_code
         )
         existing = await db.execute(stmt)
@@ -106,7 +109,7 @@ async def create_expense_account(
         if ea_data.parent_account_id:
             parent_stmt = select(ExpenseAccount).where(
                 ExpenseAccount.id == ea_data.parent_account_id,
-                ExpenseAccount.organization_id == organization_id
+                ExpenseAccount.organization_id == org_id
             )
             parent = await db.execute(parent_stmt)
             if not parent.scalars().first():
@@ -114,7 +117,7 @@ async def create_expense_account(
         
         # Create expense account
         expense_account = ExpenseAccount(
-            organization_id=organization_id,
+            organization_id=org_id,
             created_by=current_user.id,
             updated_by=current_user.id,
             **ea_data.model_dump()
@@ -138,15 +141,16 @@ async def create_expense_account(
 @router.get("/expense-accounts/{account_id}", response_model=ExpenseAccountResponse)
 async def get_expense_account(
     account_id: int,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("expense_account", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get a specific expense account"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(ExpenseAccount).where(
             ExpenseAccount.id == account_id,
-            ExpenseAccount.organization_id == organization_id
+            ExpenseAccount.organization_id == org_id
         )
         result = await db.execute(stmt)
         account = result.scalars().first()
@@ -167,16 +171,17 @@ async def get_expense_account(
 async def update_expense_account(
     account_id: int,
     ea_data: ExpenseAccountUpdate,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("expense_account", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update an expense account"""
+    current_user, org_id = auth
+    
     try:
         # Fetch existing account
         stmt = select(ExpenseAccount).where(
             ExpenseAccount.id == account_id,
-            ExpenseAccount.organization_id == organization_id
+            ExpenseAccount.organization_id == org_id
         )
         result = await db.execute(stmt)
         account = result.scalars().first()
@@ -191,7 +196,7 @@ async def update_expense_account(
             
             parent_stmt = select(ExpenseAccount).where(
                 ExpenseAccount.id == ea_data.parent_account_id,
-                ExpenseAccount.organization_id == organization_id
+                ExpenseAccount.organization_id == org_id
             )
             parent = await db.execute(parent_stmt)
             if not parent.scalars().first():
@@ -222,16 +227,17 @@ async def update_expense_account(
 @router.delete("/expense-accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_expense_account(
     account_id: int,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("expense_account", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete an expense account (soft delete by setting is_active=False)"""
+    current_user, org_id = auth
+    
     try:
         # Fetch existing account
         stmt = select(ExpenseAccount).where(
             ExpenseAccount.id == account_id,
-            ExpenseAccount.organization_id == organization_id
+            ExpenseAccount.organization_id == org_id
         )
         result = await db.execute(stmt)
         account = result.scalars().first()
@@ -242,7 +248,7 @@ async def delete_expense_account(
         # Check if account has sub-accounts
         sub_stmt = select(func.count()).where(
             ExpenseAccount.parent_account_id == account_id,
-            ExpenseAccount.organization_id == organization_id,
+            ExpenseAccount.organization_id == org_id,
             ExpenseAccount.is_active == True
         )
         sub_count = await db.execute(sub_stmt)
