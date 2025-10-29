@@ -102,13 +102,15 @@ MY_MODULE_READ = "my_module.read"
 
 ### Check User Permissions (Backend)
 ```bash
-curl -X GET "http://localhost:8000/rbac/users/{user_id}/permissions" \
+# Use HTTPS in production
+curl -X GET "https://your-api-domain.com/rbac/users/{user_id}/permissions" \
   -H "Authorization: Bearer {token}"
 ```
 
 ### Check Organization Modules
 ```bash
-curl -X GET "http://localhost:8000/organizations/current" \
+# Use HTTPS in production
+curl -X GET "https://your-api-domain.com/organizations/current" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -127,8 +129,8 @@ console.log(organizationData);
 ## Permission Hierarchy
 
 ```
-Super Admin (naughtyfruit53@gmail.com)
-  └─> God Super Admin Only Items
+Super Admin (God User)
+  └─> God Super Admin Only Items (restricted to specific user)
   
 App Super Admin
   └─> Super Admin Only Items
@@ -156,7 +158,7 @@ Regular Users
 ```typescript
 // In menuConfig.tsx:
 {
-  godSuperAdminOnly: true,   // Only naughtyfruit53@gmail.com
+  godSuperAdminOnly: true,   // Only for the designated god-level super admin
   superAdminOnly: true,      // Only app super admins
   role: 'admin',             // Requires specific role
   servicePermission: 'xyz',  // Service CRM permission
