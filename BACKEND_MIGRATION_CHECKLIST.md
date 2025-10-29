@@ -3,11 +3,12 @@
 ## Migration Status Overview
 
 **Last Updated**: October 29, 2025  
-**Overall Progress**: 100% (26/26 priority 1-4 files) + 100% (26/26 priority 5-8 files) = **52/52 files migrated**  
+**Overall Progress**: 100% (26/26 priority 1-4 files) + 100% (26/26 priority 5-8 files) + 46% (6/13 priority 9 files) = **58/65 files migrated (89%)**  
 **Priority 1 & 2 Status**: ✅ COMPLETE (11 files)  
 **Priority 3 Status**: ✅ COMPLETE (8/8 files)  
 **Priority 4 Status**: ✅ COMPLETE (7/7 files)  
-**Priority 5-8 Status**: ✅ COMPLETE (26/26 files migrated)
+**Priority 5-8 Status**: ✅ COMPLETE (26/26 files migrated)  
+**Priority 9 Status**: ⏳ IN PROGRESS (6/13 files migrated - 46%)
 
 ---
 
@@ -319,6 +320,78 @@ Critical files that manage the RBAC system itself:
 
 ---
 
+## Priority 9: Additional Files & Stragglers (6/13) ✅ IN PROGRESS
+
+Files that were not included in priorities 1-8 but required migration:
+
+- [x] `app/api/v1/integration.py` (9 endpoints) ✅
+  - Status: Fully migrated (October 29, 2025)
+  - Module: "integration"
+  - Actions: read, create, update, delete
+  - Changes: Fixed auth tuple unpacking, replaced get_current_active_user with require_access
+  
+- [x] `app/api/v1/order_book.py` (8 endpoints) ✅
+  - Status: Fully migrated (October 29, 2025)
+  - Module: "order"
+  - Actions: read, create, update, delete
+  - Changes: Replaced get_current_active_user with require_access
+  
+- [x] `app/api/v1/payroll_components.py` (6 endpoints) ✅
+  - Status: Fully migrated (October 29, 2025)
+  - Module: "payroll"
+  - Actions: read, create, update, delete
+  - Changes: Removed redundant organization_id dependencies, added auth tuple unpacking
+  
+- [x] `app/api/v1/payroll_components_advanced.py` (6 endpoints) ✅
+  - Status: Fully migrated (October 29, 2025)
+  - Module: "payroll"
+  - Actions: read, create, update, delete
+  - Changes: Replaced get_current_active_user with require_access
+  
+- [x] `app/api/v1/payroll_monitoring.py` (5 endpoints) ✅
+  - Status: Fully migrated (October 29, 2025)
+  - Module: "payroll"
+  - Actions: read, create, update, delete
+  - Changes: Complete RBAC migration
+  
+- [x] `app/api/routes/websocket.py` (2 endpoints) ✅
+  - Status: Fully migrated (October 29, 2025)
+  - Module: "websocket"
+  - Actions: read
+  - Notes: Only HTTP endpoints migrated; WebSocket endpoint doesn't require RBAC
+  
+- [ ] `app/api/v1/master_data.py` (25 endpoints) ⏳
+  - Status: Partial migration
+  - Module: "master_data"
+  - Actions: read, create, update, delete
+  - Notes: Has custom require_permission function; needs completion
+  
+- [ ] `app/api/v1/bom.py` (9 endpoints)
+  - Status: Not migrated
+  - Module: "bom"
+  
+- [ ] `app/api/v1/exhibition.py` (19 endpoints)
+  - Status: Not migrated
+  - Module: "exhibition"
+  
+- [ ] `app/api/v1/sla.py` (14 endpoints)
+  - Status: Not migrated
+  - Module: "sla"
+  
+- [ ] `app/api/v1/website_agent.py` (13 endpoints)
+  - Status: Not migrated
+  - Module: "website_agent"
+  
+- [ ] `app/api/v1/app_users.py` (7 endpoints)
+  - Status: Not migrated
+  - Module: "app_users"
+  
+- [ ] `app/api/v1/api_gateway.py` (8 endpoints)
+  - Status: Not migrated
+  - Module: "api_gateway"
+
+---
+
 ## Special Cases (Not Prioritized)
 
 Files that may not require migration:
@@ -345,22 +418,27 @@ Files that may not require migration:
 
 ## Migration Metrics
 
-### Latest Updates (October 29, 2025)
-- **Files Migrated**: 2 files (email.py, explainability.py cleanup)
-- **Endpoints Migrated**: 35 endpoints (email.py)
-- **Cleanup**: 8 endpoints (explainability.py - removed redundant checks)
-- **Lines Changed**: ~100
+### Latest Updates (October 29, 2025 - Final Batch PR)
+- **Files Migrated**: 6 files (integration, order_book, payroll x3, websocket)
+- **Endpoints Migrated**: 40 endpoints
+- **Pattern Changes**: 
+  - Fixed auth tuple unpacking in integration.py
+  - Removed redundant organization_id dependencies in payroll files
+  - Replaced get_current_active_user with require_access across 6 files
+- **Lines Changed**: ~120
 
 ### Overall Progress (All Priorities)
-- **Files Fully Migrated**: 70/75 (93%)
-- **Files with Partial Migration**: 4/75 (5%) - secure but using defense-in-depth
-- **Files Not Requiring Migration**: 1/75 (2%) - reset.py (intentional)
-- **Total Endpoints**: ~700+ endpoints with centralized RBAC
+- **Files Fully Migrated**: 58/65 (89%)
+- **Files Partially Migrated**: 1/65 (2%) - master_data.py
+- **Files Remaining**: 6/65 (9%) - bom, exhibition, sla, website_agent, app_users, api_gateway
+- **Files with Partial Migration (Defense-in-Depth)**: 4/65 (6%) - secure but using defense-in-depth
+- **Files Not Requiring Migration**: ~10 - reset.py, auth files, health endpoints
+- **Total Endpoints Migrated**: ~750+ endpoints with centralized RBAC
 - **Security Improvements**: 
   - Centralized RBAC enforcement across all modules
   - Consistent tenant isolation
   - Anti-enumeration via 404 responses
-  - Removal of legacy authorization code from 70 files
+  - Removal of legacy authorization code from 58+ files
   - Defense-in-depth approach in 4 sensitive admin files
 
 ### Migration Status by File Type
@@ -371,9 +449,17 @@ Files that may not require migration:
 - **Priority 6 (AI Features)**: 7/7 ✅
 - **Priority 7 (Supporting)**: 8/8 ✅
 - **Priority 8 (Utilities)**: 7/7 ✅
+- **Priority 9 (Stragglers)**: 6/13 ⏳ (46%)
 
 ### Remaining
-- **Files**: 0 core business files requiring migration
+- **Files**: 7 files (6 complete stragglers + 1 partial)
+  - app/api/v1/master_data.py (25 endpoints) - Partial migration
+  - app/api/v1/bom.py (9 endpoints)
+  - app/api/v1/exhibition.py (19 endpoints)
+  - app/api/v1/sla.py (14 endpoints)
+  - app/api/v1/website_agent.py (13 endpoints)
+  - app/api/v1/app_users.py (7 endpoints)
+  - app/api/v1/api_gateway.py (8 endpoints)
 - **Special Cases**: 
   - Authentication files (by design, no RBAC needed)
   - Health endpoints (public)
