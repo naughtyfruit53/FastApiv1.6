@@ -116,7 +116,7 @@ export const useSharedPermissions = () => {
     }
 
     const isSuperAdmin = user.is_super_admin || false;
-    const isOrgSuperAdmin = user.role === 'super_admin' || user.role === 'admin';
+    const isOrgSuperAdmin = user.role === 'super_admin' || user.role === 'admin' || user.role === 'org_admin';
 
     // Use permissions from AuthContext if available
     if (contextPermissions) {
@@ -148,20 +148,26 @@ export const useSharedPermissions = () => {
         'reports.*',
         'settings.*',
         'admin.*',
+        'master_data.*',
+        'manufacturing.*',
+        'vouchers.*',
+        'accounting.*',
+        'reportsAnalytics.*',
+        'aiAnalytics.*',
+        'marketing.*',
+        'projects.*',
+        'tasks_calendar.*',
+        'email.*',
       ];
-      modules = ['dashboard', 'finance', 'sales', 'crm', 'inventory', 'hr', 'service', 'reports', 'settings', 'admin'];
-      submodules = {
-        dashboard: ['all'],
-        finance: ['all'],
-        sales: ['all'],
-        crm: ['all'],
-        inventory: ['all'],
-        hr: ['all'],
-        service: ['all'],
-        reports: ['all'],
-        settings: ['all'],
-        admin: ['all'],
-      };
+      modules = [
+        'dashboard', 'finance', 'sales', 'crm', 'inventory', 'hr', 'service', 'reports', 'settings', 'admin',
+        'master_data', 'manufacturing', 'vouchers', 'accounting', 'reportsAnalytics', 'aiAnalytics',
+        'marketing', 'projects', 'tasks_calendar', 'email'
+      ];
+      submodules = modules.reduce((acc, mod) => {
+        acc[mod] = ['all'];
+        return acc;
+      }, {} as Record<string, string[]>);
     } else if (isOrgSuperAdmin) {
       // Organization admin has most permissions except super admin functions
       permissions = [
@@ -177,19 +183,26 @@ export const useSharedPermissions = () => {
         'settings.manageUsers',
         'settings.manageRoles',
         'settings.manageOrganization',
+        'master_data.*',
+        'manufacturing.*',
+        'vouchers.*',
+        'accounting.*',
+        'reportsAnalytics.*',
+        'aiAnalytics.*',
+        'marketing.*',
+        'projects.*',
+        'tasks_calendar.*',
+        'email.*',
       ];
-      modules = ['dashboard', 'finance', 'sales', 'crm', 'inventory', 'hr', 'service', 'reports', 'settings'];
-      submodules = {
-        dashboard: ['all'],
-        finance: ['all'],
-        sales: ['all'],
-        crm: ['all'],
-        inventory: ['all'],
-        hr: ['all'],
-        service: ['all'],
-        reports: ['all'],
-        settings: ['all'],
-      };
+      modules = [
+        'dashboard', 'finance', 'sales', 'crm', 'inventory', 'hr', 'service', 'reports', 'settings',
+        'master_data', 'manufacturing', 'vouchers', 'accounting', 'reportsAnalytics', 'aiAnalytics',
+        'marketing', 'projects', 'tasks_calendar', 'email'
+      ];
+      submodules = modules.reduce((acc, mod) => {
+        acc[mod] = ['all'];
+        return acc;
+      }, {} as Record<string, string[]>);
     } else {
       // Regular user - permissions based on role
       switch (user.role) {
@@ -197,56 +210,78 @@ export const useSharedPermissions = () => {
           permissions = ['dashboard.view', 'finance.*', 'reports.viewFinancial'];
           modules = ['dashboard', 'finance', 'reports'];
           submodules = {
-            dashboard: ['all'],
-            finance: ['all'],
-            reports: ['all'],
+            dashboard: ['view'],
+            finance: ['view', 'create', 'edit', 'delete', 'viewReports', 'manageBanks'],
+            reports: ['viewFinancial'],
           };
           break;
         case 'sales_manager':
           permissions = ['dashboard.view', 'sales.*', 'crm.*', 'reports.viewOperational'];
           modules = ['dashboard', 'sales', 'crm', 'reports'];
           submodules = {
-            dashboard: ['all'],
-            sales: ['all'],
-            crm: ['all'],
-            reports: ['all'],
+            dashboard: ['view'],
+            sales: ['view', 'create', 'edit', 'delete', 'manageCustomers', 'viewAnalytics'],
+            crm: ['view', 'create', 'edit', 'delete', 'manageContacts', 'viewAnalytics'],
+            reports: ['viewOperational'],
           };
           break;
         case 'inventory_manager':
           permissions = ['dashboard.view', 'inventory.*', 'reports.viewOperational'];
           modules = ['dashboard', 'inventory', 'reports'];
           submodules = {
-            dashboard: ['all'],
-            inventory: ['all'],
-            reports: ['all'],
+            dashboard: ['view'],
+            inventory: ['view', 'create', 'edit', 'delete', 'manageStock', 'viewReports'],
+            reports: ['viewOperational'],
           };
           break;
         case 'hr_manager':
           permissions = ['dashboard.view', 'hr.*', 'reports.viewOperational'];
           modules = ['dashboard', 'hr', 'reports'];
           submodules = {
-            dashboard: ['all'],
-            hr: ['all'],
-            reports: ['all'],
+            dashboard: ['view'],
+            hr: ['view', 'create', 'edit', 'delete', 'manageEmployees', 'viewPayroll'],
+            reports: ['viewOperational'],
           };
           break;
         case 'service_manager':
           permissions = ['dashboard.view', 'service.*', 'reports.viewOperational'];
           modules = ['dashboard', 'service', 'reports'];
           submodules = {
-            dashboard: ['all'],
-            service: ['all'],
-            reports: ['all'],
+            dashboard: ['view'],
+            service: ['view', 'create', 'edit', 'delete', 'manageTickets', 'viewAnalytics'],
+            reports: ['viewOperational'],
           };
           break;
         case 'user':
         case 'employee':
         default:
-          permissions = ['standard'];
-          modules = ['dashboard'];
-          submodules = {
-            dashboard: ['all'],
-          };
+          permissions = [
+            'dashboard.view',
+            'master_data.view',
+            'inventory.view',
+            'manufacturing.view',
+            'vouchers.view',
+            'finance.view',
+            'accounting.view',
+            'reportsAnalytics.view',
+            'aiAnalytics.view',
+            'sales.view',
+            'marketing.view',
+            'service.view',
+            'projects.view',
+            'hrManagement.view',
+            'tasksCalendar.view',
+            'email.view',
+          ];
+          modules = [
+            'dashboard', 'master_data', 'inventory', 'manufacturing', 'vouchers',
+            'finance', 'accounting', 'reportsAnalytics', 'aiAnalytics', 'sales',
+            'marketing', 'service', 'projects', 'hrManagement', 'tasksCalendar', 'email'
+          ];
+          submodules = modules.reduce((acc, mod) => {
+            acc[mod] = ['view'];
+            return acc;
+          }, {} as Record<string, string[]>);
           break;
       }
     }
@@ -322,6 +357,34 @@ export const useSharedPermissions = () => {
 
     return hasModuleAccess(module);
   }, [user, userPermissions, hasModuleAccess]);
+
+  const validateAction = useCallback((
+    module: string, 
+    action: string, 
+    options?: { 
+      requireOrgAdmin?: boolean;
+      requireSuperAdmin?: boolean;
+    }
+  ): { allowed: boolean; reason?: string } => {
+    if (!user) {
+      return { allowed: false, reason: 'Authentication required' };
+    }
+
+    if (options?.requireSuperAdmin && !userPermissions.isSuperAdmin) {
+      return { allowed: false, reason: 'Super administrator privileges required' };
+    }
+
+    if (options?.requireOrgAdmin && !userPermissions.isOrgSuperAdmin && !userPermissions.isSuperAdmin) {
+      return { allowed: false, reason: 'Administrator privileges required' };
+    }
+
+    const permission = `${module}.${action}`;
+    if (!hasPermission(permission)) {
+      return { allowed: false, reason: `Permission '${permission}' required` };
+    }
+
+    return { allowed: true };
+  }, [user, userPermissions, hasPermission]);
 
   const getPermissionConfig = useCallback((): PermissionConfig => {
     return {
@@ -401,34 +464,6 @@ export const useSharedPermissions = () => {
       },
     };
   }, [hasPermission, userPermissions]);
-
-  const validateAction = useCallback((
-    module: string, 
-    action: string, 
-    options?: { 
-      requireOrgAdmin?: boolean;
-      requireSuperAdmin?: boolean;
-    }
-  ): { allowed: boolean; reason?: string } => {
-    if (!user) {
-      return { allowed: false, reason: 'Authentication required' };
-    }
-
-    if (options?.requireSuperAdmin && !userPermissions.isSuperAdmin) {
-      return { allowed: false, reason: 'Super administrator privileges required' };
-    }
-
-    if (options?.requireOrgAdmin && !userPermissions.isOrgSuperAdmin && !userPermissions.isSuperAdmin) {
-      return { allowed: false, reason: 'Administrator privileges required' };
-    }
-
-    const permission = `${module}.${action}`;
-    if (!hasPermission(permission)) {
-      return { allowed: false, reason: `Permission '${permission}' required` };
-    }
-
-    return { allowed: true };
-  }, [user, userPermissions, hasPermission]);
 
   // Get navigation items based on permissions
   const getNavigationItems = useCallback(() => {

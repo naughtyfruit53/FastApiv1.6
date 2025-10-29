@@ -13,7 +13,7 @@ import useMobileRouting from "../hooks/mobile/useMobileRouting";
 import { ACCESS_TOKEN_KEY } from "../constants/auth";
 import { useCompany } from "../context/CompanyContext"; // Added import
 
-const LoginPage: React.FC = () => {
+const LoginPage = () => {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [demoModeOpen, setDemoModeOpen] = useState(false);
   const { login } = useAuth();
@@ -153,5 +153,7 @@ const LoginPage: React.FC = () => {
     </Container>
   );
 };
+
+LoginPage.getLayout = (page) => page;
 
 export default LoginPage;

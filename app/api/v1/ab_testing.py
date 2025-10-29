@@ -1,16 +1,18 @@
+# app/api/v1/ab_testing.py
+
 """
 A/B Testing API endpoints
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
-
-from app.models.user_models import User
+from app.core.enforcement import require_access
 from app.services.ab_testing_service import ABTestingService
 from app.models.ab_testing import ExperimentStatus, VariantType
 
@@ -125,12 +127,13 @@ class ResultResponse(BaseModel):
 async def create_experiment(
     experiment_data: ExperimentCreate,
     auth: tuple = Depends(require_access("ab_testing", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new A/B test experiment"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
-    experiment = service.create_experiment(
+    experiment = await service.create_experiment(
         organization_id=org_id,
         created_by_id=current_user.id,
         experiment_name=experiment_data.experiment_name,
@@ -147,12 +150,13 @@ async def list_experiments(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     auth: tuple = Depends(require_access("ab_testing", "read")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """List A/B test experiments"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
-    experiments = service.list_experiments(
+    experiments = await service.list_experiments(
         organization_id=org_id,
         status=status,
         skip=skip,
@@ -166,12 +170,13 @@ async def list_experiments(
 async def get_experiment(
     experiment_id: int,
     auth: tuple = Depends(require_access("ab_testing", "read")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get an experiment by ID"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
-    experiment = service.get_experiment(experiment_id, org_id)
+    experiment = await service.get_experiment(experiment_id, org_id)
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
     
@@ -183,13 +188,14 @@ async def update_experiment(
     experiment_id: int,
     experiment_data: ExperimentUpdate,
     auth: tuple = Depends(require_access("ab_testing", "read")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Update an experiment"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
     updates = experiment_data.model_dump(exclude_unset=True)
-    experiment = service.update_experiment(
+    experiment = await service.update_experiment(
         experiment_id=experiment_id,
         organization_id=org_id,
         **updates
@@ -205,13 +211,14 @@ async def update_experiment(
 async def start_experiment(
     experiment_id: int,
     auth: tuple = Depends(require_access("ab_testing", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Start an experiment"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
     try:
-        experiment = service.start_experiment(experiment_id, org_id)
+        experiment = await service.start_experiment(experiment_id, org_id)
         if not experiment:
             raise HTTPException(status_code=404, detail="Experiment not found")
         
@@ -224,12 +231,13 @@ async def start_experiment(
 async def pause_experiment(
     experiment_id: int,
     auth: tuple = Depends(require_access("ab_testing", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Pause an experiment"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
-    experiment = service.pause_experiment(experiment_id, org_id)
+    experiment = await service.pause_experiment(experiment_id, org_id)
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
     
@@ -240,12 +248,13 @@ async def pause_experiment(
 async def complete_experiment(
     experiment_id: int,
     auth: tuple = Depends(require_access("ab_testing", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Complete an experiment"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
-    experiment = service.complete_experiment(experiment_id, org_id)
+    experiment = await service.complete_experiment(experiment_id, org_id)
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
     
@@ -261,13 +270,14 @@ async def create_variant(
     experiment_id: int,
     variant_data: VariantCreate,
     auth: tuple = Depends(require_access("ab_testing", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a variant for an experiment"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
     try:
-        variant = service.create_variant(
+        variant = await service.create_variant(
             experiment_id=experiment_id,
             organization_id=org_id,
             variant_name=variant_data.variant_name,
@@ -287,12 +297,13 @@ async def create_variant(
 async def get_variants(
     experiment_id: int,
     auth: tuple = Depends(require_access("ab_testing", "read")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all variants for an experiment"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
-    variants = service.get_variants(experiment_id, org_id)
+    variants = await service.get_variants(experiment_id, org_id)
     
     return [VariantResponse.model_validate(v) for v in variants]
 
@@ -305,12 +316,13 @@ async def get_variants(
 async def assign_variant(
     assignment_data: AssignmentRequest,
     auth: tuple = Depends(require_access("ab_testing", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Assign a user/session to a variant"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
-    variant = service.assign_variant(
+    variant = await service.assign_variant(
         experiment_id=assignment_data.experiment_id,
         organization_id=org_id,
         user_id=assignment_data.user_id or current_user.id,
@@ -335,12 +347,13 @@ async def assign_variant(
 async def record_result(
     result_data: ResultCreate,
     auth: tuple = Depends(require_access("ab_testing", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Record a result for a variant"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
-    result = service.record_result(
+    result = await service.record_result(
         experiment_id=result_data.experiment_id,
         variant_id=result_data.variant_id,
         metric_name=result_data.metric_name,
@@ -357,12 +370,13 @@ async def record_result(
 async def get_experiment_results(
     experiment_id: int,
     auth: tuple = Depends(require_access("ab_testing", "read")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get aggregated results for an experiment"""
+    current_user, org_id = auth
     service = ABTestingService(db)
     
-    results = service.get_experiment_results(experiment_id, org_id)
+    results = await service.get_experiment_results(experiment_id, org_id)
     
     if not results:
         raise HTTPException(status_code=404, detail="Experiment not found")

@@ -135,7 +135,7 @@ class RBACEnforcement:
         # Check service permission through RBAC
         rbac_service = RBACService(db)
         
-        if rbac_service.user_has_service_permission(user.id, permission):
+        if rbac_service.user_has_permission(user.id, permission):
             logger.debug(f"User {user.id} has permission: {permission}")
             return True
         

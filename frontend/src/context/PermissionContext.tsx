@@ -1,3 +1,5 @@
+// frontend/src/context/PermissionContext.tsx
+
 /**
  * Permission Context - Manages user permissions for RBAC enforcement
  * 
@@ -25,7 +27,8 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../services/api/client';
+import { useAuth } from './AuthContext';
+import rbacService from '../services/rbacService';
 
 interface PermissionContextType {
   /** List of all permissions the current user has */
@@ -69,6 +72,7 @@ interface PermissionProviderProps {
 }
 
 export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children }) => {
+  const { user } = useAuth();
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,22 +82,26 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
    * Load permissions from backend
    */
   const loadPermissions = useCallback(async () => {
+    if (!user?.id) {
+      setPermissions([]);
+      setIsSuperAdmin(false);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
       
       // Call backend endpoint to get current user's permissions
-      // Adjust endpoint based on your backend API
-      const response = await apiClient.get<{ permissions: string[]; is_super_admin?: boolean }>('/rbac/permissions/me');
+      const response = await rbacService.getUserPermissions(user.id);
       
-      const userPermissions = response.data.permissions || [];
-      const superAdmin = response.data.is_super_admin || false;
+      const userPermissions = response.permissions || [];
       
       setPermissions(userPermissions);
-      setIsSuperAdmin(superAdmin);
+      setIsSuperAdmin(user.is_super_admin || false);
       
       console.log('[PermissionContext] Loaded permissions:', userPermissions.length, 'permissions');
-      if (superAdmin) {
+      if (user.is_super_admin) {
         console.log('[PermissionContext] User is super admin - all permissions granted');
       }
     } catch (err: any) {
@@ -107,24 +115,13 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   /**
    * Load permissions on mount and when user changes
    */
   useEffect(() => {
-    // Check if user is logged in
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        loadPermissions();
-      } else {
-        // Not logged in - no permissions
-        setPermissions([]);
-        setIsSuperAdmin(false);
-        setLoading(false);
-      }
-    }
+    loadPermissions();
   }, [loadPermissions]);
 
   /**

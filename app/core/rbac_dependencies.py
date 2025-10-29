@@ -44,7 +44,7 @@ class RBACDependency:
         # Check service permission through RBAC
         rbac_service = RBACService(db)
         
-        if rbac_service.user_has_service_permission(current_user.id, self.required_permission):
+        if rbac_service.user_has_permission(current_user.id, self.required_permission):
             logger.info(f"User {current_user.id} has service permission: {self.required_permission}")
             return current_user
         
@@ -275,7 +275,7 @@ def require_role_management_permission(
     
     # Service admins can manage roles
     rbac_service = RBACService(db)
-    if rbac_service.user_has_service_permission(current_user.id, "crm_admin"):
+    if rbac_service.user_has_permission(current_user.id, "crm_admin"):
         return current_user
     
     raise HTTPException(
@@ -344,11 +344,11 @@ class TechnicianCompletionDependency:
         # Check if user has completion permission
         rbac_service = RBACService(db)
         
-        if rbac_service.user_has_service_permission(current_user.id, "completion_record_create"):
+        if rbac_service.user_has_permission(current_user.id, "completion_record_create"):
             return current_user
         
         # Fallback check for installation update permission
-        if rbac_service.user_has_service_permission(current_user.id, "installation_update"):
+        if rbac_service.user_has_permission(current_user.id, "installation_update"):
             return current_user
         
         raise HTTPException(
@@ -420,7 +420,7 @@ class AssignedTechnicianDependency:
         if job.assigned_technician_id != current_user.id:
             # Check if user has management permissions as fallback
             rbac_service = RBACService(db)
-            if not rbac_service.user_has_service_permission(current_user.id, "installation_update"):
+            if not rbac_service.user_has_permission(current_user.id, "installation_update"):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Only the assigned technician can complete this installation job"
@@ -485,7 +485,7 @@ def check_service_permission(user: User, module: str, action: str, db: Session) 
     # Check service permission through RBAC
     rbac_service = RBACService(db)
     
-    if rbac_service.user_has_service_permission(user.id, permission):
+    if rbac_service.user_has_permission(user.id, permission):
         logger.info(f"User {user.id} has service permission: {permission}")
         return True
     

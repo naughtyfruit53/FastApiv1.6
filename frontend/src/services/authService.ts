@@ -266,25 +266,25 @@ export const voucherService = {
       throw new Error(error.userMessage || `Failed to create ${type}`);
     }
   },
-  getVoucherById: async (type: string, id: number) => {
+  getVoucherById: async (type: string, voucherId: number) => {
     try {
-      const response = await api.get(`/${type}/${id}`);
+      const response = await api.get(`/${type}/${voucherId}`);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to fetch ${type}`);
     }
   },
-  updateVoucher: async (type: string, id: number, data: any) => {
+  updateVoucher: async (type: string, voucherId: number, data: any) => {
     try {
-      const response = await api.put(`/${type}/${id}`, data);
+      const response = await api.put(`/${type}/${voucherId}`, data);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to update ${type}`);
     }
   },
-  deleteVoucher: async (type: string, id: number) => {
+  deleteVoucher: async (type: string, voucherId: number) => {
     try {
-      const response = await api.delete(`/${type}/${id}`);
+      const response = await api.delete(`/${type}/${voucherId}`);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to delete ${type}`);

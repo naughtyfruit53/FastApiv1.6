@@ -135,7 +135,6 @@ async def create_organization_license(
 ):
     """Create new organization license (requires organization_license create permission)"""
     current_user, org_id = auth
-        )
     
     result = await OrganizationService.create_license(db, license_data, current_user)
     

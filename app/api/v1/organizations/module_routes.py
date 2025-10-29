@@ -10,7 +10,6 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user
-from app.api.v1.auth import get_current_active_user
 from app.models import Organization, User, Product, Customer, Vendor, Stock
 from app.schemas.user import UserRole
 from app.schemas import OrganizationUpdate, OrganizationInDB
@@ -282,7 +281,6 @@ async def get_user_modules(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found"
         )
-        )
   
     if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN] and current_user.role != "HR":
         if current_user.id != user_id:
@@ -331,7 +329,6 @@ async def update_user_modules(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found"
-        )
         )
   
     if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN] and current_user.role != "HR":

@@ -112,7 +112,6 @@ async def get_tally_config(
 ):
     """Get Tally configuration for the organization"""
     current_user, org_id = auth
-        )
     
     result = await db.execute(select(OrganizationSettings).filter(
         OrganizationSettings.organization_id == org_id
@@ -145,7 +144,6 @@ async def update_tally_config(
 ):
     """Update Tally configuration for the organization"""
     current_user, org_id = auth
-        )
     
     result = await db.execute(select(OrganizationSettings).filter(
         OrganizationSettings.organization_id == org_id
@@ -190,7 +188,6 @@ async def test_tally_connection(
 ):
     """Test Tally connection"""
     current_user, org_id = auth
-        )
     
     response = await TallyIntegrationService.test_tally_connection(config)
     return response
@@ -203,7 +200,6 @@ async def sync_with_tally(
 ):
     """Initiate Tally sync"""
     current_user, org_id = auth
-        )
     
     # Placeholder: Implement actual sync logic in TallyIntegrationService
     result = await db.execute(select(OrganizationSettings).filter(

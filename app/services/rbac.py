@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
 
+from app.core.database import get_db
 from app.models import (
     User, ServiceRole as Role, ServicePermission as Permission, ServiceRolePermission as RolePermission, 
     UserServiceRole as UserRole, Organization
@@ -16,7 +17,6 @@ from app.schemas.rbac import (
     ServiceRoleCreate as RoleCreate, ServiceRoleUpdate as RoleUpdate, ServicePermissionCreate as PermissionCreate,
     UserServiceRoleCreate as UserRoleCreate, ServiceRoleType as RoleType, ServiceModule as Module, ServiceAction as Action
 )
-from app.core.database import get_db
 import logging
 
 logger = logging.getLogger(__name__)
@@ -100,7 +100,6 @@ class RBACService:
                     select(Permission).filter_by(id=permission_id, is_active=True)
                 )
                 permission = result.scalars().first()
-                
                 if permission:
                     role_permission = RolePermission(
                         organization_id=role.organization_id,
