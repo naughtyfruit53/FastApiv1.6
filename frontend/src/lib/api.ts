@@ -236,6 +236,46 @@ api.interceptors.response.use(
         autoClose: 3000,
       });
     }
+    
+    // Handle 403 Forbidden - Permission Denied
+    if (status === 403) {
+      const data = error.response?.data;
+      const requiredPermission = data?.required_permission || 'unknown';
+      const module = data?.module || 'this resource';
+      const action = data?.action || 'perform this action';
+      
+      console.warn('[API] Permission denied:', {
+        endpoint: url,
+        method,
+        requiredPermission,
+        module,
+        action,
+        user: localStorage.getItem('user_email') || 'unknown',
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Show user-friendly error message
+      toast.error(
+        `Access Denied: You don't have permission to ${action} on ${module}. ` +
+        `Required permission: ${requiredPermission}. ` +
+        `Please contact your administrator to request access.`,
+        {
+          position: "top-right",
+          autoClose: 5000,
+        }
+      );
+      
+      // Return the error with enhanced information for component handling
+      return Promise.reject({
+        ...error,
+        isPermissionDenied: true,
+        requiredPermission,
+        module,
+        action,
+        userMessage: `You don't have permission to ${action} on ${module}`,
+      });
+    }
+    
     if (status === 401 && !originalRequest._retry) {
       if (originalRequest.headers?.Authorization) {
         console.log(`[API] ${status} Auth error - attempting token refresh`);
