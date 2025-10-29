@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models import User
 from app.services.ai_service import AIService
 import logging
@@ -35,8 +35,8 @@ class ChatResponse(BaseModel):
 @router.post("/process", response_model=ChatResponse)
 async def process_chat_message(
     chat_message: ChatMessage,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("chatbot", "create")),
+    db: Session = Depends(get_db)
 ):
     """
     Process a chat message using advanced AI capabilities
@@ -49,12 +49,14 @@ async def process_chat_message(
     - Navigation assistance
     - Intent classification with high accuracy
     """
+    current_user, org_id = auth
+    
     try:
         # Use AI Service for intelligent message processing
         ai_service = AIService(db)
         response_data = ai_service.process_chat_message(
             message=chat_message.message,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             user_id=current_user.id,
             context=chat_message.context
         )
@@ -577,15 +579,16 @@ async def process_chat_message(
 
 @router.get("/suggestions")
 async def get_chat_suggestions(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("chatbot", "read")),
+    db: Session = Depends(get_db)
 ):
     """Get contextual chat suggestions based on user's typical workflows"""
+    current_user, org_id = auth
     
     try:
         ai_service = AIService(db)
         suggestions = ai_service.get_contextual_suggestions(
-            organization_id=current_user.organization_id
+            organization_id=org_id
         )
         
         return {"suggestions": suggestions}
@@ -606,13 +609,15 @@ async def get_chat_suggestions(
 
 @router.get("/business-insights")
 async def get_business_insights(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("chatbot", "read")),
+    db: Session = Depends(get_db)
 ):
     """
     Get AI-powered business insights and recommendations
     This endpoint analyzes business data and provides actionable insights
     """
+    current_user, org_id = auth
+    
     try:
         insights = {
             "insights": [

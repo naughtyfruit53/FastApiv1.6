@@ -8,8 +8,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from app.core.permissions import PermissionChecker
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.services.automl_service import AutoMLService
 from app.models.automl import AutoMLTaskType, AutoMLStatus, AutoMLFramework
@@ -92,14 +91,14 @@ class AutoMLModelCandidateResponse(BaseModel):
 
 @router.get("/dashboard", response_model=AutoMLDashboardResponse)
 async def get_automl_dashboard(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("automl", "read")),
     db: Session = Depends(get_db)
 ):
     """Get AutoML dashboard data"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
+    current_user, org_id = auth
     
     service = AutoMLService(db)
-    dashboard_data = service.get_automl_dashboard(current_user.organization_id)
+    dashboard_data = service.get_automl_dashboard(org_id)
     
     return AutoMLDashboardResponse(**dashboard_data)
 
@@ -107,11 +106,11 @@ async def get_automl_dashboard(
 @router.post("/runs", response_model=AutoMLRunResponse, status_code=201)
 async def create_automl_run(
     run_data: AutoMLRunCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("automl", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new AutoML run"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:create", db)
+    current_user, org_id = auth
     
     try:
         task_type = AutoMLTaskType(run_data.task_type)
@@ -121,7 +120,7 @@ async def create_automl_run(
     
     service = AutoMLService(db)
     run = service.create_automl_run(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         run_name=run_data.run_name,
         task_type=task_type,
         target_column=run_data.target_column,
@@ -162,18 +161,18 @@ async def create_automl_run(
 async def get_automl_runs(
     status: Optional[str] = Query(None, description="Filter by status"),
     task_type: Optional[str] = Query(None, description="Filter by task type"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("automl", "read")),
     db: Session = Depends(get_db)
 ):
     """Get all AutoML runs for the organization"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
+    current_user, org_id = auth
     
     status_enum = AutoMLStatus(status) if status else None
     task_type_enum = AutoMLTaskType(task_type) if task_type else None
     
     service = AutoMLService(db)
     runs = service.get_automl_runs(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         status=status_enum,
         task_type=task_type_enum
     )
@@ -207,14 +206,14 @@ async def get_automl_runs(
 @router.get("/runs/{run_id}", response_model=AutoMLRunResponse)
 async def get_automl_run(
     run_id: int = Path(..., description="AutoML run ID"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("automl", "read")),
     db: Session = Depends(get_db)
 ):
     """Get a specific AutoML run"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
+    current_user, org_id = auth
     
     service = AutoMLService(db)
-    run = service.get_automl_run(current_user.organization_id, run_id)
+    run = service.get_automl_run(org_id, run_id)
     
     if not run:
         raise HTTPException(status_code=404, detail="AutoML run not found")
@@ -246,11 +245,11 @@ async def get_automl_run(
 async def get_automl_leaderboard(
     run_id: int = Path(..., description="AutoML run ID"),
     top_n: int = Query(10, description="Number of top models to return"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("automl", "read")),
     db: Session = Depends(get_db)
 ):
     """Get leaderboard for AutoML run"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
+    current_user, org_id = auth
     
     service = AutoMLService(db)
     candidates = service.get_leaderboard(run_id, top_n)
@@ -261,11 +260,11 @@ async def get_automl_leaderboard(
 @router.post("/runs/{run_id}/cancel")
 async def cancel_automl_run(
     run_id: int = Path(..., description="AutoML run ID"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("automl", "update")),
     db: Session = Depends(get_db)
 ):
     """Cancel a running AutoML run"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:update", db)
+    current_user, org_id = auth
     
     service = AutoMLService(db)
     run = service.cancel_automl_run(run_id)

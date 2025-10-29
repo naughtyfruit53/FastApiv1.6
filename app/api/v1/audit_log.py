@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 import logging
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.audit_log import AuditLog, AuditLogView, AuditLogExport
 
@@ -124,7 +124,7 @@ class AuditLogExportResponse(BaseModel):
 @router.post("/", response_model=AuditLogResponse, status_code=status.HTTP_201_CREATED)
 async def create_audit_log(
     log_data: AuditLogCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("audit_log", "create")),
     db: Session = Depends(get_db)
 ):
     """
@@ -132,7 +132,7 @@ async def create_audit_log(
     """
     try:
         audit_log = AuditLog(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             entity_type=log_data.entity_type,
             entity_id=log_data.entity_id,
             entity_name=log_data.entity_name,
@@ -180,7 +180,7 @@ async def query_audit_logs(
     filter_request: AuditLogFilterRequest,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("audit_log", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -188,7 +188,7 @@ async def query_audit_logs(
     """
     try:
         query = db.query(AuditLog).filter(
-            AuditLog.organization_id == current_user.organization_id
+            AuditLog.organization_id == org_id
         )
         
         # Apply filters
@@ -244,7 +244,7 @@ async def list_audit_logs(
     actor_type: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("audit_log", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -252,7 +252,7 @@ async def list_audit_logs(
     """
     try:
         query = db.query(AuditLog).filter(
-            AuditLog.organization_id == current_user.organization_id
+            AuditLog.organization_id == org_id
         )
         
         if entity_type:
@@ -285,7 +285,7 @@ async def list_audit_logs(
 @router.get("/{log_id}", response_model=AuditLogResponse)
 async def get_audit_log(
     log_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("audit_log", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -295,7 +295,7 @@ async def get_audit_log(
         log = db.query(AuditLog).filter(
             and_(
                 AuditLog.id == log_id,
-                AuditLog.organization_id == current_user.organization_id
+                AuditLog.organization_id == org_id
             )
         ).first()
         
@@ -324,7 +324,7 @@ async def get_audit_log(
 @router.get("/statistics/summary", response_model=Dict[str, Any])
 async def get_audit_statistics(
     days: int = Query(30, ge=1, le=365),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("audit_log", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -335,7 +335,7 @@ async def get_audit_statistics(
         
         query = db.query(AuditLog).filter(
             and_(
-                AuditLog.organization_id == current_user.organization_id,
+                AuditLog.organization_id == org_id,
                 AuditLog.timestamp >= start_date
             )
         )
@@ -348,7 +348,7 @@ async def get_audit_statistics(
             func.count(AuditLog.id).label('count')
         ).filter(
             and_(
-                AuditLog.organization_id == current_user.organization_id,
+                AuditLog.organization_id == org_id,
                 AuditLog.timestamp >= start_date
             )
         ).group_by(AuditLog.action).all()
@@ -359,7 +359,7 @@ async def get_audit_statistics(
             func.count(AuditLog.id).label('count')
         ).filter(
             and_(
-                AuditLog.organization_id == current_user.organization_id,
+                AuditLog.organization_id == org_id,
                 AuditLog.timestamp >= start_date
             )
         ).group_by(AuditLog.actor_type).all()
@@ -395,7 +395,7 @@ async def get_audit_statistics(
 @router.post("/export", response_model=AuditLogExportResponse, status_code=status.HTTP_201_CREATED)
 async def request_audit_log_export(
     export_request: AuditLogExportRequest,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("audit_log", "create")),
     db: Session = Depends(get_db)
 ):
     """
@@ -403,7 +403,7 @@ async def request_audit_log_export(
     """
     try:
         export = AuditLogExport(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             requested_by=current_user.id,
             start_date=export_request.start_date,
             end_date=export_request.end_date,
@@ -436,7 +436,7 @@ async def request_audit_log_export(
 async def list_audit_log_exports(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("audit_log", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -444,7 +444,7 @@ async def list_audit_log_exports(
     """
     try:
         exports = db.query(AuditLogExport).filter(
-            AuditLogExport.organization_id == current_user.organization_id
+            AuditLogExport.organization_id == org_id
         ).order_by(desc(AuditLogExport.created_at)).offset(skip).limit(limit).all()
         
         return exports

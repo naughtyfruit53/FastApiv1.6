@@ -12,8 +12,8 @@ import re
 from cachetools import TTLCache
 
 from app.core.database import get_db
-from app.core.security import get_current_user, get_current_active_admin
-from app.api.v1.auth import get_current_active_user
+
+from app.core.enforcement import require_access
 from app.models.transport_models import (
     Carrier, Route, FreightRate, Shipment, ShipmentTracking, ShipmentItem,
     CarrierType, RouteStatus, FreightMode, ShipmentStatus
@@ -43,7 +43,7 @@ async def get_carriers(
     current_user = Depends(get_current_active_user)
 ):
     query = db.query(Carrier).filter(
-        Carrier.organization_id == current_user.organization_id
+        Carrier.organization_id == org_id
     )
     
     if carrier_type:
@@ -64,7 +64,7 @@ async def create_carrier(
 ):
     # Check if carrier code already exists
     existing_carrier = db.query(Carrier).filter(
-        Carrier.organization_id == current_user.organization_id,
+        Carrier.organization_id == org_id,
         Carrier.carrier_code == carrier_data.carrier_code
     ).first()
     
@@ -75,7 +75,7 @@ async def create_carrier(
         )
     
     db_carrier = Carrier(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id,
         **carrier_data.dict()
     )
@@ -94,7 +94,7 @@ async def get_carrier(
 ):
     carrier = db.query(Carrier).filter(
         Carrier.id == carrier_id,
-        Carrier.organization_id == current_user.organization_id
+        Carrier.organization_id == org_id
     ).first()
     
     if not carrier:
@@ -111,7 +111,7 @@ async def update_carrier(
 ):
     carrier = db.query(Carrier).filter(
         Carrier.id == carrier_id,
-        Carrier.organization_id == current_user.organization_id
+        Carrier.organization_id == org_id
     ).first()
     
     if not carrier:
@@ -138,7 +138,7 @@ async def get_routes(
     current_user = Depends(get_current_active_user)
 ):
     query = db.query(Route).filter(
-        Route.organization_id == current_user.organization_id
+        Route.organization_id == org_id
     )
     
     if carrier_id:
@@ -162,7 +162,7 @@ async def create_route(
     # Verify carrier exists
     carrier = db.query(Carrier).filter(
         Carrier.id == route_data.carrier_id,
-        Carrier.organization_id == current_user.organization_id
+        Carrier.organization_id == org_id
     ).first()
     
     if not carrier:
@@ -170,7 +170,7 @@ async def create_route(
     
     # Check if route code already exists
     existing_route = db.query(Route).filter(
-        Route.organization_id == current_user.organization_id,
+        Route.organization_id == org_id,
         Route.route_code == route_data.route_code
     ).first()
     
@@ -181,7 +181,7 @@ async def create_route(
         )
     
     db_route = Route(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id,
         **route_data.dict()
     )
@@ -205,7 +205,7 @@ async def get_freight_rates(
     current_user = Depends(get_current_active_user)
 ):
     query = db.query(FreightRate).filter(
-        FreightRate.organization_id == current_user.organization_id
+        FreightRate.organization_id == org_id
     )
     
     if carrier_id:
@@ -237,7 +237,7 @@ async def create_freight_rate(
     # Verify carrier exists
     carrier = db.query(Carrier).filter(
         Carrier.id == rate_data.carrier_id,
-        Carrier.organization_id == current_user.organization_id
+        Carrier.organization_id == org_id
     ).first()
     
     if not carrier:
@@ -247,14 +247,14 @@ async def create_freight_rate(
     if rate_data.route_id:
         route = db.query(Route).filter(
             Route.id == rate_data.route_id,
-            Route.organization_id == current_user.organization_id
+            Route.organization_id == org_id
         ).first()
         
         if not route:
             raise HTTPException(status_code=404, detail="Route not found")
     
     db_rate = FreightRate(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id,
         **rate_data.dict()
     )
@@ -278,7 +278,7 @@ async def compare_freight_rates(
 ):
     # Find applicable routes
     route_query = db.query(Route).filter(
-        Route.organization_id == current_user.organization_id,
+        Route.organization_id == org_id,
         Route.origin_city.ilike(f"%{origin_city}%"),
         Route.destination_city.ilike(f"%{destination_city}%"),
         Route.status == RouteStatus.ACTIVE
@@ -298,7 +298,7 @@ async def compare_freight_rates(
     for route in routes:
         # Find applicable rates for this route
         rate_query = db.query(FreightRate).filter(
-            FreightRate.organization_id == current_user.organization_id,
+            FreightRate.organization_id == org_id,
             FreightRate.route_id == route.id,
             FreightRate.is_active == True,
             FreightRate.effective_date <= current_date
@@ -388,7 +388,7 @@ async def get_shipments(
     current_user = Depends(get_current_active_user)
 ):
     query = db.query(Shipment).filter(
-        Shipment.organization_id == current_user.organization_id
+        Shipment.organization_id == org_id
     )
     
     if status:
@@ -410,14 +410,14 @@ async def create_shipment(
     # Verify carrier exists
     carrier = db.query(Carrier).filter(
         Carrier.id == shipment_data.carrier_id,
-        Carrier.organization_id == current_user.organization_id
+        Carrier.organization_id == org_id
     ).first()
     
     if not carrier:
         raise HTTPException(status_code=404, detail="Carrier not found")
     
     # Generate shipment number
-    shipment_number = f"SH-{datetime.now().strftime('%Y%m%d')}-{current_user.organization_id:04d}-{carrier.id:03d}"
+    shipment_number = f"SH-{datetime.now().strftime('%Y%m%d')}-{org_id:04d}-{carrier.id:03d}"
     
     # Calculate totals from items
     total_weight_kg = sum(item.quantity * item.weight_per_unit_kg for item in shipment_data.items)
@@ -425,7 +425,7 @@ async def create_shipment(
     total_pieces = sum(item.number_of_packages for item in shipment_data.items)
     
     db_shipment = Shipment(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         shipment_number=shipment_number,
         total_weight_kg=total_weight_kg,
         total_volume_cbm=total_volume_cbm,
@@ -441,7 +441,7 @@ async def create_shipment(
     for item_data in shipment_data.items:
         total_value = item_data.quantity * item_data.unit_value
         item = ShipmentItem(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             shipment_id=db_shipment.id,
             total_value=total_value,
             **item_data.dict()
@@ -461,7 +461,7 @@ async def get_shipment_tracking(
 ):
     shipment = db.query(Shipment).filter(
         Shipment.id == shipment_id,
-        Shipment.organization_id == current_user.organization_id
+        Shipment.organization_id == org_id
     ).first()
     
     if not shipment:
@@ -469,7 +469,7 @@ async def get_shipment_tracking(
     
     tracking_events = db.query(ShipmentTracking).filter(
         ShipmentTracking.shipment_id == shipment_id,
-        ShipmentTracking.organization_id == current_user.organization_id
+        ShipmentTracking.organization_id == org_id
     ).order_by(ShipmentTracking.event_timestamp.desc()).all()
     
     return {
@@ -498,14 +498,14 @@ async def add_tracking_event(
 ):
     shipment = db.query(Shipment).filter(
         Shipment.id == shipment_id,
-        Shipment.organization_id == current_user.organization_id
+        Shipment.organization_id == org_id
     ).first()
     
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
     
     tracking_event = ShipmentTracking(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         shipment_id=shipment_id,
         event_timestamp=datetime.now(),
         event_type=event_type,
@@ -546,34 +546,34 @@ async def get_transport_dashboard_summary(
 ):
     # Total carriers
     total_carriers = db.query(Carrier).filter(
-        Carrier.organization_id == current_user.organization_id,
+        Carrier.organization_id == org_id,
         Carrier.is_active == True
     ).count()
     
     # Active shipments
     active_shipments = db.query(Shipment).filter(
-        Shipment.organization_id == current_user.organization_id,
+        Shipment.organization_id == org_id,
         Shipment.status.in_([ShipmentStatus.BOOKED, ShipmentStatus.IN_TRANSIT])
     ).count()
     
     # Delivered this month
     start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     delivered_this_month = db.query(Shipment).filter(
-        Shipment.organization_id == current_user.organization_id,
+        Shipment.organization_id == org_id,
         Shipment.status == ShipmentStatus.DELIVERED,
         Shipment.actual_delivery_date >= start_of_month
     ).count()
     
     # Pending pickups
     pending_pickups = db.query(Shipment).filter(
-        Shipment.organization_id == current_user.organization_id,
+        Shipment.organization_id == org_id,
         Shipment.status == ShipmentStatus.BOOKED,
         Shipment.pickup_date <= datetime.now()
     ).count()
     
     # Total freight cost this month
     freight_cost_this_month = db.query(Shipment).filter(
-        Shipment.organization_id == current_user.organization_id,
+        Shipment.organization_id == org_id,
         Shipment.created_at >= start_of_month
     ).with_entities(Shipment.total_charges).all()
     

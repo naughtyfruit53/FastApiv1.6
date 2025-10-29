@@ -9,7 +9,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+
 from app.models.user_models import User
 from app.services.ab_testing_service import ABTestingService
 from app.models.ab_testing import ExperimentStatus, VariantType
@@ -124,14 +124,14 @@ class ResultResponse(BaseModel):
 @router.post("/experiments", response_model=ExperimentResponse)
 async def create_experiment(
     experiment_data: ExperimentCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new A/B test experiment"""
     service = ABTestingService(db)
     
     experiment = service.create_experiment(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by_id=current_user.id,
         experiment_name=experiment_data.experiment_name,
         description=experiment_data.description,
@@ -146,14 +146,14 @@ async def list_experiments(
     status: Optional[ExperimentStatus] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "read")),
     db: Session = Depends(get_db)
 ):
     """List A/B test experiments"""
     service = ABTestingService(db)
     
     experiments = service.list_experiments(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         status=status,
         skip=skip,
         limit=limit
@@ -165,13 +165,13 @@ async def list_experiments(
 @router.get("/experiments/{experiment_id}", response_model=ExperimentResponse)
 async def get_experiment(
     experiment_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "read")),
     db: Session = Depends(get_db)
 ):
     """Get an experiment by ID"""
     service = ABTestingService(db)
     
-    experiment = service.get_experiment(experiment_id, current_user.organization_id)
+    experiment = service.get_experiment(experiment_id, org_id)
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
     
@@ -182,7 +182,7 @@ async def get_experiment(
 async def update_experiment(
     experiment_id: int,
     experiment_data: ExperimentUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "read")),
     db: Session = Depends(get_db)
 ):
     """Update an experiment"""
@@ -191,7 +191,7 @@ async def update_experiment(
     updates = experiment_data.model_dump(exclude_unset=True)
     experiment = service.update_experiment(
         experiment_id=experiment_id,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         **updates
     )
     
@@ -204,14 +204,14 @@ async def update_experiment(
 @router.post("/experiments/{experiment_id}/start", response_model=ExperimentResponse)
 async def start_experiment(
     experiment_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "create")),
     db: Session = Depends(get_db)
 ):
     """Start an experiment"""
     service = ABTestingService(db)
     
     try:
-        experiment = service.start_experiment(experiment_id, current_user.organization_id)
+        experiment = service.start_experiment(experiment_id, org_id)
         if not experiment:
             raise HTTPException(status_code=404, detail="Experiment not found")
         
@@ -223,13 +223,13 @@ async def start_experiment(
 @router.post("/experiments/{experiment_id}/pause", response_model=ExperimentResponse)
 async def pause_experiment(
     experiment_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "create")),
     db: Session = Depends(get_db)
 ):
     """Pause an experiment"""
     service = ABTestingService(db)
     
-    experiment = service.pause_experiment(experiment_id, current_user.organization_id)
+    experiment = service.pause_experiment(experiment_id, org_id)
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
     
@@ -239,13 +239,13 @@ async def pause_experiment(
 @router.post("/experiments/{experiment_id}/complete", response_model=ExperimentResponse)
 async def complete_experiment(
     experiment_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "create")),
     db: Session = Depends(get_db)
 ):
     """Complete an experiment"""
     service = ABTestingService(db)
     
-    experiment = service.complete_experiment(experiment_id, current_user.organization_id)
+    experiment = service.complete_experiment(experiment_id, org_id)
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
     
@@ -260,7 +260,7 @@ async def complete_experiment(
 async def create_variant(
     experiment_id: int,
     variant_data: VariantCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a variant for an experiment"""
@@ -269,7 +269,7 @@ async def create_variant(
     try:
         variant = service.create_variant(
             experiment_id=experiment_id,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             variant_name=variant_data.variant_name,
             variant_type=variant_data.variant_type,
             model_id=variant_data.model_id,
@@ -286,13 +286,13 @@ async def create_variant(
 @router.get("/experiments/{experiment_id}/variants", response_model=List[VariantResponse])
 async def get_variants(
     experiment_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "read")),
     db: Session = Depends(get_db)
 ):
     """Get all variants for an experiment"""
     service = ABTestingService(db)
     
-    variants = service.get_variants(experiment_id, current_user.organization_id)
+    variants = service.get_variants(experiment_id, org_id)
     
     return [VariantResponse.model_validate(v) for v in variants]
 
@@ -304,7 +304,7 @@ async def get_variants(
 @router.post("/assign", response_model=AssignmentResponse)
 async def assign_variant(
     assignment_data: AssignmentRequest,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "create")),
     db: Session = Depends(get_db)
 ):
     """Assign a user/session to a variant"""
@@ -312,7 +312,7 @@ async def assign_variant(
     
     variant = service.assign_variant(
         experiment_id=assignment_data.experiment_id,
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         user_id=assignment_data.user_id or current_user.id,
         session_id=assignment_data.session_id
     )
@@ -334,7 +334,7 @@ async def assign_variant(
 @router.post("/results", response_model=ResultResponse)
 async def record_result(
     result_data: ResultCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "create")),
     db: Session = Depends(get_db)
 ):
     """Record a result for a variant"""
@@ -356,13 +356,13 @@ async def record_result(
 @router.get("/experiments/{experiment_id}/results")
 async def get_experiment_results(
     experiment_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ab_testing", "read")),
     db: Session = Depends(get_db)
 ):
     """Get aggregated results for an experiment"""
     service = ABTestingService(db)
     
-    results = service.get_experiment_results(experiment_id, current_user.organization_id)
+    results = service.get_experiment_results(experiment_id, org_id)
     
     if not results:
         raise HTTPException(status_code=404, detail="Experiment not found")
