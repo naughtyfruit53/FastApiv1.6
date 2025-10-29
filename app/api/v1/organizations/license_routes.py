@@ -24,14 +24,18 @@ license_router = router  # Alias for backward compatibility
 async def update_organization_license(
     organization_id: int,
     license_data: dict,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization_license", "update")),
+    db: Session = Depends(get_db)
 ):
-    """Update organization license duration and expiry (super admin only)"""
-    if not current_user.is_super_admin:
+    """Update organization license duration and expiry (requires organization_license update permission)"""
+    current_user, org_id = auth
+    
+    # License operations can be cross-organization for super admins
+    # But regular users can only update their own organization
+    if organization_id != org_id and not getattr(current_user, 'is_super_admin', False):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can update organization licenses"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
         )
     
     org = db.query(Organization).filter(Organization.id == organization_id).first()
@@ -85,14 +89,17 @@ async def update_organization_license(
 @router.get("/{organization_id:int}/license")
 async def get_organization_license(
     organization_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization_license", "read")),
+    db: Session = Depends(get_db)
 ):
     """Get organization license information"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+    current_user, org_id = auth
+    
+    # Enforce tenant isolation
+    if organization_id != org_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
         )
     
     org = db.query(Organization).filter(Organization.id == organization_id).first()
@@ -123,14 +130,11 @@ async def get_organization_license(
 @router.post("/create", response_model=OrganizationLicenseResponse)
 async def create_organization_license(
     license_data: OrganizationLicenseCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization_license", "create")),
+    db: Session = Depends(get_db)
 ):
-    """Create new organization license (super admin only)"""
-    if not current_user.is_super_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can create organization licenses"
+    """Create new organization license (requires organization_license create permission)"""
+    current_user, org_id = auth
         )
     
     result = await OrganizationService.create_license(db, license_data, current_user)
