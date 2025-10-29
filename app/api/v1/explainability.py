@@ -167,7 +167,7 @@ async def create_model_explainability(
     
     service = ExplainabilityService(db)
     explainability = service.create_model_explainability(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         model_id=explainability_data.model_id,
         model_type=explainability_data.model_type,
         model_name=explainability_data.model_name,
@@ -213,7 +213,7 @@ async def get_model_explainability(
     
     service = ExplainabilityService(db)
     explainability = service.get_model_explainability(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         model_id=model_id,
         model_type=model_type,
         method=method_enum
@@ -262,7 +262,7 @@ async def create_prediction_explanation(
     
     service = ExplainabilityService(db)
     explanation = service.create_prediction_explanation(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         model_explainability_id=explanation_data.model_explainability_id,
         input_features=explanation_data.input_features,
         predicted_value=explanation_data.predicted_value,
@@ -306,7 +306,7 @@ async def get_prediction_explanations(
     
     service = ExplainabilityService(db)
     explanations = service.get_prediction_explanations(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         model_explainability_id=explainability_id,
         limit=limit
     )
@@ -349,7 +349,7 @@ async def create_explainability_report(
     
     service = ExplainabilityService(db)
     report = service.create_explainability_report(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         report_name=report_data.report_name,
         report_type=report_data.report_type,
         model_ids=report_data.model_ids,
@@ -392,7 +392,7 @@ async def get_explainability_reports(
     
     service = ExplainabilityService(db)
     reports = service.get_explainability_reports(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         report_type=report_type
     )
     
@@ -428,7 +428,7 @@ async def get_explainability_report(
     
     service = ExplainabilityService(db)
     report = service.get_explainability_report(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         report_id=report_id
     )
     
