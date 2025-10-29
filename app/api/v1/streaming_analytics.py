@@ -1,8 +1,7 @@
 """
 Streaming Analytics API endpoints
 """
-
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+    from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -11,7 +10,7 @@ import json
 import asyncio
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.services.streaming_analytics_service import StreamingAnalyticsService
 from app.models.streaming_analytics import StreamStatus, AlertSeverity, AlertStatus
@@ -176,14 +175,14 @@ class MetricResponse(BaseModel):
 @router.post("/data-sources", response_model=DataSourceResponse)
 async def create_data_source(
     source_data: DataSourceCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Create a new streaming data source"""
     service = StreamingAnalyticsService(db)
     
     data_source = service.create_data_source(
-        organization_id=organization_id,
+        organization_id=org_id,
         created_by_id=current_user.id,
         source_name=source_data.source_name,
         source_type=source_data.source_type,
@@ -199,14 +198,14 @@ async def list_data_sources(
     status: Optional[StreamStatus] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """List streaming data sources"""
     service = StreamingAnalyticsService(db)
     
     sources = service.list_data_sources(
-        organization_id=organization_id,
+        organization_id=org_id,
         status=status,
         skip=skip,
         limit=limit
@@ -218,13 +217,13 @@ async def list_data_sources(
 @router.get("/data-sources/{source_id}", response_model=DataSourceResponse)
 async def get_data_source(
     source_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Get a data source by ID"""
     service = StreamingAnalyticsService(db)
     
-    source = service.get_data_source(source_id, organization_id)
+    source = service.get_data_source(source_id, org_id)
     if not source:
         raise HTTPException(status_code=404, detail="Data source not found")
     
@@ -235,8 +234,8 @@ async def get_data_source(
 async def update_data_source(
     source_id: int,
     source_data: DataSourceUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Update a data source"""
     service = StreamingAnalyticsService(db)
@@ -244,7 +243,7 @@ async def update_data_source(
     updates = source_data.model_dump(exclude_unset=True)
     source = service.update_data_source(
         source_id=source_id,
-        organization_id=organization_id,
+        organization_id=org_id,
         **updates
     )
     
@@ -261,15 +260,15 @@ async def update_data_source(
 @router.post("/events", response_model=EventResponse)
 async def ingest_event(
     event_data: EventCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Ingest a streaming event"""
     service = StreamingAnalyticsService(db)
     
     event = service.ingest_event(
         data_source_id=event_data.data_source_id,
-        organization_id=organization_id,
+        organization_id=org_id,
         event_type=event_data.event_type,
         event_data=event_data.event_data,
         event_timestamp=event_data.event_timestamp
@@ -284,14 +283,14 @@ async def get_recent_events(
     event_type: Optional[str] = None,
     minutes: int = Query(60, ge=1, le=1440),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Get recent streaming events"""
     service = StreamingAnalyticsService(db)
     
     events = service.get_recent_events(
-        organization_id=organization_id,
+        organization_id=org_id,
         data_source_id=data_source_id,
         event_type=event_type,
         minutes=minutes,
@@ -308,14 +307,14 @@ async def get_recent_events(
 @router.post("/predictions", response_model=LivePredictionResponse)
 async def record_live_prediction(
     prediction_data: LivePredictionCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Record a live prediction"""
     service = StreamingAnalyticsService(db)
     
     prediction = service.record_live_prediction(
-        organization_id=organization_id,
+        organization_id=org_id,
         prediction_type=prediction_data.prediction_type,
         input_data=prediction_data.input_data,
         prediction_result=prediction_data.prediction_result,
@@ -333,14 +332,14 @@ async def get_recent_predictions(
     model_id: Optional[int] = None,
     minutes: int = Query(60, ge=1, le=1440),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Get recent live predictions"""
     service = StreamingAnalyticsService(db)
     
     predictions = service.get_recent_predictions(
-        organization_id=organization_id,
+        organization_id=org_id,
         prediction_type=prediction_type,
         model_id=model_id,
         minutes=minutes,
@@ -357,14 +356,14 @@ async def get_recent_predictions(
 @router.post("/alerts", response_model=AlertResponse)
 async def create_alert(
     alert_data: AlertCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Create a streaming alert"""
     service = StreamingAnalyticsService(db)
     
     alert = service.create_alert(
-        organization_id=organization_id,
+        organization_id=org_id,
         alert_type=alert_data.alert_type,
         alert_title=alert_data.alert_title,
         alert_message=alert_data.alert_message,
@@ -382,14 +381,14 @@ async def get_alerts(
     severity: Optional[AlertSeverity] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Get streaming alerts"""
     service = StreamingAnalyticsService(db)
     
     alerts = service.get_alerts(
-        organization_id=organization_id,
+        organization_id=org_id,
         status=status,
         severity=severity,
         skip=skip,
@@ -402,15 +401,15 @@ async def get_alerts(
 @router.post("/alerts/acknowledge", response_model=AlertResponse)
 async def acknowledge_alert(
     alert_data: AlertAcknowledge,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Acknowledge an alert"""
     service = StreamingAnalyticsService(db)
     
     alert = service.acknowledge_alert(
         alert_id=alert_data.alert_id,
-        organization_id=organization_id,
+        organization_id=org_id,
         acknowledged_by_id=current_user.id
     )
     
@@ -423,15 +422,15 @@ async def acknowledge_alert(
 @router.post("/alerts/resolve", response_model=AlertResponse)
 async def resolve_alert(
     alert_data: AlertResolve,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Resolve an alert"""
     service = StreamingAnalyticsService(db)
     
     alert = service.resolve_alert(
         alert_id=alert_data.alert_id,
-        organization_id=organization_id,
+        organization_id=org_id,
         resolved_by_id=current_user.id,
         resolution_notes=alert_data.resolution_notes
     )
@@ -449,14 +448,14 @@ async def resolve_alert(
 @router.post("/metrics", response_model=MetricResponse)
 async def record_metric(
     metric_data: MetricCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Record a streaming metric"""
     service = StreamingAnalyticsService(db)
     
     metric = service.record_metric(
-        organization_id=organization_id,
+        organization_id=org_id,
         metric_name=metric_data.metric_name,
         metric_value=metric_data.metric_value,
         aggregation_type=metric_data.aggregation_type,
@@ -475,14 +474,14 @@ async def get_metrics(
     metric_name: Optional[str] = None,
     time_window: Optional[str] = None,
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Get streaming metrics"""
     service = StreamingAnalyticsService(db)
     
     metrics = service.get_metrics(
-        organization_id=organization_id,
+        organization_id=org_id,
         metric_name=metric_name,
         time_window=time_window,
         limit=limit
@@ -497,13 +496,13 @@ async def get_metrics(
 
 @router.get("/dashboard")
 async def get_dashboard_data(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    auth: tuple = Depends(require_access("streaming_analytics", "read")),
+    db:  = Depends(get_db)
 ):
     """Get streaming analytics dashboard data"""
     service = StreamingAnalyticsService(db)
     
-    dashboard_data = service.get_dashboard_data(organization_id)
+    dashboard_data = service.get_dashboard_data(org_id)
     
     return dashboard_data
 

@@ -1,4 +1,4 @@
-# Revised: app/api/customer_analytics.py
+# app/api/customer_analytics.py
 
 """
 Customer Analytics API endpoints
@@ -12,11 +12,14 @@ Provides REST API endpoints for customer analytics and insights including:
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
 from typing import List, Optional
+from datetime import datetime, timedelta
+
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+from app.core.enforcement import require_access
 from app.models import User, Customer, CustomerSegment
+from app.models.base import CustomerInteraction
 from app.services.customer_analytics_service import CustomerAnalyticsService
 from app.schemas.customer_analytics import (
     CustomerAnalyticsResponse,
@@ -28,7 +31,6 @@ from app.schemas.customer_analytics import (
     AnalyticsErrorResponse,
     ValidationErrorResponse
 )
-from app.core.tenant import TenantQueryMixin
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,8 +42,8 @@ async def get_customer_analytics(
     customer_id: int,
     include_recent_interactions: bool = Query(True, description="Include recent interactions in response"),
     recent_interactions_limit: int = Query(5, ge=1, le=20, description="Number of recent interactions to include"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer_analytics", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get comprehensive analytics for a specific customer.
@@ -52,23 +54,20 @@ async def get_customer_analytics(
     - Interaction breakdown by type and status
     - Current segment memberships
     - Recent interactions summary
-    
-    **Required permissions**: Standard user or above
-    **Multi-tenant**: Data is automatically scoped to user's organization
     """
+    current_user, org_id = auth
+    
     try:
-        # Ensure organization context
-        org_id = require_current_organization_id(current_user)
-        
         # Verify customer exists and belongs to organization
-        customer = await TenantQueryMixin.filter_by_tenant(
-            (await db.execute(select(Customer).filter_by(id=customer_id, organization_id=org_id))).scalars().first()
+        result = await db.execute(
+            select(Customer).where(Customer.id == customer_id, Customer.organization_id == org_id)
         )
+        customer = result.scalars().first()
         
         if not customer:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Customer with ID {customer_id} not found"
+                detail="Customer not found"
             )
         
         # Initialize analytics service
@@ -80,7 +79,7 @@ async def get_customer_analytics(
         if not analytics_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Analytics data not available for customer {customer_id}"
+                detail="Analytics data not available"
             )
         
         # Limit recent interactions if requested
@@ -107,34 +106,27 @@ async def get_segment_analytics(
     segment_name: str,
     include_timeline: bool = Query(True, description="Include activity timeline"),
     timeline_days: int = Query(30, ge=7, le=365, description="Number of days for timeline"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer_analytics", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """
-    Get comprehensive analytics for a customer segment.
+    """Get comprehensive analytics for a customer segment."""
+    current_user, org_id = auth
     
-    Returns metrics including:
-    - Total customers in segment
-    - Total and average interactions
-    - Interaction distribution by type
-    - Activity timeline over specified period
-    
-    **Required permissions**: Standard user or above
-    **Multi-tenant**: Data is automatically scoped to user's organization
-    """
     try:
-        # Ensure organization context
-        org_id = require_current_organization_id(current_user)
-        
         # Validate segment exists in organization
-        segment_exists = await TenantQueryMixin.filter_by_tenant(
-            (await db.execute(select(CustomerSegment).filter_by(segment_name=segment_name, is_active=True, organization_id=org_id))).scalars().first()
+        result = await db.execute(
+            select(CustomerSegment).where(
+                CustomerSegment.segment_name == segment_name,
+                CustomerSegment.is_active == True,
+                CustomerSegment.organization_id == org_id
+            )
         )
+        segment_exists = result.scalars().first()
         
         if not segment_exists:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Segment '{segment_name}' not found or has no active customers"
+                detail="Segment not found"
             )
         
         # Initialize analytics service
@@ -162,24 +154,13 @@ async def get_segment_analytics(
 
 @router.get("/organization/summary", response_model=OrganizationAnalyticsSummary)
 async def get_organization_analytics_summary(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer_analytics", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """
-    Get high-level analytics summary for the entire organization.
+    """Get high-level analytics summary for the entire organization."""
+    current_user, org_id = auth
     
-    Returns metrics including:
-    - Total customers and interactions
-    - Customer distribution by segment
-    - Interaction trends over time
-    
-    **Required permissions**: Standard user or above
-    **Multi-tenant**: Data is automatically scoped to user's organization
-    """
     try:
-        # Ensure organization context
-        org_id = require_current_organization_id(current_user)
-        
         # Initialize analytics service
         analytics_service = CustomerAnalyticsService(db, org_id)
         
@@ -201,25 +182,13 @@ async def get_organization_analytics_summary(
 
 @router.get("/dashboard/metrics", response_model=DashboardMetrics)
 async def get_dashboard_metrics(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer_analytics", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """
-    Get key metrics for analytics dashboard.
+    """Get key metrics for analytics dashboard."""
+    current_user, org_id = auth
     
-    Returns quick metrics including:
-    - Customer counts
-    - Interaction counts (today, week, month)
-    - Top segments
-    - Recent activity
-    
-    **Required permissions**: Standard user or above
-    **Multi-tenant**: Data is automatically scoped to user's organization
-    """
     try:
-        # Ensure organization context
-        org_id = require_current_organization_id(current_user)
-        
         # Initialize analytics service
         analytics_service = CustomerAnalyticsService(db, org_id)
         
@@ -227,17 +196,13 @@ async def get_dashboard_metrics(
         summary_data = await analytics_service.get_organization_analytics_summary()
         
         # Calculate additional dashboard-specific metrics
-        from datetime import datetime, timedelta
-        from sqlalchemy import and_
-        from app.models.base import CustomerInteraction
-        
         today = datetime.utcnow().date()
         week_start = today - timedelta(days=7)
         month_start = today - timedelta(days=30)
         
         # Interactions today
         interactions_today = len((await db.execute(
-            select(CustomerInteraction).filter(
+            select(CustomerInteraction).where(
                 CustomerInteraction.organization_id == org_id,
                 CustomerInteraction.interaction_date >= datetime.combine(today, datetime.min.time())
             )
@@ -245,7 +210,7 @@ async def get_dashboard_metrics(
         
         # Interactions this week
         interactions_week = len((await db.execute(
-            select(CustomerInteraction).filter(
+            select(CustomerInteraction).where(
                 CustomerInteraction.organization_id == org_id,
                 CustomerInteraction.interaction_date >= datetime.combine(week_start, datetime.min.time())
             )
@@ -253,7 +218,7 @@ async def get_dashboard_metrics(
         
         # Interactions this month
         interactions_month = len((await db.execute(
-            select(CustomerInteraction).filter(
+            select(CustomerInteraction).where(
                 CustomerInteraction.organization_id == org_id,
                 CustomerInteraction.interaction_date >= datetime.combine(month_start, datetime.min.time())
             )
@@ -297,22 +262,16 @@ async def get_dashboard_metrics(
 
 @router.get("/segments", response_model=List[str])
 async def list_available_segments(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("customer_analytics", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """
-    Get list of available customer segments in the organization.
+    """Get list of available customer segments in the organization."""
+    current_user, org_id = auth
     
-    **Required permissions**: Standard user or above
-    **Multi-tenant**: Data is automatically scoped to user's organization
-    """
     try:
-        # Ensure organization context
-        org_id = require_current_organization_id(current_user)
-        
         # Get distinct segment names
         segments = (await db.execute(
-            select(CustomerSegment.segment_name).filter(
+            select(CustomerSegment.segment_name).where(
                 CustomerSegment.organization_id == org_id,
                 CustomerSegment.is_active == True
             ).distinct()
