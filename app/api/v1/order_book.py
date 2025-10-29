@@ -263,9 +263,11 @@ async def update_order_status(
 
 @router.get("/workflow-stages")
 async def get_workflow_stages(
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("order", "read"))
 ):
     """Get available workflow stages"""
+    current_user, organization_id = auth
+    
     return {
         "stages": [
             {"value": "order_received", "label": "Order Received", "order": 1},
@@ -279,9 +281,11 @@ async def get_workflow_stages(
 
 @router.get("/order-statuses")
 async def get_order_statuses(
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("order", "read"))
 ):
     """Get available order statuses"""
+    current_user, organization_id = auth
+    
     return {
         "statuses": [
             {"value": "pending", "label": "Pending"},

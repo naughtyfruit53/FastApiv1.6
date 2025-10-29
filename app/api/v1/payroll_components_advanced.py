@@ -39,9 +39,10 @@ async def bulk_create_payroll_components(
     bulk_data: BulkPayrollComponentCreate,
     auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Bulk create payroll components with chart account mappings"""
+    current_user, organization_id = auth
+    
     try:
         created_components = []
         errors = []
@@ -145,11 +146,12 @@ async def get_advanced_payroll_components(
     filter_params: PayrollComponentFilter = Depends(),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get payroll components with advanced filtering and account details"""
+    current_user, organization_id = auth
+    
     try:
         query = db.query(PayrollComponent).options(
             joinedload(PayrollComponent.expense_account),
@@ -236,9 +238,10 @@ async def update_component_chart_mapping(
     mapping_data: PayrollComponentMappingUpdate,
     auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Update chart account mapping for a payroll component"""
+    current_user, organization_id = auth
+    
     try:
         # Get component
         component = db.query(PayrollComponent).filter(
@@ -330,9 +333,10 @@ async def update_component_chart_mapping(
 async def get_component_mapping_status(
     auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get mapping status for all payroll components"""
+    current_user, organization_id = auth
+    
     try:
         # Get counts by mapping status
         total_components = db.query(func.count(PayrollComponent.id)).filter(
@@ -401,9 +405,10 @@ async def update_advanced_payroll_settings(
     settings: AdvancedPayrollSettings,
     auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Update advanced payroll settings with default account mappings"""
+    current_user, organization_id = auth
+    
     try:
         # This would integrate with a PayrollSettings model to store advanced configurations
         # For now, we'll return the received settings as confirmation
@@ -431,9 +436,10 @@ async def update_advanced_payroll_settings(
 async def validate_all_components(
     auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Validate all payroll components for chart account mappings"""
+    current_user, organization_id = auth
+    
     try:
         components = db.query(PayrollComponent).options(
             joinedload(PayrollComponent.expense_account),

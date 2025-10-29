@@ -138,6 +138,8 @@ async def create_integration(
     """
     Create a new integration.
     """
+    current_user, org_id = auth
+    
     try:
         integration = Integration(
             organization_id=org_id,
@@ -176,12 +178,14 @@ async def list_integrations(
     limit: int = Query(100, ge=1, le=100),
     provider: Optional[str] = None,
     status: Optional[str] = None,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("integration", "read")),
     db: Session = Depends(get_db)
 ):
     """
     List all integrations for the organization.
     """
+    current_user, org_id = auth
+    
     try:
         query = db.query(Integration).filter(
             Integration.organization_id == org_id
@@ -215,6 +219,8 @@ async def get_integration(
     """
     Get details of a specific integration.
     """
+    current_user, org_id = auth
+    
     try:
         integration = db.query(Integration).filter(
             and_(
@@ -251,6 +257,8 @@ async def update_integration(
     """
     Update an integration.
     """
+    current_user, org_id = auth
+    
     try:
         integration = db.query(Integration).filter(
             and_(
@@ -296,6 +304,8 @@ async def delete_integration(
     """
     Delete an integration.
     """
+    current_user, org_id = auth
+    
     try:
         integration = db.query(Integration).filter(
             and_(
@@ -339,6 +349,8 @@ async def send_message(
     """
     Send a message through an integration.
     """
+    current_user, org_id = auth
+    
     try:
         # Verify integration
         integration = db.query(Integration).filter(
@@ -404,12 +416,14 @@ async def list_messages(
     direction: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("integration", "read")),
     db: Session = Depends(get_db)
 ):
     """
     List messages for integrations.
     """
+    current_user, org_id = auth
+    
     try:
         query = db.query(IntegrationMessage).filter(
             IntegrationMessage.organization_id == org_id
@@ -446,6 +460,8 @@ async def create_webhook(
     """
     Create a webhook for an integration.
     """
+    current_user, org_id = auth
+    
     try:
         # Verify integration
         integration = db.query(Integration).filter(
@@ -494,12 +510,14 @@ async def list_webhooks(
     integration_id: Optional[int] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("integration", "read")),
     db: Session = Depends(get_db)
 ):
     """
     List webhooks for integrations.
     """
+    current_user, org_id = auth
+    
     try:
         query = db.query(IntegrationWebhook).filter(
             IntegrationWebhook.organization_id == org_id

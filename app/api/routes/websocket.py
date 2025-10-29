@@ -4,10 +4,12 @@ WebSocket API Routes for Real-Time Collaboration
 Provides WebSocket endpoints for demo mode collaboration and real-time features.
 """
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Depends
 from typing import Optional
 import logging
 import json
+
+from app.core.enforcement import require_access
 
 # Import the connection manager from backend/shared
 import sys
@@ -157,16 +159,25 @@ async def demo_collaboration_websocket(
 
 
 @router.get("/ws/sessions")
-async def get_active_sessions():
+async def get_active_sessions(
+    auth: tuple = Depends(require_access("websocket", "read"))
+):
     """Get list of all active collaboration sessions"""
+    current_user, org_id = auth
+    
     return {
         "sessions": manager.get_active_sessions()
     }
 
 
 @router.get("/ws/sessions/{session_id}/participants")
-async def get_session_participants(session_id: str):
+async def get_session_participants(
+    session_id: str,
+    auth: tuple = Depends(require_access("websocket", "read"))
+):
     """Get list of participants in a specific session"""
+    current_user, org_id = auth
+    
     return {
         "session_id": session_id,
         "participants": manager.get_session_participants(session_id)
