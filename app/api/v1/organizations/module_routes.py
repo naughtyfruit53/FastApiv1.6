@@ -18,6 +18,7 @@ from app.utils.supabase_auth import supabase_auth_service
 from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole  # Changed to absolute from rbac_models
 
 from sqlalchemy import select, delete, func  # Added imports for async queries
+from app.core.tenant import TenantContext  # Added import for TenantContext
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,10 @@ async def get_organization_modules(
 ):
     """Get organization's enabled modules"""
     current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
     
     # Enforce tenant isolation
     if organization_id != org_id:
@@ -63,6 +68,10 @@ async def update_organization_modules(
 ):
     """Update organization's enabled modules (requires organization_module update permission)"""
     current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
     
     # Enforce tenant isolation
     if organization_id != org_id:
@@ -115,6 +124,10 @@ async def get_organization(
     """Get organization by ID"""
     current_user, org_id = auth
     
+    if current_user.is_super_admin:
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
+    
     # Enforce tenant isolation
     if organization_id != org_id:
         raise HTTPException(
@@ -141,6 +154,10 @@ async def update_organization(
 ):
     """Update organization"""
     current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
     
     # Enforce tenant isolation
     if organization_id != org_id:
@@ -194,6 +211,10 @@ async def delete_organization(
 ):
     """Delete organization (requires organization delete permission)"""
     current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
     
     # Critical operation - extra super admin check for safety
     if not getattr(current_user, 'is_super_admin', False):
@@ -275,6 +296,10 @@ async def get_user_modules(
     """Get user's assigned modules"""
     current_user, org_id = auth
     
+    if current_user.is_super_admin:
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
+    
     # Enforce tenant isolation
     if organization_id != org_id:
         raise HTTPException(
@@ -323,6 +348,10 @@ async def update_user_modules(
 ):
     """Update user's assigned modules (requires user update permission)"""
     current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
     
     # Enforce tenant isolation
     if organization_id != org_id:

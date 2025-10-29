@@ -201,13 +201,13 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
             'service.view',
             'projects.view',
             'hrManagement.view',
-            'tasksCalendar.view',
+            'tasks_calendar.view',
             'email.view',
           ];
           modules = [
             'dashboard', 'master_data', 'inventory', 'manufacturing', 'vouchers',
             'finance', 'accounting', 'reportsAnalytics', 'aiAnalytics', 'sales',
-            'marketing', 'service', 'projects', 'hrManagement', 'tasksCalendar', 'email'
+            'marketing', 'service', 'projects', 'hrManagement', 'tasks_calendar', 'email'
           ];
           submodules = modules.reduce((acc, mod) => {
             acc[mod] = ['view'];
@@ -287,15 +287,15 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       },
     );
     try {
-      const currentToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+      const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
       // Validate token format before proceeding
-      if (currentToken === 'null' || (currentToken && currentToken.split('.').length !== 3)) {
+      if (accessToken === 'null' || (accessToken && accessToken.split('.').length !== 3)) {
         console.log('[AuthProvider] Invalid token format detected - clearing storage');
         localStorage.removeItem(ACCESS_TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
         throw new Error('Invalid token format');
       }
-      if (!currentToken) {
+      if (!accessToken) {
         console.log("[AuthProvider] No token found in localStorage");
         throw new Error("No token found");
       }
@@ -605,6 +605,13 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   // Get auth headers for API requests
   const getAuthHeaders = () => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    if (!token) {
+      console.warn("[AuthProvider] No token found when getting auth headers");
+    } else if (token.split('.').length !== 3) {
+      console.error("[AuthProvider] Malformed token when getting auth headers:", token.substring(0, 20) + '...');
+    } else {
+      console.log("[AuthProvider] Valid token format for auth headers");
+    }
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 

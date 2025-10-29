@@ -1,3 +1,5 @@
+# app/services/rbac.py
+ 
 """
 RBAC service layer for Role-based access control
 """
@@ -357,7 +359,12 @@ class RBACService:
         user = user_result.scalars().first()
         
         permissions = set()
-        if user and user.role in ['org_admin', 'management']:
+        if user and (user.is_super_admin or user.role == "super_admin"):
+            # Grant all active permissions to super admins
+            result = await self.db.execute(select(Permission.name).where(Permission.is_active == True))
+            permissions.update({row[0] for row in result.fetchall()})
+            logger.debug(f"Granted all permissions to super admin user {user_id}")
+        elif user and user.role in ['org_admin', 'management']:
             logger.debug(f"Adding org_admin/management fallback permissions for user {user_id}")
             fallback_result = await self.db.execute(
                 select(Permission.name).where(
@@ -372,7 +379,7 @@ class RBACService:
                 )
             )
             permissions.update({row[0] for row in fallback_result.fetchall()})
-            logger.debug(f"Fallback permissions for org_admin/management: {permissions}")
+            logger.debug(f"Fallback permissions: {permissions}")
         
         result = await self.db.execute(
             select(Permission.name)
@@ -387,7 +394,7 @@ class RBACService:
             )
         )
         role_permissions = {row[0] for row in result.fetchall()}
-        logger.debug(f"Permissions from roles for user {user_id}: {role_permissions}")
+        logger.debug(f"Permissions from roles: {role_permissions}")
         
         permissions.update(role_permissions)
         logger.debug(f"Final permissions for user {user_id}: {permissions}")

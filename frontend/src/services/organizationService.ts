@@ -50,9 +50,9 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to get organization");
     }
   },
-  updateOrganizationById: async (id: number, data: any): Promise<any> => {
+  updateOrganizationById: async (id: number, data: any, config?: any): Promise<any> => {
     try {
-      const response = await api.put(`/organizations/${id}`, data);
+      const response = await api.put(`/organizations/${id}`, data, config);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || "Failed to update organization");
@@ -244,6 +244,44 @@ export const organizationService = {
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || "Failed to update organization settings");
+    }
+  },
+
+  // New methods for module management
+  getAvailableModules: async (): Promise<any> => {
+    try {
+      const response = await api.get("/organizations/available-modules");
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get available modules");
+    }
+  },
+
+  getOrganizationModules: async (id: number, config?: any): Promise<any> => {
+    try {
+      const response = await api.get(`/organizations/${id}/modules`, config);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get organization modules");
+    }
+  },
+
+  updateOrganizationModules: async (id: number, data: any, config?: any): Promise<any> => {
+    try {
+      const response = await api.put(`/organizations/${id}/modules`, data, config);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to update organization modules");
+    }
+  },
+
+  // New method for reset
+  resetOrganizationData: async (config?: any): Promise<any> => {
+    try {
+      const response = await api.post("/organizations/reset-data", {}, config);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to reset organization data");
     }
   },
 };

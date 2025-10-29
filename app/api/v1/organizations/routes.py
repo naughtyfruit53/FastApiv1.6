@@ -151,11 +151,21 @@ async def get_available_modules(
 
 @router.get("/app-statistics")
 async def get_app_level_statistics(
-    auth: tuple = Depends(require_access("organization", "read")),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Get app-level statistics (admin permission required)"""
-    current_user, org_id = auth
+    if current_user.organization_id is None and current_user.is_super_admin:
+        # Super admin with no organization: proceed with global statistics
+        return await OrganizationService.get_app_statistics(db)
+    
+    # For non-super admins, restrict access
+    if not current_user.is_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super admins can access app-level statistics"
+        )
+    
     return await OrganizationService.get_app_statistics(db)
 
 @router.get("/org-statistics")

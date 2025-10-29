@@ -390,14 +390,16 @@ async def remove_all_roles_from_user(
 @router.get("/users/{user_id}/roles", response_model=List[ServiceRoleInDB])
 async def get_user_service_roles(
     user_id: int,
+    current_user: User = Depends(get_current_active_user),
     rbac_service: RBACService = Depends(get_rbac_service),
-    auth: tuple = Depends(require_access("rbac", "read"))
 ):
     """Get all service roles assigned to a user, including self"""
-    current_user, organization_id = auth
-
     logger.info(f"User {current_user.id} requesting roles for user {user_id}")
     
+    if current_user.organization_id is None and current_user.is_super_admin:
+        # Super admin with no organization: return empty list as fallback
+        return []
+
     # Allow users to view their own roles
     if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
         raise HTTPException(
@@ -559,14 +561,21 @@ async def check_user_permission(
 @router.get("/users/{user_id}/permissions")
 async def get_user_permissions(
     user_id: int,
+    current_user: User = Depends(get_current_active_user),
     rbac_service: RBACService = Depends(get_rbac_service),
-    auth: tuple = Depends(require_access("rbac", "read"))
 ):
     """Get all permissions for a user, including self - with resilient error handling"""
-    current_user, organization_id = auth
-
     logger.info(f"User {current_user.id} requesting permissions for user {user_id}")
     
+    if current_user.organization_id is None and current_user.is_super_admin:
+        # Super admin with no organization: return fallback empty permissions
+        return {
+            "user_id": user_id,
+            "permissions": [],
+            "service_roles": [],
+            "total_permissions": 0
+        }
+
     try:
         # Allow users to view their own permissions
         if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:

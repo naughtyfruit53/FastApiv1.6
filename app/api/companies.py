@@ -17,6 +17,7 @@ import logging
 import os
 import uuid
 import shutil
+from app.api.v1.auth import get_current_active_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -45,7 +46,7 @@ async def get_companies(
 
 @router.get("/current", response_model=CompanyInDB)
 async def get_current_company(
-    auth: tuple = Depends(require_access("company", "read")),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Get current organization's company details"""
@@ -54,9 +55,11 @@ async def get_current_company(
     logger.info(f"[/companies/current] Request from user: {current_user.id} ({current_user.email})")
     logger.info(f"[/companies/current] User context: role={current_user.role}, is_super_admin={current_user.is_super_admin}, org_id={current_user.organization_id}")
     
+    org_id = current_user.organization_id
+    
     try:
         # For super admins, return a placeholder empty company (no org context post-reset)
-        if current_user.is_super_admin and current_user.organization_id is None:
+        if current_user.is_super_admin and org_id is None:
             logger.info(f"[/companies/current] Super admin access without organization context - returning placeholder")
             return CompanyInDB(
                 id=0,
@@ -81,7 +84,6 @@ async def get_current_company(
             )
         
         # For organization users, ensure organization context
-        current_user, org_id = auth
         logger.info(f"[/companies/current] Organization context established: org_id={org_id}")
         
         stmt = select(Company).where(Company.organization_id == org_id)
@@ -490,7 +492,7 @@ async def upload_company_logo(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    # Update company logo path
+    # Update company logo logo path
     company.logo_path = file_path
     await db.commit()
     await db.refresh(company)
