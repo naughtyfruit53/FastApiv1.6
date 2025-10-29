@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import logging
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
 from app.models import Organization, User
