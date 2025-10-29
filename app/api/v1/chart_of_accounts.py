@@ -9,9 +9,9 @@ from decimal import Decimal
 import logging
 from fastapi import HTTPException
 
-from app.db.session import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+from app.core.database import get_db
+from app.core.enforcement import require_access
+
 from app.models.user_models import User
 from app.models.erp_models import ChartOfAccounts
 from app.schemas.master_data import (
@@ -28,13 +28,14 @@ async def get_chart_of_accounts(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     coa_filter: ChartOfAccountsFilter = Depends(),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("chart_of_accounts", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get chart of accounts with filtering and pagination"""
+    current_user, org_id = auth
+    
     try:
-        stmt = select(ChartOfAccounts).where(ChartOfAccounts.organization_id == organization_id)
+        stmt = select(ChartOfAccounts).where(ChartOfAccounts.organization_id == org_id)
         
         # Apply filters
         if coa_filter.account_type:
@@ -85,21 +86,22 @@ async def get_chart_of_accounts(
 @router.post("/chart-of-accounts", response_model=ChartOfAccountsResponse)
 async def create_chart_of_account(
     coa_data: ChartOfAccountsCreate,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("chart_of_accounts", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new chart of account"""
+    current_user, org_id = auth
+    
     try:
         logger.info(f"master_data.py validator loaded - received raw account_type: {coa_data.account_type}")
         # Generate code if not provided or empty
         account_code = coa_data.account_code.strip() if coa_data.account_code else ""
         if not account_code:
-            account_code = await LedgerService.generate_account_code(db, organization_id, coa_data.account_type.upper())
+            account_code = await LedgerService.generate_account_code(db, org_id, coa_data.account_type.upper())
         
         # Check for duplicate code
         existing_stmt = select(ChartOfAccounts).where(
-            ChartOfAccounts.organization_id == organization_id,
+            ChartOfAccounts.organization_id == org_id,
             ChartOfAccounts.account_code == account_code
         )
         existing_result = await db.execute(existing_stmt)
@@ -116,7 +118,7 @@ async def create_chart_of_account(
         if coa_data.parent_account_id:
             parent_stmt = select(ChartOfAccounts).where(
                 ChartOfAccounts.id == coa_data.parent_account_id,
-                ChartOfAccounts.organization_id == organization_id
+                ChartOfAccounts.organization_id == org_id
             )
             parent_result = await db.execute(parent_stmt)
             parent = parent_result.scalars().first()
@@ -128,7 +130,7 @@ async def create_chart_of_account(
         
         # Create account
         account = ChartOfAccounts(
-            organization_id=organization_id,
+            org_id=org_id,
             account_code=account_code,
             account_name=coa_data.account_name,
             account_type=coa_data.account_type.upper(),
@@ -164,14 +166,13 @@ async def create_chart_of_account(
 @router.get("/chart-of-accounts/get-next-code")
 async def get_next_account_code(
     account_type: str = Query(..., alias="type", description="Account type for code generation"),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("chart_of_accounts", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get next suggested account code for a type"""
     try:
-        logger.info(f"Generating next account code for type: {account_type}, org: {organization_id}")
-        next_code = await LedgerService.generate_account_code(db, organization_id, account_type.upper())
+        logger.info(f"Generating next account code for type: {account_type}, org: {org_id}")
+        next_code = await LedgerService.generate_account_code(db, org_id, account_type.upper())
         logger.info(f"Generated next code: {next_code}")
         return {"next_code": next_code}
     except Exception as e:
@@ -182,14 +183,13 @@ async def get_next_account_code(
 @router.get("/chart-of-accounts/{account_id}", response_model=ChartOfAccountsResponse)
 async def get_chart_of_account(
     account_id: int,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("chart_of_accounts", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get a specific chart of account"""
     stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == account_id,
-        ChartOfAccounts.organization_id == organization_id
+        ChartOfAccounts.organization_id == org_id
     )
     result = await db.execute(stmt)
     account = result.scalars().first()
@@ -204,15 +204,14 @@ async def get_chart_of_account(
 async def update_chart_of_account(
     account_id: int,
     coa_data: ChartOfAccountsUpdate,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("chart_of_accounts", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update a chart of account"""
     try:
         stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.id == account_id,
-            ChartOfAccounts.organization_id == organization_id
+            ChartOfAccounts.organization_id == org_id
         )
         result = await db.execute(stmt)
         account = result.scalars().first()
@@ -223,7 +222,7 @@ async def update_chart_of_account(
         # Check for duplicate code if being updated
         if coa_data.account_code and coa_data.account_code != account.account_code:
             existing_stmt = select(ChartOfAccounts).where(
-                ChartOfAccounts.organization_id == organization_id,
+                ChartOfAccounts.organization_id == org_id,
                 ChartOfAccounts.account_code == coa_data.account_code,
                 ChartOfAccounts.id != account_id
             )
@@ -265,15 +264,14 @@ async def update_chart_of_account(
 @router.delete("/chart-of-accounts/{account_id}")
 async def delete_chart_of_account(
     account_id: int,
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("chart_of_accounts", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete a chart of account"""
     try:
         stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.id == account_id,
-            ChartOfAccounts.organization_id == organization_id
+            ChartOfAccounts.organization_id == org_id
         )
         result = await db.execute(stmt)
         account = result.scalars().first()
@@ -312,9 +310,8 @@ async def get_payroll_eligible_accounts(
     account_types: List[str] = Query(["expense", "liability"], description="Account types eligible for payroll"),
     component_type: Optional[str] = Query(None, description="Filter by component type"),
     is_active: bool = Query(True, description="Filter active accounts"),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("chart_of_accounts", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get chart of accounts eligible for payroll component mapping"""
     try:
@@ -331,7 +328,7 @@ async def get_payroll_eligible_accounts(
             )
         
         stmt = select(ChartOfAccounts).where(
-            ChartOfAccounts.organization_id == organization_id,
+            ChartOfAccounts.organization_id == org_id,
             ChartOfAccounts.account_type.in_(filtered_types),
             ChartOfAccounts.is_active == is_active,
             ChartOfAccounts.can_post == True  # Only accounts that can have transactions posted
@@ -359,7 +356,7 @@ async def get_payroll_eligible_accounts(
         result = await db.execute(paginated_stmt)
         accounts = result.scalars().all()
         
-        logger.info(f"Retrieved {len(accounts)} payroll-eligible accounts for organization {organization_id}")
+        logger.info(f"Retrieved {len(accounts)} payroll-eligible accounts for organization {org_id}")
         
         return ChartOfAccountsList(
             items=accounts,
@@ -384,14 +381,13 @@ async def chart_accounts_lookup(
     search: str = Query(None, description="Search term for account name or code"),
     account_types: Optional[List[str]] = Query(None, description="Filter by account types"),
     limit: int = Query(20, ge=1, le=100, description="Maximum number of results"),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("chart_of_accounts", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Lookup chart of accounts for dropdown/autocomplete components"""
     try:
         stmt = select(ChartOfAccounts).where(
-            ChartOfAccounts.organization_id == organization_id,
+            ChartOfAccounts.organization_id == org_id,
             ChartOfAccounts.is_active == True
         )
         
@@ -442,9 +438,8 @@ async def get_expense_accounts(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     search: Optional[str] = Query(None),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("chart_of_accounts", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Alias for expense accounts (filter chart-of-accounts by expense type)"""
     coa_filter = ChartOfAccountsFilter(account_type="EXPENSE", search=search)
@@ -454,5 +449,5 @@ async def get_expense_accounts(
         coa_filter=coa_filter,
         current_user=current_user,
         db=db,
-        organization_id=organization_id
+        org_id=org_id
     )
