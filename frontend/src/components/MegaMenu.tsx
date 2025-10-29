@@ -159,6 +159,17 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     }
   }, [anchorEl, isMobile]);
 
+  // Auto-select first section when menu opens if none is selected
+  useEffect(() => {
+    if (anchorEl && activeMenu && !selectedSection) {
+      const menuItem = menuItems[activeMenu as keyof typeof menuItems];
+      const sections = activeMenu === 'menu' ? mainMenuSections(isSuperAdmin) : menuItem?.sections || [];
+      if (sections.length > 0) {
+        setSelectedSection(sections[0].title);
+      }
+    }
+  }, [anchorEl, activeMenu, selectedSection, isSuperAdmin]);
+
   if (!isVisible) return null;
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, menuName: string) => {
@@ -169,7 +180,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     } else {
       setAnchorEl(event.currentTarget);
       setActiveMenu(menuName);
-      setSelectedSection(null);
+      // Auto-select first section if none is selected (improves UX)
+      if (!selectedSection && menuName !== 'menu') {
+        const sections = menuName === 'menu' ? mainMenuSections(isSuperAdmin) : menuItem?.sections || [];
+        if (sections.length > 0) {
+          setSelectedSection(sections[0].title);
+        }
+      }
     }
   };
 
@@ -210,7 +227,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     return permissions.some((permission) => userServicePermissions.includes(permission));
   };
 
-  const canAccessService = (): boolean => {
+  const _canAccessService = (): boolean => {
     return hasAnyServicePermission([
       SERVICE_PERMISSIONS.SERVICE_READ,
       SERVICE_PERMISSIONS.APPOINTMENT_READ,
@@ -219,11 +236,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     ]);
   };
 
-  const canAccessServiceReports = (): boolean => {
+  const _canAccessServiceReports = (): boolean => {
     return hasServicePermission(SERVICE_PERMISSIONS.SERVICE_REPORTS_READ);
   };
 
-  const canAccessCRMAdmin = (): boolean => {
+  const _canAccessCRMAdmin = (): boolean => {
     return hasServicePermission(SERVICE_PERMISSIONS.CRM_ADMIN) || isOrgSuperAdmin(user);
   };
 
@@ -237,7 +254,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     return enabled;
   };
 
-  const openDemoMode = () => {
+  const _openDemoMode = () => {
     router.push('/demo');
     handleMenuClose();
   };
@@ -264,7 +281,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     setSearchQuery('');
   };
 
-  const handleCreateLicense = () => {
+  const _handleCreateLicense = () => {
     setCreateLicenseModalOpen(true);
     handleMenuClose();
   };
@@ -334,25 +351,38 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           // Hide org-role specific items for app superadmin
           if (item.role && isSuperAdmin) return false;
           
-          // NEW: Check RBAC permissions from AuthContext
+          // For super admins, allow all items that aren't explicitly restricted
+          if (isSuperAdmin) {
+            return true;
+          }
+          
+          // Check RBAC permissions from AuthContext if available
           if (item.permission && contextUserPermissions) {
             // Check if user has the required permission
             if (!hasPermission(item.permission)) {
+              console.log(`Permission check failed for item ${item.name}: requires ${item.permission}`);
               return false;
             }
           }
           
-          // NEW: Check module access
-          if (item.requireModule && contextUserPermissions) {
-            if (!hasModuleAccess(item.requireModule)) {
+          // Check module access if specified
+          if (item.requireModule) {
+            if (contextUserPermissions && !hasModuleAccess(item.requireModule)) {
+              console.log(`Module access check failed for item ${item.name}: requires module ${item.requireModule}`);
+              return false;
+            }
+            // Also check organization enabled_modules
+            if (!isModuleEnabled(item.requireModule)) {
+              console.log(`Module not enabled for item ${item.name}: module ${item.requireModule}`);
               return false;
             }
           }
           
-          // NEW: Check submodule access
+          // Check submodule access if specified
           if (item.requireSubmodule && contextUserPermissions) {
             const { module, submodule } = item.requireSubmodule;
             if (!hasSubmoduleAccess(module, submodule)) {
+              console.log(`Submodule access check failed for item ${item.name}: requires ${module}.${submodule}`);
               return false;
             }
           }
@@ -382,7 +412,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       return section;
     });
 
-    // Modified filter to include sections with direct paths even if subSections are empty
+    // Filter sections - include sections with at least one permitted item or direct paths
     const filteredSections = normalizedSections
       .map((section: any) => {
         // Check if this section has a direct path (e.g., Email)
@@ -408,8 +438,42 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       .filter((section: any) => section.subSections.length > 0 || section.hasDirectPath);
 
     if (filteredSections.length === 0) {
-      console.log(`No items in submenu for ${activeMenu} - permissions may be missing`);
-      return null;
+      console.warn(`No items in submenu for ${activeMenu} - user may not have required permissions or modules enabled`);
+      // Show a helpful message instead of returning null
+      return (
+        <Popover
+          open={Boolean(anchorEl)}
+          anchorEl={anchorEl}
+          onClose={handleMenuClose}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          PaperProps={{
+            sx: {
+              width: 'auto',
+              minWidth: 400,
+              maxWidth: 600,
+              left: '20px !important',
+              borderRadius: 2,
+              boxShadow: '0 14px 40px rgba(0,0,0,0.16)',
+              border: '1px solid',
+              borderColor: 'divider',
+              p: 3,
+            },
+          }}
+        >
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              No Menu Items Available
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              You don't have permission to access any items in this menu, or the required modules are not enabled for your organization.
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Contact your administrator to request access or enable required modules.
+            </Typography>
+          </Box>
+        </Popover>
+      );
     }
 
     return (
