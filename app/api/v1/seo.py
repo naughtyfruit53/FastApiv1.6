@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+from app.core.enforcement import require_access
+
 from app.models.user_models import User
 from app.schemas.seo import (
     SEOMetaTagCreate, SEOMetaTagUpdate, SEOMetaTagInDB,
@@ -30,11 +30,11 @@ router = APIRouter()
 @router.get("/dashboard", response_model=SEODashboard)
 async def get_seo_dashboard(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Get SEO dashboard overview"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     dashboard = await seo_service.get_seo_dashboard(db, org_id)
     return dashboard
 
@@ -42,11 +42,11 @@ async def get_seo_dashboard(
 @router.get("/audit", response_model=SEOAudit)
 async def run_seo_audit(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Run comprehensive SEO audit"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     audit = await seo_service.run_seo_audit(db, org_id)
     return audit
 
@@ -57,11 +57,11 @@ async def run_seo_audit(
 async def create_meta_tag(
     tag_data: SEOMetaTagCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "create")),
 ):
     """Create a new SEO meta tag for a page"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     # Check if meta tag already exists for this page
     existing = await seo_service.get_meta_tag_for_page(db, org_id, tag_data.page_path)
@@ -82,11 +82,11 @@ async def get_meta_tags(
     skip: int = Query(0, ge=0, description="Number of tags to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of tags to return"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Get SEO meta tags for the organization"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     tags = await seo_service.get_meta_tags(db, org_id, page_path, is_active, skip, limit)
     return tags
 
@@ -95,11 +95,11 @@ async def get_meta_tags(
 async def get_meta_tag_for_page(
     page_path: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Get meta tag for a specific page"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     # Ensure page path starts with /
     if not page_path.startswith('/'):
@@ -120,11 +120,11 @@ async def update_meta_tag(
     tag_id: int,
     tag_data: SEOMetaTagUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "update")),
 ):
     """Update an SEO meta tag"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     tag = await seo_service.update_meta_tag(db, tag_id, org_id, tag_data)
     if not tag:
@@ -140,11 +140,11 @@ async def update_meta_tag(
 async def delete_meta_tag(
     tag_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "delete")),
 ):
     """Delete an SEO meta tag"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     success = await seo_service.delete_meta_tag(db, tag_id, org_id)
     if not success:
@@ -160,11 +160,11 @@ async def delete_meta_tag(
 async def create_sitemap_entry(
     entry_data: SitemapEntryCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "create")),
 ):
     """Create a new sitemap entry"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     entry = await seo_service.create_sitemap_entry(db, entry_data, org_id)
     return entry
 
@@ -175,11 +175,11 @@ async def get_sitemap_entries(
     skip: int = Query(0, ge=0, description="Number of entries to skip"),
     limit: int = Query(1000, ge=1, le=1000, description="Number of entries to return"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Get sitemap entries for the organization"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     entries = await seo_service.get_sitemap_entries(db, org_id, is_active, skip, limit)
     return entries
 
@@ -188,11 +188,11 @@ async def get_sitemap_entries(
 async def get_sitemap_xml(
     base_url: str = Query(..., description="Base URL for the sitemap"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Generate and return sitemap XML"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     xml_content = await seo_service.generate_sitemap_xml(db, org_id, base_url)
     
@@ -207,11 +207,11 @@ async def get_sitemap_xml(
 async def auto_generate_sitemap(
     urls: List[str],
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "create")),
 ):
     """Auto-generate sitemap entries from a list of URLs"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     created_count = await seo_service.auto_generate_sitemap_entries(db, org_id, urls)
     
@@ -229,11 +229,11 @@ async def auto_generate_sitemap(
 async def create_analytics_integration(
     integration_data: AnalyticsIntegrationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "create")),
 ):
     """Create a new analytics integration"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     integration = await seo_service.create_analytics_integration(
         db, integration_data, org_id, current_user.id
@@ -246,11 +246,11 @@ async def get_analytics_integrations(
     provider: Optional[str] = Query(None, description="Filter by provider"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Get analytics integrations for the organization"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     integrations = await seo_service.get_analytics_integrations(db, org_id, provider, is_active)
     return integrations
 
@@ -261,11 +261,11 @@ async def get_analytics_integrations(
 async def create_keyword_analysis(
     keyword_data: KeywordAnalysisCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "create")),
 ):
     """Create a new keyword analysis"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     keyword = await seo_service.create_keyword_analysis(
         db, keyword_data, org_id, current_user.id
@@ -280,11 +280,11 @@ async def get_keyword_analysis(
     skip: int = Query(0, ge=0, description="Number of keywords to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of keywords to return"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Get keyword analysis for the organization"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     keywords = await seo_service.get_keyword_analysis(db, org_id, is_target_keyword, priority, skip, limit)
     return keywords
 
@@ -292,11 +292,11 @@ async def get_keyword_analysis(
 @router.get("/keywords/report", response_model=KeywordReport)
 async def get_keyword_report(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Get comprehensive keyword analysis report"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     report = await seo_service.get_keyword_report(db, org_id)
     return report
 
@@ -305,11 +305,11 @@ async def get_keyword_report(
 async def bulk_import_keywords(
     import_data: BulkKeywordImport,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "create")),
 ):
     """Bulk import keyword analysis data"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     results = {
         "imported_count": 0,
@@ -356,11 +356,11 @@ async def bulk_import_keywords(
 async def create_competitor_analysis(
     competitor_data: CompetitorAnalysisCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "create")),
 ):
     """Create a new competitor analysis"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     competitor = await seo_service.create_competitor_analysis(
         db, competitor_data, org_id, current_user.id
@@ -374,11 +374,11 @@ async def get_competitor_analysis(
     skip: int = Query(0, ge=0, description="Number of competitors to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of competitors to return"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Get competitor analysis for the organization"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     competitors = await seo_service.get_competitor_analysis(db, org_id, is_active, skip, limit)
     return competitors
 
@@ -390,11 +390,11 @@ async def generate_meta_tag_suggestions(
     page_path: str = Query(..., description="Page path to generate suggestions for"),
     content: Optional[str] = Query(None, description="Page content for analysis"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "read")),
 ):
     """Generate SEO meta tag suggestions for a page"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     # TODO: Implement AI-powered meta tag suggestions based on content
     # This could use NLP to analyze page content and suggest optimal titles/descriptions
@@ -423,10 +423,12 @@ async def generate_meta_tag_suggestions(
 @router.post("/test-meta-tags")
 async def test_meta_tags(
     url: str = Query(..., description="URL to test meta tags"),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("seo", "create")),
 ):
     """Test and analyze meta tags for a given URL"""
     
+    current_user, org_id = auth
+
     # TODO: Implement URL meta tag scraping and analysis
     # This would fetch the URL and analyze existing meta tags
     

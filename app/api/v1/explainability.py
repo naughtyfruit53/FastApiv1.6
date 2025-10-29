@@ -8,7 +8,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.enforcement import require_access
 from app.core.permissions import PermissionChecker
 from app.models.user_models import User
 from app.services.explainability_service import ExplainabilityService
@@ -138,7 +138,7 @@ class ExplainabilityDashboardResponse(BaseModel):
 
 @router.get("/dashboard", response_model=ExplainabilityDashboardResponse)
 async def get_explainability_dashboard(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("explainability", "read")),
     db: Session = Depends(get_db)
 ):
     """Get explainability dashboard data"""
@@ -153,10 +153,12 @@ async def get_explainability_dashboard(
 @router.post("/models", response_model=ModelExplainabilityResponse, status_code=201)
 async def create_model_explainability(
     explainability_data: ModelExplainabilityCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("explainability", "create")),
     db: Session = Depends(get_db)
 ):
     """Create model explainability configuration"""
+    current_user, org_id = auth
+
     PermissionChecker.require_permission(current_user, "ml_analytics:create", db)
     
     try:
@@ -202,10 +204,12 @@ async def get_model_explainability(
     model_id: int = Path(..., description="Model ID"),
     model_type: str = Path(..., description="Model type"),
     method: Optional[str] = Query(None, description="Filter by method"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("explainability", "read")),
     db: Session = Depends(get_db)
 ):
     """Get model explainability configuration"""
+    current_user, org_id = auth
+
     PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     method_enum = ExplainabilityMethod(method) if method else None
@@ -247,10 +251,12 @@ async def get_model_explainability(
 @router.post("/predictions", response_model=PredictionExplanationResponse, status_code=201)
 async def create_prediction_explanation(
     explanation_data: PredictionExplanationCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("explainability", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a prediction explanation"""
+    current_user, org_id = auth
+
     PermissionChecker.require_permission(current_user, "ml_analytics:create", db)
     
     try:
@@ -295,10 +301,12 @@ async def create_prediction_explanation(
 async def get_prediction_explanations(
     explainability_id: int = Path(..., description="Model explainability ID"),
     limit: int = Query(100, description="Maximum number of results"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("explainability", "read")),
     db: Session = Depends(get_db)
 ):
     """Get prediction explanations for a model"""
+    current_user, org_id = auth
+
     PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = ExplainabilityService(db)
@@ -337,10 +345,12 @@ async def get_prediction_explanations(
 @router.post("/reports", response_model=ExplainabilityReportResponse, status_code=201)
 async def create_explainability_report(
     report_data: ExplainabilityReportCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("explainability", "create")),
     db: Session = Depends(get_db)
 ):
     """Create an explainability report"""
+    current_user, org_id = auth
+
     PermissionChecker.require_permission(current_user, "ml_analytics:create", db)
     
     service = ExplainabilityService(db)
@@ -379,10 +389,12 @@ async def create_explainability_report(
 @router.get("/reports", response_model=List[ExplainabilityReportResponse])
 async def get_explainability_reports(
     report_type: Optional[str] = Query(None, description="Filter by report type"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("explainability", "read")),
     db: Session = Depends(get_db)
 ):
     """Get explainability reports"""
+    current_user, org_id = auth
+
     PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = ExplainabilityService(db)
@@ -414,10 +426,12 @@ async def get_explainability_reports(
 @router.get("/reports/{report_id}", response_model=ExplainabilityReportResponse)
 async def get_explainability_report(
     report_id: int = Path(..., description="Report ID"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("explainability", "read")),
     db: Session = Depends(get_db)
 ):
     """Get a specific explainability report"""
+    current_user, org_id = auth
+
     PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = ExplainabilityService(db)
