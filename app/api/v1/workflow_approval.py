@@ -41,7 +41,7 @@ async def get_workflow_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get workflow management dashboard statistics"""
-    org_id = org_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -162,7 +162,7 @@ async def get_approval_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get personal approval dashboard for current user"""
-    org_id = org_id
+    current_user, org_id = auth
     user_id = current_user.id
     
     # My pending approvals
@@ -265,7 +265,7 @@ async def create_workflow_template(
 ):
     """Create a new workflow template"""
     check_service_permission(current_user, "workflow", "create", db)
-    org_id = org_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Validate company access
@@ -323,7 +323,7 @@ async def list_workflow_templates(
     db: Session = Depends(get_db)
 ):
     """List workflow templates with filtering and pagination"""
-    org_id = org_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -424,7 +424,7 @@ async def create_approval_request(
 ):
     """Create a new approval request"""
     check_service_permission(current_user, "approval", "create", db)
-    org_id = org_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Validate company access
@@ -487,7 +487,7 @@ async def list_approval_requests(
     db: Session = Depends(get_db)
 ):
     """List approval requests with filtering and pagination"""
-    org_id = org_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -597,7 +597,7 @@ async def make_approval_decision(
 ):
     """Make a decision on an approval request"""
     check_service_permission(current_user, "approval", "respond", db)
-    org_id = org_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get the approval request
@@ -687,7 +687,7 @@ async def bulk_approval_decision(
 ):
     """Make bulk approval decisions"""
     check_service_permission(current_user, "approval", "respond", db)
-    org_id = org_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     user_companies = rbac.get_user_companies(current_user.id)
     
@@ -747,7 +747,7 @@ async def get_approval_history(
     db: Session = Depends(get_db)
 ):
     """Get approval request history"""
-    org_id = org_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Check approval exists and user has access

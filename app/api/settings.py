@@ -143,7 +143,7 @@ async def reset_organization_data(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="User must belong to an organization to reset data"
                 )
-            org_id = org_id
+    current_user, org_id = auth
         
         # Verify organization exists
         organization = db.query(Organization).filter(Organization.id == org_id).first()

@@ -28,7 +28,7 @@ router = APIRouter()
 async def submit_customer_feedback(
     feedback_data: CustomerFeedbackCreate,
     db: Session = Depends(get_db),
-    auth: tuple = Depends(require_access("feedback", "read"))
+    auth: tuple = Depends(require_access("feedback", "update"))
 ):
     """
     Submit customer feedback for a completed service.
@@ -118,7 +118,7 @@ async def update_feedback(
     feedback_id: int,
     feedback_update: CustomerFeedbackUpdate,
     db: Session = Depends(get_db),
-    auth: tuple = Depends(require_access("feedback", "read"))
+    auth: tuple = Depends(require_access("feedback", "update"))
 ):
     """
     Update customer feedback record.
@@ -145,7 +145,7 @@ async def review_feedback(
     feedback_id: int,
     response_notes: str,
     db: Session = Depends(get_db),
-    auth: tuple = Depends(require_access("feedback", "read"))
+    auth: tuple = Depends(require_access("feedback", "update"))
 ):
     """
     Review and respond to customer feedback.
@@ -178,7 +178,7 @@ async def review_feedback(
 async def create_service_closure(
     closure_data: ServiceClosureCreate,
     db: Session = Depends(get_db),
-    auth: tuple = Depends(require_access("feedback", "read"))
+    auth: tuple = Depends(require_access("feedback", "update"))
 ):
     """
     Create a service closure request.
@@ -271,7 +271,7 @@ async def approve_service_closure(
     closure_id: int,
     approval_notes: Optional[str] = None,
     db: Session = Depends(get_db),
-    auth: tuple = Depends(require_access("feedback", "read"))
+    auth: tuple = Depends(require_access("feedback", "update"))
 ):
     """
     Approve a service closure request.
@@ -298,7 +298,7 @@ async def close_service_ticket(
     closure_id: int,
     final_closure_notes: Optional[str] = None,
     db: Session = Depends(get_db),
-    auth: tuple = Depends(require_access("feedback", "read"))
+    auth: tuple = Depends(require_access("feedback", "update"))
 ):
     """
     Close a service ticket (final closure).
@@ -325,7 +325,7 @@ async def reopen_service_ticket(
     closure_id: int,
     reopening_reason: str,
     db: Session = Depends(get_db),
-    auth: tuple = Depends(require_access("feedback", "read"))
+    auth: tuple = Depends(require_access("feedback", "update"))
 ):
     """
     Reopen a closed service ticket.
@@ -353,7 +353,7 @@ async def reopen_service_ticket(
 async def get_feedback_analytics(
     days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
-    auth: tuple = Depends(require_access("feedback", "read"))
+    auth: tuple = Depends(require_access("feedback", "update"))
 ):
     """
     Get feedback analytics summary.

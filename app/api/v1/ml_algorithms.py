@@ -113,9 +113,7 @@ async def create_algorithm_config(
     auth: tuple = Depends(require_access("ml_algorithms", "create")),
     db: Session = Depends(get_db)
 ):
-    """Create a new algorithm configuration"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:create", db)
-    
+    """Create a new algorithm configuration"""    
     try:
         framework = MLFramework(config_data.framework)
         category = AlgorithmCategory(config_data.category)
@@ -158,9 +156,7 @@ async def get_algorithm_configs(
     auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
-    """Get all algorithm configurations"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
-    
+    """Get all algorithm configurations"""    
     framework_enum = MLFramework(framework) if framework else None
     category_enum = AlgorithmCategory(category) if category else None
     
@@ -195,9 +191,7 @@ async def get_algorithm_config(
     auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
-    """Get a specific algorithm configuration"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
-    
+    """Get a specific algorithm configuration"""    
     service = MLAlgorithmsService(db)
     config = service.get_algorithm_config(org_id, config_id)
     
@@ -222,12 +216,10 @@ async def get_algorithm_config(
 @router.delete("/configs/{config_id}")
 async def delete_algorithm_config(
     config_id: int = Path(..., description="Configuration ID"),
-    auth: tuple = Depends(require_access("ml_algorithms", "read")),
+    auth: tuple = Depends(require_access("ml_algorithms", "delete")),
     db: Session = Depends(get_db)
 ):
-    """Delete an algorithm configuration"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:delete", db)
-    
+    """Delete an algorithm configuration"""    
     service = MLAlgorithmsService(db)
     deleted = service.delete_algorithm_config(config_id, org_id)
     
@@ -246,9 +238,7 @@ async def get_training_dashboard(
     auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
-    """Get training dashboard data"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
-    
+    """Get training dashboard data"""    
     service = MLAlgorithmsService(db)
     dashboard_data = service.get_training_dashboard(org_id)
     
@@ -261,9 +251,7 @@ async def create_model_training(
     auth: tuple = Depends(require_access("ml_algorithms", "create")),
     db: Session = Depends(get_db)
 ):
-    """Create a new model training session"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:create", db)
-    
+    """Create a new model training session"""    
     try:
         framework = MLFramework(training_data.framework)
     except ValueError as e:
@@ -313,9 +301,7 @@ async def get_model_trainings(
     auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
-    """Get all model training sessions"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
-    
+    """Get all model training sessions"""    
     framework_enum = MLFramework(framework) if framework else None
     status_enum = TrainingStatus(status) if status else None
     
@@ -356,9 +342,7 @@ async def get_model_training(
     auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
-    """Get a specific model training session"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
-    
+    """Get a specific model training session"""    
     service = MLAlgorithmsService(db)
     training = service.get_model_training(org_id, training_id)
     
@@ -396,9 +380,7 @@ async def get_framework_algorithms(
     auth: tuple = Depends(require_access("ml_algorithms", "read")),
     db: Session = Depends(get_db)
 ):
-    """Get available algorithms for a framework"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
-    
+    """Get available algorithms for a framework"""    
     try:
         framework_enum = MLFramework(framework)
     except ValueError:

@@ -32,7 +32,7 @@ async def get_task_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get task dashboard statistics for current user's accessible companies"""
-    org_id = org_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -150,7 +150,7 @@ async def get_tasks(
     db: Session = Depends(get_db)
 ):
     """Get paginated list of tasks with filtering and sorting"""
-    org_id = org_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
