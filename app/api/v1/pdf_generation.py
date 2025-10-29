@@ -12,10 +12,9 @@ from sqlalchemy import select  # Added for select
 from sqlalchemy.orm import joinedload
 from typing import Dict, Any
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models import User
 from app.services.pdf_generation_service import pdf_generator
-from app.services.rbac import RBACService
 from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder, PurchaseReturn, PurchaseOrderItem, PurchaseVoucherItem, PurchaseReturnItem, GoodsReceiptNote, GoodsReceiptNoteItem
 from app.models.vouchers.sales import SalesVoucher, DeliveryChallan, SalesReturn, DeliveryChallanItem
 from app.models.vouchers.presales import Quotation, SalesOrder, ProformaInvoice, QuotationItem, SalesOrderItem, ProformaInvoiceItem
@@ -30,46 +29,12 @@ from app.models.organization_settings import OrganizationSettings
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["pdf-generation"])
 
-def check_voucher_permission(voucher_type: str, current_user: User, db: AsyncSession) -> None:  # Changed to AsyncSession
-    """Check if user has permission for voucher type"""
-    permission_map = {
-        'purchase': 'voucher_read',
-        'purchase-vouchers': 'voucher_read',
-        'purchase-orders': 'voucher_read',
-        'purchase-return': 'voucher_read',
-        'purchase-returns': 'voucher_read',
-        'sales': 'voucher_read',
-        'sales-vouchers': 'voucher_read',
-        'delivery-challan': 'voucher_read',
-        'sales-return': 'voucher_read',
-        'sales-returns': 'voucher_read',
-        'quotation': 'presales_read',
-        'sales_order': 'presales_read',
-        'sales-orders': 'presales_read',
-        'proforma_invoice': 'presales_read',
-        'proforma-invoices': 'presales_read',
-        'payment-vouchers': 'voucher_read',
-        'receipt-vouchers': 'voucher_read',
-        'goods-receipt-notes': 'voucher_read'
-    }
-    
-    required_permission = permission_map.get(voucher_type)
-    if required_permission:
-        rbac_service = RBACService(db)
-        # Skip RBAC check for now and just log
-        logger.info(f"User {current_user.id} accessing {voucher_type} PDF generation")
-        # if not rbac_service.user_has_service_permission(current_user.id, required_permission):
-        #     raise HTTPException(
-        #         status_code=status.HTTP_403_FORBIDDEN,
-        #         detail=f"Insufficient permissions to access {voucher_type} vouchers"
-        #     )
-
 @router.post("/voucher/{voucher_type}/{voucher_id}")
 async def generate_voucher_pdf(
     voucher_type: str,
     voucher_id: int,
-    db: AsyncSession = Depends(get_db),  # Changed to AsyncSession
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read")),
+    db: AsyncSession = Depends(get_db)  # Changed to AsyncSession
 ):
     """
     Generate PDF for a specific voucher
@@ -93,6 +58,7 @@ async def generate_voucher_pdf(
     - proforma-invoices: Proforma Invoice
     - goods-receipt-notes: Goods Receipt Note
     """
+    current_user, org_id = auth
     
     # Normalize voucher_type for consistency
     if voucher_type == 'quotations':
@@ -110,9 +76,6 @@ async def generate_voucher_pdf(
     elif voucher_type == 'goods-receipt-notes':
         voucher_type = 'grn'
     
-    # Check permissions
-    check_voucher_permission(voucher_type, current_user, db)
-    
     try:
         # Get voucher data
         voucher_data = await _get_voucher_data(voucher_type, voucher_id, db, current_user)  # Await
@@ -128,7 +91,7 @@ async def generate_voucher_pdf(
             voucher_type=voucher_type,
             voucher_data=voucher_data,
             db=db,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             current_user=current_user
         )
         
@@ -160,12 +123,13 @@ async def generate_voucher_pdf(
 async def download_voucher_pdf(
     voucher_type: str,
     voucher_id: int,
-    db: AsyncSession = Depends(get_db),  # Changed to AsyncSession
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read")),
+    db: AsyncSession = Depends(get_db)  # Changed to AsyncSession
 ):
     """
     Download PDF for a specific voucher (forces download instead of preview)
     """
+    current_user, org_id = auth
     
     # Normalize voucher_type for consistency
     if voucher_type == 'quotations':
@@ -183,9 +147,6 @@ async def download_voucher_pdf(
     elif voucher_type == 'goods-receipt-notes':
         voucher_type = 'grn'
     
-    # Check permissions
-    check_voucher_permission(voucher_type, current_user, db)
-    
     try:
         # Get voucher data
         voucher_data = await _get_voucher_data(voucher_type, voucher_id, db, current_user)  # Await
@@ -201,7 +162,7 @@ async def download_voucher_pdf(
             voucher_type=voucher_type,
             voucher_data=voucher_data,
             db=db,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             current_user=current_user
         )
         
@@ -232,9 +193,10 @@ async def download_voucher_pdf(
 
 @router.get("/templates")
 async def get_available_templates(
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get list of available PDF templates"""
+    current_user, org_id = auth
     
     templates = [
         {
