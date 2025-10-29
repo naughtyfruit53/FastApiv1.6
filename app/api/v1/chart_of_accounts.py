@@ -170,6 +170,8 @@ async def get_next_account_code(
     db: AsyncSession = Depends(get_db)
 ):
     """Get next suggested account code for a type"""
+    current_user, org_id = auth
+    
     try:
         logger.info(f"Generating next account code for type: {account_type}, org: {org_id}")
         next_code = await LedgerService.generate_account_code(db, org_id, account_type.upper())
@@ -187,6 +189,8 @@ async def get_chart_of_account(
     db: AsyncSession = Depends(get_db)
 ):
     """Get a specific chart of account"""
+    current_user, org_id = auth
+    
     stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == account_id,
         ChartOfAccounts.organization_id == org_id
@@ -204,10 +208,12 @@ async def get_chart_of_account(
 async def update_chart_of_account(
     account_id: int,
     coa_data: ChartOfAccountsUpdate,
-    auth: tuple = Depends(require_access("chart_of_accounts", "read")),
+    auth: tuple = Depends(require_access("chart_of_accounts", "update")),
     db: AsyncSession = Depends(get_db)
 ):
     """Update a chart of account"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.id == account_id,
@@ -264,10 +270,12 @@ async def update_chart_of_account(
 @router.delete("/chart-of-accounts/{account_id}")
 async def delete_chart_of_account(
     account_id: int,
-    auth: tuple = Depends(require_access("chart_of_accounts", "read")),
+    auth: tuple = Depends(require_access("chart_of_accounts", "delete")),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a chart of account"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.id == account_id,
@@ -314,6 +322,8 @@ async def get_payroll_eligible_accounts(
     db: AsyncSession = Depends(get_db)
 ):
     """Get chart of accounts eligible for payroll component mapping"""
+    current_user, org_id = auth
+    
     try:
         # Valid account types for payroll
         valid_payroll_types = ["expense", "liability", "asset"]
@@ -385,6 +395,8 @@ async def chart_accounts_lookup(
     db: AsyncSession = Depends(get_db)
 ):
     """Lookup chart of accounts for dropdown/autocomplete components"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.organization_id == org_id,
@@ -442,6 +454,8 @@ async def get_expense_accounts(
     db: AsyncSession = Depends(get_db)
 ):
     """Alias for expense accounts (filter chart-of-accounts by expense type)"""
+    current_user, org_id = auth
+    
     coa_filter = ChartOfAccountsFilter(account_type="EXPENSE", search=search)
     return await get_chart_of_accounts(
         page=page,
