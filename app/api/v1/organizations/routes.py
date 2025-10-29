@@ -10,6 +10,7 @@ import logging
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.permissions import PermissionChecker, Permission, require_platform_permission
+from app.core.enforcement import require_access
 from app.models import Organization, User, Product, Customer, Vendor, Stock, AuditLog
 from app.schemas.user import UserRole, UserInDB
 from app.schemas.organization import (
@@ -98,23 +99,13 @@ async def get_current_organization(
 @router.put("/current", response_model=OrganizationInDB)
 async def update_current_organization(
     org_update: OrganizationUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Update current user's organization (org admin only)"""
-    if current_user.organization_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is not associated with any organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN.value:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators or organization administrators can update organization details"
-        )
-  
-    result = await db.execute(select(Organization).filter_by(id=current_user.organization_id))
+    """Update current user's organization (org admin permission required)"""
+    current_user, org_id = auth
+    
+    result = await db.execute(select(Organization).filter_by(id=org_id))
     organization = result.scalars().first()
   
     if not organization:
@@ -160,54 +151,44 @@ async def get_available_modules(
 
 @router.get("/app-statistics")
 async def get_app_level_statistics(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get app-level statistics for super admins"""
-    if not current_user.is_super_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can access app-level statistics"
-        )
+    """Get app-level statistics (admin permission required)"""
+    current_user, org_id = auth
     return await OrganizationService.get_app_statistics(db)
 
 @router.get("/org-statistics")
 async def get_org_level_statistics(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get organization-level statistics for org admins/users"""
-    if current_user.organization_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Organization context required for statistics"
-        )
-    return await OrganizationService.get_org_statistics(db, current_user.organization_id)
+    """Get organization-level statistics (org permission required)"""
+    current_user, org_id = auth
+    return await OrganizationService.get_org_statistics(db, org_id)
 
 @router.get("/recent-activities")
 async def get_recent_activities(
     limit: int = 10,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get recent activities for the organization"""
-    if current_user.organization_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Organization context required for recent activities"
-        )
-    return await OrganizationService.get_recent_activities(db, current_user.organization_id, limit)
+    current_user, org_id = auth
+    return await OrganizationService.get_recent_activities(db, org_id, limit)
 
 @router.post("/factory-default")
 async def factory_default_system(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Factory Default - App Super Admin only (complete system reset)"""
-    if not current_user.is_super_admin:
+    """Factory Default - Requires organization delete permission (complete system reset)"""
+    current_user, org_id = auth
+    # Extra check for super admin for this critical operation
+    if not getattr(current_user, 'is_super_admin', False):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can perform factory default reset"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resource not found"
         )
     try:
         from app.services.reset_service import ResetService
@@ -265,10 +246,12 @@ async def create_organization(
 @router.post("/{organization_id}/join")
 async def join_organization(
     organization_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Join an organization (must have permission)"""
+    """Join an organization (requires organization update permission)"""
+    current_user, org_id = auth
+    
     result = await db.execute(select(Organization).filter_by(id=organization_id))
     org = result.scalars().first()
     if not org:
@@ -283,10 +266,11 @@ async def join_organization(
             detail="User is already a member of this organization"
         )
   
-    if not current_user.is_super_admin:
+    # Extra check for super admin for cross-org operations
+    if not getattr(current_user, 'is_super_admin', False):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can join organizations without invitation"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
         )
   
     try:
@@ -306,20 +290,17 @@ async def get_organization_members(
     organization_id: int,
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get organization members (org admin or super admin only)"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+    """Get organization members (org admin permission required)"""
+    current_user, org_id = auth
+    
+    # Enforce tenant isolation - can only view members of own organization
+    if organization_id != org_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN.value:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to view organization members"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
         )
   
     result = await db.execute(
@@ -332,15 +313,11 @@ async def get_organization_members(
 @router.post("/license/create", response_model=OrganizationLicenseResponse)
 async def create_organization_license(
     license_data: OrganizationLicenseCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Create new organization license (super admin only)"""
-    if not current_user.is_super_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can create organization licenses"
-        )
+    """Create new organization license (organization create permission required)"""
+    current_user, org_id = auth
     
     result = await OrganizationService.create_license(db, license_data, current_user)
 
@@ -349,25 +326,15 @@ async def create_organization_license(
 @router.post("/reset-data/request-otp")
 async def request_reset_otp(
     request: OTPRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Request OTP for organization data reset (org admin only)"""
-    if current_user.organization_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is not associated with any organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN.value:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can request OTP for data reset"
-        )
+    """Request OTP for organization data reset (requires organization delete permission)"""
+    current_user, org_id = auth
   
     try:
         otp_service = OTPService(db)
-        otp = otp_service.generate_and_send_otp(current_user.email, "reset_data", organization_id=current_user.organization_id)
+        otp = otp_service.generate_and_send_otp(current_user.email, "reset_data", organization_id=org_id)
         return {"message": "OTP sent to your email. Please verify to proceed with data reset."}
     except Exception as e:
         raise HTTPException(
@@ -378,21 +345,11 @@ async def request_reset_otp(
 @router.post("/reset-data/verify-otp")
 async def verify_reset_otp_and_reset(
     verify_data: OTPVerify,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Verify OTP and perform organization data reset (org admin only)"""
-    if current_user.organization_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is not associated with any organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN.value:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can reset organization data"
-        )
+    """Verify OTP and perform organization data reset (requires organization delete permission)"""
+    current_user, org_id = auth
   
     try:
         otp_service = OTPService(db)
@@ -403,7 +360,7 @@ async def verify_reset_otp_and_reset(
             )
         
         from app.services.org_reset_service import OrgResetService
-        result = await OrgResetService.reset_organization_business_data(db, current_user.organization_id)
+        result = await OrgResetService.reset_organization_business_data(db, org_id)
         return {
             "message": "Organization data has been reset successfully",
             "details": result.get("deleted", {}),
@@ -418,25 +375,15 @@ async def verify_reset_otp_and_reset(
 
 @router.post("/reset-data")
 async def reset_organization_data(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("organization", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Reset organization business data (org admin only)"""
-    if current_user.organization_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is not associated with any organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role != UserRole.ORG_ADMIN.value:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only organization administrators can reset organization data"
-        )
+    """Reset organization business data (requires organization delete permission)"""
+    current_user, org_id = auth
   
     try:
         from app.services.org_reset_service import OrgResetService
-        result = await OrgResetService.reset_organization_business_data(db, current_user.organization_id)
+        result = await OrgResetService.reset_organization_business_data(db, org_id)
         return {
             "message": "Organization data has been reset successfully",
             "details": result.get("deleted", {}),
