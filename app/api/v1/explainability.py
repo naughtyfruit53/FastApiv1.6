@@ -141,9 +141,10 @@ async def get_explainability_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get explainability dashboard data"""
+    current_user, org_id = auth
     
     service = ExplainabilityService(db)
-    dashboard_data = service.get_explainability_dashboard(current_user.organization_id)
+    dashboard_data = service.get_explainability_dashboard(org_id)
     
     return ExplainabilityDashboardResponse(**dashboard_data)
 
