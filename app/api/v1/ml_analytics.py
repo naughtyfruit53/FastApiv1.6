@@ -8,8 +8,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from app.core.permissions import PermissionChecker
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.services.ml_analytics_service import MLAnalyticsService
 from app.schemas.ml_analytics import (
@@ -32,14 +31,14 @@ router = APIRouter()
 
 @router.get("/dashboard", response_model=MLAnalyticsDashboard)
 async def get_ml_analytics_dashboard(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_analytics", "read")),
     db: Session = Depends(get_db)
 ):
     """Get ML analytics dashboard data"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
+    current_user, org_id = auth
     
     service = MLAnalyticsService(db)
-    dashboard_data = service.get_ml_analytics_dashboard(organization_id)
+    dashboard_data = service.get_ml_analytics_dashboard(org_id)
     
     return MLAnalyticsDashboard(**dashboard_data)
 
@@ -51,15 +50,15 @@ async def get_ml_analytics_dashboard(
 @router.post("/models/predictive", response_model=PredictiveModelResponse, status_code=201)
 async def create_predictive_model(
     model_data: PredictiveModelCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_analytics", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new predictive model"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:create", db)
+    current_user, org_id = auth
     
     service = MLAnalyticsService(db)
     model = service.create_predictive_model(
-        organization_id=organization_id,
+        organization_id=org_id,
         model_data=model_data,
         created_by_id=current_user.id
     )
@@ -71,11 +70,11 @@ async def create_predictive_model(
 async def get_predictive_models(
     model_type: Optional[PredictiveModelTypeEnum] = Query(None, description="Filter by model type"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("ml_analytics", "read")),
     db: Session = Depends(get_db)
 ):
     """Get all predictive models for the organization"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
+    current_user, org_id = auth
     
     service = MLAnalyticsService(db)
     models = service.get_predictive_models(
