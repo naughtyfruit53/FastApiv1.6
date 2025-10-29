@@ -6,8 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.schemas.exhibition import (
     ExhibitionEventCreate, ExhibitionEventUpdate, ExhibitionEventInDB,
@@ -17,7 +16,6 @@ from app.schemas.exhibition import (
     CardScanWithProspect, BulkCardScanResponse
 )
 from app.services.exhibition_service import exhibition_service
-from app.services.rbac import RBACService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,22 +27,11 @@ router = APIRouter()
 @router.post("/events", response_model=ExhibitionEventInDB, status_code=status.HTTP_201_CREATED)
 async def create_exhibition_event(
     event_data: ExhibitionEventCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new exhibition event"""
-    
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    if "exhibition_event_create" not in user_permissions and not current_user.is_company_admin:
-        logger.error(f"User {current_user.email} lacks 'exhibition_event_create' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to create exhibition events"
-        )
-    
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     event = await exhibition_service.create_exhibition_event(
         db=db,
@@ -63,21 +50,10 @@ async def get_exhibition_events(
     skip: int = Query(0, ge=0, description="Number of events to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of events to return"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Get exhibition events for the current organization"""
-    
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    if "exhibition_event_read" not in user_permissions and not current_user.is_company_admin:
-        logger.error(f"User {current_user.email} lacks 'exhibition_event_read' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to view exhibition events"
-        )
-    
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     events = await exhibition_service.get_exhibition_events(
         db=db,
@@ -95,11 +71,11 @@ async def get_exhibition_events(
 async def get_exhibition_event(
     event_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Get a specific exhibition event"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     event = await exhibition_service.get_exhibition_event(db, event_id, org_id)
     if not event:
@@ -116,11 +92,11 @@ async def update_exhibition_event(
     event_id: int,
     event_data: ExhibitionEventUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "update")),
 ):
     """Update an exhibition event"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     event = await exhibition_service.update_exhibition_event(
         db=db,
@@ -142,11 +118,11 @@ async def update_exhibition_event(
 async def delete_exhibition_event(
     event_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "delete")),
 ):
     """Delete an exhibition event"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     success = await exhibition_service.delete_exhibition_event(db, event_id, org_id)
     if not success:
@@ -163,21 +139,10 @@ async def scan_business_card(
     event_id: int,
     file: UploadFile = File(..., description="Business card image file"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Scan a business card for an exhibition event"""
-    
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    if "exhibition_scan_create" not in user_permissions and not current_user.is_company_admin:
-        logger.error(f"User {current_user.email} lacks 'exhibition_scan_create' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to scan business cards"
-        )
-    
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     try:
         scan = await exhibition_service.scan_business_card(
@@ -206,11 +171,11 @@ async def get_card_scans(
     skip: int = Query(0, ge=0, description="Number of scans to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of scans to return"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Get business card scans for the current organization"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     scans = await exhibition_service.get_card_scans(
         db=db,
@@ -229,11 +194,11 @@ async def get_card_scans(
 async def get_card_scan(
     scan_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Get a specific business card scan"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     scan = await exhibition_service.get_card_scan(db, scan_id, org_id)
     if not scan:
@@ -250,11 +215,11 @@ async def update_card_scan(
     scan_id: int,
     scan_data: BusinessCardScanUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "update")),
 ):
     """Update a business card scan (validation, correction)"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     scan = await exhibition_service.update_card_scan(
         db=db,
@@ -279,21 +244,10 @@ async def update_card_scan(
 async def create_prospect(
     prospect_data: ExhibitionProspectCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "create")),
 ):
     """Create a new exhibition prospect"""
-    
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    if "exhibition_prospect_create" not in user_permissions and not current_user.is_company_admin:
-        logger.error(f"User {current_user.email} lacks 'exhibition_prospect_create' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to create exhibition prospects"
-        )
-    
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     prospect = await exhibition_service.create_prospect(
         db=db,
@@ -314,21 +268,10 @@ async def get_prospects(
     skip: int = Query(0, ge=0, description="Number of prospects to skip"),
     limit: int = Query(100, ge=1, le=100, description="Number of prospects to return"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Get exhibition prospects for the current organization"""
-    
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    if "exhibition_prospect_read" not in user_permissions and not current_user.is_company_admin:
-        logger.error(f"User {current_user.email} lacks 'exhibition_prospect_read' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to view exhibition prospects"
-        )
-    
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     prospects = await exhibition_service.get_prospects(
         db=db,
@@ -348,11 +291,11 @@ async def get_prospects(
 async def get_prospect(
     prospect_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Get a specific exhibition prospect"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     prospect = await exhibition_service.get_prospect(db, prospect_id, org_id)
     if not prospect:
@@ -369,11 +312,11 @@ async def update_prospect(
     prospect_id: int,
     prospect_data: ExhibitionProspectUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "update")),
 ):
     """Update an exhibition prospect"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     prospect = await exhibition_service.update_prospect(
         db=db,
@@ -395,11 +338,11 @@ async def update_prospect(
 async def convert_prospect_to_customer(
     prospect_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Convert an exhibition prospect to a CRM customer"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     customer = await exhibition_service.convert_prospect_to_customer(
         db=db,
@@ -425,11 +368,11 @@ async def convert_prospect_to_customer(
 @router.get("/analytics", response_model=ExhibitionAnalytics)
 async def get_exhibition_analytics(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Get overall exhibition analytics for the organization"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     analytics = await exhibition_service.get_exhibition_analytics(db, org_id)
     return analytics
@@ -439,11 +382,11 @@ async def get_exhibition_analytics(
 async def get_event_metrics(
     event_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Get detailed metrics for a specific exhibition event"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     metrics = await exhibition_service.get_event_metrics(db, event_id, org_id)
     if not metrics:
@@ -462,11 +405,11 @@ async def bulk_scan_cards(
     event_id: int,
     files: List[UploadFile] = File(..., description="Multiple business card images"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Bulk scan multiple business cards for an exhibition event"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     results = {
         "successful_scans": 0,
@@ -508,11 +451,11 @@ async def export_event_data(
     event_id: int,
     format: str = Query("csv", description="Export format: csv, excel, json"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Export exhibition event data"""
     
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     # Verify event exists
     event = await exhibition_service.get_exhibition_event(db, event_id, org_id)
@@ -531,7 +474,7 @@ async def export_event_data(
 @router.post("/test-ocr", response_model=OCRExtractionResult)
 async def test_ocr_extraction(
     file: UploadFile = File(..., description="Business card image for testing"),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("exhibition", "read")),
 ):
     """Test OCR extraction without creating a scan record"""
     

@@ -14,6 +14,7 @@ import hashlib
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user as get_current_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.api_gateway_models import (
     APIKey, APIUsageLog, APIEndpoint, Webhook, WebhookDelivery,
@@ -31,7 +32,7 @@ from app.schemas.api_gateway import (
     APIGatewayDashboardStats, APIUsageStats, BulkAPIKeyUpdate, BulkWebhookUpdate
 )
 from app.services.rbac import RBACService
-from app.core.rbac_dependencies import check_service_permission
+
 
 router = APIRouter()
 
@@ -39,11 +40,11 @@ router = APIRouter()
 @router.get("/dashboard", response_model=APIGatewayDashboardStats)
 async def get_api_gateway_dashboard(
     company_id: Optional[int] = Query(None, description="Filter by specific company"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("api_gateway", "read")),
     db: Session = Depends(get_db)
 ):
     """Get API Gateway dashboard statistics"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -160,12 +161,12 @@ async def get_api_gateway_dashboard(
 @router.post("/api-keys", response_model=APIKeyGenerated)
 async def create_api_key(
     api_key_data: APIKeyCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("api_gateway", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new API key"""
     check_service_permission(current_user, "api_gateway", "create", db)
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Validate company access
@@ -230,11 +231,11 @@ async def list_api_keys(
     per_page: int = Query(50, ge=1, le=100, description="Items per page"),
     company_id: Optional[int] = Query(None, description="Filter by company"),
     filters: APIKeyFilter = Depends(),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("api_gateway", "read")),
     db: Session = Depends(get_db)
 ):
     """List API keys with filtering and pagination"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -327,12 +328,12 @@ async def list_api_keys(
 async def update_api_key(
     api_key_id: int,
     api_key_update: APIKeyUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("api_gateway", "update")),
     db: Session = Depends(get_db)
 ):
     """Update an API key"""
     check_service_permission(current_user, "api_gateway", "update", db)
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     api_key = db.query(APIKey).filter(
@@ -369,12 +370,12 @@ async def update_api_key(
 @router.delete("/api-keys/{api_key_id}")
 async def delete_api_key(
     api_key_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("api_gateway", "delete")),
     db: Session = Depends(get_db)
 ):
     """Delete an API key"""
     check_service_permission(current_user, "api_gateway", "delete", db)
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     api_key = db.query(APIKey).filter(
@@ -407,11 +408,11 @@ async def list_usage_logs(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(100, ge=1, le=1000, description="Items per page"),
     filters: APIUsageLogFilter = Depends(),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("api_gateway", "read")),
     db: Session = Depends(get_db)
 ):
     """List API usage logs with filtering and pagination"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     
     # Build query
     query = db.query(APIUsageLog).filter(APIUsageLog.organization_id == org_id)
@@ -471,12 +472,12 @@ async def list_usage_logs(
 @router.post("/webhooks", response_model=WebhookResponse)
 async def create_webhook(
     webhook_data: WebhookCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("api_gateway", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new webhook"""
     check_service_permission(current_user, "api_gateway", "create", db)
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Validate company access
@@ -532,11 +533,11 @@ async def list_webhooks(
     per_page: int = Query(50, ge=1, le=100, description="Items per page"),
     company_id: Optional[int] = Query(None, description="Filter by company"),
     filters: WebhookFilter = Depends(),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("api_gateway", "read")),
     db: Session = Depends(get_db)
 ):
     """List webhooks with filtering and pagination"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies

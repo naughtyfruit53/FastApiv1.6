@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.models import User
 from app.schemas.user import UserRole, UserCreate, UserUpdate, UserInDB
 from app.core.security import get_current_user
+from app.core.enforcement import require_access
 from app.services.user_service import UserService
 from app.core.security import get_password_hash, is_super_admin_email
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
@@ -39,9 +40,10 @@ async def list_app_users(
     limit: int = 100,
     active_only: bool = True,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_app_user_management_permission)
+    auth: tuple = Depends(require_access("app_users", "read"))
 ):
     """List all app-level users (superadmins and admins)"""
+    current_user, _ = auth  # App-level users have no organization
     try:
         # Query for app-level users (SUPER_ADMIN and APP_ADMIN roles)
         query = db.query(User).filter(
@@ -66,9 +68,10 @@ async def list_app_users(
 async def create_app_user(
     user_data: UserCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_app_user_management_permission)
+    auth: tuple = Depends(require_access("app_users", "read"))
 ):
     """Create a new app-level user (superadmin or admin)"""
+    current_user, _ = auth  # App-level users have no organization
     try:
         # Validate role - allow super_admin and app_admin for app-level users
         if user_data.role not in [UserRole.SUPER_ADMIN, UserRole.APP_ADMIN]:
@@ -192,9 +195,10 @@ async def create_app_user(
 async def get_app_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_app_user_management_permission)
+    auth: tuple = Depends(require_access("app_users", "read"))
 ):
     """Get app user by ID"""
+    current_user, _ = auth  # App-level users have no organization
     user = db.query(User).filter(
         User.id == user_id,
         User.organization_id.is_(None),
@@ -214,9 +218,10 @@ async def update_app_user(
     user_id: int,
     user_update: UserUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_app_user_management_permission)
+    auth: tuple = Depends(require_access("app_users", "read"))
 ):
     """Update app user"""
+    current_user, _ = auth  # App-level users have no organization
     user = db.query(User).filter(
         User.id == user_id,
         User.organization_id.is_(None),
@@ -278,9 +283,10 @@ async def update_app_user(
 async def delete_app_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_app_user_management_permission)
+    auth: tuple = Depends(require_access("app_users", "read"))
 ):
     """Delete app user"""
+    current_user, _ = auth  # App-level users have no organization
     user = db.query(User).filter(
         User.id == user_id,
         User.organization_id.is_(None),
@@ -326,10 +332,11 @@ async def delete_app_user(
 async def reset_app_user_password(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_app_user_management_permission),
+    auth: tuple = Depends(require_access("app_users", "read")),
     request: Request = None
 ):
     """Reset password for an app user"""
+    current_user, _ = auth  # App-level users have no organization
     user = db.query(User).filter(
         User.id == user_id,
         User.organization_id.is_(None),
@@ -364,9 +371,10 @@ async def reset_app_user_password(
 async def toggle_app_user_status(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_app_user_management_permission)
+    auth: tuple = Depends(require_access("app_users", "read"))
 ):
     """Toggle active/inactive status for an app user"""
+    current_user, _ = auth  # App-level users have no organization
     user = db.query(User).filter(
         User.id == user_id,
         User.organization_id.is_(None),
