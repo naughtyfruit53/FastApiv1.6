@@ -5,13 +5,14 @@ Tests permission enforcement, tenant isolation, and anti-enumeration patterns.
 """
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
-import secrets
 
 # Mock test - structure for when dependencies are available
 # This demonstrates the test patterns that should be used
+# When implementing, uncomment and add required imports:
+# from fastapi.testclient import TestClient
+# from sqlalchemy.orm import Session
+# from datetime import datetime, timedelta
+# import secrets
 
 class TestPasswordManagementRBAC:
     """Test RBAC for password management endpoints"""
