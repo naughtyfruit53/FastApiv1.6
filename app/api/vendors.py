@@ -26,16 +26,13 @@ async def get_vendors(
     limit: int = 1000000,
     search: Optional[str] = None,
     active_only: bool = True,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all vendors for the organization"""
+    current_user, org_id = auth
     
-    target_org_id = require_current_organization_id(current_user)
-    
-    stmt = TenantQueryFilter.apply_organization_filter(
-        select(Vendor), Vendor, target_org_id, current_user
-    )
+    stmt = select(Vendor).where(Vendor.organization_id == org_id)
 
     if active_only:
         stmt = stmt.where(Vendor.is_active == True)
@@ -48,29 +45,32 @@ async def get_vendors(
         stmt = stmt.where(search_filter)
     result = await db.execute(stmt.offset(skip).limit(limit))
     vendors = result.scalars().all()
-    logger.info(f"Fetched {len(vendors)} vendors for organization {target_org_id}")
+    logger.info(f"Fetched {len(vendors)} vendors for organization {org_id}")
     return vendors
 
 @router.post("", response_model=VendorInDB)
 async def create_vendor(
     vendor: VendorCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create new vendor"""
+    current_user, org_id = auth
+    
     try:
         vendor_data = vendor.dict()
-        vendor_data = TenantQueryFilter.validate_organization_data(vendor_data, current_user)
+        vendor_data['organization_id'] = org_id
         logger.info(f"Creating vendor with data: {vendor_data}")
         
         # Check for duplicate vendor name in organization
-        stmt = TenantQueryFilter.apply_organization_filter(
-            select(Vendor), Vendor, vendor_data['organization_id'], current_user
-        ).where(Vendor.name == vendor_data['name'])
+        stmt = select(Vendor).where(
+            Vendor.organization_id == org_id,
+            Vendor.name == vendor_data['name']
+        )
         result = await db.execute(stmt)
         existing_vendor = result.scalar_one_or_none()
         if existing_vendor:
-            logger.warning(f"Vendor creation failed: Vendor with name '{vendor_data['name']}' already exists in organization {vendor_data['organization_id']}")
+            logger.warning(f"Vendor creation failed: Vendor with name '{vendor_data['name']}' already exists in organization {org_id}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Vendor with name '{vendor_data['name']}' already exists in this organization"
@@ -81,7 +81,7 @@ async def create_vendor(
             from app.models.erp_models import ChartOfAccounts
             default_payable_stmt = select(ChartOfAccounts).where(
                 and_(
-                    ChartOfAccounts.organization_id == vendor_data['organization_id'],
+                    ChartOfAccounts.organization_id == org_id,
                     ChartOfAccounts.account_code == '2110',  # Accounts Payable
                     ChartOfAccounts.is_active == True
                 )
@@ -109,27 +109,22 @@ async def create_vendor(
 @router.get("/{vendor_id}", response_model=VendorInDB)
 async def get_vendor(
     vendor_id: int,
-    organization_id: Optional[int] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get vendor by ID with organization validation"""
-    if organization_id and getattr(current_user, 'is_platform_user', False):
-        validate_organization_access(organization_id, current_user, db)
-        target_org_id = organization_id
-    else:
-        target_org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
-    stmt = TenantQueryFilter.apply_organization_filter(
-        select(Vendor), Vendor, target_org_id, current_user
-    ).where(Vendor.id == vendor_id)
+    stmt = select(Vendor).where(
+        Vendor.id == vendor_id,
+        Vendor.organization_id == org_id
+    )
     result = await db.execute(stmt)
     vendor = result.scalar_one_or_none()
     if not vendor:
-        logger.warning(f"Vendor {vendor_id} not found in organization {target_org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Vendor {vendor_id} not found in organization {target_org_id}"
+            detail="Vendor not found"
         )
     return vendor
 
@@ -137,38 +132,40 @@ async def get_vendor(
 async def update_vendor(
     vendor_id: int,
     vendor: VendorUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update vendor with organization validation"""
-    target_org_id = require_current_organization_id(current_user)
-    stmt = TenantQueryFilter.apply_organization_filter(
-        select(Vendor), Vendor, target_org_id, current_user
-    ).where(Vendor.id == vendor_id)
+    current_user, org_id = auth
+    
+    stmt = select(Vendor).where(
+        Vendor.id == vendor_id,
+        Vendor.organization_id == org_id
+    )
     result = await db.execute(stmt)
     db_vendor = result.scalar_one_or_none()
     if not db_vendor:
-        logger.warning(f"Vendor {vendor_id} not found in organization {target_org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Vendor {vendor_id} not found in organization {target_org_id}"
+            detail="Vendor not found"
         )
+    
     update_data = vendor.dict(exclude_unset=True)
     if 'name' in update_data and update_data['name'] != db_vendor.name:
-        stmt = TenantQueryFilter.apply_organization_filter(
-            select(Vendor), Vendor, target_org_id, current_user
-        ).where(
+        stmt = select(Vendor).where(
+            Vendor.organization_id == org_id,
             Vendor.name == update_data['name'],
             Vendor.id != vendor_id
         )
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
         if existing:
-            logger.warning(f"Vendor update failed: Vendor with name '{update_data['name']}' already exists in organization {target_org_id}")
+            logger.warning(f"Vendor update failed: Vendor with name '{update_data['name']}' already exists in organization {org_id}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Vendor with name '{update_data['name']}' already exists in this organization"
             )
+    
     for field, value in update_data.items():
         setattr(db_vendor, field, value)
     await db.commit()
@@ -179,22 +176,24 @@ async def update_vendor(
 @router.delete("/{vendor_id}")
 async def delete_vendor(
     vendor_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("vendor", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Delete vendor with organization validation (admin only)"""
-    target_org_id = require_current_organization_id(current_user)
-    stmt = TenantQueryFilter.apply_organization_filter(
-        select(Vendor), Vendor, target_org_id, current_user
-    ).where(Vendor.id == vendor_id)
+    """Delete vendor with organization validation"""
+    current_user, org_id = auth
+    
+    stmt = select(Vendor).where(
+        Vendor.id == vendor_id,
+        Vendor.organization_id == org_id
+    )
     result = await db.execute(stmt)
     db_vendor = result.scalar_one_or_none()
     if not db_vendor:
-        logger.warning(f"Vendor {vendor_id} not found in organization {target_org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Vendor {vendor_id} not found in organization {target_org_id}"
+            detail="Vendor not found"
         )
+    
     db_vendor.is_active = False
     await db.commit()
     logger.info(f"Deleted vendor {db_vendor.name} (ID: {db_vendor.id}) in organization {db_vendor.organization_id}")
@@ -206,29 +205,30 @@ async def delete_vendor(
 async def search_vendors_for_dropdown(
     search_term: str,
     limit: int = 10,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Search vendors for dropdown/autocomplete with organization filtering"""
-    target_org_id = require_current_organization_id(current_user)
-    stmt = TenantQueryFilter.apply_organization_filter(
-        select(Vendor), Vendor, target_org_id, current_user
-    ).where(
+    current_user, org_id = auth
+    
+    stmt = select(Vendor).where(
+        Vendor.organization_id == org_id,
         Vendor.is_active == True,
         Vendor.name.contains(search_term)
     ).limit(limit)
     result = await db.execute(stmt)
     vendors = result.scalars().all()
-    logger.info(f"Searched vendors for dropdown: {len(vendors)} found for term '{search_term}' in organization {target_org_id}")
+    logger.info(f"Searched vendors for dropdown: {len(vendors)} found for term '{search_term}' in organization {org_id}")
     return vendors
 
 # --- Excel Import/Export/Template endpoints ---
 
 @router.get("/template/excel")
 async def download_vendors_template(
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "read"))
 ):
     """Download Excel template for vendors bulk import"""
+    current_user, org_id = auth
     excel_data = VendorExcelService.create_template()
     return ExcelService.create_streaming_response(excel_data, "vendors_template.xlsx")
 
@@ -238,14 +238,13 @@ async def export_vendors_excel(
     limit: int = 1000,
     search: Optional[str] = None,
     active_only: bool = True,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Export vendors to Excel"""
-    target_org_id = require_current_organization_id(current_user)
-    stmt = TenantQueryFilter.apply_organization_filter(
-        select(Vendor), Vendor, target_org_id, current_user
-    )
+    current_user, org_id = auth
+    
+    stmt = select(Vendor).where(Vendor.organization_id == org_id)
     if active_only:
         stmt = stmt.where(Vendor.is_active == True)
     if search:
@@ -279,11 +278,12 @@ async def export_vendors_excel(
 @router.post("/import/excel", response_model=BulkImportResponse)
 async def import_vendors_excel(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Import vendors from Excel file"""
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
+    
     if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
         logger.warning(f"Invalid file format for vendor import: {file.filename}")
         raise HTTPException(
@@ -368,12 +368,11 @@ async def upload_vendor_file(
     vendor_id: int,
     file: UploadFile = File(...),
     file_type: str = "general",
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Upload a file for a vendor (GST certificate, PAN card, etc.)"""
-    
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     stmt = select(Vendor).where(
         Vendor.id == vendor_id,
@@ -383,7 +382,6 @@ async def upload_vendor_file(
     vendor = result.scalar_one_or_none()
     
     if not vendor:
-        logger.warning(f"Vendor {vendor_id} not found for file upload in organization {org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vendor not found"
@@ -456,12 +454,11 @@ async def upload_vendor_file(
 async def get_vendor_files(
     vendor_id: int,
     file_type: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all files for a vendor, optionally filtered by file type"""
-    
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     stmt = select(Vendor).where(
         Vendor.id == vendor_id,
@@ -471,7 +468,6 @@ async def get_vendor_files(
     vendor = result.scalar_one_or_none()
     
     if not vendor:
-        logger.warning(f"Vendor {vendor_id} not found for file retrieval in organization {org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vendor not found"
@@ -505,12 +501,11 @@ async def get_vendor_files(
 async def download_vendor_file(
     vendor_id: int,
     file_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Download a vendor file"""
-    
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     stmt = select(VendorFile).where(
         VendorFile.id == file_id,
@@ -521,7 +516,6 @@ async def download_vendor_file(
     file_record = result.scalar_one_or_none()
     
     if not file_record:
-        logger.warning(f"File {file_id} not found for vendor {vendor_id} in organization {org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"
@@ -544,12 +538,11 @@ async def download_vendor_file(
 async def delete_vendor_file(
     vendor_id: int,
     file_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("vendor", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete a vendor file"""
-    
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     stmt = select(VendorFile).where(
         VendorFile.id == file_id,
@@ -560,7 +553,6 @@ async def delete_vendor_file(
     file_record = result.scalar_one_or_none()
     
     if not file_record:
-        logger.warning(f"File {file_id} not found for vendor {vendor_id} in organization {org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found"

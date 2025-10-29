@@ -12,8 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
 
 from app.core.database import get_db
-
-from app.core.tenant import TenantQueryMixin
 from app.core.enforcement import require_access
 from app.models import User, NotificationTemplate, NotificationLog
 from app.schemas.base import (
