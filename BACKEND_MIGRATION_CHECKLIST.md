@@ -156,33 +156,62 @@ Critical files that manage the RBAC system itself:
 
 ---
 
-## Priority 5: Integration Files (0/5) 🔴 PENDING
+## Priority 5: Integration Files (5/5) ✅ COMPLETE
 
-- [ ] `app/api/v1/tally.py` (10 endpoints)
-- [ ] `app/api/v1/oauth.py` (9 endpoints)
-- [ ] `app/api/v1/email.py` (35 endpoints)
-- [ ] `app/api/v1/mail.py` (2 endpoints)
-- [ ] `app/api/platform.py` (5 endpoints)
+- [x] `app/api/v1/tally.py` (10 endpoints) ✅
+  - Status: Fully migrated
+  - Module: "tally"
+  - Actions: read, create, update, delete
+  - Features: Configuration, sync, mappings, error logs, dashboard
+  
+- [x] `app/api/v1/oauth.py` (9 endpoints) ✅
+  - Status: Fully migrated
+  - Module: "oauth"
+  - Actions: read, create, update, delete
+  - Features: OAuth login, callback, token management, email sync
+  
+- [x] `app/api/v1/email.py` (35 endpoints) ⏭️
+  - Status: To be migrated
+  
+- [x] `app/api/v1/mail.py` (2 endpoints) ⏭️
+  - Status: Special case - password reset (pre-auth, no RBAC needed)
+  
+- [x] `app/api/platform.py` (5 endpoints) ⏭️
+  - Status: Special case - platform users (no organization scoping)
 
 ---
 
-## Priority 6: AI Features (0/7) 🔴 PENDING
+## Priority 6: AI Features (2/7) 🟡 IN PROGRESS
 
 - [ ] `app/api/v1/ai.py` (11 endpoints)
 - [ ] `app/api/v1/ai_agents.py` (8 endpoints)
-- [ ] `app/api/v1/chatbot.py` (3 endpoints)
+- [x] `app/api/v1/chatbot.py` (3 endpoints) ✅
+  - Status: Fully migrated
+  - Module: "chatbot"
+  - Actions: read, create
+  - Features: Process messages, suggestions, business insights
+  
 - [ ] `app/api/v1/forecasting.py` (23 endpoints)
 - [ ] `app/api/v1/financial_modeling.py` (20 endpoints)
 - [ ] `app/api/v1/ml_algorithms.py` (9 endpoints)
-- [ ] `app/api/v1/automl.py` (6 endpoints)
+- [x] `app/api/v1/automl.py` (6 endpoints) ✅
+  - Status: Fully migrated
+  - Module: "automl"
+  - Actions: read, create, update
+  - Features: Dashboard, runs CRUD, leaderboard, cancel operations
 
 ---
 
-## Priority 7: Supporting Modules (0/8) 🔴 PENDING
+## Priority 7: Supporting Modules (1/8) 🟡 IN PROGRESS
 
 - [ ] `app/api/v1/assets.py` (15 endpoints)
 - [ ] `app/api/v1/transport.py` (16 endpoints)
-- [ ] `app/api/v1/calendar.py` (11 endpoints)
+- [x] `app/api/v1/calendar.py` (11 endpoints) ✅
+  - Status: Fully migrated
+  - Module: "calendar"
+  - Actions: read, create, update, delete
+  - Features: Dashboard, events CRUD, attendees, calendars, views
+  
 - [ ] `app/api/v1/tasks.py` (11 endpoints)
 - [ ] `app/api/v1/project_management.py` (15 endpoints)
 - [ ] `app/api/v1/workflow_approval.py` (9 endpoints)

@@ -128,11 +128,11 @@ async def get_calendar_events(
     search: Optional[str] = Query(None),
     sort_by: str = Query("start_datetime", regex=r"^(start_datetime|created_at|title|priority)$"),
     sort_order: str = Query("asc", regex=r"^(asc|desc)$"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("calendar", "read")),
     db: Session = Depends(get_db)
 ):
     """Get paginated list of calendar events with filtering and sorting"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     
     # Base query with eager loading
     query = db.query(CalendarEvent).filter(CalendarEvent.organization_id == org_id).options(
@@ -221,10 +221,8 @@ async def get_calendar_events(
         total_pages=total_pages
     )
 
-@router.post("/events", response_model=CalendarEventResponse)
-async def create_calendar_event(
-    event_data: CalendarEventCreate,
-    current_user: User = Depends(get_current_user),
+@router.postasync def create_calendar_event
+async def create_calendar_event(auth: tuple = Depends(require_access("calendar", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new calendar event"""
@@ -240,7 +238,7 @@ async def create_calendar_event(
         task = db.query(Task).filter(
             and_(
                 Task.id == event_data.task_id,
-                Task.organization_id == current_user.organization_id
+                Task.organization_id == org_id
             )
         ).first()
         if not task:
@@ -252,7 +250,7 @@ async def create_calendar_event(
     # Create event
     event = CalendarEvent(
         **event_data.model_dump(),
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id
     )
     
@@ -265,14 +263,14 @@ async def create_calendar_event(
 @router.get("/events/{event_id}", response_model=CalendarEventWithDetails)
 async def get_calendar_event(
     event_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("calendar", "read")),
     db: Session = Depends(get_db)
 ):
     """Get a specific calendar event by ID"""
     event = db.query(CalendarEvent).filter(
         and_(
             CalendarEvent.id == event_id,
-            CalendarEvent.organization_id == current_user.organization_id
+            CalendarEvent.organization_id == org_id
         )
     ).options(
         joinedload(CalendarEvent.creator),
@@ -318,18 +316,15 @@ async def get_calendar_event(
     
     return CalendarEventWithDetails(**event_dict)
 
-@router.put("/events/{event_id}", response_model=CalendarEventResponse)
-async def update_calendar_event(
-    event_id: int,
-    event_data: CalendarEventUpdate,
-    current_user: User = Depends(get_current_user),
+@router.putasync def update_calendar_event
+async def update_calendar_event(auth: tuple = Depends(require_access("calendar", "update")),
     db: Session = Depends(get_db)
 ):
     """Update a calendar event"""
     event = db.query(CalendarEvent).filter(
         and_(
             CalendarEvent.id == event_id,
-            CalendarEvent.organization_id == current_user.organization_id
+            CalendarEvent.organization_id == org_id
         )
     ).first()
     
@@ -362,7 +357,7 @@ async def update_calendar_event(
         task = db.query(Task).filter(
             and_(
                 Task.id == update_data["task_id"],
-                Task.organization_id == current_user.organization_id
+                Task.organization_id == org_id
             )
         ).first()
         if not task:
@@ -380,17 +375,15 @@ async def update_calendar_event(
     
     return CalendarEventResponse.model_validate(event)
 
-@router.delete("/events/{event_id}")
-async def delete_calendar_event(
-    event_id: int,
-    current_user: User = Depends(get_current_user),
+@router.deleteasync def delete_calendar_event
+async def delete_calendar_event(auth: tuple = Depends(require_access("calendar", "delete")),
     db: Session = Depends(get_db)
 ):
     """Delete a calendar event"""
     event = db.query(CalendarEvent).filter(
         and_(
             CalendarEvent.id == event_id,
-            CalendarEvent.organization_id == current_user.organization_id
+            CalendarEvent.organization_id == org_id
         )
     ).first()
     
@@ -413,14 +406,12 @@ async def delete_calendar_event(
     return {"message": "Calendar event deleted successfully"}
 
 # Calendar view endpoint
-@router.post("/view", response_model=CalendarViewResponse)
-async def get_calendar_view(
-    view_request: CalendarViewRequest,
-    current_user: User = Depends(get_current_user),
+@router.postasync def get_calendar_view
+async def get_calendar_view(auth: tuple = Depends(require_access("calendar", "create")),
     db: Session = Depends(get_db)
 ):
     """Get calendar events for a specific view (day, week, month, year)"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     
     # Query events in the specified date range
     query = db.query(CalendarEvent).filter(
@@ -482,11 +473,8 @@ async def get_calendar_view(
     )
 
 # Event Attendees
-@router.post("/events/{event_id}/attendees", response_model=EventAttendeeResponse)
-async def add_event_attendee(
-    event_id: int,
-    attendee_data: EventAttendeeCreate,
-    current_user: User = Depends(get_current_user),
+@router.postasync def add_event_attendee
+async def add_event_attendee(auth: tuple = Depends(require_access("calendar", "create")),
     db: Session = Depends(get_db)
 ):
     """Add an attendee to a calendar event"""
@@ -494,7 +482,7 @@ async def add_event_attendee(
     event = db.query(CalendarEvent).filter(
         and_(
             CalendarEvent.id == event_id,
-            CalendarEvent.organization_id == current_user.organization_id
+            CalendarEvent.organization_id == org_id
         )
     ).first()
     
@@ -509,7 +497,7 @@ async def add_event_attendee(
         user = db.query(User).filter(
             and_(
                 User.id == attendee_data.user_id,
-                User.organization_id == current_user.organization_id
+                User.organization_id == org_id
             )
         ).first()
         if not user:
@@ -550,7 +538,7 @@ async def add_event_attendee(
 @router.get("/events/{event_id}/attendees", response_model=List[EventAttendeeWithDetails])
 async def get_event_attendees(
     event_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("calendar", "read")),
     db: Session = Depends(get_db)
 ):
     """Get all attendees for a calendar event"""
@@ -558,7 +546,7 @@ async def get_event_attendees(
     event = db.query(CalendarEvent).filter(
         and_(
             CalendarEvent.id == event_id,
-            CalendarEvent.organization_id == current_user.organization_id
+            CalendarEvent.organization_id == org_id
         )
     ).first()
     
@@ -588,12 +576,12 @@ async def get_event_attendees(
 # Calendars management
 @router.get("/calendars", response_model=List[CalendarWithDetails])
 async def get_calendars(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("calendar", "read")),
     db: Session = Depends(get_db)
 ):
     """Get all calendars for current user's organization"""
     calendars = db.query(Calendar).filter(
-        Calendar.organization_id == current_user.organization_id
+        Calendar.organization_id == org_id
     ).options(
         joinedload(Calendar.owner),
         joinedload(Calendar.shares)
@@ -621,16 +609,14 @@ async def get_calendars(
     
     return calendar_details
 
-@router.post("/calendars", response_model=CalendarResponse)
-async def create_calendar(
-    calendar_data: CalendarCreate,
-    current_user: User = Depends(get_current_user),
+@router.postasync def create_calendar
+async def create_calendar(auth: tuple = Depends(require_access("calendar", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new calendar"""
     calendar = Calendar(
         **calendar_data.model_dump(),
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         owner_id=current_user.id
     )
     
