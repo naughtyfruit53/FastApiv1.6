@@ -9,7 +9,6 @@ from datetime import datetime
 
 from app.core.database import get_db
 from app.core.enforcement import require_access
-from app.core.permissions import PermissionChecker
 from app.models.user_models import User
 from app.services.explainability_service import ExplainabilityService
 from app.models.explainability import ExplainabilityMethod, ExplainabilityScope
@@ -142,7 +141,6 @@ async def get_explainability_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get explainability dashboard data"""
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = ExplainabilityService(db)
     dashboard_data = service.get_explainability_dashboard(current_user.organization_id)
@@ -159,7 +157,6 @@ async def create_model_explainability(
     """Create model explainability configuration"""
     current_user, org_id = auth
 
-    PermissionChecker.require_permission(current_user, "ml_analytics:create", db)
     
     try:
         method = ExplainabilityMethod(explainability_data.method)
@@ -210,7 +207,6 @@ async def get_model_explainability(
     """Get model explainability configuration"""
     current_user, org_id = auth
 
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     method_enum = ExplainabilityMethod(method) if method else None
     
@@ -257,7 +253,6 @@ async def create_prediction_explanation(
     """Create a prediction explanation"""
     current_user, org_id = auth
 
-    PermissionChecker.require_permission(current_user, "ml_analytics:create", db)
     
     try:
         method = ExplainabilityMethod(explanation_data.method)
@@ -307,7 +302,6 @@ async def get_prediction_explanations(
     """Get prediction explanations for a model"""
     current_user, org_id = auth
 
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = ExplainabilityService(db)
     explanations = service.get_prediction_explanations(
@@ -351,7 +345,6 @@ async def create_explainability_report(
     """Create an explainability report"""
     current_user, org_id = auth
 
-    PermissionChecker.require_permission(current_user, "ml_analytics:create", db)
     
     service = ExplainabilityService(db)
     report = service.create_explainability_report(
@@ -395,7 +388,6 @@ async def get_explainability_reports(
     """Get explainability reports"""
     current_user, org_id = auth
 
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = ExplainabilityService(db)
     reports = service.get_explainability_reports(
@@ -432,7 +424,6 @@ async def get_explainability_report(
     """Get a specific explainability report"""
     current_user, org_id = auth
 
-    PermissionChecker.require_permission(current_user, "ml_analytics:read", db)
     
     service = ExplainabilityService(db)
     report = service.get_explainability_report(

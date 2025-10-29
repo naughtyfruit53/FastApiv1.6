@@ -12,7 +12,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.core.database import get_db, SessionLocal
-from app.services.dependencies import PermissionChecker
+from app.core.enforcement import require_access
 from app.services.system_email_service import system_email_service, link_email_to_customer_vendor, auto_link_emails_by_sender
 from app.services.user_email_service import user_email_service
 from app.services.email_sync_worker import email_sync_worker
@@ -37,10 +37,6 @@ router = APIRouter(tags=["email"])
 
 logger = logging.getLogger(__name__)
 
-# RBAC permissions - updated to match default permissions naming
-ADMIN_PERMISSIONS = ["crm_admin"]
-MANAGER_PERMISSIONS = ["mail:accounts:update", "crm_admin"] 
-USER_PERMISSIONS = ["mail:accounts:read", "mail:accounts:update", "crm_admin"]
 
 class UpdateEmailStatus(BaseModel):
     new_status: EmailStatus
@@ -48,13 +44,14 @@ class UpdateEmailStatus(BaseModel):
 @router.post("/accounts", response_model=MailAccountResponse)
 async def create_mail_account(
     account_data: MailAccountCreate,
-    current_user: User = Depends(PermissionChecker(MANAGER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "create")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Create new email account for IMAP/SMTP sync
     Requires email:manage or email:admin permissions
     """
+    current_user, organization_id = auth
     try:
         # Check if account already exists
         stmt = select(MailAccount).filter(
@@ -138,7 +135,7 @@ async def create_mail_account(
 
 @router.get("/accounts", response_model=List[MailAccountResponse])
 async def list_mail_accounts(
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500)
@@ -147,6 +144,7 @@ async def list_mail_accounts(
     List email accounts for current user
     Requires email:read permissions
     """
+    current_user, organization_id = auth
     stmt = select(MailAccount).filter(
         MailAccount.user_id == current_user.id
     ).offset(skip).limit(limit)
@@ -159,12 +157,13 @@ async def list_mail_accounts(
 @router.get("/accounts/{account_id}", response_model=MailAccountResponse)
 async def get_mail_account(
     account_id: int = Path(..., gt=0),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get specific email account details
     """
+    current_user, organization_id = auth
     stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
@@ -185,12 +184,13 @@ async def get_mail_account(
 async def update_mail_account(
     account_id: int,
     update_data: MailAccountUpdate,
-    current_user: User = Depends(PermissionChecker(MANAGER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "update")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Update email account settings
     """
+    current_user, organization_id = auth
     stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
@@ -226,12 +226,13 @@ async def update_mail_account(
 @router.delete("/accounts/{account_id}")
 async def delete_mail_account(
     account_id: int,
-    current_user: User = Depends(PermissionChecker(MANAGER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "update")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Delete email account and all associated data
     """
+    current_user, organization_id = auth
     stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
@@ -283,12 +284,13 @@ async def trigger_manual_sync(
     account_id: int,
     sync_request: ManualSyncRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Trigger manual sync for specific account
     """
+    current_user, organization_id = auth
     stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
@@ -314,12 +316,13 @@ async def trigger_manual_sync(
 @router.get("/accounts/{account_id}/status", response_model=SyncStatusResponse)
 async def get_account_sync_status(
     account_id: int,
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get detailed sync status for email account
     """
+    current_user, organization_id = auth
     stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
@@ -347,7 +350,7 @@ async def get_account_sync_status(
 @router.get("/accounts/{account_id}/emails", response_model=EmailListResponse)
 async def get_account_emails(
     account_id: int = Path(..., gt=0),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     folder: str = Query("INBOX", description="Filter by folder"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -357,6 +360,7 @@ async def get_account_emails(
     """
     Get emails from specific account and folder
     """
+    current_user, organization_id = auth
     stmt = select(MailAccount).filter(
         MailAccount.id == account_id,
         MailAccount.user_id == current_user.id
@@ -407,13 +411,14 @@ async def get_account_emails(
 @router.get("/emails/{email_id}", response_model=EmailResponse)
 async def get_email_detail(
     email_id: int,
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     include_attachments: bool = Query(True),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get detailed email information
     """
+    current_user, organization_id = auth
     stmt = select(Email).join(MailAccount).filter(
         Email.id == email_id,
         MailAccount.user_id == current_user.id
@@ -436,12 +441,13 @@ async def get_email_detail(
 async def update_email_status(
     email_id: int,
     update_data: UpdateEmailStatus,
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Update email status (read, unread, archived, etc.)
     """
+    current_user, organization_id = auth
     stmt = select(Email).join(MailAccount).filter(
         Email.id == email_id,
         MailAccount.user_id == current_user.id
@@ -476,7 +482,7 @@ async def update_email_status(
 
 @router.get("/threads", response_model=List[EmailThreadResponse])
 async def list_email_threads(
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     account_id: Optional[int] = Query(None, description="Filter by account"),
     status_filter: Optional[EmailStatus] = Query(None, description="Filter by status"),
     limit: int = Query(50, ge=1, le=200),
@@ -486,6 +492,7 @@ async def list_email_threads(
     """
     List email threads with filtering
     """
+    current_user, organization_id = auth
     # Build query
     stmt = select(EmailThread).join(MailAccount).filter(
         MailAccount.user_id == current_user.id
@@ -506,12 +513,13 @@ async def list_email_threads(
 @router.get("/threads/{thread_id}", response_model=EmailThreadResponse)
 async def get_email_thread(
     thread_id: int,
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get email thread with all messages
     """
+    current_user, organization_id = auth
     stmt = select(EmailThread).join(MailAccount).filter(
         EmailThread.id == thread_id,
         MailAccount.user_id == current_user.id
@@ -531,7 +539,7 @@ async def get_email_thread(
 @router.get("/threads/{thread_id}/emails", response_model=List[EmailResponse])
 async def get_thread_emails(
     thread_id: int = Path(..., gt=0),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     include_attachments: bool = Query(True, description="Include attachment details"),
     db: AsyncSession = Depends(get_db)
 ):
@@ -539,6 +547,7 @@ async def get_thread_emails(
     Get all emails in a thread, ordered by received date
     Requires email:read permissions
     """
+    current_user, organization_id = auth
     # Verify thread access
     thread_stmt = select(EmailThread).join(MailAccount).filter(
         EmailThread.id == thread_id,
@@ -573,12 +582,13 @@ async def get_thread_emails(
 @router.get("/attachments/{attachment_id}/download")
 async def download_attachment(
     attachment_id: int,
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Download email attachment
     """
+    current_user, organization_id = auth
     stmt = select(EmailAttachment).join(Email).join(MailAccount).filter(
         EmailAttachment.id == attachment_id,
         MailAccount.user_id == current_user.id
@@ -599,22 +609,25 @@ async def download_attachment(
 
 @router.get("/sync/status")
 async def get_sync_worker_status(
-    current_user: User = Depends(PermissionChecker(ADMIN_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Get email sync worker status
-    Requires admin permissions
+    Requires email:read permissions
     """
+    current_user, organization_id = auth
     return email_sync_worker.get_status()
 
 
 @router.post("/sync/start")
 async def start_sync_worker(
-    current_user: User = Depends(PermissionChecker(ADMIN_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "update"))
 ):
     """
     Start email sync worker
+    Requires email:update permissions
     """
+    current_user, organization_id = auth
     success = email_sync_worker.start()
     
     if success:
@@ -628,11 +641,13 @@ async def start_sync_worker(
 
 @router.post("/sync/stop")
 async def stop_sync_worker(
-    current_user: User = Depends(PermissionChecker(ADMIN_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "update"))
 ):
     """
     Stop email sync worker
+    Requires email:update permissions
     """
+    current_user, organization_id = auth
     success = email_sync_worker.stop()
     
     if success:
@@ -646,12 +661,13 @@ async def stop_sync_worker(
 
 @router.get("/oauth/tokens")
 async def list_oauth_tokens(
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     List OAuth tokens for current user
     """
+    current_user, organization_id = auth
     oauth_service = OAuth2Service(db)
     tokens = await oauth_service.list_user_tokens(current_user.id, current_user.organization_id)
     
@@ -670,12 +686,13 @@ async def list_oauth_tokens(
 @router.post("/attachments/{attachment_id}/parse-calendar")
 async def parse_calendar_attachment(
     attachment_id: int = Path(..., description="Email attachment ID"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Parse .ics calendar file from email attachment and extract events/tasks
     """
+    current_user, organization_id = auth
     try:
         result = await calendar_sync_service.parse_ics_attachment(
             attachment_id, current_user.organization_id
@@ -698,11 +715,12 @@ async def parse_calendar_attachment(
 @router.post("/calendar/sync-events")
 async def sync_calendar_events(
     events: List[Dict[str, Any]],
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Sync parsed calendar events to database
     """
+    current_user, organization_id = auth
     try:
         result = await calendar_sync_service.sync_events_to_database(events, current_user.id)
         
@@ -723,11 +741,12 @@ async def sync_calendar_events(
 @router.post("/calendar/sync-tasks")
 async def sync_calendar_tasks(
     tasks: List[Dict[str, Any]],
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Sync parsed calendar tasks to database
     """
+    current_user, organization_id = auth
     try:
         result = await calendar_sync_service.sync_tasks_to_database(tasks, current_user.id)
         
@@ -758,11 +777,12 @@ async def search_emails(
     has_attachments: Optional[bool] = Query(None, description="Filter by attachment presence"),
     limit: int = Query(50, ge=1, le=100, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Full-text search across emails using PostgreSQL tsvector
     """
+    current_user, organization_id = auth
     try:
         result = await email_search_service.full_text_search(
             query=query,
@@ -791,11 +811,12 @@ async def search_attachments(
     file_types: Optional[List[str]] = Query(None, description="File extensions to filter by"),
     limit: int = Query(50, ge=1, le=100, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Search email attachments by filename and extracted content
     """
+    current_user, organization_id = auth
     try:
         result = await email_search_service.search_attachments(
             query=query,
@@ -819,11 +840,12 @@ async def search_by_customer_vendor(
     vendor_id: Optional[int] = Query(None, description="Vendor ID"),
     limit: int = Query(50, ge=1, le=100, description="Maximum results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Search emails linked to specific customers or vendors
     """
+    current_user, organization_id = auth
     try:
         result = await email_search_service.search_by_customer_vendor(
             organization_id=current_user.organization_id,
@@ -846,11 +868,12 @@ async def search_by_customer_vendor(
 @router.post("/attachments/{attachment_id}/ocr")
 async def process_attachment_ocr(
     attachment_id: int = Path(..., description="Email attachment ID"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Process email attachment with OCR to extract text content
     """
+    current_user, organization_id = auth
     try:
         result = await email_attachment_ocr_service.process_email_attachment(attachment_id)
         
@@ -871,11 +894,12 @@ async def process_attachment_ocr(
 @router.post("/attachments/batch-ocr")
 async def batch_process_attachments_ocr(
     attachment_ids: List[int],
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Process multiple email attachments with OCR in batch
     """
+    current_user, organization_id = auth
     try:
         result = await email_attachment_ocr_service.batch_process_attachments(attachment_ids)
         return result
@@ -891,11 +915,12 @@ async def batch_process_attachments_ocr(
 @router.get("/ai/summary/{email_id}")
 async def get_email_summary(
     email_id: int = Path(..., description="Email ID"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Generate AI-powered summary of an email
     """
+    current_user, organization_id = auth
     try:
         result = await email_ai_service.generate_email_summary(email_id)
         
@@ -917,11 +942,12 @@ async def get_email_summary(
 async def get_reply_suggestions(
     email_id: int = Path(..., description="Email ID"),
     context: Optional[str] = Query(None, description="Additional context for reply"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Generate AI-powered reply suggestions for an email
     """
+    current_user, organization_id = auth
     try:
         result = await email_ai_service.generate_reply_suggestions(email_id, context)
         
@@ -942,11 +968,12 @@ async def get_reply_suggestions(
 @router.post("/ai/categorize-batch")
 async def categorize_emails_batch(
     email_ids: List[int],
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Categorize multiple emails using AI
     """
+    current_user, organization_id = auth
     try:
         result = await email_ai_service.categorize_email_batch(email_ids)
         return result
@@ -960,11 +987,12 @@ async def categorize_emails_batch(
 @router.get("/ai/action-items/{email_id}")
 async def extract_action_items(
     email_id: int = Path(..., description="Email ID"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Extract action items and tasks from email content using AI
     """
+    current_user, organization_id = auth
     try:
         result = await email_ai_service.extract_action_items(email_id)
         
@@ -986,12 +1014,13 @@ async def extract_action_items(
 
 @router.get("/shared-inboxes")
 async def list_shared_inboxes(
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     List shared inboxes accessible to current user based on RBAC
     """
+    current_user, organization_id = auth
     try:
         # Get mail accounts that are shared or owned by user
         stmt = select(MailAccount).filter(
@@ -1041,11 +1070,12 @@ async def link_email_to_entity(
     email_id: int = Path(..., description="Email ID"),
     customer_id: Optional[int] = Query(None, description="Customer ID to link to"),
     vendor_id: Optional[int] = Query(None, description="Vendor ID to link to"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "read"))
 ):
     """
     Link an email to a customer or vendor for ERP integration
     """
+    current_user, organization_id = auth
     try:
         if not customer_id and not vendor_id:
             raise HTTPException(
@@ -1086,11 +1116,12 @@ async def link_email_to_entity(
 @router.post("/auto-link")
 async def auto_link_emails(
     limit: int = Query(100, ge=1, le=500, description="Maximum emails to process"),
-    current_user: User = Depends(PermissionChecker(MANAGER_PERMISSIONS))
+    auth: tuple = Depends(require_access("email", "update"))
 ):
     """
     Automatically link emails to customers/vendors based on sender addresses
     """
+    current_user, organization_id = auth
     try:
         result = await auto_link_emails_by_sender(
             organization_id=current_user.organization_id,
@@ -1112,13 +1143,14 @@ async def compose_email(
     subject: str = Query(..., description="Email subject"),
     body: str = Query(..., description="Plain text body"),
     html_body: Optional[str] = Query(None, description="Optional HTML body"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Compose and send email from user's connected account using provider API.
     Supports Mail 1 Level Up BCC if enabled in organization settings.
     """
+    current_user, organization_id = auth
     from app.services.system_email_service import system_email_service
     
     try:
@@ -1184,13 +1216,14 @@ async def compose_email(
 @router.post("/oauth/revoke/{token_id}")
 async def revoke_oauth_token(
     token_id: int = Path(..., description="OAuth token ID to revoke"),
-    current_user: User = Depends(PermissionChecker(USER_PERMISSIONS)),
+    auth: tuple = Depends(require_access("email", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Revoke OAuth token and mark as REVOKED
     Allows users to revoke failed tokens and re-authorize
     """
+    current_user, organization_id = auth
     try:
         oauth_service = OAuth2Service(db)
         success = await oauth_service.revoke_token(token_id)
