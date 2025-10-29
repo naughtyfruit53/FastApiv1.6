@@ -9,8 +9,7 @@ from typing import Optional
 import logging
 import httpx
 from app.core.config import settings
-
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 
 logger = logging.getLogger(__name__)
@@ -56,7 +55,7 @@ def validate_gstin_checksum(gstin: str) -> bool:
 @router.get("/search/{gst_number}", response_model=GSTDetails)
 async def search_gst_number(
     gst_number: str,
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("gst", "read"))
 ):
     """
     Search for GST details by GST number.
@@ -66,6 +65,7 @@ async def search_gst_number(
     Validates checksum before API call. Handles 400 as invalid GSTIN without retry. Retries other errors up to 3 times.
     Falls back to basic extracted info if API fails or key is missing.
     """
+    current_user, org_id = auth
     
     # Validate GST format
     import re
@@ -165,13 +165,14 @@ async def search_gst_number(
 @router.get("/verify/{gst_number}")
 async def verify_gst_number(
     gst_number: str,
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("gst", "read"))
 ):
     """
     Verify if a GST number is valid and active.
     
     Returns basic validation status.
     """
+    current_user, org_id = auth
     import re
     gst_pattern = r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$'
     

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models import User
 from app.services.pdf_extraction import pdf_extraction_service
 import logging
@@ -18,8 +18,8 @@ router = APIRouter()
 async def extract_pdf_data(
     voucher_type: str,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("pdf_extraction", "create")),
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Extract structured data from uploaded PDF based on voucher type
@@ -30,6 +30,7 @@ async def extract_pdf_data(
     - vendor
     - customer
     """
+    current_user, org_id = auth
     
     logger.info(f"PDF extraction requested for voucher type: {voucher_type} by user: {current_user.id}")
     
