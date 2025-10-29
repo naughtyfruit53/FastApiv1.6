@@ -7,9 +7,7 @@ from sqlalchemy import select, func
 from typing import List, Optional
 from datetime import datetime
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user, get_current_admin_user, get_current_org_admin_user
-from app.core.tenant import TenantQueryMixin, TenantQueryFilter, require_current_organization_id
-from app.core.org_restrictions import require_organization_access, require_current_organization_id
+from app.core.enforcement import require_access
 from app.models import User, Company, Organization
 from app.models.user_models import UserCompany
 from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyInDB, CompanyResponse, CompanyErrorResponse, UserCompanyAssignmentCreate, UserCompanyAssignmentUpdate, UserCompanyAssignmentInDB
@@ -29,16 +27,16 @@ os.makedirs(LOGO_UPLOAD_DIR, exist_ok=True)
 
 @router.get("/", response_model=List[CompanyInDB])
 async def get_companies(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("company", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get companies in current organization"""
     
     # Restrict app super admins from accessing organization data
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     stmt = select(Company)
-    stmt = TenantQueryMixin.filter_by_tenant(stmt, Company, org_id)
+    stmt = stmt.where(Company.organization_id == org_id)
     
     result = await db.execute(stmt)
     companies = result.scalars().all()
@@ -47,8 +45,8 @@ async def get_companies(
 
 @router.get("/current", response_model=CompanyInDB)
 async def get_current_company(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("company", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get current organization's company details"""
     
@@ -83,7 +81,7 @@ async def get_current_company(
             )
         
         # For organization users, ensure organization context
-        org_id = require_current_organization_id(current_user)
+        current_user, org_id = auth
         logger.info(f"[/companies/current] Organization context established: org_id={org_id}")
         
         stmt = select(Company).where(Company.organization_id == org_id)
@@ -113,8 +111,8 @@ async def get_current_company(
 @router.get("/{company_id}", response_model=CompanyInDB)
 async def get_company(
     company_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("company", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get company by ID"""
     
@@ -127,16 +125,13 @@ async def get_company(
             detail="Company not found"
         )
     
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
-    
     return company
 
 @router.post("/", response_model=CompanyResponse)
 async def create_company(
     company: CompanyCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("company", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create company details for current organization with enhanced validation"""
     
@@ -202,8 +197,8 @@ async def create_company(
 async def update_company(
     company_id: int,
     company_update: CompanyUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("company", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update company details with enhanced validation"""
     
@@ -215,9 +210,6 @@ async def update_company(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Company not found"
         )
-    
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
     
     try:
         for field, value in company_update.model_dump(exclude_unset=True).items():
@@ -240,8 +232,8 @@ async def update_company(
 @router.delete("/{company_id}")
 async def delete_company(
     company_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("company", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete company (admin only)"""
     
@@ -254,9 +246,6 @@ async def delete_company(
             detail="Company not found"
         )
     
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
-    
     await db.delete(company)
     await db.commit()
     
@@ -267,9 +256,11 @@ async def delete_company(
 
 @router.get("/template/excel")
 async def download_companies_template(
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("company", "read"))
 ):
     """Download Excel template for companies bulk import"""
+    current_user, org_id = auth
+    
     try:
         excel_data = CompanyExcelService.create_template()
         logger.info("Company template downloaded successfully")
@@ -285,18 +276,18 @@ async def download_companies_template(
 async def export_companies_excel(
     skip: int = 0,
     limit: int = 1000,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("company", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Export companies to Excel"""
+    current_user, org_id = auth
     
     skip = max(0, skip)  # Ensure non-negative skip
     limit = min(1000, max(1, limit))  # Limit between 1 and 1000
     
     # Get companies using the same logic as the list endpoint
-    org_id = require_current_organization_id(current_user)
     stmt = select(Company).offset(skip).limit(limit)
-    stmt = TenantQueryMixin.filter_by_tenant(stmt, Company, org_id)
+    stmt = stmt.where(Company.organization_id == org_id)
     
     result = await db.execute(stmt)
     companies = result.scalars().all()
@@ -328,12 +319,11 @@ async def export_companies_excel(
 @router.post("/import/excel", response_model=BulkImportResponse)
 async def import_companies_excel(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("company", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Import companies from Excel file"""
-    
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
     
     # Validate file type
     if not file.filename.endswith(('.xlsx', '.xls')):
@@ -450,12 +440,16 @@ async def import_companies_excel(
 async def upload_company_logo(
     company_id: int,
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("company", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Upload company logo (admin only)"""
+    current_user, org_id = auth
     
-    stmt = select(Company).where(Company.id == company_id)
+    stmt = select(Company).where(
+        Company.id == company_id,
+        Company.organization_id == org_id
+    )
     result = await db.execute(stmt)
     company = result.scalar_one_or_none()
     if not company:
@@ -463,9 +457,6 @@ async def upload_company_logo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Company not found"
         )
-    
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
     
     # Validate file type (only allow image files)
     if not file.content_type or not file.content_type.startswith('image/'):
@@ -513,12 +504,16 @@ async def upload_company_logo(
 @router.delete("/{company_id}/logo")
 async def delete_company_logo(
     company_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("company", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete company logo (admin only)"""
+    current_user, org_id = auth
     
-    stmt = select(Company).where(Company.id == company_id)
+    stmt = select(Company).where(
+        Company.id == company_id,
+        Company.organization_id == org_id
+    )
     result = await db.execute(stmt)
     company = result.scalar_one_or_none()
     if not company:
@@ -526,9 +521,6 @@ async def delete_company_logo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Company not found"
         )
-    
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
     
     # Remove logo file if exists
     if company.logo_path and os.path.exists(company.logo_path):
@@ -548,12 +540,16 @@ async def delete_company_logo(
 @router.get("/{company_id}/logo")
 async def get_company_logo(
     company_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("company", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get company logo file"""
+    current_user, org_id = auth
     
-    stmt = select(Company).where(Company.id == company_id)
+    stmt = select(Company).where(
+        Company.id == company_id,
+        Company.organization_id == org_id
+    )
     result = await db.execute(stmt)
     company = result.scalar_one_or_none()
     if not company:
@@ -561,9 +557,6 @@ async def get_company_logo(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Company not found"
         )
-    
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
     
     if not company.logo_path or not os.path.exists(company.logo_path):
         raise HTTPException(
@@ -584,20 +577,21 @@ async def get_company_logo(
 @router.get("/{company_id}/users", response_model=List[UserCompanyAssignmentInDB])
 async def get_company_users(
     company_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("company", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get users assigned to a specific company"""
+    current_user, org_id = auth
     
     # Check company exists and user has access
-    stmt = select(Company).where(Company.id == company_id)
+    stmt = select(Company).where(
+        Company.id == company_id,
+        Company.organization_id == org_id
+    )
     result = await db.execute(stmt)
     company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
     
     # Get user assignments for this company
     stmt = select(UserCompany).where(
@@ -636,20 +630,21 @@ async def get_company_users(
 async def assign_user_to_company(
     company_id: int,
     assignment: UserCompanyAssignmentCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_org_admin_user)
+    auth: tuple = Depends(require_access("company", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Assign a user to a company (org admin only)"""
+    current_user, org_id = auth
     
     # Check company exists and belongs to current user's org
-    stmt = select(Company).where(Company.id == company_id)
+    stmt = select(Company).where(
+        Company.id == company_id,
+        Company.organization_id == org_id
+    )
     result = await db.execute(stmt)
     company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(company, current_user.organization_id)
     
     # Check user exists and belongs to same organization
     stmt = select(User).where(User.id == assignment.user_id)
@@ -704,25 +699,22 @@ async def update_user_company_assignment(
     company_id: int,
     user_id: int,
     update_data: UserCompanyAssignmentUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_org_admin_user)
+    auth: tuple = Depends(require_access("company", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update user-company assignment (org admin only)"""
+    current_user, org_id = auth
     
     stmt = select(UserCompany).where(
         UserCompany.company_id == company_id,
-        UserCompany.user_id == user_id
+        UserCompany.user_id == user_id,
+        UserCompany.organization_id == org_id
     )
     result = await db.execute(stmt)
     assignment = result.scalar_one_or_none()
     
     if not assignment:
         raise HTTPException(status_code=404, detail="User-company assignment not found")
-    
-    # Check access
-    if not current_user.is_super_admin:
-        if assignment.organization_id != current_user.organization_id:
-            raise HTTPException(status_code=403, detail="Access denied")
     
     # Update fields
     if update_data.is_active is not None:
@@ -739,25 +731,22 @@ async def update_user_company_assignment(
 async def remove_user_from_company(
     company_id: int,
     user_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_org_admin_user)
+    auth: tuple = Depends(require_access("company", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Remove user from company (org admin only)"""
+    current_user, org_id = auth
     
     stmt = select(UserCompany).where(
         UserCompany.company_id == company_id,
-        UserCompany.user_id == user_id
+        UserCompany.user_id == user_id,
+        UserCompany.organization_id == org_id
     )
     result = await db.execute(stmt)
     assignment = result.scalar_one_or_none()
     
     if not assignment:
         raise HTTPException(status_code=404, detail="User-company assignment not found")
-    
-    # Check access
-    if not current_user.is_super_admin:
-        if assignment.organization_id != current_user.organization_id:
-            raise HTTPException(status_code=403, detail="Access denied")
     
     # Soft delete - deactivate assignment
     assignment.is_active = False

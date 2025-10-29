@@ -12,10 +12,8 @@ import uuid
 import shutil
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user, get_current_admin_user
-from app.core.tenant import TenantQueryMixin, require_current_organization_id
+from app.core.enforcement import require_access
 from app.core.org_restrictions import validate_company_setup
-from app.core.org_restrictions import require_organization_access, require_current_organization_id
 from app.models import User, Product, Stock, ProductFile, Organization, Company
 from app.schemas.base import ProductCreate, ProductUpdate, ProductInDB, ProductResponse, BulkImportResponse, ProductFileResponse
 from app.services.excel_service import ProductExcelService, ExcelService
@@ -29,16 +27,13 @@ async def get_products(
     limit: int = 1000000,
     search: Optional[str] = None,
     active_only: bool = True,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get products in current organization"""
+    current_user, org_id = auth
     
-    # Check if user is app super admin
-    org_id = require_current_organization_id(current_user)
-    
-    stmt = select(Product)
-    stmt = TenantQueryMixin.filter_by_tenant(stmt, Product, org_id)
+    stmt = select(Product).where(Product.organization_id == org_id)
     
     if active_only:
         stmt = stmt.where(Product.is_active == True)
@@ -68,11 +63,16 @@ async def get_products(
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
     product_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get product by ID"""
-    stmt = select(Product).options(selectinload(Product.files)).where(Product.id == product_id)
+    current_user, org_id = auth
+    
+    stmt = select(Product).options(selectinload(Product.files)).where(
+        Product.id == product_id,
+        Product.organization_id == org_id
+    )
     result = await db.execute(stmt)
     product = result.scalar_one_or_none()
     if not product:
@@ -81,26 +81,16 @@ async def get_product(
             detail="Product not found"
         )
     
-    # Ensure tenant access for non-super-admin users
-    if not current_user.is_super_admin is True:
-        TenantQueryMixin.ensure_tenant_access(product, getattr(product, "organization_id", None))
-    
     return ProductResponse.from_product(product)  # Sync call
 
 @router.post("", response_model=ProductResponse)
 async def create_product(
     product: ProductCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create new product"""
-    
-    org_id = current_user.organization_id
-    if not org_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No current Organization specified"
-        )
+    current_user, org_id = auth
     
     # Check if product name already exists in organization
     stmt = select(Product).where(
@@ -147,12 +137,16 @@ async def create_product(
 async def update_product(
     product_id: int,
     product_update: ProductUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update product"""
+    current_user, org_id = auth
     
-    stmt = select(Product).where(Product.id == product_id)
+    stmt = select(Product).where(
+        Product.id == product_id,
+        Product.organization_id == org_id
+    )
     result = await db.execute(stmt)
     product = result.scalar_one_or_none()
     if not product:
@@ -160,10 +154,6 @@ async def update_product(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found"
         )
-    
-    # Ensure tenant access for non-super-admin users
-    if not bool(current_user.is_super_admin):
-        TenantQueryMixin.ensure_tenant_access(product, getattr(product, "organization_id", None))
     
     # Check name uniqueness if being updated
     if product_update.product_name and product_update.product_name != product.product_name:
@@ -199,12 +189,16 @@ async def update_product(
 @router.delete("/{product_id}")
 async def delete_product(
     product_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("product", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete product (admin only)"""
+    current_user, org_id = auth
     
-    stmt = select(Product).where(Product.id == product_id)
+    stmt = select(Product).where(
+        Product.id == product_id,
+        Product.organization_id == org_id
+    )
     result = await db.execute(stmt)
     product = result.scalar_one_or_none()
     if not product:
@@ -212,10 +206,6 @@ async def delete_product(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found"
         )
-    
-    # Ensure tenant access for non-super-admin users
-    if not bool(current_user.is_super_admin):
-        TenantQueryMixin.ensure_tenant_access(product, getattr(product, "organization_id", None))
     
     # TODO: Check if product has any associated transactions/vouchers
     # before allowing deletion
@@ -229,14 +219,16 @@ async def delete_product(
 @router.post("/validate-product-ids")
 async def validate_product_ids(
     product_ids: List[int],
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Validate product IDs and check for missing or invalid names"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(Product).where(
             Product.id.in_(product_ids),
-            Product.organization_id == current_user.organization_id,
+            Product.organization_id == org_id,
             Product.is_active == True
         )
         result = await db.execute(stmt)
@@ -263,9 +255,10 @@ async def validate_product_ids(
 
 @router.get("/template/excel")
 async def download_products_template(
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "read"))
 ):
     """Download Excel template for products bulk import"""
+    current_user, org_id = auth
     excel_data = ProductExcelService.create_template()
     return ExcelService.create_streaming_response(excel_data, "products_template.xlsx")
 
@@ -275,23 +268,14 @@ async def export_products_excel(
     limit: int = 1000,
     search: Optional[str] = None,
     active_only: bool = True,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Export products to Excel"""
+    current_user, org_id = auth
     
     # Get products using the same logic as the list endpoint
-    stmt = select(Product)
-    
-    # Apply tenant filtering for non-super-admin users
-    if not bool(current_user.is_super_admin):
-        org_id = current_user.organization_id
-        if not org_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No current Organization specified"
-            )
-        stmt = TenantQueryMixin.filter_by_tenant(stmt, Product, org_id)
+    stmt = select(Product).where(Product.organization_id == org_id)
     
     if active_only:
         stmt = stmt.where(Product.is_active == True)
@@ -329,17 +313,11 @@ async def export_products_excel(
 @router.post("/import/excel", response_model=BulkImportResponse)
 async def import_products_excel(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Import products from Excel file"""
-    
-    org_id = current_user.organization_id
-    if not org_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No current Organization specified"
-        )
+    current_user, org_id = auth
     
     # Validate company setup is completed before allowing product imports
     await validate_company_setup(db, org_id)
@@ -512,17 +490,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def upload_product_file(
     product_id: int,
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Upload a file for a product (max 5 files per product)"""
-    
-    org_id = current_user.organization_id
-    if not org_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No current Organization specified"
-        )
+    current_user, org_id = auth
     
     # Verify product exists and belongs to current organization
     stmt = select(Product).where(
@@ -608,17 +580,11 @@ async def upload_product_file(
 @router.get("/{product_id}/files", response_model=List[ProductFileResponse])
 async def get_product_files(
     product_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all files for a product"""
-    
-    org_id = current_user.organization_id
-    if not org_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No current Organization specified"
-        )
+    current_user, org_id = auth
     
     # Verify product exists and belongs to current organization
     stmt = select(Product).where(
@@ -657,17 +623,11 @@ async def get_product_files(
 async def download_product_file(
     product_id: int,
     file_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Download a product file"""
-    
-    org_id = current_user.organization_id
-    if not org_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No current Organization specified"
-        )
+    current_user, org_id = auth
     
     # Get file record
     stmt = select(ProductFile).where(
@@ -701,17 +661,11 @@ async def download_product_file(
 async def delete_product_file(
     product_id: int,
     file_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("product", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete a product file"""
-    
-    org_id = current_user.organization_id
-    if not org_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No current Organization specified"
-        )
+    current_user, org_id = auth
     
     # Get file record
     stmt = select(ProductFile).where(
@@ -749,21 +703,14 @@ async def delete_product_file(
 @router.post("/check-consistency")
 async def check_products_stock_consistency(
     fix_issues: bool = False,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("product", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Check consistency between products and stock tables.
     If fix_issues=True, creates missing stock entries and removes orphaned stock.
     """
-    
-    # Get organization context
-    org_id = current_user.organization_id
-    if not org_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No current Organization specified"
-        )
+    current_user, org_id = auth
     
     # Count products and stock entries
     stmt = select(Product).where(Product.organization_id == org_id)
