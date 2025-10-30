@@ -12,7 +12,9 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.enforcement import require_access
 from app.models import User
+from app.models.user_models import Organization
 from app.services.rbac import RBACService
+from sqlalchemy import select
 from app.schemas.rbac import (
     ServiceRoleCreate, ServiceRoleUpdate, ServiceRoleInDB, ServiceRoleWithPermissions,
     ServicePermissionInDB, UserServiceRoleCreate, UserServiceRoleInDB,
@@ -563,6 +565,7 @@ async def get_user_permissions(
     user_id: int,
     current_user: User = Depends(get_current_active_user),
     rbac_service: RBACService = Depends(get_rbac_service),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all permissions for a user, including self - with resilient error handling"""
     logger.info(f"User {current_user.id} requesting permissions for user {user_id}")
@@ -573,6 +576,7 @@ async def get_user_permissions(
             "user_id": user_id,
             "permissions": [],
             "service_roles": [],
+            "modules": [],
             "total_permissions": 0
         }
 
@@ -587,10 +591,27 @@ async def get_user_permissions(
         permissions = await rbac_service.get_user_permissions(user_id)
         roles = await rbac_service.get_user_roles(user_id)
         
+        # Get user's organization enabled modules
+        modules = []
+        try:
+            # Get the user to fetch their organization
+            user_result = await db.execute(select(User).filter(User.id == user_id))
+            user = user_result.scalars().first()
+            if user and user.organization_id:
+                org_result = await db.execute(select(Organization).filter(Organization.id == user.organization_id))
+                org = org_result.scalars().first()
+                if org and org.enabled_modules:
+                    # Convert enabled_modules dict to list of enabled module names
+                    modules = [k for k, v in org.enabled_modules.items() if v]
+        except Exception as module_err:
+            logger.warning(f"Could not fetch modules for user {user_id}: {module_err}")
+            # Continue without modules
+        
         return {
             "user_id": user_id,
             "permissions": list(permissions),
             "service_roles": roles,
+            "modules": modules,
             "total_permissions": len(permissions)
         }
     except HTTPException:
@@ -605,6 +626,7 @@ async def get_user_permissions(
             "user_id": user_id,
             "permissions": [],
             "service_roles": [],
+            "modules": [],
             "total_permissions": 0,
             "error": "Failed to fetch permissions",
             "fallback": True

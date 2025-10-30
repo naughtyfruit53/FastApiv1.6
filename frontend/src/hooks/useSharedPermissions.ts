@@ -297,7 +297,7 @@ export const useSharedPermissions = () => {
   }, [user, contextPermissions]);
 
   const hasPermission = useCallback((permission: string): boolean => {
-    if (!user || !userPermissions.permissions.length) return false;
+    if (!user || !userPermissions || !userPermissions.permissions || !userPermissions.permissions.length) return false;
     
     // Super admin has all permissions
     if (userPermissions.isSuperAdmin) return true;
@@ -306,7 +306,7 @@ export const useSharedPermissions = () => {
     if (userPermissions.permissions.includes(permission)) return true;
 
     // Check wildcard permissions (e.g., 'finance.*' matches 'finance.view')
-    const wildcardPermissions = userPermissions.permissions.filter(p => p.endsWith('.*'));
+    const wildcardPermissions = userPermissions.permissions.filter(p => p && p.endsWith('.*'));
     for (const wildcardPerm of wildcardPermissions) {
       const module = wildcardPerm.replace('.*', '');
       if (permission.startsWith(`${module}.`)) return true;
@@ -316,20 +316,20 @@ export const useSharedPermissions = () => {
   }, [user, userPermissions]);
 
   const hasModuleAccess = useCallback((module: string): boolean => {
-    if (!user) return false;
+    if (!user || !userPermissions || !userPermissions.modules) return false;
     if (userPermissions.isSuperAdmin) return true;
     return userPermissions.modules.includes(module);
   }, [user, userPermissions]);
 
   const hasSubmoduleAccess = useCallback((module: string, submodule: string): boolean => {
-    if (!user) return false;
+    if (!user || !userPermissions) return false;
     if (userPermissions.isSuperAdmin) return true;
     
     // Check if we have contextPermissions with submodule data
     if (contextPermissions?.submodules && contextPermissions.submodules[module]) {
       const subs = contextPermissions.submodules[module];
-      if (subs.includes('all')) return true;
-      return subs.includes(submodule);
+      if (subs && subs.includes('all')) return true;
+      return subs && subs.includes(submodule);
     }
     
     // Fallback: if user has module access, assume they have all submodule access

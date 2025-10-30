@@ -253,7 +253,9 @@ export const organizationService = {
       const response = await api.get("/organizations/available-modules");
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || "Failed to get available modules");
+      const errorMessage = error?.response?.data?.detail || error?.message || "Failed to get available modules";
+      console.error("[OrganizationService] getAvailableModules error:", errorMessage);
+      throw new Error(errorMessage);
     }
   },
 
@@ -262,7 +264,9 @@ export const organizationService = {
       const response = await api.get(`/organizations/${id}/modules`, config);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || "Failed to get organization modules");
+      const errorMessage = error?.response?.data?.detail || error?.message || "Failed to get organization modules";
+      console.error("[OrganizationService] getOrganizationModules error:", errorMessage);
+      throw new Error(errorMessage);
     }
   },
 
@@ -271,7 +275,9 @@ export const organizationService = {
       const response = await api.put(`/organizations/${id}/modules`, data, config);
       return response.data;
     } catch (error: any) {
-      throw new Error(error.userMessage || "Failed to update organization modules");
+      const errorMessage = error?.response?.data?.detail || error?.message || "Failed to update organization modules";
+      console.error("[OrganizationService] updateOrganizationModules error:", errorMessage);
+      throw new Error(errorMessage);
     }
   },
 

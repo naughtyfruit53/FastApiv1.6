@@ -24,6 +24,7 @@ class ForceCORSMiddleware(BaseHTTPMiddleware):
     """
     Middleware that ensures CORS headers are present on all responses,
     including error responses (4xx, 5xx) that might bypass standard CORS middleware.
+    Also handles OPTIONS preflight requests explicitly.
     """
     def __init__(self, app: ASGIApp, allowed_origins: list):
         super().__init__(app)
@@ -31,6 +32,21 @@ class ForceCORSMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next):
         origin = request.headers.get("origin")
+        
+        # Handle OPTIONS preflight requests
+        if request.method == "OPTIONS":
+            if origin and origin in self.allowed_origins:
+                return JSONResponse(
+                    status_code=200,
+                    content={},
+                    headers={
+                        "Access-Control-Allow-Origin": origin,
+                        "Access-Control-Allow-Credentials": "true",
+                        "Access-Control-Allow-Methods": "*",
+                        "Access-Control-Allow-Headers": "*",
+                        "Access-Control-Max-Age": "600"
+                    }
+                )
         
         # Process the request
         try:
@@ -84,6 +100,7 @@ async def init_org_roles(background_tasks: BackgroundTasks):
     from app.models.user_models import User
     from app.models.rbac_models import UserServiceRole, ServiceRole
     from app.models.user_models import Organization  # Corrected import path
+    from app.core.modules_registry import get_default_enabled_modules  # Import for enabled_modules defaults
     async with AsyncSessionLocal() as db:
         try:
             # Check if user_service_roles table exists
@@ -97,6 +114,11 @@ async def init_org_roles(background_tasks: BackgroundTasks):
             rbac = RBACService(db)
             orgs = (await db.execute(select(Organization))).scalars().all()
             for org in orgs:
+                # Ensure enabled_modules defaults are set
+                if not org.enabled_modules:
+                    org.enabled_modules = get_default_enabled_modules()
+                    logger.info(f"Set default enabled_modules for organization {org.id}: {org.name}")
+                
                 roles = await rbac.get_roles(org.id)
                 if not roles:
                     await rbac.initialize_default_roles(org.id)

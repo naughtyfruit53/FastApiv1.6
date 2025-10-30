@@ -246,9 +246,10 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   const isModuleEnabled = (module: string): boolean => {
     if (isSuperAdmin) return true;
+    // Safe fallback: if no organization data or enabled_modules, default to false
     const enabled = organizationData?.enabled_modules?.[module] ?? false;
     console.log(`Module check - ${module}:`, enabled, {
-      allModules: organizationData?.enabled_modules,
+      allModules: organizationData?.enabled_modules || {},
       timestamp: new Date().toISOString(),
     });
     return enabled;
