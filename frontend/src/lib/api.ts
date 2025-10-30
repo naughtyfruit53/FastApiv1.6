@@ -161,6 +161,7 @@ const refreshAxios = axios.create({
     "Content-Type": "application/json",
   },
   timeout: 90000,
+  withCredentials: true, // Enable sending cookies with cross-origin requests
 });
 
 axiosRetry(refreshAxios, {
@@ -177,6 +178,7 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
   timeout: 90000,
+  withCredentials: true, // Enable sending cookies with cross-origin requests
 });
 
 api.interceptors.request.use(
