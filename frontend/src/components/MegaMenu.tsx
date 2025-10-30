@@ -246,7 +246,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   const isModuleEnabled = (module: string): boolean => {
     if (isSuperAdmin) return true;
-    const enabled = organizationData?.enabled_modules?.[module] ?? false;
+    const enabled = organizationData?.enabled_modules?.[module] ?? true;
     console.log(`Module check - ${module}:`, enabled, {
       allModules: organizationData?.enabled_modules,
       timestamp: new Date().toISOString(),
@@ -760,6 +760,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               <Button
                 color="inherit"
                 startIcon={<MenuIcon />}
+                endIcon={<ExpandMore />}
                 endIcon={<ExpandMore />}
                 onClick={(e) => handleMenuClick(e, 'menu')}
                 className="modern-menu-button"

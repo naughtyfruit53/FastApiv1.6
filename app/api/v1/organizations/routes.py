@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.permissions import PermissionChecker, Permission, require_platform_permission
 from app.core.enforcement import require_access
-from app.models import Organization, User, Product, Customer, Vendor, Stock, AuditLog
+from app.models.user_models import User, Organization
 from app.schemas.user import UserRole, UserInDB
 from app.schemas.organization import (
     OrganizationCreate, OrganizationUpdate, OrganizationInDB,
@@ -37,6 +37,7 @@ def get_rbac(db: AsyncSession = Depends(get_db)):
 
 # Import RBAC models from rbac_models
 from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole
+from app.core.modules_registry import get_default_enabled_modules
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["organizations"])
@@ -93,7 +94,15 @@ async def get_current_organization(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found"
         )
+
+    # Ensure enabled_modules is always populated with defaults if None/empty
+    if not organization.enabled_modules or len(organization.enabled_modules) == 0:
+        organization.enabled_modules = get_default_enabled_modules()
+        await db.commit()
+        await db.refresh(organization)
+        logger.info(f"Populated default enabled_modules for organization {organization.id}")
   
+    logger.info(f"Returning enabled_modules for org {organization.id}: {organization.enabled_modules}")  # Debug log
     return organization
 
 @router.put("/current", response_model=OrganizationInDB)

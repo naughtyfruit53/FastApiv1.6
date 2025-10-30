@@ -6,6 +6,7 @@ RBAC service layer for Role-based access control
 
 from typing import List, Optional, Dict, Set
 from sqlalchemy import select, and_, or_, func, insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
@@ -466,7 +467,10 @@ class RBACService:
             batch_size = 100
             for i in range(0, len(to_create), batch_size):
                 batch = to_create[i:i+batch_size]
-                insert_stmt = insert(Permission).values(batch)
+                # Use PostgreSQL-specific insert with on_conflict_do_nothing
+                insert_stmt = pg_insert(Permission).values(batch).on_conflict_do_nothing(
+                    index_elements=['module', 'action']  # Use the unique constraint
+                )
                 result = await self.db.execute(insert_stmt.returning(Permission))
                 batch_created = result.scalars().all()
                 created_permissions.extend(batch_created)

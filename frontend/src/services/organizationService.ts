@@ -16,10 +16,20 @@ export const organizationService = {
   },
   getCurrentOrganization: async (): Promise<any> => {
     try {
-      const response = await api.get("/organizations/current");
+      const ts = new Date().getTime(); // Timestamp to bust cache
+      const response = await api.get(`/organizations/current?ts=${ts}`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      console.log('Fetched organization data:', response.data); // Debug log
+      console.log('Enabled modules:', response.data.enabled_modules); // Specific debug for enabled_modules
       // Organization context is managed by backend session only
       return response.data;
     } catch (error: any) {
+      console.error('Failed to fetch current organization:', error);
       throw new Error(
         error.userMessage || "Failed to get current organization",
       );

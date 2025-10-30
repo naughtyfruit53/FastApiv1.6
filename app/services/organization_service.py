@@ -1,149 +1,296 @@
-# app/services/organization_service.py
+// frontend/src/services/organizationService.ts
+import api from "../lib/api";
+export const organizationService = {
+  createLicense: async (data: any): Promise<any> => {
+    try {
+      const response = await api.post("/organizations/license/create", data, {
+        timeout: 60000  // Increased to 60 seconds for long processing
+      });
+      // Organization context is managed by backend session only
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.userMessage || "Failed to create organization license",
+      );
+    }
+  },
+  getCurrentOrganization: async (): Promise<any> => {
+    try {
+      const ts = new Date().getTime(); // Timestamp to bust cache
+      const response = await api.get(`/organizations/current?ts=${ts}`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      console.log('Fetched organization data:', response.data); // Debug log
+      // Organization context is managed by backend session only
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to fetch current organization:', error);
+      throw new Error(
+        error.userMessage || "Failed to get current organization",
+      );
+    }
+  },
+  updateOrganization: async (data: any): Promise<any> => {
+    try {
+      const response = await api.put("/organizations/current", data);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to update organization");
+    }
+  },
+  // Admin-only endpoints
+  getAllOrganizations: async (): Promise<any> => {
+    try {
+      const response = await api.get("/organizations/");
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get organizations");
+    }
+  },
+  getOrganization: async (id: number): Promise<any> => {
+    try {
+      const response = await api.get(`/organizations/${id}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get organization");
+    }
+  },
+  updateOrganizationById: async (id: number, data: any, config?: any): Promise<any> => {
+    try {
+      const response = await api.put(`/organizations/${id}`, data, config);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to update organization");
+    }
+  },
+  // New organization management endpoints
+  createOrganization: async (data: any): Promise<any> => {
+    try {
+      const response = await api.post("/organizations/", data);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to create organization");
+    }
+  },
+  joinOrganization: async (organizationId: number): Promise<any> => {
+    try {
+      const response = await api.post(`/organizations/${organizationId}/join`);
+      // Organization context is managed by backend session only
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to join organization");
+    }
+  },
+  getOrganizationMembers: async (organizationId: number): Promise<any> => {
+    try {
+      const response = await api.get(
+        `/organizations/${organizationId}/members`,
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.userMessage || "Failed to get organization members",
+      );
+    }
+  },
+  inviteUserToOrganization: async (organizationId: number, userData: any): Promise<any> => {
+    try {
+      const response = await api.post(
+        `/organizations/${organizationId}/invite`,
+        userData,
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.userMessage || "Failed to invite user to organization",
+      );
+    }
+  },
+  // User organization management
+  getUserOrganizations: async (): Promise<any> => {
+    try {
+      const response = await api.get("/users/me/organizations");
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get user organizations");
+    }
+  },
+  switchOrganization: async (organizationId: number): Promise<any> => {
+    try {
+      const response = await api.put("/users/me/organization", {
+        organization_id: organizationId,
+      });
+      // Organization context is managed by backend session only
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to switch organization");
+    }
+  },
+  deleteOrganization: async (organizationId: number): Promise<any> => {
+    try {
+      const response = await api.delete(`/organizations/${organizationId}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to delete organization");
+    }
+  },
+  // Organization-scoped user management
+  getOrganizationUsers: async (organizationId: number, params?: any): Promise<any> => {
+    try {
+      const response = await api.get(`/organizations/${organizationId}/users`, {
+        params,
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get organization users");
+    }
+  },
+  createUserInOrganization: async (organizationId: number, userData: any): Promise<any> => {
+    try {
+      const response = await api.post(
+        `/organizations/${organizationId}/users`,
+        userData,
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.userMessage || "Failed to create user in organization",
+      );
+    }
+  },
+  updateUserInOrganization: async (
+    organizationId: number,
+    userId: number,
+    userData: any,
+  ): Promise<any> => {
+    try {
+      const response = await api.put(
+        `/organizations/${organizationId}/users/${userId}`,
+        userData,
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.userMessage || "Failed to update user in organization",
+      );
+    }
+  },
+  deleteUserFromOrganization: async (
+    organizationId: number,
+    userId: number,
+  ): Promise<any> => {
+    try {
+      const response = await api.delete(
+        `/organizations/${organizationId}/users/${userId}`,
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.userMessage || "Failed to delete user from organization",
+      );
+    }
+  },
+  // Invitation management
+  getOrganizationInvitations: async (organizationId: number, params?: any): Promise<any> => {
+    try {
+      const response = await api.get(
+        `/organizations/${organizationId}/invitations`,
+        { params },
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error.userMessage || "Failed to get organization invitations",
+      );
+    }
+  },
+  resendInvitation: async (organizationId: number, invitationId: number): Promise<any> => {
+    try {
+      const response = await api.post(
+        `/organizations/${organizationId}/invitations/${invitationId}/resend`,
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to resend invitation");
+    }
+  },
+  cancelInvitation: async (organizationId: number, invitationId: number): Promise<any> => {
+    try {
+      const response = await api.delete(
+        `/organizations/${organizationId}/invitations/${invitationId}`,
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to cancel invitation");
+    }
+  },
+  resetUserPassword: async (organizationId: number, userId: number): Promise<any> => {
+    try {
+      const response = await api.post(`/organizations/${organizationId}/users/${userId}/reset-password`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to reset user password");
+    }
+  },
 
-from sqlalchemy.orm import Session
-from app.models import Organization, User
-from app.schemas.organization import OrganizationLicenseCreate, OrganizationLicenseResponse
-from app.schemas.user import UserCreate, UserRole
-from app.core.security import get_password_hash, create_access_token
-from app.services.otp_service import OTPService
-from app.services.system_email_service import system_email_service
-from app.services.rbac import RBACService
-from app.services.role_management_service import RoleManagementService
-from app.services.user_service import UserService
-from app.scripts.seed_default_coa_accounts import create_default_accounts
-import secrets
-import string
-import logging
-import asyncio
-from datetime import datetime, timedelta
+  // Organization settings management
+  getOrganizationSettings: async (): Promise<any> => {
+    try {
+      const response = await api.get("/organizations/settings/");
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get organization settings");
+    }
+  },
 
-logger = logging.getLogger(__name__)
+  updateOrganizationSettings: async (settings: any): Promise<any> => {
+    try {
+      const response = await api.put("/organizations/settings/", settings);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to update organization settings");
+    }
+  },
 
-class OrganizationService:
-    @staticmethod
-    def create_license(db: Session, license_data: OrganizationLicenseCreate, current_user: User) -> OrganizationLicenseResponse:
-        """Create new organization license with super admin account and send credentials via email"""
-        # Generate unique subdomain and org_code
-        subdomain = license_data.organization_name.lower().replace(" ", "-")
-        org_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
-        
-        # Create organization
-        org = Organization(
-            name=license_data.organization_name,
-            subdomain=subdomain,
-            org_code=org_code,
-            primary_email=license_data.superadmin_email,
-            primary_phone=license_data.primary_phone,
-            address1=license_data.address1,
-            pin_code=license_data.pin_code,
-            city=license_data.city,
-            state=license_data.state,
-            state_code=license_data.state_code,
-            gst_number=license_data.gst_number,
-            max_users=license_data.max_users,
-            license_type=license_data.license_type,
-            license_issued_date=datetime.utcnow(),
-            license_duration_months=license_data.license_duration_months,
-            plan_type="premium" if license_data.license_type != "trial" else "trial",
-            created_by_id=current_user.id
-        )
-        
-        # Set expiry date based on license type
-        if license_data.license_type == "perpetual":
-            org.license_expiry_date = None
-        elif license_data.license_type == "month":
-            org.license_duration_months = 1
-            org.license_expiry_date = datetime.utcnow() + timedelta(days=30)
-        elif license_data.license_type == "year":
-            org.license_duration_months = 12
-            org.license_expiry_date = datetime.utcnow() + timedelta(days=365)
-        elif license_data.license_type == "trial":
-            org.license_duration_months = 1
-            org.license_expiry_date = datetime.utcnow() + timedelta(days=7)  # Changed to 7 days for trial
-        
-        db.add(org)
-        db.commit()
-        db.refresh(org)
-        
-        # Seed standard chart of accounts for the new organization
-        create_default_accounts(db, org.id)
-        
-        # Generate temp password for org super admin
-        alphabet = string.ascii_letters + string.digits + string.punctuation
-        temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
-        
-        # Create org super admin user with temp password
-        super_admin = UserService.create_user(
-            db=db,
-            user_data=UserCreate(
-                email=license_data.superadmin_email,
-                password=temp_password,
-                full_name="Org Super Admin",
-                role=UserRole.ORG_ADMIN,
-                organization_id=org.id,
-                is_active=True,
-                must_change_password=True  # Force password change on first login
-            )
-        )
-        
-        # Initialize RBAC for organization
-        rbac_service = RBACService(db)
-        rbac_service.initialize_default_permissions()
-        rbac_service.initialize_default_roles(org.id)
-        
-        # Assign admin role
-        RoleManagementService.assign_role_to_user(
-            db=db,
-            user_id=super_admin.id,
-            role_name="admin",
-            organization_id=org.id
-        )
-        
-        # Send email with temp password (system-level: account creation)
-        try:
-            success, error = asyncio.run(system_email_service.send_user_creation_email(
-                user_email=super_admin.email,
-                user_name=super_admin.full_name,
-                temp_password=temp_password,
-                organization_name=org.name,
-                login_url=f"https://{org.subdomain}.app.tritiq.com" if org.subdomain else "https://app.tritiq.com",
-                organization_id=org.id,
-                user_id=super_admin.id
-            ))
-        except RuntimeError:
-            # Already in event loop, create new loop in thread
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    asyncio.run,
-                    system_email_service.send_user_creation_email(
-                        user_email=super_admin.email,
-                        user_name=super_admin.full_name,
-                        temp_password=temp_password,
-                        organization_name=org.name,
-                        login_url=f"https://{org.subdomain}.app.tritiq.com" if org.subdomain else "https://app.tritiq.com",
-                        organization_id=org.id,
-                        user_id=super_admin.id
-                    )
-                )
-                success, error = future.result()
-        
-        if not success:
-            logger.warning(f"License created but welcome email failed: {error}")
-        
-        license_status = "trial" if license_data.license_type == "trial" else "active"
-        
-        return OrganizationLicenseResponse(
-            organization_id=org.id,
-            organization_name=org.name,
-            subdomain=org.subdomain,
-            org_code=org.org_code,
-            superadmin_email=super_admin.email,
-            temp_password=temp_password if success else None,
-            email_sent=success,
-            email_error=error if not success else None,
-            license_type=org.license_type,
-            license_status=license_status,
-            license_issued_date=org.license_issued_date,
-            license_expiry_date=org.license_expiry_date
-        )
+  // New methods for module management
+  getAvailableModules: async (): Promise<any> => {
+    try {
+      const response = await api.get("/organizations/available-modules");
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get available modules");
+    }
+  },
+
+  getOrganizationModules: async (id: number, config?: any): Promise<any> => {
+    try {
+      const response = await api.get(`/organizations/${id}/modules`, config);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get organization modules");
+    }
+  },
+
+  updateOrganizationModules: async (id: number, data: any, config?: any): Promise<any> => {
+    try {
+      const response = await api.put(`/organizations/${id}/modules`, data, config);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to update organization modules");
+    }
+  },
+
+  // New method for reset
+  resetOrganizationData: async (config?: any): Promise<any> => {
+    try {
+      const response = await api.post("/organizations/reset-data", {}, config);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to reset organization data");
+    }
+  },
+};

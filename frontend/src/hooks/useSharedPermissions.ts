@@ -120,13 +120,18 @@ export const useSharedPermissions = () => {
 
     // Use permissions from AuthContext if available
     if (contextPermissions) {
+      let modules = contextPermissions.modules || [];
+      let submodules = contextPermissions.submodules || {};
+      if (modules.length === 0) {
+        modules = [...new Set(contextPermissions.permissions.map(p => p.split('_')[0]))];
+      }
       return {
         isSuperAdmin,
         isOrgSuperAdmin,
         role: contextPermissions.role || user.role || 'user',
         permissions: contextPermissions.permissions,
-        modules: contextPermissions.modules,
-        submodules: contextPermissions.submodules,
+        modules,
+        submodules,
       };
     }
 
@@ -332,7 +337,7 @@ export const useSharedPermissions = () => {
       return subs.includes(submodule);
     }
     
-    // Fallback: if user has module access, assume they have all submodule access
+    // Return false if no submodule data and no module access
     return hasModuleAccess(module);
   }, [user, userPermissions, contextPermissions, hasModuleAccess]);
 
