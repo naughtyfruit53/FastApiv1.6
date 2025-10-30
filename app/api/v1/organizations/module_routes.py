@@ -35,15 +35,16 @@ async def get_organization_modules(
     current_user, org_id = auth
     
     if current_user.is_super_admin:
+        # Super admin can access any organization by explicit org_id
         org_id = organization_id
         TenantContext.set_organization_id(org_id)
-    
-    # Enforce tenant isolation
-    if organization_id != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
   
     result = await db.execute(select(Organization).filter(Organization.id == organization_id))
     organization = result.scalars().first()
@@ -70,15 +71,16 @@ async def update_organization_modules(
     current_user, org_id = auth
     
     if current_user.is_super_admin:
+        # Super admin can update any organization's modules by explicit org_id
         org_id = organization_id
         TenantContext.set_organization_id(org_id)
-    
-    # Enforce tenant isolation
-    if organization_id != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
   
     result = await db.execute(select(Organization).filter(Organization.id == organization_id))
     organization = result.scalars().first()
@@ -125,15 +127,16 @@ async def get_organization(
     current_user, org_id = auth
     
     if current_user.is_super_admin:
+        # Super admin can access any organization by explicit org_id
         org_id = organization_id
         TenantContext.set_organization_id(org_id)
-    
-    # Enforce tenant isolation
-    if organization_id != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
   
     result = await db.execute(select(Organization).filter(Organization.id == organization_id))
     org = result.scalars().first()
@@ -156,15 +159,16 @@ async def update_organization(
     current_user, org_id = auth
     
     if current_user.is_super_admin:
+        # Super admin can update any organization by explicit org_id
         org_id = organization_id
         TenantContext.set_organization_id(org_id)
-    
-    # Enforce tenant isolation
-    if organization_id != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
   
     result = await db.execute(select(Organization).filter(Organization.id == organization_id))
     org = result.scalars().first()
@@ -297,15 +301,16 @@ async def get_user_modules(
     current_user, org_id = auth
     
     if current_user.is_super_admin:
+        # Super admin can access any organization's user modules by explicit org_id
         org_id = organization_id
         TenantContext.set_organization_id(org_id)
-    
-    # Enforce tenant isolation
-    if organization_id != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
   
     if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN] and current_user.role != "HR":
         if current_user.id != user_id:
@@ -350,15 +355,16 @@ async def update_user_modules(
     current_user, org_id = auth
     
     if current_user.is_super_admin:
+        # Super admin can update any organization's user modules by explicit org_id
         org_id = organization_id
         TenantContext.set_organization_id(org_id)
-    
-    # Enforce tenant isolation
-    if organization_id != org_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
-        )
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
   
     if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN] and current_user.role != "HR":
         raise HTTPException(

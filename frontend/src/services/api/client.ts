@@ -21,6 +21,7 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true, // Enable sending cookies with cross-origin requests
     });
 
     // Request interceptor to add auth token
