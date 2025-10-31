@@ -253,13 +253,25 @@ class ResetService:
             
             # Delete business data in reverse dependency order to avoid foreign key constraints
             
-            # Delete all user_service_roles for this org
-            res_user_service_roles = await db.execute(delete(UserServiceRole).where(UserServiceRole.organization_id == organization_id))
+            # Delete all user_service_roles for this org (via ServiceRole relationship)
+            # UserServiceRole doesn't have organization_id, so we need to join through ServiceRole
+            user_service_roles_subquery = select(UserServiceRole.id).join(
+                ServiceRole, UserServiceRole.role_id == ServiceRole.id
+            ).where(ServiceRole.organization_id == organization_id)
+            res_user_service_roles = await db.execute(
+                delete(UserServiceRole).where(UserServiceRole.id.in_(user_service_roles_subquery))
+            )
             deleted_user_service_roles = res_user_service_roles.rowcount
             result["deleted"]["user_service_roles"] = deleted_user_service_roles
             
-            # Delete all service_role_permissions for this org
-            res_role_permissions = await db.execute(delete(ServiceRolePermission).where(ServiceRolePermission.organization_id == organization_id))
+            # Delete all service_role_permissions for this org (via ServiceRole relationship)
+            # ServiceRolePermission doesn't have organization_id, so we need to join through ServiceRole
+            role_permissions_subquery = select(ServiceRolePermission.id).join(
+                ServiceRole, ServiceRolePermission.role_id == ServiceRole.id
+            ).where(ServiceRole.organization_id == organization_id)
+            res_role_permissions = await db.execute(
+                delete(ServiceRolePermission).where(ServiceRolePermission.id.in_(role_permissions_subquery))
+            )
             deleted_role_permissions = res_role_permissions.rowcount
             result["deleted"]["service_role_permissions"] = deleted_role_permissions
             
