@@ -111,6 +111,11 @@ class Settings:
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     
+    # Auth transport options for development
+    # When enabled, auth can return tokens in cookies (Secure=False, SameSite=Lax)
+    # Production always uses Secure=True, SameSite=None over HTTPS
+    AUTH_COOKIE_DEV: bool = os.getenv("AUTH_COOKIE_DEV", "false").lower() == "true"
+    
     WKHTMLTOPDF_PATH: str = os.getenv("WKHTMLTOPDF_PATH", "/usr/bin/wkhtmltopdf")
     logger.info(f"wkhtmltopdf path configured: {WKHTMLTOPDF_PATH} (exists: {os.path.exists(WKHTMLTOPDF_PATH)})")
     

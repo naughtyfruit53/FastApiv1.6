@@ -1,9 +1,18 @@
 /**
- * API Client - Base HTTP client for API communication
+ * API Client - Centralized HTTP client for API communication
+ * 
+ * Features:
+ * - Automatic Bearer token attachment
+ * - Request/response logging in dev mode
+ * - Retry logic for transient failures
+ * - Refresh token support
+ * - Comprehensive error handling
+ * - RBAC permission denial handling
  */
 
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import { ACCESS_TOKEN_KEY } from '../../constants/auth';  // Import the constant
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+import axiosRetry from 'axios-retry';
+import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../../constants/auth';
 
 interface ApiResponse<T = any> {
   data: T;
@@ -13,51 +22,171 @@ interface ApiResponse<T = any> {
 
 class ApiClient {
   private client: AxiosInstance;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (value?: any) => void;
+    reject: (reason?: any) => void;
+  }> = [];
 
   constructor() {
+    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+    const isDev = process.env.NODE_ENV === 'development';
+
     this.client = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
-      timeout: 120000, // Increased from 30000 to 60000 (60 seconds)
+      baseURL,
+      timeout: 120000, // 2 minutes for long-running operations
       headers: {
         'Content-Type': 'application/json',
       },
       withCredentials: true, // Enable sending cookies with cross-origin requests
     });
 
-    // Request interceptor to add auth token
+    // Configure retry logic for transient failures
+    axiosRetry(this.client, {
+      retries: 3,
+      retryDelay: axiosRetry.exponentialDelay,
+      retryCondition: (error) => {
+        // Retry on network errors or 5xx server errors
+        return axiosRetry.isNetworkOrIdempotentRequestError(error) || 
+               (error.response?.status ? error.response.status >= 500 : false);
+      },
+      onRetry: (retryCount, error, requestConfig) => {
+        console.log(`[API Client] Retry attempt ${retryCount} for ${requestConfig.url}`, {
+          status: error.response?.status,
+          message: error.message
+        });
+      }
+    });
+
+    // Request interceptor to add auth token and logging
     this.client.interceptors.request.use(
       (config) => {
-        // Get token from localStorage or context
+        // Get token from localStorage
         const token = typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
-        if (token) {
+        
+        // Attach Bearer token if available
+        if (token && token !== 'null' && token !== 'undefined') {
           config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // Development mode logging
+        if (isDev) {
+          console.log('[API Client] Request:', {
+            method: config.method?.toUpperCase(),
+            url: config.url,
+            hasAuth: !!config.headers.Authorization,
+            timestamp: new Date().toISOString()
+          });
+        }
+
         return config;
       },
       (error) => {
+        if (isDev) {
+          console.error('[API Client] Request error:', error);
+        }
         return Promise.reject(error);
       }
     );
 
-    // Response interceptor for error handling
+    // Response interceptor for error handling and token refresh
     this.client.interceptors.response.use(
       (response) => {
+        // Development mode logging
+        if (isDev) {
+          console.log('[API Client] Response:', {
+            method: response.config.method?.toUpperCase(),
+            url: response.config.url,
+            status: response.status,
+            timestamp: new Date().toISOString()
+          });
+        }
         return response;
       },
-      (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          // Handle unauthorized - redirect to login
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem(ACCESS_TOKEN_KEY);
-            window.location.href = '/login';
+      async (error: AxiosError) => {
+        const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+        // Development mode logging
+        if (isDev) {
+          console.error('[API Client] Response error:', {
+            method: error.config?.method?.toUpperCase(),
+            url: error.config?.url,
+            status: error.response?.status,
+            detail: (error.response?.data as any)?.detail,
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        // Handle 401 Unauthorized - attempt token refresh
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          if (this.isRefreshing) {
+            // Queue the request while refresh is in progress
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+            }).then(() => {
+              return this.client(originalRequest);
+            }).catch((err) => {
+              return Promise.reject(err);
+            });
           }
-        } else if (error.response?.status === 403) {
-          // Handle permission denied (RBAC enforcement)
+
+          originalRequest._retry = true;
+          this.isRefreshing = true;
+
+          const refreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
+
+          if (refreshToken) {
+            try {
+              // Attempt to refresh the access token
+              const response = await axios.post(
+                `${baseURL.replace('/api/v1', '')}/api/v1/auth/refresh-token`,
+                { refresh_token: refreshToken }
+              );
+
+              const { access_token } = response.data;
+
+              if (access_token) {
+                localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
+                
+                // Retry all queued requests
+                this.failedQueue.forEach(({ resolve }) => resolve());
+                this.failedQueue = [];
+                
+                this.isRefreshing = false;
+
+                // Retry the original request
+                return this.client(originalRequest);
+              }
+            } catch (refreshError) {
+              console.error('[API Client] Token refresh failed:', refreshError);
+              this.failedQueue.forEach(({ reject }) => reject(refreshError));
+              this.failedQueue = [];
+              this.isRefreshing = false;
+              
+              // Clear tokens and redirect to login
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem(ACCESS_TOKEN_KEY);
+                localStorage.removeItem(REFRESH_TOKEN_KEY);
+                window.location.href = '/login';
+              }
+              return Promise.reject(refreshError);
+            }
+          } else {
+            // No refresh token available - redirect to login
+            this.isRefreshing = false;
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem(ACCESS_TOKEN_KEY);
+              window.location.href = '/login';
+            }
+          }
+        }
+
+        // Handle 403 Forbidden - RBAC permission denial
+        if (error.response?.status === 403) {
           const errorData = error.response.data as any;
           const permission = errorData?.required_permission || errorData?.detail || 'unknown permission';
           const module = errorData?.module || '';
           
-          // Log permission denial for audit and debugging
           console.warn('[RBAC] Permission denied:', {
             endpoint: error.config?.url,
             method: error.config?.method?.toUpperCase(),
@@ -65,24 +194,12 @@ class ApiClient {
             module: module,
             timestamp: new Date().toISOString(),
           });
-          
-          // Show user-friendly error message
-          if (typeof window !== 'undefined' && window.alert) {
-            const message = `Access Denied: You don't have permission to perform this action.\n\n` +
-              `Required permission: ${permission}\n` +
-              (module ? `Module: ${module}\n` : '') +
-              `\nPlease contact your administrator to request access.`;
-            
-            // You can replace window.alert with a toast notification library
-            // Example: toast.error(message);
-            console.error(message);
-          }
-        } else if (error.response?.status === 404) {
-          // Handle not found - could be access denial for cross-org resources
-          // Backend returns 404 instead of 403 to avoid information disclosure
+        }
+
+        // Handle 404 Not Found - could be access denial for cross-org resources
+        if (error.response?.status === 404) {
           const errorData = error.response.data as any;
           
-          // Check if this is actually an access denial (some endpoints return 404 for security)
           if (errorData?.detail && typeof errorData.detail === 'string') {
             const isAccessDenial = errorData.detail.toLowerCase().includes('not found') ||
                                    errorData.detail.toLowerCase().includes('access');
@@ -97,6 +214,22 @@ class ApiClient {
             }
           }
         }
+
+        // Handle connection errors
+        if (!error.response && error.message) {
+          console.error('[API Client] Connection error:', {
+            message: error.message,
+            code: error.code,
+            url: error.config?.url
+          });
+          
+          // Provide user-friendly error message
+          const enhancedError = new Error(
+            'Failed to establish a secure connection to the server. Please check your internet connection and try again.'
+          );
+          return Promise.reject(enhancedError);
+        }
+
         return Promise.reject(error);
       }
     );
