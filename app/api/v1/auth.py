@@ -2,7 +2,7 @@
 
 import logging
 from typing import Optional, Union
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
@@ -38,6 +38,7 @@ async def fetch_platform_user(db: AsyncSession, email: str):
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
+    response: Response,
     email_login: Optional[EmailLogin] = Body(None),
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
@@ -145,6 +146,50 @@ async def login(
     else:
         user_out = UserResponse.model_validate(user)
 
+    # Optional: Set cookies in development mode if AUTH_COOKIE_DEV is enabled
+    # Production always prefers JSON response with Authorization: Bearer
+    if settings.AUTH_COOKIE_DEV and settings.ENVIRONMENT == "development":
+        # Development cookie settings: Secure=False, SameSite=Lax
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=False,  # Allow HTTP in development
+            samesite="lax",  # Lax for development
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
+        )
+        logger.info(f"[AUTH] Cookies set for development (user: {user.email})")
+    elif settings.ENVIRONMENT == "production":
+        # Production cookie settings: Secure=True, SameSite=Lax
+        # Note: SameSite=Lax provides better CSRF protection than 'none'
+        # Use 'none' only if cross-site requests are explicitly required
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,  # Require HTTPS in production
+            samesite="lax",  # Better CSRF protection, allows same-site requests
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
+        )
+        logger.info(f"[AUTH] Production cookies set (user: {user.email})")
+
+    # Always return tokens in JSON (preferred for Authorization: Bearer in headers)
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,

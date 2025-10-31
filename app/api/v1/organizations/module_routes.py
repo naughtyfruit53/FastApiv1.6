@@ -25,13 +25,27 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 module_router = router  # Alias for backward compatibility
 
+# Cache sorted valid modules at module level to avoid repeated sorting
+_VALID_MODULES_SORTED = None
+
+def get_sorted_valid_modules():
+    """Get cached sorted list of valid modules"""
+    global _VALID_MODULES_SORTED
+    if _VALID_MODULES_SORTED is None:
+        from app.core.modules_registry import get_all_modules
+        _VALID_MODULES_SORTED = sorted(get_all_modules())
+    return _VALID_MODULES_SORTED
+
 @router.get("/{organization_id:int}/modules")
 async def get_organization_modules(
     organization_id: int,
     auth: tuple = Depends(require_access("organization_module", "read")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get organization's enabled modules"""
+    """
+    Get organization's enabled modules.
+    Returns both enabled modules and list of all available modules in the system.
+    """
     current_user, org_id = auth
     
     if current_user.is_super_admin:
@@ -54,11 +68,17 @@ async def get_organization_modules(
             detail="Organization not found"
         )
   
-    from app.core.modules_registry import get_default_enabled_modules
+    from app.core.modules_registry import get_default_enabled_modules, get_all_modules
     
     enabled_modules = organization.enabled_modules or get_default_enabled_modules()
+    available_modules = get_all_modules()
   
-    return {"enabled_modules": enabled_modules}
+    return {
+        "enabled_modules": enabled_modules,
+        "available_modules": available_modules,
+        "organization_id": organization_id,
+        "organization_name": organization.name
+    }
 
 @router.put("/{organization_id:int}/modules")
 async def update_organization_modules(
@@ -67,7 +87,20 @@ async def update_organization_modules(
     auth: tuple = Depends(require_access("organization_module", "update")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update organization's enabled modules (requires organization_module update permission)"""
+    """
+    Update organization's enabled modules (requires organization_module update permission).
+    Idempotent - can be called multiple times with same data.
+    
+    Request body format:
+    {
+        "enabled_modules": {
+            "CRM": true,
+            "ERP": false,
+            "Finance": true,
+            ...
+        }
+    }
+    """
     current_user, org_id = auth
     
     if current_user.is_super_admin:
@@ -93,28 +126,73 @@ async def update_organization_modules(
     try:
         from app.core.modules_registry import get_all_modules
         
+        # Validate request body structure
+        if "enabled_modules" not in modules_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing 'enabled_modules' in request body. Expected format: {'enabled_modules': {'ModuleName': true/false}}"
+            )
+        
+        enabled_modules = modules_data.get("enabled_modules", {})
+        
+        # Validate that enabled_modules is a dict
+        if not isinstance(enabled_modules, dict):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="'enabled_modules' must be a dictionary mapping module names to boolean values"
+            )
+        
         valid_modules = get_all_modules()
-        for module in modules_data.get("enabled_modules", {}):
+        invalid_modules = []
+        
+        # Validate each module key
+        for module, enabled in enabled_modules.items():
             if module not in valid_modules:
+                invalid_modules.append(module)
+            
+            # Validate that values are booleans
+            if not isinstance(enabled, bool):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid module: {module}. Valid modules are: {', '.join(valid_modules)}"
+                    detail=f"Module '{module}' has invalid value. Expected boolean (true/false), got: {type(enabled).__name__}"
                 )
+        
+        if invalid_modules:
+            # Use cached sorted modules list
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid module(s): {', '.join(invalid_modules)}. Valid modules are: {', '.join(get_sorted_valid_modules())}"
+            )
       
-        organization.enabled_modules = modules_data.get("enabled_modules", {})
-        await db.commit()
+        # Idempotent update - only commit if there are actual changes
+        if organization.enabled_modules != enabled_modules:
+            organization.enabled_modules = enabled_modules
+            await db.commit()
+            logger.info(f"Organization {organization_id} modules updated by {current_user.email}: {len(enabled_modules)} modules configured")
+            message = "Organization modules updated successfully"
+        else:
+            logger.debug(f"Organization {organization_id} modules unchanged - idempotent update")
+            message = "Organization modules unchanged (already up to date)"
       
-        logger.info(f"Organization {organization_id} modules updated by {current_user.email}")
-        return {"message": "Organization modules updated successfully", "enabled_modules": organization.enabled_modules}
+        return {
+            "message": message,
+            "enabled_modules": organization.enabled_modules,
+            "available_modules": valid_modules
+        }
       
     except HTTPException:
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating organization modules: {e}")
+        # Log exception with stack trace only in development for debugging
+        from app.core.config import settings
+        logger.error(
+            f"Error updating organization modules for org {organization_id}: {type(e).__name__}", 
+            exc_info=(settings.ENVIRONMENT == "development")
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update organization modules"
+            detail="Failed to update organization modules due to an internal error. Please contact support if the issue persists."
         )
 
 @router.get("/{organization_id:int}", response_model=OrganizationInDB)
