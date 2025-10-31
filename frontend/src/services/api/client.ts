@@ -64,9 +64,15 @@ class ApiClient {
         // Get token from localStorage
         const token = typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
         
-        // Attach Bearer token if available (validate format: not null/undefined/empty and has JWT structure)
-        if (token && token.trim() && token !== 'null' && token !== 'undefined' && token.includes('.')) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Attach Bearer token if available
+        // Validate JWT structure: should have two dots (header.payload.signature)
+        if (token && token.trim() && token !== 'null' && token !== 'undefined') {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            config.headers.Authorization = `Bearer ${token}`;
+          } else {
+            console.warn('[API Client] Invalid JWT format detected, skipping auth header');
+          }
         }
 
         // Development mode logging
@@ -123,7 +129,11 @@ class ApiClient {
             // Queue the request while refresh is in progress
             return new Promise((resolve, reject) => {
               this.failedQueue.push({ resolve, reject });
-            }).then(() => {
+            }).then((token) => {
+              // Update the authorization header with new token
+              if (originalRequest.headers && token) {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+              }
               return this.client(originalRequest);
             });
           }
@@ -136,11 +146,18 @@ class ApiClient {
           if (refreshToken) {
             try {
               // Attempt to refresh the access token
-              // Construct refresh endpoint URL using URL constructor for robustness
-              const refreshUrl = new URL('/api/v1/auth/refresh-token', baseURL);
+              // Construct refresh endpoint URL - handle both absolute and relative baseURL
+              let refreshUrl: string;
+              try {
+                // Try to construct as absolute URL
+                refreshUrl = new URL('/api/v1/auth/refresh-token', baseURL).toString();
+              } catch {
+                // If baseURL is relative, construct manually
+                refreshUrl = `${baseURL.replace(/\/+$/, '')}/auth/refresh-token`;
+              }
               
               const response = await axios.post(
-                refreshUrl.toString(),
+                refreshUrl,
                 { refresh_token: refreshToken }
               );
 
@@ -149,12 +166,17 @@ class ApiClient {
               if (access_token) {
                 localStorage.setItem(ACCESS_TOKEN_KEY, access_token);
                 
-                // Retry all queued requests
-                this.failedQueue.forEach(({ resolve }) => resolve());
+                // Retry all queued requests with new token
+                this.failedQueue.forEach(({ resolve }) => resolve(access_token));
                 this.failedQueue = [];
                 
                 this.isRefreshing = false;
 
+                // Update original request with new token
+                if (originalRequest.headers) {
+                  originalRequest.headers.Authorization = `Bearer ${access_token}`;
+                }
+                
                 // Retry the original request
                 return this.client(originalRequest);
               }

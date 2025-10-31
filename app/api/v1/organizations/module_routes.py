@@ -25,6 +25,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 module_router = router  # Alias for backward compatibility
 
+# Cache sorted valid modules at module level to avoid repeated sorting
+_VALID_MODULES_SORTED = None
+
+def get_sorted_valid_modules():
+    """Get cached sorted list of valid modules"""
+    global _VALID_MODULES_SORTED
+    if _VALID_MODULES_SORTED is None:
+        from app.core.modules_registry import get_all_modules
+        _VALID_MODULES_SORTED = sorted(get_all_modules())
+    return _VALID_MODULES_SORTED
+
 @router.get("/{organization_id:int}/modules")
 async def get_organization_modules(
     organization_id: int,
@@ -147,11 +158,10 @@ async def update_organization_modules(
                 )
         
         if invalid_modules:
-            # Sort valid modules once for display
-            valid_modules_sorted = sorted(valid_modules)
+            # Use cached sorted modules list
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid module(s): {', '.join(invalid_modules)}. Valid modules are: {', '.join(valid_modules_sorted)}"
+                detail=f"Invalid module(s): {', '.join(invalid_modules)}. Valid modules are: {', '.join(get_sorted_valid_modules())}"
             )
       
         # Idempotent update - only commit if there are actual changes
