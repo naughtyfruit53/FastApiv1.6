@@ -1,11 +1,12 @@
 // frontend/src/pages/vouchers/index.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ReactElement } from 'react';
 import { useRouter } from 'next/router';
 import {
   Box,
   Button,
   Card,
   CardContent,
+  Container,
   Paper,
   Table,
   TableBody,
@@ -25,10 +26,10 @@ import { useQuery } from '@tanstack/react-query';
 import { voucherService, reportsService } from '../../services/authService';
 import { voucherService as voucherApi } from '../../services/vouchersService';
 import { generateVoucherPDF, getVoucherPdfConfig } from '../../utils/pdfUtils';
-import MegaMenu from '../../components/MegaMenu';
 import VoucherContextMenu from '../../components/VoucherContextMenu';
 import VoucherListModal from '../../components/VoucherListModal';
-import { useCompany } from '../../context/CompanyContext'; // Added import
+import { useCompany } from '../../context/CompanyContext';
+import { withAppLayout } from '../../components/AppLayout';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -103,9 +104,7 @@ const VoucherManagement: React.FC = () => {
     setModalVouchers([]);
   };
 
-  const handleLogout = () => {
-    // Handle logout
-  };
+
 
   const handleCreateVoucher = (tabIndex: number) => {
     if (!company?.state_code && !company?.gst_number) {
@@ -416,7 +415,6 @@ const VoucherManagement: React.FC = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <MegaMenu user={user} onLogout={handleLogout} />
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Voucher Management System
@@ -541,6 +539,11 @@ const VoucherManagement: React.FC = () => {
       )}
     </Box>
   );
+};
+
+// Apply AppLayout to this page
+VoucherManagement.getLayout = function getLayout(page: ReactElement) {
+  return withAppLayout(page);
 };
 
 export default VoucherManagement;

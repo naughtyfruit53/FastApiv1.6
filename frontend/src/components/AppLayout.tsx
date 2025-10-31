@@ -1,6 +1,6 @@
 // frontend/src/components/AppLayout.tsx
 'use client';
-import React from 'react';
+import React, { ReactElement, ReactNode } from 'react';
 import { Box } from '@mui/material';
 import MegaMenu from './MegaMenu';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     logout();
     router.push('/login');
   };
+
+  // Skip layout for login and public pages
+  const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+  const isPublicPath = publicPaths.some(path => router.pathname.startsWith(path));
+
+  if (isPublicPath) {
+    return <>{children}</>;
+  }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -37,3 +45,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 };
 
 export default AppLayout;
+
+// HOC for pages that need the app layout
+export function withAppLayout(page: ReactElement): ReactNode {
+  return <AppLayout>{page}</AppLayout>;
+}

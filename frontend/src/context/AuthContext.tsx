@@ -15,6 +15,7 @@ import { markAuthReady, resetAuthReady } from "../lib/api";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY } from "../constants/auth";
 import { Role } from "../types/rbac.types";
 import { rbacService } from "../services/rbacService";
+import { normalizePermissions } from "../utils/permissionNormalizer";
 
 interface UserPermissions {
   role: string;
@@ -238,17 +239,31 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       // Compute fallback
       const fallback = computeRoleBasedPermissions(user);
       
-      // Merge fetched with fallback
-      const mergedPermissions = [...new Set([...fallback.permissions, ...(permissionsData.permissions || [])])];
-      const mergedModules = [...new Set([...fallback.modules, ...(permissionsData.modules || [])])];
+      // Normalize backend permissions (*.read, *.manage → *.view)
+      const normalizedBackend = normalizePermissions(permissionsData.permissions || []);
+      console.log("[AuthProvider] Normalized backend permissions:", {
+        original: permissionsData.permissions?.length || 0,
+        normalized: normalizedBackend.permissions.length,
+        modules: Array.from(normalizedBackend.modules),
+      });
+      
+      // Merge fetched normalized permissions with fallback
+      const mergedPermissions = [...new Set([...fallback.permissions, ...normalizedBackend.permissions])];
+      const mergedModules = [...new Set([...fallback.modules, ...Array.from(normalizedBackend.modules)])];
       const mergedSubmodules: Record<string, string[]> = {};
       
       // Merge submodules
-      const allKeys = new Set([...Object.keys(fallback.submodules), ...Object.keys(permissionsData.submodules || {})]);
+      const normalizedSubmodules = Object.fromEntries(
+        Object.entries(normalizedBackend.submodules).map(([key, value]) => [key, Array.from(value)])
+      );
+      const allKeys = new Set([
+        ...Object.keys(fallback.submodules),
+        ...Object.keys(normalizedSubmodules)
+      ]);
       allKeys.forEach(key => {
         mergedSubmodules[key] = [...new Set([
           ...(fallback.submodules[key] || []),
-          ...(permissionsData.submodules[key] || [])
+          ...(normalizedSubmodules[key] || [])
         ])];
       });
 
@@ -262,7 +277,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       };
 
       setUserPermissions(permissions);
-      console.log("[AuthProvider] User permissions fetched and merged successfully");
+      console.log("[AuthProvider] User permissions fetched, normalized, and merged successfully", {
+        totalPermissions: permissions.permissions.length,
+        modules: permissions.modules.length,
+      });
       return permissions;
     } catch (error) {
       console.error("[AuthProvider] Error fetching user permissions:", error);

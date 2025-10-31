@@ -1,6 +1,7 @@
 // frontend/src/hooks/useSharedPermissions.ts
 import { useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { hasNormalizedPermission as checkNormalizedPermission } from '../utils/permissionNormalizer';
 
 export interface Permission {
   module: string;
@@ -301,23 +302,17 @@ export const useSharedPermissions = () => {
     };
   }, [user, contextPermissions]);
 
-  const hasPermission = useCallback((permission: string): boolean => {
+  const hasPermission = useCallback((module: string, action?: string): boolean => {
     if (!user || !userPermissions.permissions.length) return false;
     
     // Super admin has all permissions
     if (userPermissions.isSuperAdmin) return true;
 
-    // Check exact permission match
-    if (userPermissions.permissions.includes(permission)) return true;
+    // Support both 'module.action' string and separate parameters
+    const permission = action ? `${module}.${action}` : module;
 
-    // Check wildcard permissions (e.g., 'finance.*' matches 'finance.view')
-    const wildcardPermissions = userPermissions.permissions.filter(p => p.endsWith('.*'));
-    for (const wildcardPerm of wildcardPermissions) {
-      const module = wildcardPerm.replace('.*', '');
-      if (permission.startsWith(`${module}.`)) return true;
-    }
-
-    return false;
+    // Use normalized permission checking which handles backend → frontend mapping
+    return checkNormalizedPermission(userPermissions.permissions, permission);
   }, [user, userPermissions]);
 
   const hasModuleAccess = useCallback((module: string): boolean => {
