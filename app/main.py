@@ -127,6 +127,22 @@ async def init_org_roles(background_tasks: BackgroundTasks):
             logger.error(f"Error initializing organization roles: {str(e)} - skipping role init")
             await db.rollback()
 
+# Backfill default enabled_modules for organizations that have missing or empty modules
+async def init_org_modules(background_tasks: BackgroundTasks):
+    from app.models.user_models import Organization
+    from app.core.modules_registry import get_default_enabled_modules
+    async with AsyncSessionLocal() as db:
+        try:
+            orgs = (await db.execute(select(Organization))).scalars().all()
+            for org in orgs:
+                if not org.enabled_modules or len(org.enabled_modules) == 0:
+                    org.enabled_modules = get_default_enabled_modules()
+                    logger.info(f"Backfilled default enabled_modules for organization {org.id}: {org.name}")
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Error backfilling organization modules: {str(e)}")
+            await db.rollback()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -158,6 +174,7 @@ async def lifespan(app: FastAPI):
     background_tasks = BackgroundTasks()
     background_tasks.add_task(init_default_permissions, background_tasks)
     background_tasks.add_task(init_org_roles, background_tasks)
+    background_tasks.add_task(init_org_modules, background_tasks)
     
     yield
     # Shutdown
@@ -270,6 +287,13 @@ def include_minimal_routers():
     except Exception as e:
         logger.error(f"Failed to import rbac router: {str(e)}")
         raise  # Core
+    
+    try:
+        from app.api.v1 import debug as v1_debug
+        routers.append((v1_debug.router, "/api/v1/debug", ["debug"]))
+        logger.info("Debug router included for RBAC troubleshooting")
+    except Exception as e:
+        logger.warning(f"Failed to import debug router: {str(e)}")  # Optional, warn only
     
     try:
         from app.api.v1.organizations import router as organizations_router
