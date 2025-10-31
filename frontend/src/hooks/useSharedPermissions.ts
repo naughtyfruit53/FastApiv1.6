@@ -302,14 +302,16 @@ export const useSharedPermissions = () => {
     };
   }, [user, contextPermissions]);
 
-  const hasPermission = useCallback((module: string, action?: string): boolean => {
+  const hasPermission = useCallback((moduleOrPermission: string, action?: string): boolean => {
     if (!user || !userPermissions.permissions.length) return false;
     
     // Super admin has all permissions
     if (userPermissions.isSuperAdmin) return true;
 
-    // Support both 'module.action' string and separate parameters
-    const permission = action ? `${module}.${action}` : module;
+    // Support both signatures:
+    // 1. hasPermission('finance.view') - single string
+    // 2. hasPermission('finance', 'view') - separate parameters
+    const permission = action ? `${moduleOrPermission}.${action}` : moduleOrPermission;
 
     // Use normalized permission checking which handles backend → frontend mapping
     return checkNormalizedPermission(userPermissions.permissions, permission);

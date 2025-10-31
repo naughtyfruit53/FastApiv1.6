@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import api from "../lib/api";
 
 interface PincodeData {
@@ -122,20 +122,32 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
     return requestPromise;
   }, []);
 
-  // Debounced version of lookupPincode
+  // Debounced version of lookupPincode with proper cleanup
   const debouncedLookupPincode = useCallback((pincode: string): Promise<PincodeData | null> => {
-    // Clear any existing debounce timer
+    // Clear any existing debounce timer to prevent memory leaks
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
     }
 
     // Return a promise that resolves when the debounced call completes
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       debounceTimerRef.current = setTimeout(() => {
-        lookupPincode(pincode).then(resolve);
+        lookupPincode(pincode).then(resolve).catch(reject);
+        debounceTimerRef.current = null;
       }, 500); // 500ms debounce
     });
   }, [lookupPincode]);
+
+  // Cleanup on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const clearData = () => {
     setPincodeData(null);

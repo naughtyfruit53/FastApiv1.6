@@ -87,8 +87,12 @@ export function normalizePermissions(backendPermissions: string[]): NormalizedPe
   };
 }
 
+// Cache for normalized permissions to avoid repeated processing
+const normalizationCache = new WeakMap<string[], NormalizedPermissions>();
+
 /**
  * Checks if a user has a specific permission after normalization
+ * Uses memoization to avoid repeated normalization of the same permission set
  * 
  * @param userPermissions Array of user's permissions
  * @param requiredPermission Permission to check
@@ -98,7 +102,14 @@ export function hasNormalizedPermission(
   userPermissions: string[],
   requiredPermission: string
 ): boolean {
-  const normalized = normalizePermissions(userPermissions);
+  // Try to get cached normalized permissions
+  let normalized = normalizationCache.get(userPermissions);
+  
+  if (!normalized) {
+    // Cache miss - normalize and cache
+    normalized = normalizePermissions(userPermissions);
+    normalizationCache.set(userPermissions, normalized);
+  }
   
   // Check exact match
   if (normalized.permissions.includes(requiredPermission)) {
