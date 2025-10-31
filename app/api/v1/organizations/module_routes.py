@@ -147,9 +147,11 @@ async def update_organization_modules(
                 )
         
         if invalid_modules:
+            # Sort valid modules once for display
+            valid_modules_sorted = sorted(valid_modules)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid module(s): {', '.join(invalid_modules)}. Valid modules are: {', '.join(sorted(valid_modules))}"
+                detail=f"Invalid module(s): {', '.join(invalid_modules)}. Valid modules are: {', '.join(valid_modules_sorted)}"
             )
       
         # Idempotent update - only commit if there are actual changes
@@ -172,9 +174,12 @@ async def update_organization_modules(
         raise
     except Exception as e:
         await db.rollback()
-        # Log exception for debugging (exc_info=True includes stack trace)
-        # Note: In production, consider configuring logging level to avoid verbose stack traces
-        logger.error(f"Error updating organization modules for org {organization_id}: {type(e).__name__}", exc_info=True)
+        # Log exception with stack trace only in development for debugging
+        from app.core.config import settings
+        logger.error(
+            f"Error updating organization modules for org {organization_id}: {type(e).__name__}", 
+            exc_info=(settings.ENVIRONMENT == "development")
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update organization modules due to an internal error. Please contact support if the issue persists."

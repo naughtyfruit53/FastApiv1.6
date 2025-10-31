@@ -64,8 +64,8 @@ class ApiClient {
         // Get token from localStorage
         const token = typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
         
-        // Attach Bearer token if available
-        if (token && token !== 'null' && token !== 'undefined') {
+        // Attach Bearer token if available (validate format: not null/undefined/empty and has JWT structure)
+        if (token && token.trim() && token !== 'null' && token !== 'undefined' && token.includes('.')) {
           config.headers.Authorization = `Bearer ${token}`;
         }
 
@@ -125,8 +125,6 @@ class ApiClient {
               this.failedQueue.push({ resolve, reject });
             }).then(() => {
               return this.client(originalRequest);
-            }).catch((err) => {
-              return Promise.reject(err);
             });
           }
 
@@ -139,8 +137,7 @@ class ApiClient {
             try {
               // Attempt to refresh the access token
               // Construct refresh endpoint URL using URL constructor for robustness
-              const baseUrl = new URL(baseURL, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-              const refreshUrl = new URL('/api/v1/auth/refresh-token', baseUrl.origin);
+              const refreshUrl = new URL('/api/v1/auth/refresh-token', baseURL);
               
               const response = await axios.post(
                 refreshUrl.toString(),
