@@ -231,11 +231,33 @@ api.interceptors.response.use(
       error: error.response?.data,
       timestamp: new Date().toISOString(),
     });
+    // Handle network errors more gracefully
     if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
       console.error("[API] Request timed out");
       toast.error("Request timed out. Please try again.", {
         position: "top-right",
         autoClose: 3000,
+      });
+      return Promise.reject({
+        ...error,
+        isNetworkError: true,
+        isTimeout: true,
+        userMessage: "Request timed out. Please try again.",
+      });
+    }
+    
+    // Handle connection failures (network down, CORS, etc.)
+    if (!error.response && error.request) {
+      console.error("[API] Network error - no response received:", {
+        url,
+        method,
+        error: error.message,
+      });
+      
+      return Promise.reject({
+        ...error,
+        isNetworkError: true,
+        userMessage: "Unable to connect to server. Please check your connection and try again.",
       });
     }
     
