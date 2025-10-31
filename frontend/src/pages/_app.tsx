@@ -16,6 +16,7 @@ import { EmailProvider } from "../context/EmailContext"; // Added import for Ema
 import { PermissionProvider } from "../context/PermissionContext";  // Added import for PermissionProvider
 import { useState, useEffect } from "react"; // Added import for useState and useEffect
 import Head from 'next/head';  // Added import for Head to handle meta tags
+import AppLayout from "../components/AppLayout"; // Global layout with MegaMenu
 // Removed ChatbotNavigator import as it may be causing the undefined component error
 
 // Create modern theme using our design system
@@ -187,7 +188,10 @@ function MyApp({ Component, pageProps }: AppProps) {
                 <ThemeProvider theme={theme}>
                   <CssBaseline />
                   <ClientOnly>
-                    {getLayout(<Component {...pageProps} />)}
+                    {/* Global AppLayout wraps all pages and conditionally shows MegaMenu */}
+                    <AppLayout>
+                      {getLayout(<Component {...pageProps} />)}
+                    </AppLayout>
                     <ToastContainer
                       position="top-right"
                       autoClose={5000}

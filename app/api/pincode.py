@@ -1,9 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from typing import Dict
 import requests
 import logging
 import traceback  # For detailed error logging
-from app.core.enforcement import require_access
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -52,13 +51,12 @@ STATE_CODE_MAP = {
 
 @router.get("/lookup/{pin_code}")
 async def lookup_pincode(
-    pin_code: str,
-    auth: tuple = Depends(require_access("pincode", "read"))
+    pin_code: str
 ) -> Dict[str, str]:
     """
-    Lookup city, state, and state_code by PIN code using external API
+    Lookup city, state, and state_code by PIN code using external API.
+    This is a public endpoint as it only queries external postal code data.
     """
-    current_user, org_id = auth
     
     # Validate pin code format
     if not pin_code.isdigit() or len(pin_code) != 6:

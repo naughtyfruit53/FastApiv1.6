@@ -279,6 +279,13 @@ def include_minimal_routers():
         raise  # Core, so raise
     
     try:
+        from app.api.v1 import password as v1_password
+        routers.append((v1_password.router, "/api/v1/password", ["password"]))
+    except Exception as e:
+        logger.error(f"Failed to import password router: {str(e)}")
+        raise  # Core, so raise
+    
+    try:
         from app.api.v1 import health as v1_health
         routers.append((v1_health.router, "/api/v1", ["health"]))
     except Exception as e:
