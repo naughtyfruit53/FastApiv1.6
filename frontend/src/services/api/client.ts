@@ -138,8 +138,12 @@ class ApiClient {
           if (refreshToken) {
             try {
               // Attempt to refresh the access token
+              // Construct refresh endpoint URL using URL constructor for robustness
+              const baseUrl = new URL(baseURL, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+              const refreshUrl = new URL('/api/v1/auth/refresh-token', baseUrl.origin);
+              
               const response = await axios.post(
-                `${baseURL.replace('/api/v1', '')}/api/v1/auth/refresh-token`,
+                refreshUrl.toString(),
                 { refresh_token: refreshToken }
               );
 

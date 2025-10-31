@@ -172,10 +172,12 @@ async def update_organization_modules(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating organization modules: {e}", exc_info=True)
+        # Log exception for debugging (exc_info=True includes stack trace)
+        # Note: In production, consider configuring logging level to avoid verbose stack traces
+        logger.error(f"Error updating organization modules for org {organization_id}: {type(e).__name__}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update organization modules: {str(e)}"
+            detail="Failed to update organization modules due to an internal error. Please contact support if the issue persists."
         )
 
 @router.get("/{organization_id:int}", response_model=OrganizationInDB)

@@ -168,13 +168,15 @@ async def login(
         )
         logger.info(f"[AUTH] Cookies set for development (user: {user.email})")
     elif settings.ENVIRONMENT == "production":
-        # Production cookie settings: Secure=True, SameSite=None over HTTPS
+        # Production cookie settings: Secure=True, SameSite=Lax
+        # Note: SameSite=Lax provides better CSRF protection than 'none'
+        # Use 'none' only if cross-site requests are explicitly required
         response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=True,
             secure=True,  # Require HTTPS in production
-            samesite="none",  # Allow cross-site in production with HTTPS
+            samesite="lax",  # Better CSRF protection, allows same-site requests
             max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
         response.set_cookie(
@@ -182,7 +184,7 @@ async def login(
             value=refresh_token,
             httponly=True,
             secure=True,
-            samesite="none",
+            samesite="lax",
             max_age=settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
         )
         logger.info(f"[AUTH] Production cookies set (user: {user.email})")
