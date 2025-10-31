@@ -345,15 +345,27 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         {
           error: error.message,
           status: error?.status,
+          isNetworkError: error?.isNetworkError,
           willRetry:
             retryCount < maxRetries &&
             error?.status !== 401 &&
             error?.status !== 403,
         },
       );
-      // Attempt token refresh before giving up
+      
+      // Handle network errors gracefully - these are NOT auth failures
+      if (error?.isNetworkError && retryCount < maxRetries) {
+        const retryDelay = Math.pow(2, retryCount) * 1000;
+        console.log(
+          `[AuthProvider] Network error detected - retrying fetchUser in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries + 1})`,
+        );
+        setTimeout(() => fetchUser(retryCount + 1), retryDelay);
+        return;
+      }
+      
+      // For explicit auth errors (401/403), attempt token refresh
       if (retryCount < maxRetries && (error?.status === 401 || error?.status === 403)) {
-        console.log("[AuthProvider] Attempting token refresh before retry");
+        console.log("[AuthProvider] Auth error - attempting token refresh before retry");
         const refreshResult = await authService.refreshToken();
         if (refreshResult) {
           console.log("[AuthProvider] Token refresh successful, retrying fetchUser");
@@ -361,27 +373,44 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
           return;
         }
       }
-      // Only retry on non-auth errors
+      
+      // Only retry on non-auth errors (but not network errors, which are handled above)
       if (
         retryCount < maxRetries &&
         error?.status !== 401 &&
-        error?.status !== 403
+        error?.status !== 403 &&
+        !error?.isNetworkError
       ) {
         const retryDelay = Math.pow(2, retryCount) * 1000;
         console.log(`[AuthProvider] Retrying fetchUser in ${retryDelay}ms`);
         setTimeout(() => fetchUser(retryCount + 1), retryDelay);
         return;
       }
-      // On error, clear sensitive data and force re-auth
-      console.log("[AuthProvider] Auth error - clearing data");
+      
+      // If we've exhausted retries on a network error, mark auth as ready but keep tokens
+      // This allows the app to continue working and retry later
+      if (error?.isNetworkError) {
+        console.warn(
+          "[AuthProvider] Network error persists after retries - marking auth ready but keeping tokens for recovery",
+        );
+        markAuthReady();
+        setLoading(false);
+        toast.warning(
+          "Unable to verify session. Please check your connection. Your session will be restored when connection is available.",
+          { position: "top-right", autoClose: 7000 },
+        );
+        return;
+      }
+      
+      // Only clear tokens and logout for explicit auth failures (401/403)
+      console.log("[AuthProvider] Auth failure confirmed - clearing data");
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem(USER_ROLE_KEY);
       localStorage.removeItem(IS_SUPER_ADMIN_KEY);
-      // Preserve refresh_token for potential recovery
-      console.log("[AuthProvider] Preserving refresh_token for potential recovery");
       setUser(null);
       resetAuthReady();
+      
       if (error?.userMessage) {
         toast.error(`Authentication failed: ${error.userMessage}`, {
           position: "top-right",
@@ -389,10 +418,11 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         });
       } else {
         toast.error(
-          "Failed to establish secure session. Please log in again.",
+          "Session expired. Please log in again.",
           { position: "top-right", autoClose: 5000 },
         );
       }
+      
       // Only redirect if not already on login page to prevent loop
       if (router.pathname !== "/login") {
         console.log("[AuthProvider] Redirecting to login");

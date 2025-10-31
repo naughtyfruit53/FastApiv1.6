@@ -111,6 +111,10 @@ class Settings:
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     
+    # Auth cookie configuration for development
+    # When True, disables secure cookies for local development over HTTP
+    AUTH_COOKIE_DEV_MODE: bool = os.getenv("AUTH_COOKIE_DEV_MODE", "true").lower() == "true" and ENVIRONMENT == "development"
+    
     WKHTMLTOPDF_PATH: str = os.getenv("WKHTMLTOPDF_PATH", "/usr/bin/wkhtmltopdf")
     logger.info(f"wkhtmltopdf path configured: {WKHTMLTOPDF_PATH} (exists: {os.path.exists(WKHTMLTOPDF_PATH)})")
     
