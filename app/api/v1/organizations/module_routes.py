@@ -315,28 +315,62 @@ async def delete_organization(
         )
   
     try:
-        # Delete all related data
-        # Delete user_service_roles
-        await db.execute(delete(UserServiceRole).where(UserServiceRole.organization_id == organization_id))
+        # Start transaction - wrap all deletions in a single transaction
+        logger.info(f"Starting organization deletion for org_id={organization_id}, org_name={org.name}")
         
-        # Delete service_role_permissions
-        await db.execute(delete(ServiceRolePermission).where(ServiceRolePermission.organization_id == organization_id))
+        # Delete all related data in proper order to respect foreign key constraints
         
-        # Delete stock
-        await db.execute(delete(Stock).where(Stock.organization_id == organization_id))
+        # 1. Delete user_service_roles (via user relationship)
+        # UserServiceRole doesn't have organization_id, so we need to join through User
+        user_service_role_delete = await db.execute(
+            delete(UserServiceRole)
+            .where(UserServiceRole.user_id.in_(
+                select(User.id).where(User.organization_id == organization_id)
+            ))
+        )
+        logger.info(f"Deleted {user_service_role_delete.rowcount} user_service_roles")
         
-        # Delete products
-        await db.execute(delete(Product).where(Product.organization_id == organization_id))
+        # 2. Delete service_role_permissions
+        role_perm_delete = await db.execute(
+            delete(ServiceRolePermission).where(ServiceRolePermission.organization_id == organization_id)
+        )
+        logger.info(f"Deleted {role_perm_delete.rowcount} service_role_permissions")
         
-        # Delete customers
-        await db.execute(delete(Customer).where(Customer.organization_id == organization_id))
+        # 3. Delete service_roles
+        service_role_delete = await db.execute(
+            delete(ServiceRole).where(ServiceRole.organization_id == organization_id)
+        )
+        logger.info(f"Deleted {service_role_delete.rowcount} service_roles")
         
-        # Delete vendors
-        await db.execute(delete(Vendor).where(Vendor.organization_id == organization_id))
+        # 4. Delete stock
+        stock_delete = await db.execute(
+            delete(Stock).where(Stock.organization_id == organization_id)
+        )
+        logger.info(f"Deleted {stock_delete.rowcount} stock records")
         
-        # Delete users (including auth users)
+        # 5. Delete products
+        product_delete = await db.execute(
+            delete(Product).where(Product.organization_id == organization_id)
+        )
+        logger.info(f"Deleted {product_delete.rowcount} products")
+        
+        # 6. Delete customers
+        customer_delete = await db.execute(
+            delete(Customer).where(Customer.organization_id == organization_id)
+        )
+        logger.info(f"Deleted {customer_delete.rowcount} customers")
+        
+        # 7. Delete vendors
+        vendor_delete = await db.execute(
+            delete(Vendor).where(Vendor.organization_id == organization_id)
+        )
+        logger.info(f"Deleted {vendor_delete.rowcount} vendors")
+        
+        # 8. Delete users (including auth users) - must be done last as other tables reference users
         result = await db.execute(select(User).where(User.organization_id == organization_id))
         users = result.scalars().all()
+        user_count = len(users)
+        
         for user in users:
             if user.supabase_uuid:
                 try:
@@ -347,25 +381,37 @@ async def delete_organization(
                     # Continue deletion even if Supabase fails
             await db.delete(user)
         
-        # Delete service_roles
-        await db.execute(delete(ServiceRole).where(ServiceRole.organization_id == organization_id))
+        logger.info(f"Deleted {user_count} users")
         
-        # Commit deletions
+        # Commit all deletions before deleting the organization itself
         await db.commit()
         
-        # Now delete the organization
+        # 9. Finally delete the organization
         await db.delete(org)
         await db.commit()
         
-        logger.info(f"Deleted organization {org.name} and all related data by user {current_user.email}")
-        return {"message": "Organization and all related data deleted successfully"}
+        logger.info(f"Successfully deleted organization {org.name} (id={organization_id}) and all related data by user {current_user.email}")
+        return {
+            "message": "Organization and all related data deleted successfully",
+            "deleted": {
+                "user_service_roles": user_service_role_delete.rowcount if user_service_role_delete else 0,
+                "service_role_permissions": role_perm_delete.rowcount if role_perm_delete else 0,
+                "service_roles": service_role_delete.rowcount if service_role_delete else 0,
+                "stock": stock_delete.rowcount if stock_delete else 0,
+                "products": product_delete.rowcount if product_delete else 0,
+                "customers": customer_delete.rowcount if customer_delete else 0,
+                "vendors": vendor_delete.rowcount if vendor_delete else 0,
+                "users": user_count,
+                "organization": org.name
+            }
+        }
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error deleting organization and related data: {e}")
+        logger.error(f"Error deleting organization {organization_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error deleting organization and related data"
+            detail=f"Error deleting organization and related data: {str(e)}"
         )
 
 @router.get("/{organization_id:int}/users/{user_id:int}/modules")

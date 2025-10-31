@@ -1,10 +1,12 @@
-import { useState } from "react";
-import axios from "axios";
+import { useState, useRef, useCallback } from "react";
+import api from "../lib/api";
+
 interface PincodeData {
   city: string;
   state: string;
   state_code: string;
 }
+
 interface UsePincodeLookupReturn {
   lookupPincode: (pincode: string) => Promise<PincodeData | null>;
   pincodeData: PincodeData | null;
@@ -12,10 +14,16 @@ interface UsePincodeLookupReturn {
   error: string | null;
   clearData: () => void;
 }
+
 // Session-based cache for pincode lookups
 const pincodeCache = new Map<string, PincodeData>();
+
+// In-flight request tracker to prevent duplicate requests
+const inflightRequests = new Map<string, Promise<PincodeData | null>>();
+
 // Retry utility with exponential backoff
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const retryWithBackoff = async <T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
@@ -41,16 +49,20 @@ const retryWithBackoff = async <T>(
   }
   throw lastError!;
 };
+
 export const usePincodeLookup = (): UsePincodeLookupReturn => {
   const [pincodeData, setPincodeData] = useState<PincodeData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const lookupPincode = async (pincode: string): Promise<PincodeData | null> => {
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const lookupPincode = useCallback(async (pincode: string): Promise<PincodeData | null> => {
     // Validate pincode format
     if (!pincode || !/^\d{6}$/.test(pincode)) {
       setError("Please enter a valid 6-digit PIN code");
       return null;
     }
+
     // Check cache first
     const cachedData = pincodeCache.get(pincode);
     if (cachedData) {
@@ -58,43 +70,84 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
       setError(null);
       return cachedData;
     }
+
+    // Check if there's already a request in flight for this pincode (single-flight pattern)
+    const existingRequest = inflightRequests.get(pincode);
+    if (existingRequest) {
+      console.log(`[PincodeLookup] Reusing in-flight request for ${pincode}`);
+      return existingRequest;
+    }
+
     setLoading(true);
     setError(null);
-    try {
-      // Use retry logic for better reliability
-      const response = await retryWithBackoff(
-        () => axios.get(`/api/v1/pincode/lookup/${pincode}`),
-        3, // 3 retries
-        1000, // 1 second base delay
-      );
-      const data = response.data;
-      setPincodeData(data);
-      // Cache successful lookup for the session
-      pincodeCache.set(pincode, data);
-      return data;
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        setError("PIN code not found. Please enter city and state manually.");
-      } else if (err.response?.status === 503) {
-        setError(
-          "PIN code lookup service is currently unavailable. Please try again later or enter details manually.",
+
+    // Create a new request promise
+    const requestPromise = (async () => {
+      try {
+        // Use retry logic for better reliability with authenticated client
+        const response = await retryWithBackoff(
+          () => api.get(`/pincode/lookup/${pincode}`),
+          3, // 3 retries
+          1000, // 1 second base delay
         );
-      } else {
-        setError("Failed to lookup PIN code. Please enter details manually.");
+        const data = response.data;
+        setPincodeData(data);
+        // Cache successful lookup for the session
+        pincodeCache.set(pincode, data);
+        return data;
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          setError("PIN code not found. Please enter city and state manually.");
+        } else if (err.response?.status === 503) {
+          setError(
+            "PIN code lookup service is currently unavailable. Please try again later or enter details manually.",
+          );
+        } else if (err.response?.status === 401) {
+          setError("Authentication required. Please log in and try again.");
+        } else {
+          setError("Failed to lookup PIN code. Please enter details manually.");
+        }
+        setPincodeData(null);
+        return null;
+      } finally {
+        setLoading(false);
+        // Remove from in-flight tracker
+        inflightRequests.delete(pincode);
       }
-      setPincodeData(null);
-      return null;
-    } finally {
-      setLoading(false);
+    })();
+
+    // Track this request
+    inflightRequests.set(pincode, requestPromise);
+
+    return requestPromise;
+  }, []);
+
+  // Debounced version of lookupPincode
+  const debouncedLookupPincode = useCallback((pincode: string): Promise<PincodeData | null> => {
+    // Clear any existing debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
-  };
+
+    // Return a promise that resolves when the debounced call completes
+    return new Promise((resolve) => {
+      debounceTimerRef.current = setTimeout(() => {
+        lookupPincode(pincode).then(resolve);
+      }, 500); // 500ms debounce
+    });
+  }, [lookupPincode]);
+
   const clearData = () => {
     setPincodeData(null);
     setError(null);
     setLoading(false);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
   };
+
   return {
-    lookupPincode,
+    lookupPincode: debouncedLookupPincode,
     pincodeData,
     loading,
     error,
