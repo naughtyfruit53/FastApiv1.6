@@ -1,11 +1,12 @@
 // frontend/src/pages/dashboard/index.tsx
 
-import React, { useEffect } from "react";
+import React, { useEffect, ReactElement } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "../../context/AuthContext";
 import { useMobileDetection } from "../../hooks/useMobileDetection";  // Added import for mobile detection
 import AppSuperAdminDashboard from "./AppSuperAdminDashboard";
 import OrgDashboard from "./OrgDashboard";
+import { withAppLayout } from "../../components/AppLayout";
 
 const Dashboard: React.FC = () => {
   console.count('Render: Dashboard');
@@ -108,6 +109,11 @@ const Dashboard: React.FC = () => {
       )}
     </div>
   );
+};
+
+// Apply AppLayout to this page
+Dashboard.getLayout = function getLayout(page: ReactElement) {
+  return withAppLayout(page);
 };
 
 export default Dashboard;
