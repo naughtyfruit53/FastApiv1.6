@@ -108,6 +108,8 @@ export function normalizePermissions(backendPermissions: string[]): Set<string> 
   
   // Module-level base access: if user has any permission in a module namespace,
   // grant the base *.view permission for that module
+  // Note: This list should match the module registry in the backend
+  // TODO: Consider deriving this from PERMISSION_ALIASES keys or fetching from backend config
   const moduleNamespaces = [
     'master_data',
     'inventory',

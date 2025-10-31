@@ -35,8 +35,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       )}
       <Box
         sx={{
-          // Add top margin when menu is shown to prevent content overlap
-          mt: shouldShowMenu ? 0 : 0,
           minHeight: '100vh',
         }}
       >

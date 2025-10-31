@@ -41,7 +41,7 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
       return cachedData;
     }
 
-    // Check if there's already an inflight request for this pincode
+    // Check if there's already an inflight request for this pincode (single-flight pattern)
     const existingRequest = inflightRequests.get(pincode);
     if (existingRequest) {
       return existingRequest;
@@ -61,6 +61,13 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
         setPincodeData(data);
         // Cache successful lookup for the session
         pincodeCache.set(pincode, data);
+        
+        // Limit cache size to prevent memory bloat (keep last 100 lookups)
+        if (pincodeCache.size > 100) {
+          const firstKey = pincodeCache.keys().next().value;
+          pincodeCache.delete(firstKey);
+        }
+        
         return data;
       } catch (err: any) {
         let errorMessage = "Failed to lookup PIN code. Please enter details manually.";
@@ -78,12 +85,12 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
         return null;
       } finally {
         setLoading(false);
-        // Clean up inflight request tracking
+        // Clean up inflight request tracking immediately after completion
         inflightRequests.delete(pincode);
       }
     })();
 
-    // Track this request
+    // Track this request to prevent duplicates
     inflightRequests.set(pincode, requestPromise);
     
     return requestPromise;

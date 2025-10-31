@@ -129,7 +129,10 @@ export const useSharedPermissions = () => {
       const normalizedPermArray = Array.from(normalizedPerms);
       
       if (modules.length === 0) {
-        modules = [...new Set(normalizedPermArray.map(p => p.split('.')[0]))];
+        modules = [...new Set(normalizedPermArray.map(p => {
+          const parts = p.split('.');
+          return parts.length > 1 ? parts[0] : p;
+        }))];
       }
       
       return {
