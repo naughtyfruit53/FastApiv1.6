@@ -254,11 +254,6 @@ api.interceptors.response.use(
         error: error.message,
       });
       
-      // Don't show toast for network errors during initial load - components will handle
-      const isNetworkError = error.message.includes('Network Error') || 
-                           error.message.includes('Failed to fetch') ||
-                           error.code === 'ERR_NETWORK';
-      
       return Promise.reject({
         ...error,
         isNetworkError: true,
