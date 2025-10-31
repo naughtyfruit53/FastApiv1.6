@@ -39,7 +39,8 @@ import MobileNav from './MobileNav';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { menuItems, mainMenuSections } from './menuConfig';
 import { useAuth } from '../context/AuthContext';
-import { useSharedPermissions } from '../hooks/useSharedPermissions';
+import { usePermissions } from '../context/PermissionContext';
+import useSharedPermissions from '../hooks/useSharedPermissions';
 
 interface MegaMenuProps {
   user?: any;
@@ -48,8 +49,8 @@ interface MegaMenuProps {
 }
 
 const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true }) => {
-  const { userPermissions: contextUserPermissions } = useAuth();
-  const { hasPermission, hasModuleAccess, hasSubmoduleAccess } = useSharedPermissions();
+  const { hasPermission, permissions: contextUserPermissions } = usePermissions();
+  const { hasModuleAccess, hasSubmoduleAccess } = useSharedPermissions();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -105,7 +106,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   // Query for current user's service permissions
   const { data: userServicePermissions = [] } = useQuery({
     queryKey: ['userServicePermissions'],
-    queryFn: rbacService.getCurrentUserPermissions,
+    queryFn: rbacService.getUserPermissions,
     enabled: !!user && !isAppSuperAdmin(user),
     retry: false,
     staleTime: 0,
@@ -217,31 +218,14 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   const hasServicePermission = (permission: string): boolean => {
     try {
-      return userServicePermissions.includes(permission);
+      return contextUserPermissions.includes(permission);
     } catch {
       return false;
     }
   };
 
   const hasAnyServicePermission = (permissions: string[]): boolean => {
-    return permissions.some((permission) => userServicePermissions.includes(permission));
-  };
-
-  const _canAccessService = (): boolean => {
-    return hasAnyServicePermission([
-      SERVICE_PERMISSIONS.SERVICE_READ,
-      SERVICE_PERMISSIONS.APPOINTMENT_READ,
-      SERVICE_PERMISSIONS.TECHNICIAN_READ,
-      SERVICE_PERMISSIONS.WORK_ORDER_READ,
-    ]);
-  };
-
-  const _canAccessServiceReports = (): boolean => {
-    return hasServicePermission(SERVICE_PERMISSIONS.SERVICE_REPORTS_READ);
-  };
-
-  const _canAccessCRMAdmin = (): boolean => {
-    return hasServicePermission(SERVICE_PERMISSIONS.CRM_ADMIN) || isOrgSuperAdmin(user);
+    return permissions.some((permission) => contextUserPermissions.includes(permission));
   };
 
   const isModuleEnabled = (module: string): boolean => {
@@ -357,14 +341,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             return true;
           }
           
-          // Check RBAC permissions from AuthContext if available
-          if (item.permission && contextUserPermissions) {
-            // Assuming item.permission is in format 'module.action'
+          // Check RBAC permissions if specified
+          if (item.permission) {
             const [module, action] = item.permission.split('.');
-            if (!module || !action) {
-              console.warn(`Invalid permission format for item ${item.name}: ${item.permission}`);
-              return false;
-            }
             if (!hasPermission(module, action)) {
               console.log(`Permission check failed for item ${item.name}: requires ${item.permission}`);
               return false;
@@ -373,7 +352,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           
           // Check module access if specified
           if (item.requireModule) {
-            if (contextUserPermissions && !hasModuleAccess(item.requireModule)) {
+            if (!hasModuleAccess(item.requireModule)) {
               console.log(`Module access check failed for item ${item.name}: requires module ${item.requireModule}`);
               return false;
             }
@@ -385,7 +364,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           }
           
           // Check submodule access if specified
-          if (item.requireSubmodule && contextUserPermissions) {
+          if (item.requireSubmodule) {
             const { module, submodule } = item.requireSubmodule;
             if (!hasSubmoduleAccess(module, submodule)) {
               console.log(`Submodule access check failed for item ${item.name}: requires ${module}.${submodule}`);
@@ -589,7 +568,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                           )}
                           <List dense>
                             {subSection.items.map((item: any, itemIndex: number) => {
-                              const disabled = item.__disabled;
+                              const disabled =
+                                (item.role && !canManageUsers(user)) ||
+                                (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission)));
                               return (
                                 <Tooltip key={itemIndex} title={disabled ? 'You do not have permission. Click Request.' : ''} arrow>
                                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>

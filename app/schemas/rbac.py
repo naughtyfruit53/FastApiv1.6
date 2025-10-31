@@ -248,11 +248,6 @@ class ServiceModule(str, Enum):
     TASK_TIME_LOGS = "task_time_logs"
     TASK_REPORTS = "task_reports"
     
-    # New modules from menuConfig
-    SETTINGS = "settings"  # Added
-    ADMIN = "admin"  # Added
-    EMAIL = "email"  # Added
-    
     @classmethod
     def is_valid(cls, value: str) -> bool:
         """Check if a value is a valid module"""

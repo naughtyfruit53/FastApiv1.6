@@ -52,6 +52,10 @@ class ModuleName(str, Enum):
     PROJECTS = "Projects"
     HR_MANAGEMENT = "HR_Management"
     TASKS_CALENDAR = "Tasks_Calendar"
+    
+    # Additional modules for menu items
+    SETTINGS = "settings"
+    ADMIN = "admin"
 
 
 # Submodule definitions for each module (expanded to match menuConfig.tsx)
@@ -255,22 +259,22 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
     
     # Workflow Module
     ModuleName.WORKFLOW.value: [
-        "workflow_templates",
+        "templates",
         "approval_requests",
-        "workflow_instances",
+        "instances",
         "automation_rules",
-        "workflow_analytics",
+        "analytics",
     ],
     
     # Integration Module
     ModuleName.INTEGRATION.value: [
         "api_keys",
         "webhooks",
-        "external_integrations",
+        "external",
         "data_sync",
         "tally_sync",
         "oauth_clients",
-        "integration_logs",
+        "logs",
     ],
     
     # AI Analytics Module
@@ -280,35 +284,8 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "anomaly_detection",
         "recommendations",
         "automl",
-        "model_explainability",
-        "ai_reports",
-    ],
-    
-    # Streaming Analytics Module
-    ModuleName.STREAMING_ANALYTICS.value: [
-        "real_time_dashboards",
-        "event_streaming",
-        "alerts",
-        "monitoring",
-        "streaming_reports",
-    ],
-    
-    # AB Testing Module
-    ModuleName.AB_TESTING.value: [
-        "experiments",
-        "variants",
-        "metrics",
-        "results_analysis",
-        "ab_reports",
-    ],
-    
-    # Website Agent Module
-    ModuleName.WEBSITE_AGENT.value: [
-        "chatbot_config",
-        "conversations",
-        "knowledge_base",
-        "analytics",
-        "customization",
+        "explainability",
+        "reports",
     ],
     
     # Email Module
@@ -319,7 +296,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "accounts",
         "sync",
         "filters",
-        "email_analytics",
+        "analytics",
     ],
     
     # Calendar Module
@@ -327,7 +304,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "events",
         "meetings",
         "reminders",
-        "calendar_sharing",
+        "sharing",
         "event_types",
     ],
     
@@ -338,164 +315,57 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "boards",
         "sprints",
         "time_logs",
-        "task_reports",
+        "reports",
     ],
     
     # Order Book Module
     ModuleName.ORDER_BOOK.value: [
         "sales_orders",
         "purchase_orders",
-        "order_tracking",
+        "tracking",
         "fulfillment",
-        "order_analytics",
+        "analytics",
     ],
     
     # Exhibition Module
     ModuleName.EXHIBITION.value: [
-        "exhibitions",
+        "events",
         "booths",
         "attendees",
         "leads",
-        "exhibition_analytics",
+        "analytics",
     ],
     
-    # New from menuConfig
-    ModuleName.MASTER_DATA.value: [
-        "vendors",
-        "customers",
-        "employees",
-        "company_details",
-        "products",
-        "categories",
-        "units",
-        "bom",
-        "chart_of_accounts",
-        "tax_codes",
-        "payment_terms",
-        "bank_account",
+    # Settings Module (added)
+    ModuleName.SETTINGS.value: [
+        "general",
+        "company",
+        "voucher",
+        "role_management",
+        "service",
+        "audit_logs",
+        "notification",
+        "user_management",
+        "system_reports",
+        "migration",
+        "ui_testing",
+        "notification_demo",
+        "transport",
+        "assets",
+        "bank_accounts",
     ],
-    ModuleName.VOUCHERS.value: [
-        "purchase_order",
-        "grn",
-        "purchase_voucher",
-        "purchase_return",
-        "quotation",
-        "proforma_invoice",
-        "sales_order",
-        "sales_voucher",
-        "delivery_challan",
-        "sales_return",
-        "payment_voucher",
-        "receipt_voucher",
-        "journal_voucher",
-        "contra_voucher",
-        "credit_note",
-        "debit_note",
-        "non_sales_credit_note",
-        "rfq",
-        "dispatch_details",
-        "inter_department_voucher",
-    ],
-    ModuleName.ACCOUNTING.value: [
-        "chart_of_accounts",
-        "account_groups",
-        "opening_balances",
-        "general_ledger",
-        "journal_entries",
-        "bank_reconciliation",
-        "trial_balance",
-        "profit_loss",
-        "balance_sheet",
-        "cash_flow",
-    ],
-    ModuleName.REPORTS_ANALYTICS.value: [
-        "ledgers",
-        "trial_balance",
-        "profit_loss",
-        "balance_sheet",
-        "stock_report",
-        "valuation_report",
-        "movement_report",
-        "sales_analysis",
-        "purchase_analysis",
-        "vendor_analysis",
-        "customer_analytics",
-        "sales_analytics",
-        "purchase_analytics",
-        "project_analytics",
-        "hr_analytics",
-        "service_dashboard",
-        "job_completion",
-        "technician_performance",
-        "customer_satisfaction",
-        "sla_compliance",
-    ],
-    ModuleName.SALES.value: [
-        "sales_dashboard",
-        "lead_management",
-        "opportunity_tracking",
-        "sales_pipeline",
-        "exhibition_mode",
-        "customer_database",
-        "contact_management",
-        "account_management",
-        "customer_analytics",
-        "quotations",
-        "sales_orders",
-        "commission_tracking",
-        "sales_reports",
-    ],
-    ModuleName.PROJECTS.value: [
-        "all_projects",
-        "project_planning",
-        "resource_management",
-        "document_management",
-        "create_project",
-        "project_analytics",
-        "performance_reports",
-        "resource_utilization",
-        "budget_analysis",
-        "team_dashboard",
-        "time_tracking",
-        "team_documents",
-        "project_chat",
-    ],
-    ModuleName.HR_MANAGEMENT.value: [
-        "employee_directory",
-        "employee_records",
-        "employee_onboarding",
-        "performance_management",
-        "employee_records_archive",
-        "payroll_management",
-        "salary_processing",
-        "benefits_administration",
-        "tax_management",
-        "time_tracking",
-        "leave_management",
-        "attendance_reports",
-        "shift_management",
-        "job_postings",
-        "candidate_management",
-        "interview_scheduling",
-        "hiring_pipeline",
-        "hr_analytics_dashboard",
-    ],
-    ModuleName.TASKS_CALENDAR.value: [
-        "task_dashboard",
-        "my_tasks",
-        "create_task",
-        "task_assignment",
-        "task_templates",
-        "task_reminders",
-        "task_comments",
-        "calendar_dashboard",
-        "calendar_view",
-        "my_events",
-        "create_event",
-        "appointments",
-        "meeting_rooms",
-        "event_reminders",
-        "recurring_events",
+    
+    # Admin Module (added)
+    ModuleName.ADMIN.value: [
+        "dashboard",
+        "user_management",
+        "role_management",
+        "audit_logs",
+        "system_settings",
+        "notifications",
+        "license_management",
+        "organizations",
+        "app_statistics",
     ],
 }
 
