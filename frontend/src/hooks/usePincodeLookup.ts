@@ -1,10 +1,12 @@
-import { useState } from "react";
-import axios from "axios";
+import { useState, useRef } from "react";
+import { apiClient } from "../services/api/client";
+
 interface PincodeData {
   city: string;
   state: string;
   state_code: string;
 }
+
 interface UsePincodeLookupReturn {
   lookupPincode: (pincode: string) => Promise<PincodeData | null>;
   pincodeData: PincodeData | null;
@@ -12,45 +14,25 @@ interface UsePincodeLookupReturn {
   error: string | null;
   clearData: () => void;
 }
+
 // Session-based cache for pincode lookups
 const pincodeCache = new Map<string, PincodeData>();
-// Retry utility with exponential backoff
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-const retryWithBackoff = async <T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelay: number = 1000,
-): Promise<T> => {
-  let lastError: Error;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error: any) {
-      lastError = error;
-      // Don't retry for client errors (4xx) or if it's the last attempt
-      if (error.response?.status >= 400 && error.response?.status < 500) {
-        throw error;
-      }
-      if (attempt === maxRetries) {
-        throw error;
-      }
-      // Exponential backoff: 1s, 2s, 4s
-      const delay = baseDelay * Math.pow(2, attempt);
-      await sleep(delay);
-    }
-  }
-  throw lastError!;
-};
+
+// Single-flight map to prevent duplicate concurrent requests
+const inflightRequests = new Map<string, Promise<PincodeData | null>>();
 export const usePincodeLookup = (): UsePincodeLookupReturn => {
   const [pincodeData, setPincodeData] = useState<PincodeData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const lookupPincode = async (pincode: string): Promise<PincodeData | null> => {
     // Validate pincode format
     if (!pincode || !/^\d{6}$/.test(pincode)) {
       setError("Please enter a valid 6-digit PIN code");
       return null;
     }
+
     // Check cache first
     const cachedData = pincodeCache.get(pincode);
     if (cachedData) {
@@ -58,41 +40,66 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
       setError(null);
       return cachedData;
     }
+
+    // Check if there's already an inflight request for this pincode
+    const existingRequest = inflightRequests.get(pincode);
+    if (existingRequest) {
+      return existingRequest;
+    }
+
     setLoading(true);
     setError(null);
-    try {
-      // Use retry logic for better reliability
-      const response = await retryWithBackoff(
-        () => axios.get(`/api/v1/pincode/lookup/${pincode}`),
-        3, // 3 retries
-        1000, // 1 second base delay
-      );
-      const data = response.data;
-      setPincodeData(data);
-      // Cache successful lookup for the session
-      pincodeCache.set(pincode, data);
-      return data;
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        setError("PIN code not found. Please enter city and state manually.");
-      } else if (err.response?.status === 503) {
-        setError(
-          "PIN code lookup service is currently unavailable. Please try again later or enter details manually.",
-        );
-      } else {
-        setError("Failed to lookup PIN code. Please enter details manually.");
+
+    // Create the request promise
+    const requestPromise = (async () => {
+      try {
+        // Use the centralized apiClient with auth support
+        // Note: Backend endpoint is now public, so this will work without auth too
+        const response = await apiClient.get<PincodeData>(`/pincode/lookup/${pincode}`);
+        const data = response.data;
+        
+        setPincodeData(data);
+        // Cache successful lookup for the session
+        pincodeCache.set(pincode, data);
+        return data;
+      } catch (err: any) {
+        let errorMessage = "Failed to lookup PIN code. Please enter details manually.";
+        
+        if (err.response?.status === 404) {
+          errorMessage = "PIN code not found. Please enter city and state manually.";
+        } else if (err.response?.status === 503) {
+          errorMessage = "PIN code lookup service is currently unavailable. Please try again later or enter details manually.";
+        } else if (err.response?.status === 401) {
+          errorMessage = "Authentication required. Please try again after logging in.";
+        }
+        
+        setError(errorMessage);
+        setPincodeData(null);
+        return null;
+      } finally {
+        setLoading(false);
+        // Clean up inflight request tracking
+        inflightRequests.delete(pincode);
       }
-      setPincodeData(null);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    })();
+
+    // Track this request
+    inflightRequests.set(pincode, requestPromise);
+    
+    return requestPromise;
   };
+
   const clearData = () => {
     setPincodeData(null);
     setError(null);
     setLoading(false);
+    // Clear any pending debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
   };
+
   return {
     lookupPincode,
     pincodeData,

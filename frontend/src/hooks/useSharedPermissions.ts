@@ -1,6 +1,7 @@
 // frontend/src/hooks/useSharedPermissions.ts
 import { useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { normalizePermissions, hasPermission as checkPermissionWithAliases } from '../utils/permissionNormalizer';
 
 export interface Permission {
   module: string;
@@ -122,14 +123,20 @@ export const useSharedPermissions = () => {
     if (contextPermissions) {
       let modules = contextPermissions.modules || [];
       let submodules = contextPermissions.submodules || {};
+      
+      // Normalize permissions to handle backend/frontend key mismatches
+      const normalizedPerms = normalizePermissions(contextPermissions.permissions);
+      const normalizedPermArray = Array.from(normalizedPerms);
+      
       if (modules.length === 0) {
-        modules = [...new Set(contextPermissions.permissions.map(p => p.split('_')[0]))];
+        modules = [...new Set(normalizedPermArray.map(p => p.split('.')[0]))];
       }
+      
       return {
         isSuperAdmin,
         isOrgSuperAdmin,
         role: contextPermissions.role || user.role || 'user',
-        permissions: contextPermissions.permissions,
+        permissions: normalizedPermArray,
         modules,
         submodules,
       };
@@ -307,8 +314,8 @@ export const useSharedPermissions = () => {
     // Super admin has all permissions
     if (userPermissions.isSuperAdmin) return true;
 
-    // Check exact permission match
-    if (userPermissions.permissions.includes(permission)) return true;
+    // Use the normalization helper to check permission with aliases
+    if (checkPermissionWithAliases(userPermissions.permissions, permission)) return true;
 
     // Check wildcard permissions (e.g., 'finance.*' matches 'finance.view')
     const wildcardPermissions = userPermissions.permissions.filter(p => p.endsWith('.*'));
