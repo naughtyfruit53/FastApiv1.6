@@ -21,19 +21,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   actions,
   maxWidth = "lg",
   className = "",
-  showMegaMenu = true,
+  showMegaMenu = true, // Deprecated: MegaMenu is now globally mounted in AppLayout
 }) => {
   const { user, logout } = useAuth();
 
   return (
     <>
-      {showMegaMenu && (
-        <MegaMenu
-          user={user}
-          onLogout={logout}
-          isVisible={true}
-        />
-      )}
+      {/* MegaMenu is now globally mounted in AppLayout (_app.tsx) */}
+      {/* Keeping this for backward compatibility, but it won't render if already shown globally */}
       <Box
         className={`modern-dashboard ${className}`}
         sx={{
@@ -49,7 +44,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               transform: "translateY(0)",
             },
           },
-          mt: showMegaMenu ? 2 : 0,
+          mt: 2,
         }}
       >
         <Container maxWidth={maxWidth} className="modern-dashboard-container">
