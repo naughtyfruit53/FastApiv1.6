@@ -323,3 +323,9 @@ async def get_organization_users(
     result = await db.execute(stmt.offset(skip).limit(limit))
     users = result.scalars().all()
     return users
+
+# Added dependency for super admin check
+async def get_current_super_admin(current_user: User = Depends(get_current_active_user)):
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient privileges - Super Admin required")
+    return current_user

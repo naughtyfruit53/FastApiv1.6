@@ -105,7 +105,6 @@ class RBACService:
                 permission = result.scalars().first()
                 if permission:
                     role_permission = RolePermission(
-                        organization_id=role.organization_id,
                         role_id=db_role.id,
                         permission_id=permission_id
                     )
@@ -175,7 +174,6 @@ class RBACService:
                 
                 if permission:
                     role_permission = RolePermission(
-                        organization_id=db_role.organization_id,
                         role_id=role_id,
                         permission_id=permission_id
                     )

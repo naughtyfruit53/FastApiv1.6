@@ -1,7 +1,7 @@
 # app/api/v1/auth.py
 
 import logging
-from typing import Optional, Union
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +23,7 @@ from app.core.audit import create_audit_log
 from app.models.user_models import User, PlatformUser
 from app.schemas.user import UserResponse, Token, EmailLogin, LoginResponse, PlatformUserInDB, UserInDB
 from app.core.config import settings
+from app.services.otp_service import OTPService
 from pydantic import BaseModel, EmailStr
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,24 @@ async def login(
     # Merge the user into the current session to attach it properly
     if user:
         user = await db.merge(user)
+
+    # Check if password is 6-digit OTP (for admin reset flow)
+    if len(password) == 6 and password.isdigit():
+        otp_service = OTPService(db)
+        otp_valid, _ = await otp_service.verify_otp(email, password, "admin_password_reset")
+        if otp_valid:
+            # OTP valid - force password change on success
+            user.force_password_reset = True
+            user.must_change_password = True
+            await db.commit()
+            # Proceed to login with OTP as temp auth
+        else:
+            logger.info(f"[LOGIN:FAILED] Invalid OTP for {email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid OTP",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     if not user or not verify_password(password, user.hashed_password):
         logger.info(f"[LOGIN:FAILED] Email: {email}")
@@ -330,11 +349,8 @@ async def get_current_user_optional(token: str = Depends(oauth2_scheme), db: Asy
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    payload = verify_token(token)
-    if not payload:
-        raise credentials_exception
-    email: str = payload.get("sub")
-    if email is None:
+    email, organization_id, user_role, user_type = verify_token(token)
+    if not email:
         raise credentials_exception
     user = await execute_with_retry(fetch_user, email=email)
     if user is None:

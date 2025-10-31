@@ -73,7 +73,9 @@ class OrganizationService:
         total_storage_used_gb = total_licenses * 0.5
         average_users_per_org = round(total_users / total_licenses) if total_licenses > 0 else 0
         
-        result = await db.execute(select(func.sum(User.failed_login_attempts)))
+        total_storage_used_gb = total_licenses * 0.5
+        average_users_per_org = round(total_users / total_licenses) if total_licenses > 0 else 0
+        
         failed_login_attempts = result.scalar_one() or 0
         
         seven_days_ago = datetime.utcnow() - timedelta(days=7)
@@ -191,7 +193,7 @@ class OrganizationService:
             if existing_user:
                 raise HTTPException(status_code=400, detail="Email already registered in the system. Please use a different email.")
             
-            subdomain = license_data.subdomain or generate_subdomain(license_data.organization_name)
+            subdomain = getattr(license_data, 'subdomain', None) or generate_subdomain(license_data.organization_name)
             result = await db.execute(select(Organization).filter_by(subdomain=subdomain))
             if result.scalars().first():
                 raise HTTPException(status_code=400, detail=f"Subdomain '{subdomain}' is already in use")
@@ -309,7 +311,7 @@ class OrganizationService:
             )
             
             if not success:
-                logger.warning(f"Failed to send license creation email: {error}")
+                raise HTTPException(status_code=500, detail=f"License created but email failed: {error}")
             
             return OrganizationLicenseResponse(
                 license_type=organization.license_type,

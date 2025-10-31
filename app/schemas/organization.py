@@ -82,9 +82,9 @@ class OrganizationInDB(OrganizationBase):
 
 
 class OrganizationLicenseCreate(BaseModel):
-    license_type: str = Field(..., max_length=50)
+    license_type: str = Field("trial", max_length=50)
     license_duration_months: Optional[int] = None
-    organization_id: int
+    organization_id: Optional[int] = None
     superadmin_email: str = Field(..., max_length=255)
     primary_phone: str = Field(..., max_length=20)
     address1: str = Field(..., max_length=255)
@@ -95,6 +95,7 @@ class OrganizationLicenseCreate(BaseModel):
     organization_name: str = Field(..., max_length=100)
     max_users: int = Field(..., ge=1)
     enabled_modules: Optional[Dict] = None
+    state_code: str = Field(..., max_length=10)
 
 
 class OrganizationLicenseResponse(BaseModel):

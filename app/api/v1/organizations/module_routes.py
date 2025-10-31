@@ -316,11 +316,23 @@ async def delete_organization(
   
     try:
         # Delete all related data
-        # Delete user_service_roles
-        await db.execute(delete(UserServiceRole).where(UserServiceRole.organization_id == organization_id))
+        # Delete user_service_roles using subquery for roles in this organization
+        await db.execute(
+            delete(UserServiceRole).where(
+                UserServiceRole.role_id.in_(
+                    select(ServiceRole.id).where(ServiceRole.organization_id == organization_id)
+                )
+            )
+        )
         
-        # Delete service_role_permissions
-        await db.execute(delete(ServiceRolePermission).where(ServiceRolePermission.organization_id == organization_id))
+        # Delete service_role_permissions using subquery for roles in this organization
+        await db.execute(
+            delete(ServiceRolePermission).where(
+                ServiceRolePermission.role_id.in_(
+                    select(ServiceRole.id).where(ServiceRole.organization_id == organization_id)
+                )
+            )
+        )
         
         # Delete stock
         await db.execute(delete(Stock).where(Stock.organization_id == organization_id))

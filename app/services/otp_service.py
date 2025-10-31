@@ -31,7 +31,8 @@ class OTPService:
             otp_hash = get_password_hash(otp)
             
             # Create OTP verification record
-            expiry = datetime.utcnow() + timedelta(minutes=10)  # Extended to 10 minutes for WhatsApp
+            expiry_minutes = 30 if purpose in ["password_reset", "admin_password_reset"] else 10  # Extended for resets
+            expiry = datetime.utcnow() + timedelta(minutes=expiry_minutes)
             otp_verification = OTPVerification(
                 email=email,
                 otp_hash=otp_hash,
@@ -55,9 +56,9 @@ class OTPService:
                         delivery_method_used = "whatsapp"
                         logger.info(f"OTP sent via WhatsApp to {phone_number} for {purpose}")
                     else:
-                        logger.warning(f"WhatsApp delivery failed for {phone_number}: {error}")
+                        logger.warning(f"⚠️ WhatsApp delivery failed for {phone_number}: {error}")
                 else:
-                    logger.warning("WhatsApp service not available")
+                    logger.warning("⚠️ WhatsApp service not available")
             
             # Fallback to email if WhatsApp failed or not requested
             if not delivery_success:
@@ -67,9 +68,9 @@ class OTPService:
                 if success:
                     delivery_success = True
                     delivery_method_used = "email"
-                    logger.info(f"OTP sent via email to {email} for {purpose}")
+                    logger.info(f"✅ OTP sent via email to {email} for {purpose}")
                 else:
-                    logger.error(f"Failed to send OTP via email to {email} for {purpose}")
+                    logger.error(f"❌ Failed to send OTP via email to {email} for {purpose}")
             
             if not delivery_success:
                 await self.db.rollback()
@@ -83,7 +84,7 @@ class OTPService:
             
         except Exception as e:
             await self.db.rollback()
-            logger.error(f"Failed to generate OTP for {email}: {e}")
+            logger.error(f"❌ Failed to generate OTP for {email}: {e}")
             return False, None
     
     async def verify_otp(self, email: str, otp: str, purpose: str = "login", return_data: bool = False) -> Union[bool, Tuple[bool, Dict[str, Any]]]:
@@ -100,7 +101,7 @@ class OTPService:
             )).scalars().first()
             
             if not otp_record:
-                logger.warning(f"No valid OTP found for {email} ({purpose})")
+                logger.warning(f"⚠️ No valid OTP found for {email} ({purpose})")
                 return False if not return_data else (False, {})
             
             # Verify hashed OTP
@@ -109,7 +110,7 @@ class OTPService:
                 if otp_record.attempts >= otp_record.max_attempts:
                     otp_record.is_used = True  # Mark as used after max attempts
                 await self.db.commit()
-                logger.warning(f"Invalid OTP attempt for {email} ({purpose}), attempts: {otp_record.attempts}")
+                logger.warning(f"⚠️ Invalid OTP attempt for {email} ({purpose}), attempts: {otp_record.attempts}")
                 return False if not return_data else (False, {})
             
             # Mark as used
@@ -117,9 +118,9 @@ class OTPService:
             otp_record.used_at = datetime.utcnow()
             await self.db.commit()
             
-            logger.info(f"OTP verified successfully for {email} ({purpose})")
+            logger.info(f"✅ OTP verified successfully for {email} ({purpose})")
             return True if not return_data else (True, {})
             
         except Exception as e:
-            logger.error(f"Failed to verify OTP for {email}: {e}")
+            logger.error(f"❌ Failed to verify OTP for {email}: {e}")
             return False if not return_data else (False, {})

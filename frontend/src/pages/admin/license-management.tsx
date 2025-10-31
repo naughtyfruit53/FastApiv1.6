@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/license-management.tsx
+
 'use client';
 import React, { useState } from 'react';
 import {
@@ -50,10 +52,16 @@ const LicenseManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { user } = useAuth();
+
+  // API calls using real service
+  const { data: organizations, isLoading } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: organizationService.getAllOrganizations,
+    enabled: !!user?.is_super_admin && !user?.organization_id
+  });
 
   // Restrict to app-level accounts only (super admins without organization)
-  const { user } = useAuth();
-  
   if (!user?.is_super_admin || user?.organization_id) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -73,12 +81,6 @@ const LicenseManagement: React.FC = () => {
       </Container>
     );
   }
-
-  // API calls using real service
-  const { data: organizations, isLoading } = useQuery({
-    queryKey: ['organizations'],
-    queryFn: organizationService.getAllOrganizations
-  });
 
   const handleCreateLicense = () => {
     // License creation is handled by the modal

@@ -78,7 +78,7 @@ export const authService = {
         console.log("[AuthService] Stored refresh token");
       }
       if (response.data.user_role) {
-        localStorage.setItem(USER_ROLE_KEY, response.data.user_role);
+        localStorage.set_item(USER_ROLE_KEY, response.data.user_role);
         console.log("[AuthService] Stored user_role:", response.data.user_role);
       }
       localStorage.setItem(
@@ -468,7 +468,7 @@ export const masterDataService = {
   },
   updateStock: async (productId: number, data: any) => {
     try {
-      const response = await api.put(`/stock/product/${productId}`, data);
+      const response = await api.put(`/stock/product/product/${productId}`, data);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || "Failed to update stock");
@@ -964,6 +964,14 @@ export const passwordService = {
       throw new Error(error.userMessage || "Failed to reset password");
     }
   },
+  adminResetPassword: async (userEmail: string) => {
+    try {
+      const response = await api.post("/password/admin-reset", { user_email: userEmail });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to initiate admin password reset");
+    }
+  }
 };
 export const userService = {
   // Organization user management (for org admins)
