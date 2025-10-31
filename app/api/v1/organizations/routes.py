@@ -1,9 +1,9 @@
 # app/api/v1/organizations/routes.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
-from typing import List, Any
+from typing import List, Any, Optional
 from datetime import datetime
 import logging
 
@@ -64,6 +64,7 @@ async def list_organizations(
 
 @router.get("/current", response_model=OrganizationInDB)
 async def get_current_organization(
+    ts: Optional[str] = Query(None, description="Timestamp for cache busting"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):

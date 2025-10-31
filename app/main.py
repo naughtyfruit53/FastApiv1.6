@@ -31,6 +31,19 @@ class ForceCORSMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next):
         origin = request.headers.get("origin")
+
+        # Handle OPTIONS preflight requests early to avoid route dependencies
+        if request.method == "OPTIONS":
+            if origin and origin in self.allowed_origins:
+                headers = {
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Methods": request.headers.get("access-control-request-method", "*"),
+                    "Access-Control-Allow-Headers": request.headers.get("access-control-request-headers", "*"),
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Max-Age": "86400",  # Cache preflight for 24 hours
+                    "Vary": "Origin",
+                }
+                return JSONResponse(status_code=200, content={}, headers=headers)
         
         # Process the request
         try:
@@ -49,6 +62,7 @@ class ForceCORSMiddleware(BaseHTTPMiddleware):
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "*"
             response.headers["Access-Control-Allow-Headers"] = "*"
+            response.headers["Vary"] = "Origin"
         
         return response
 
@@ -223,8 +237,13 @@ async def global_exception_handler(request: Request, exc: Exception):
     
     # Add CORS headers if origin is in allowed list
     if origin and origin in origins:
-        headers["Access-Control-Allow-Origin"] = origin
-        headers["Access-Control-Allow-Credentials"] = "true"
+        headers = {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": request.headers.get("access-control-request-headers", "*"),
+            "Vary": "Origin",
+        }
     
     return JSONResponse(
         status_code=500,

@@ -246,8 +246,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   const isModuleEnabled = (module: string): boolean => {
     if (isSuperAdmin) return true;
-    const enabled = organizationData?.enabled_modules?.[module] ?? true;
-    console.log(`Module check - ${module}:`, enabled, {
+    const normalizedModule = module.toUpperCase();
+    const enabled = organizationData?.enabled_modules?.[normalizedModule] ?? true;
+    console.log(`Module check - ${module} (normalized: ${normalizedModule}):`, enabled, {
       allModules: organizationData?.enabled_modules,
       timestamp: new Date().toISOString(),
     });
@@ -358,8 +359,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           
           // Check RBAC permissions from AuthContext if available
           if (item.permission && contextUserPermissions) {
-            // Check if user has the required permission
-            if (!hasPermission(item.permission)) {
+            // Assuming item.permission is in format 'module.action'
+            const [module, action] = item.permission.split('.');
+            if (!module || !action) {
+              console.warn(`Invalid permission format for item ${item.name}: ${item.permission}`);
+              return false;
+            }
+            if (!hasPermission(module, action)) {
               console.log(`Permission check failed for item ${item.name}: requires ${item.permission}`);
               return false;
             }
@@ -760,7 +766,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               <Button
                 color="inherit"
                 startIcon={<MenuIcon />}
-                endIcon={<ExpandMore />}
                 endIcon={<ExpandMore />}
                 onClick={(e) => handleMenuClick(e, 'menu')}
                 className="modern-menu-button"

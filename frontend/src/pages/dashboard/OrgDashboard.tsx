@@ -327,15 +327,25 @@ const OrgDashboard: React.FC = () => {
                   <ListItemText
                     primary={activity.title}
                     secondary={
-                      <Box>
-                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                      <React.Fragment>
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          sx={{ display: 'block', mb: 0.5 }}
+                          color="text.primary"
+                        >
                           {activity.description}
                         </Typography>
-                        <Typography variant="caption" color="textSecondary">
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          sx={{ display: 'block' }}
+                          color="text.secondary"
+                        >
                           {activityService.formatActivityTime(activity.timestamp)}
                           {activity.user_name && ` • by ${activity.user_name}`}
                         </Typography>
-                      </Box>
+                      </React.Fragment>
                     }
                   />
                 </ListItem>

@@ -136,8 +136,13 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
       return true;
     }
     
-    const requiredPermission = `${module}_${action}`;
-    return permissions.includes(requiredPermission);
+    const permUnderscore = `${module}_${action}`;
+    const permColon = `${module}:${action}`;
+    const hasPerm = permissions.includes(permUnderscore) || permissions.includes(permColon);
+    
+    console.log(`Checking permission: ${permUnderscore} or ${permColon} - Result: ${hasPerm}`);
+    
+    return hasPerm;
   }, [permissions, isSuperAdmin]);
 
   /**
@@ -151,8 +156,12 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
       return true;
     }
     
-    return permissionList.some(permission => permissions.includes(permission));
-  }, [permissions, isSuperAdmin]);
+    return permissionList.some(permission => {
+      // Support both formats in list
+      const [module, action] = permission.split(/[_:]/); // split on _ or :
+      return hasPermission(module, action);
+    });
+  }, [hasPermission, isSuperAdmin]);
 
   /**
    * Check if user has all of the specified permissions
@@ -165,8 +174,11 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
       return true;
     }
     
-    return permissionList.every(permission => permissions.includes(permission));
-  }, [permissions, isSuperAdmin]);
+    return permissionList.every(permission => {
+      const [module, action] = permission.split(/[_:]/);
+      return hasPermission(module, action);
+    });
+  }, [hasPermission, isSuperAdmin]);
 
   /**
    * Manually refresh permissions

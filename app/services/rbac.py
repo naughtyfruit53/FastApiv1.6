@@ -360,27 +360,11 @@ class RBACService:
         user = user_result.scalars().first()
         
         permissions = set()
-        if user and (user.is_super_admin or user.role == "super_admin"):
-            # Grant all active permissions to super admins
+        if user and (user.is_super_admin or user.role in ["super_admin", "org_admin"]):
+            # Grant all active permissions to super admins and org admins
             result = await self.db.execute(select(Permission.name).where(Permission.is_active == True))
             permissions.update({row[0] for row in result.fetchall()})
-            logger.debug(f"Granted all permissions to super admin user {user_id}")
-        elif user and user.role in ['org_admin', 'management']:
-            logger.debug(f"Adding org_admin/management fallback permissions for user {user_id}")
-            fallback_result = await self.db.execute(
-                select(Permission.name).where(
-                    or_(
-                        Permission.name.like('crm_%'),
-                        Permission.name == 'crm_admin',
-                        Permission.name.like('mail:%'),
-                        Permission.name.in_(['crm_commission_read', 'crm_commission_create', 
-                                                  'crm_commission_update', 'crm_commission_delete'])
-                    ),
-                    Permission.is_active == True
-                )
-            )
-            permissions.update({row[0] for row in fallback_result.fetchall()})
-            logger.debug(f"Fallback permissions: {permissions}")
+            logger.debug(f"Granted all permissions to user {user_id} due to role {user.role}")
         
         result = await self.db.execute(
             select(Permission.name)

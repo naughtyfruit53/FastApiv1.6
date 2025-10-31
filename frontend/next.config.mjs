@@ -1,5 +1,3 @@
-import path from "path";
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -7,7 +5,7 @@ const nextConfig = {
     reactCompiler: false,
   },
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "https://fastapiv16-production.up.railway.app",
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
     NEXT_PUBLIC_SNAPPYMAIL_URL: process.env.NEXT_PUBLIC_SNAPPYMAIL_URL || "http://localhost:8888",
   },
   transpilePackages: ["@mui/x-data-grid"],
@@ -21,14 +19,8 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  webpack(config) {
-    config.resolve.alias["@services"] = path.join(process.cwd(), "src/services");
-    config.resolve.alias["@lib"] = path.join(process.cwd(), "src/lib");
-    return config;
-  },
-
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://fastapiv16-production.up.railway.app";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     return [
       {
         source: '/api/customers',

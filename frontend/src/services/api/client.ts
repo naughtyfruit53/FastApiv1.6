@@ -29,7 +29,7 @@ class ApiClient {
   }> = [];
 
   constructor() {
-    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+    const baseURL = '/api/v1';  // Use proxy path for all API calls
     const isDev = process.env.NODE_ENV === 'development';
 
     this.client = axios.create({
@@ -38,7 +38,7 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
-      withCredentials: true, // Enable sending cookies with cross-origin requests
+      withCredentials: false, // Changed to false to avoid credential issues with CORS
     });
 
     // Configure retry logic for transient failures
@@ -150,7 +150,7 @@ class ApiClient {
               let refreshUrl: string;
               try {
                 // Try to construct as absolute URL
-                refreshUrl = new URL('/api/v1/auth/refresh-token', baseURL).toString();
+                refreshUrl = new URL('/auth/refresh-token', baseURL).toString();
               } catch {
                 // If baseURL is relative, construct manually
                 refreshUrl = `${baseURL.replace(/\/+$/, '')}/auth/refresh-token`;
@@ -173,7 +173,7 @@ class ApiClient {
                 this.isRefreshing = false;
 
                 // Update original request with new token
-                if (originalRequest.headers) {
+                if (originalRequest.headers && access_token) {
                   originalRequest.headers.Authorization = `Bearer ${access_token}`;
                 }
                 

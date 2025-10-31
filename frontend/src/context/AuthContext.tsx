@@ -531,6 +531,8 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       "[AuthProvider] Stored is_super_admin:",
       loginResponse.user?.is_super_admin,
     );
+    // Clear any OTP-related fields
+    console.log("[AuthProvider] Clearing OTP-related fields");
     // Defensive: never store org_id in localStorage
     const userData = loginResponse.user;
     // Validate org context for regular users
@@ -547,11 +549,14 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       email: userData.email,
       role: userData.role,
       is_super_admin: userData.is_super_admin,
-      organization_id: userData.organization_id,
-      must_change_password: userData.must_change_password,
+      organization_id: loginResponse.organization_id, // note: it's from loginResponse, not user
+      must_change_password: loginResponse.must_change_password,
     };
     setUser(newUser);
     console.log("[AuthProvider] User state set from login response");
+
+    // Verify session immediately after setting token and user
+    await refreshUser();
     
     // Fetch user permissions
     await fetchUserPermissions(userData.id);
