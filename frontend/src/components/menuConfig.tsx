@@ -60,7 +60,7 @@ import {
   CloudUpload,
   SupervisorAccount,
   History,
-  MenuIcon,
+  Menu as MenuIcon,
   BugReport,
   NotificationsActive,
   LocalShipping as TransportIcon,
