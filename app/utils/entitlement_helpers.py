@@ -21,7 +21,7 @@ def normalize_enabled_modules(enabled_modules: Optional[Dict[str, Any]]) -> Dict
         A normalized dict with lowercase keys and boolean values
         
     Example:
-        >>> normalize_enabled_modules({"CRM": true, "ERP": "true", "Manufacturing": 1})
+        >>> normalize_enabled_modules({"CRM": True, "ERP": "true", "Manufacturing": 1})
         {"crm": True, "erp": True, "manufacturing": True}
     """
     if not enabled_modules:
