@@ -346,9 +346,9 @@ async def get_role_permissions(
                 "id": p.id,
                 "name": p.name,
                 "display_name": p.display_name,
-                "description": p.description,
-                "module": p.module,
-                "action": p.action
+                "description": p.description if hasattr(p, 'description') else None,
+                "module": p.module if hasattr(p, 'module') else None,
+                "action": p.action if hasattr(p, 'action') else None
             }
             for p in permissions
         ]

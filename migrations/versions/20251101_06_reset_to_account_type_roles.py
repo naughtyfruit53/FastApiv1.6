@@ -152,6 +152,7 @@ def upgrade():
                 print(f"Org {org_id}: Created role '{role_def['name']}'")
     
     # Mark legacy roles as inactive (but don't delete to preserve historical data)
+    deprecated_roles = []
     if LEGACY_ROLES:
         legacy_roles_str = "', '".join(LEGACY_ROLES)
         if has_updated_at:
