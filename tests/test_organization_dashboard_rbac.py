@@ -309,8 +309,12 @@ class TestOrganizationDashboardAccess:
         
         # Super admin should either succeed or get a different error (not permission denied)
         # Might get 400 for missing org context, but not 403 for permissions
-        assert response.status_code != 403 or "permission" not in response.json().get("detail", "").lower(), \
-            f"Super admin should not get permission denied: {response.text}"
+        if response.status_code == 403:
+            # If it's a 403, make sure it's not a permission error
+            detail = response.json().get("detail", "")
+            detail_str = str(detail).lower() if detail else ""
+            assert "permission" not in detail_str, \
+                f"Super admin should not get permission denied: {response.text}"
 
 
 class TestOrganizationCreationAutoSeeding:
