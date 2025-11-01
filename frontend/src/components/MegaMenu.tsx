@@ -35,14 +35,12 @@ import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
 import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers } from '../types/user.types';
 import { useQuery } from '@tanstack/react-query';
-import { rbacService, SERVICE_PERMISSIONS } from '../services/rbacService';
+import { rbacService } from '../services/rbacService';
 import { organizationService } from '../services/organizationService';
 import MobileNav from './MobileNav';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { menuItems, mainMenuSections } from './menuConfig';
-import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionContext';
-import useSharedPermissions from '../hooks/useSharedPermissions';
 import { useEntitlements } from '../hooks/useEntitlements';
 import { evalMenuItemAccess, getMenuItemBadge, getMenuItemTooltip } from '../permissions/menuAccess';
 
@@ -54,7 +52,6 @@ interface MegaMenuProps {
 
 const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true }) => {
   const { hasPermission, permissions: contextUserPermissions } = usePermissions();
-  const { hasModuleAccess, hasSubmoduleAccess } = useSharedPermissions();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -108,7 +105,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   });
 
   // Query for current user's service permissions
-  const { data: userServicePermissions = [] } = useQuery({
+  const { data: _userServicePermissions = [] } = useQuery({
     queryKey: ['userServicePermissions'],
     queryFn: rbacService.getUserPermissions,
     enabled: !!user && !isAppSuperAdmin(user),
@@ -125,7 +122,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   // Fetch entitlements for menu access control
   const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-  const { entitlements, isLoading: entitlementsLoading } = useEntitlements(
+  const { entitlements } = useEntitlements(
     organizationData?.id,
     authToken || undefined
   );
@@ -236,9 +233,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     }
   };
 
-  const hasAnyServicePermission = (permissions: string[]): boolean => {
-    return permissions.some((permission) => contextUserPermissions.includes(permission));
-  };
+  // Removed unused function hasAnyServicePermission
 
   const isModuleEnabled = (module: string): boolean => {
     if (isSuperAdmin) return true;
@@ -449,7 +444,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             ...subSection,
             items: filterMenuItems(subSection),
           }))
-          .filter((subSection: any) => true); // Keep all subsections visible, even if no items
+          .filter(() => true); // Keep all subsections visible, even if no items
 
         return {
           ...section,
@@ -457,7 +452,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           hasDirectPath: hasDirectPath,
         };
       })
-      .filter((section: any) => true); // Keep all sections visible
+      .filter(() => true); // Keep all sections visible
 
     if (filteredSections.length === 0) {
       console.warn(`No items in submenu for ${activeMenu} - user may not have required permissions or modules enabled`);

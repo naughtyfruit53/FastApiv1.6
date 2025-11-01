@@ -17,7 +17,6 @@ import {
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   MODULE_BUNDLES,
-  getBundleModules,
   getSelectedBundlesFromModules,
   computeModuleChanges,
 } from '../config/moduleBundleMap';
