@@ -18,14 +18,19 @@ from app.models.user_models import User
 
 logger = logging.getLogger(__name__)
 
+# Role constants for type safety
+ROLE_SUPER_ADMIN = "super_admin"
+ROLE_ORG_ADMIN = "org_admin"
+
 # Always-on modules (skip entitlement check)
 ALWAYS_ON_MODULES = {'email'}
 
 # RBAC-only modules (non-billable, skip entitlement check)
 RBAC_ONLY_MODULES = {'settings', 'admin', 'administration'}
 
-# Feature flag for entitlements gating (set to True to enable enforcement)
-ENABLE_ENTITLEMENTS_GATING = True
+# Feature flag for entitlements gating (can be overridden via environment variable)
+import os
+ENABLE_ENTITLEMENTS_GATING = os.getenv('ENABLE_ENTITLEMENTS_GATING', 'true').lower() == 'true'
 
 
 class EntitlementDeniedError(HTTPException):
@@ -132,7 +137,7 @@ def require_entitlement(
             return
         
         # Exception 3: Super Admin bypass
-        if allow_super_admin_bypass and current_user.role == "super_admin":
+        if allow_super_admin_bypass and current_user.role == ROLE_SUPER_ADMIN:
             if audit_bypass:
                 logger.info(
                     f"Super admin {current_user.email} (ID: {current_user.id}) "
@@ -209,7 +214,7 @@ async def check_entitlement_access(
         return True, 'enabled', 'RBAC-only module'
     
     # Exception 3: Super Admin bypass
-    if user and allow_super_admin_bypass and user.role == "super_admin":
+    if user and allow_super_admin_bypass and user.role == ROLE_SUPER_ADMIN:
         return True, 'enabled', 'Super admin bypass'
     
     # Check entitlement
