@@ -20,7 +20,6 @@ import {
   Menu,
   MenuItem,
   Chip,
-  Lock as LockIcon,
 } from '@mui/material';
 import {
   Settings,
@@ -30,6 +29,7 @@ import {
   Menu as MenuIcon,
   Search as SearchIcon,
   Email,
+  Lock as LockIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
@@ -628,7 +628,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                                     >
                                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         {disabled && isAdminLike && <LockIcon fontSize="small" color="disabled" />}
-                                        <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
+                                        {item.icon && <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>}
                                         <ListItemText primary={item.name} />
                                         {item.__badge && (
                                           <Chip 
@@ -734,7 +734,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 36 }}>{subItem.icon}</ListItemIcon>
+              {subItem.icon && <ListItemIcon sx={{ minWidth: 36 }}>{subItem.icon}</ListItemIcon>}
               <ListItemText primary={subItem.name} />
             </ListItemButton>
           ))}

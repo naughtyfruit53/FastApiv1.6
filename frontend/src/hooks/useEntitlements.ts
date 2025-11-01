@@ -4,16 +4,12 @@
  * React hooks for accessing and managing entitlements
  */
 
-import { useEffect, useState, useCallback } from 'react';
-import useSWR, { mutate } from 'swr';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchOrgEntitlements,
   AppEntitlementsResponse,
-  ModuleEntitlement,
 } from '../services/entitlementsApi';
-
-// Cache for entitlements
-let cachedEntitlements: { [orgId: number]: AppEntitlementsResponse } = {};
 
 /**
  * Hook to fetch and cache organization entitlements
@@ -21,21 +17,14 @@ let cachedEntitlements: { [orgId: number]: AppEntitlementsResponse } = {};
 export function useEntitlements(orgId: number | undefined, token: string | undefined) {
   const shouldFetch = orgId !== undefined && token !== undefined;
 
-  const { data, error, isLoading } = useSWR(
-    shouldFetch ? ['entitlements', orgId] : null,
-    () => fetchOrgEntitlements(orgId!, token!),
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 60000, // 1 minute
-      onSuccess: (data) => {
-        // Cache the result
-        if (orgId) {
-          cachedEntitlements[orgId] = data;
-        }
-      },
-    }
-  );
+  const { data, error, isLoading } = useQuery({
+    queryKey: ['entitlements', orgId],
+    queryFn: () => fetchOrgEntitlements(orgId!, token!),
+    enabled: shouldFetch,
+    staleTime: 60000, // 1 minute
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+  });
 
   // Check if module is entitled
   const isModuleEnabled = useCallback(
@@ -115,12 +104,11 @@ export function useEntitlements(orgId: number | undefined, token: string | undef
  * Hook to invalidate entitlements cache (useful after updates)
  */
 export function useInvalidateEntitlements() {
+  const queryClient = useQueryClient();
+  
   const invalidate = useCallback((orgId: number) => {
-    mutate(['entitlements', orgId]);
-    if (cachedEntitlements[orgId]) {
-      delete cachedEntitlements[orgId];
-    }
-  }, []);
+    queryClient.invalidateQueries({ queryKey: ['entitlements', orgId] });
+  }, [queryClient]);
 
   return { invalidateEntitlements: invalidate };
 }
