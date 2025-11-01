@@ -22,7 +22,7 @@ CUSTOM_RAW_SQL_TABLES = [
     'user_email_tokens',
     'bank_accounts',
     'chart_of_accounts',
-    'snappymail_configs',
+    # 'snappymail_configs',  # Removed - SnappyMail integration discontinued
     'email_attachments',
     'emails',
     'mail_accounts',
