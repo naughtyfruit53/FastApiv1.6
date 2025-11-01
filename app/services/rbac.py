@@ -1,14 +1,15 @@
 # app/services/rbac.py
- 
+
 """
 RBAC service layer for Role-based access control
 """
 
-from typing import List, Optional
+from typing import List, Optional, Set
 from sqlalchemy import select, and_, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.database import get_db
 from app.models import (
@@ -418,7 +419,7 @@ class RBACService:
         """Initialize default permissions"""
         from app.services.rbac_permissions import get_comprehensive_permissions
         
-        # Get comprehensive permissions list
+        # Get comprehensive permissions
         default_permissions = get_comprehensive_permissions()
         
         # Batch check existing permissions
