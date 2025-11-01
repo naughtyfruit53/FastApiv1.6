@@ -657,21 +657,22 @@ export const menuItems = {
   email: {
     title: 'Email',
     icon: <Email />,
+    path: '/email', // Direct navigation to Inbox
     sections: [
       {
         title: 'Email Management',
         items: [
-          { name: 'Inbox', path: '/email', icon: <Email />, permission: 'email.view', requireModule: 'erp', requireSubmodule: { module: 'erp', submodule: 'inbox' } },
-          { name: 'Compose', path: '/email?compose=true', icon: <NoteAdd />, permission: 'email.view', requireModule: 'erp', requireSubmodule: { module: 'erp', submodule: 'compose' } },
-          { name: 'Account Settings', path: '/email/accounts', icon: <Settings />, permission: 'email.view', requireModule: 'erp', requireSubmodule: { module: 'erp', submodule: 'account_settings' } }
+          { name: 'Inbox', path: '/email', icon: <Email /> },
+          { name: 'Compose', path: '/email?compose=true', icon: <NoteAdd /> },
+          { name: 'Account Settings', path: '/email/accounts', icon: <Settings /> }
         ]
       },
       {
         title: 'Integration',
         items: [
-          { name: 'OAuth Connections', path: '/email/oauth', icon: <Security />, permission: 'email.view', requireModule: 'erp', requireSubmodule: { module: 'erp', submodule: 'oauth_connections' } },
-          { name: 'Sync Status', path: '/email/sync', icon: <CloudUpload />, permission: 'email.view', requireModule: 'erp', requireSubmodule: { module: 'erp', submodule: 'sync_status' } },
-          { name: 'Templates', path: '/email/templates', icon: <Assignment />, permission: 'email.view', requireModule: 'erp', requireSubmodule: { module: 'erp', submodule: 'templates' } }
+          { name: 'OAuth Connections', path: '/email/oauth', icon: <Security /> },
+          { name: 'Sync Status', path: '/email/sync', icon: <CloudUpload /> },
+          { name: 'Templates', path: '/email/templates', icon: <Assignment /> }
         ]
       }
     ]
@@ -727,6 +728,7 @@ export const menuItems = {
 };
 
 // Create main menu sections dynamically
+// Email is NOT included here - it's a top-level menu item now
 export const mainMenuSections = (isSuperAdmin: boolean) => {
   // Debug logging
   console.log("menuConfig.tsx - Rendering menu for isSuperAdmin:", isSuperAdmin);
@@ -758,7 +760,7 @@ export const mainMenuSections = (isSuperAdmin: boolean) => {
         { title: 'Service', subSections: menuItems.service.sections },
         { title: 'HR Management', subSections: menuItems.hr_management.sections },
         { title: 'Projects', subSections: menuItems.projects.sections },
-        { title: 'Tasks & Calendar', subSections: menuItems.tasks_calendar.sections },
-        { title: 'Email', subSections: menuItems.email.sections }
+        { title: 'Tasks & Calendar', subSections: menuItems.tasks_calendar.sections }
+        // Note: Email is no longer in nested Menu - it's a top-level item
       ];
 };

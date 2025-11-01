@@ -19,6 +19,8 @@ import {
   Tooltip,
   Menu,
   MenuItem,
+  Chip,
+  Lock as LockIcon,
 } from '@mui/material';
 import {
   Settings,
@@ -33,14 +35,14 @@ import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
 import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers } from '../types/user.types';
 import { useQuery } from '@tanstack/react-query';
-import { rbacService, SERVICE_PERMISSIONS } from '../services/rbacService';
+import { rbacService } from '../services/rbacService';
 import { organizationService } from '../services/organizationService';
 import MobileNav from './MobileNav';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { menuItems, mainMenuSections } from './menuConfig';
-import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionContext';
-import useSharedPermissions from '../hooks/useSharedPermissions';
+import { useEntitlements } from '../hooks/useEntitlements';
+import { evalMenuItemAccess, getMenuItemBadge, getMenuItemTooltip } from '../permissions/menuAccess';
 
 interface MegaMenuProps {
   user?: any;
@@ -50,7 +52,6 @@ interface MegaMenuProps {
 
 const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true }) => {
   const { hasPermission, permissions: contextUserPermissions } = usePermissions();
-  const { hasModuleAccess, hasSubmoduleAccess } = useSharedPermissions();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -104,7 +105,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   });
 
   // Query for current user's service permissions
-  const { data: userServicePermissions = [] } = useQuery({
+  const { data: _userServicePermissions = [] } = useQuery({
     queryKey: ['userServicePermissions'],
     queryFn: rbacService.getUserPermissions,
     enabled: !!user && !isAppSuperAdmin(user),
@@ -117,6 +118,14 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   const isSuperAdmin = isAppSuperAdmin(user);
   const isGodSuperAdmin = user?.email === 'naughtyfruit53@gmail.com';
+  const isAdminLike = isSuperAdmin || isOrgSuperAdmin(user);
+
+  // Fetch entitlements for menu access control
+  const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  const { entitlements } = useEntitlements(
+    organizationData?.id,
+    authToken || undefined
+  );
 
   // Keyboard: Esc closes menus; Ctrl/Cmd+K focuses search
   useEffect(() => {
@@ -224,9 +233,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     }
   };
 
-  const hasAnyServicePermission = (permissions: string[]): boolean => {
-    return permissions.some((permission) => contextUserPermissions.includes(permission));
-  };
+  // Removed unused function hasAnyServicePermission
 
   const isModuleEnabled = (module: string): boolean => {
     if (isSuperAdmin) return true;
@@ -327,7 +334,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           if (item.godSuperAdminOnly && !isGodSuperAdmin) {
             return false;
           }
-          // Filter out items that require superadmin access
+          // Filter out items that require superadmin access (unless they are super admin)
           if (item.superAdminOnly && !isSuperAdmin) {
             return false;
           }
@@ -341,6 +348,20 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             return true;
           }
           
+          // Use evalMenuItemAccess for entitlement-based access control
+          const accessResult = evalMenuItemAccess({
+            requireModule: item.requireModule,
+            requireSubmodule: item.requireSubmodule,
+            entitlements: entitlements,
+            isAdmin: isAdminLike,
+            isSuperAdmin: isSuperAdmin,
+          });
+          
+          // If access is 'hidden', hide for non-admin users
+          if (accessResult.result === 'hidden' && !isAdminLike) {
+            return false;
+          }
+          
           // Check RBAC permissions if specified
           if (item.permission) {
             const [module, action] = item.permission.split('.');
@@ -350,36 +371,46 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             }
           }
           
-          // Check module access if specified
-          if (item.requireModule) {
-            if (!hasModuleAccess(item.requireModule)) {
-              console.log(`Module access check failed for item ${item.name}: requires module ${item.requireModule}`);
-              return true; // Show but disable
-            }
-            // Also check organization enabled_modules
-            if (!isModuleEnabled(item.requireModule)) {
-              console.log(`Module not enabled for item ${item.name}: module ${item.requireModule}`);
-              return true; // Show but disable
-            }
-          }
-          
-          // Check submodule access if specified
-          if (item.requireSubmodule) {
-            const { module, submodule } = item.requireSubmodule;
-            if (!hasSubmoduleAccess(module, submodule)) {
-              console.log(`Submodule access check failed for item ${item.name}: requires ${module}.${submodule}`);
-              return true; // Show but disable
-            }
-          }
-          
-          return true; // Show and enable
+          return true; // Show item (may be disabled based on access result)
         })
         .map((item: any) => {
+          // Evaluate access for each item
+          const accessResult = evalMenuItemAccess({
+            requireModule: item.requireModule,
+            requireSubmodule: item.requireSubmodule,
+            entitlements: entitlements,
+            isAdmin: isAdminLike,
+            isSuperAdmin: isSuperAdmin,
+          });
+          
           const disabled =
+            accessResult.result === 'disabled' ||
             (item.role && !canManageUsers(user)) ||
-            (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission))) ||
-            item.__disabled;
-          return { ...item, __disabled: Boolean(disabled) };
+            (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission)));
+          
+          const badge = getMenuItemBadge({
+            requireModule: item.requireModule,
+            requireSubmodule: item.requireSubmodule,
+            entitlements: entitlements,
+            isAdmin: isAdminLike,
+            isSuperAdmin: isSuperAdmin,
+          });
+          
+          const tooltip = getMenuItemTooltip({
+            requireModule: item.requireModule,
+            requireSubmodule: item.requireSubmodule,
+            entitlements: entitlements,
+            isAdmin: isAdminLike,
+            isSuperAdmin: isSuperAdmin,
+          });
+          
+          return { 
+            ...item, 
+            __disabled: Boolean(disabled),
+            __badge: badge,
+            __tooltip: tooltip,
+            __accessResult: accessResult,
+          };
         });
     };
 
@@ -412,16 +443,14 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           .map((subSection: any) => ({
             ...subSection,
             items: filterMenuItems(subSection),
-          }))
-          .filter((subSection: any) => true); // Keep all subsections visible, even if no items
+          })); // Keep all subsections visible, even if no items
 
         return {
           ...section,
           subSections: processedSubSections,
           hasDirectPath: hasDirectPath,
         };
-      })
-      .filter((section: any) => true); // Keep all sections visible
+      }); // Keep all sections visible
 
     if (filteredSections.length === 0) {
       console.warn(`No items in submenu for ${activeMenu} - user may not have required permissions or modules enabled`);
@@ -573,8 +602,9 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                                 (item.role && !canManageUsers(user)) ||
                                 (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission))) ||
                                 item.__disabled;
+                              const tooltipText = item.__tooltip || (disabled ? 'Module not enabled. Contact your administrator.' : '');
                               return (
-                                <Tooltip key={itemIndex} title={disabled ? 'You do not have permission. Click Request.' : ''} arrow>
+                                <Tooltip key={itemIndex} title={tooltipText} arrow>
                                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                                     <ListItemButton
                                       disabled={disabled}
@@ -596,14 +626,23 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                                       }}
                                       role="menuitem"
                                     >
-                                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        {disabled && isAdminLike && <LockIcon fontSize="small" color="disabled" />}
                                         <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
                                         <ListItemText primary={item.name} />
+                                        {item.__badge && (
+                                          <Chip 
+                                            label={item.__badge} 
+                                            size="small" 
+                                            color="warning" 
+                                            sx={{ height: 20, fontSize: '0.7rem' }}
+                                          />
+                                        )}
                                       </Box>
                                       {item.subItems ? <ChevronRight /> : null}
                                     </ListItemButton>
 
-                                    {disabled && (
+                                    {disabled && isAdminLike && (
                                       <Button size="small" onClick={requestModuleActivation} sx={{ ml: 1 }}>
                                         Request
                                       </Button>

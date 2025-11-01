@@ -4,7 +4,7 @@
  * Menu access evaluation logic based on entitlements
  */
 
-import { AppEntitlementsResponse, ModuleEntitlement } from '../services/entitlementsApi';
+import { AppEntitlementsResponse } from '../services/entitlementsApi';
 
 export type MenuAccessResult = 'hidden' | 'disabled' | 'enabled';
 
@@ -39,7 +39,7 @@ export interface MenuAccessParams {
  * @returns MenuItemAccess result
  */
 export function evalMenuItemAccess(params: MenuAccessParams): MenuItemAccess {
-  const { requireModule, requireSubmodule, entitlements, isAdmin, isSuperAdmin } = params;
+  const { requireModule, requireSubmodule, entitlements, isAdmin: _isAdmin, isSuperAdmin } = params;
 
   // Super admin bypasses all checks
   if (isSuperAdmin) {
