@@ -433,4 +433,17 @@ def register_subrouters():
         logger.error(f"Failed to import/include admin_entitlements_router: {str(e)}\n{traceback.format_exc()}")
         raise
 
+    # Role Delegation API (org_admin and management)
+    try:
+        from .role_delegation import router as role_delegation_router
+        logger.debug("Imported role_delegation_router")
+        api_v1_router.include_router(role_delegation_router, prefix="/role-delegation", tags=["Role Delegation"])
+        role_delegation_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /role-delegation{route.path}" for route in role_delegation_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered role_delegation endpoints: {len(role_delegation_routes)} routes")
+        for route_path in role_delegation_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include role_delegation_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
 register_subrouters()
