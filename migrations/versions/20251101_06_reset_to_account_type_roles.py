@@ -154,24 +154,25 @@ def upgrade():
     # Mark legacy roles as inactive (but don't delete to preserve historical data)
     deprecated_roles = []
     if LEGACY_ROLES:
-        legacy_roles_str = "', '".join(LEGACY_ROLES)
+        # Use parameterized query to avoid SQL injection
+        legacy_roles_tuple = tuple(LEGACY_ROLES)
         if has_updated_at:
-            result = connection.execute(text(f"""
+            result = connection.execute(text("""
                 UPDATE service_roles 
                 SET is_active = FALSE,
                     updated_at = NOW()
-                WHERE name IN ('{legacy_roles_str}')
+                WHERE name = ANY(:legacy_roles)
                 AND is_active = TRUE
                 RETURNING id, name, organization_id
-            """))
+            """), {"legacy_roles": list(legacy_roles_tuple)})
         else:
-            result = connection.execute(text(f"""
+            result = connection.execute(text("""
                 UPDATE service_roles 
                 SET is_active = FALSE
-                WHERE name IN ('{legacy_roles_str}')
+                WHERE name = ANY(:legacy_roles)
                 AND is_active = TRUE
                 RETURNING id, name, organization_id
-            """))
+            """), {"legacy_roles": list(legacy_roles_tuple)})
         
         deprecated_roles = result.fetchall()
         if deprecated_roles:

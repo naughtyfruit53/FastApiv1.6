@@ -22,6 +22,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Constants for role names
+DELEGATOR_ROLES = ['org_admin', 'management']  # Roles that can delegate permissions
+DELEGATEE_ROLES = ['manager', 'executive']  # Roles that can receive delegated permissions
+
 
 # Request/Response Schemas
 class DelegatePermissionsRequest(BaseModel):
@@ -72,7 +76,7 @@ async def check_delegation_permission(
             and_(
                 UserServiceRole.user_id == current_user.id,
                 ServiceRole.organization_id == organization_id,
-                ServiceRole.name.in_(['org_admin', 'management']),
+                ServiceRole.name.in_(DELEGATOR_ROLES),
                 UserServiceRole.is_active == True,
                 ServiceRole.is_active == True
             )
@@ -102,14 +106,14 @@ async def delegate_permissions(
     if not can_delegate:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only org_admin or management roles can delegate permissions"
+            detail=f"Only {', '.join(DELEGATOR_ROLES)} roles can delegate permissions"
         )
     
     # Validate target role
-    if request.target_role_name not in ['manager', 'executive']:
+    if request.target_role_name not in DELEGATEE_ROLES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only delegate to 'manager' or 'executive' roles"
+            detail=f"Can only delegate to {', '.join(DELEGATEE_ROLES)} roles"
         )
     
     # Get target role
@@ -206,14 +210,14 @@ async def revoke_permissions(
     if not can_delegate:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only org_admin or management roles can revoke permissions"
+            detail=f"Only {', '.join(DELEGATOR_ROLES)} roles can revoke permissions"
         )
     
     # Validate target role
-    if request.target_role_name not in ['manager', 'executive']:
+    if request.target_role_name not in DELEGATEE_ROLES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Can only revoke from 'manager' or 'executive' roles"
+            detail=f"Can only revoke from {', '.join(DELEGATEE_ROLES)} roles"
         )
     
     # Get target role
@@ -305,7 +309,7 @@ async def get_role_permissions(
     if not can_view:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only org_admin or management roles can view role permissions"
+            detail=f"Only {', '.join(DELEGATOR_ROLES)} roles can view role permissions"
         )
     
     # Get role
