@@ -645,12 +645,7 @@ class User(Base):
         back_populates="user"
     )
 
-    # SnappyMail Configuration (one-to-one per user) - Use fully qualified path to avoid registry conflict
-    snappymail_config: Mapped[Optional["SnappyMailConfig"]] = relationship(
-        "SnappyMailConfig",
-        back_populates="user",
-        uselist=False
-    )
+    # SnappyMail relationship removed - integration discontinued
 
     # RBAC relationships
     service_roles: Mapped[List["UserServiceRole"]] = relationship(

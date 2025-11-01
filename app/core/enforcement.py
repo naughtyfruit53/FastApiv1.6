@@ -111,8 +111,38 @@ class TenantEnforcement:
 class RBACEnforcement:
     """RBAC permission enforcement utilities"""
     
+    # Permission mapping: (module, action) -> actual permission name
+    # This allows us to map route-level module+action to canonical permission names
+    PERMISSION_MAP = {
+        ('organization', 'read'): 'admin_organizations_view',
+        ('organization', 'view'): 'admin_organizations_view',
+        ('organization', 'create'): 'admin_organizations_create',
+        ('organization', 'update'): 'admin_organizations_update',
+        ('organization', 'delete'): 'admin_organizations_delete',
+    }
+    
     @staticmethod
-    def check_permission(
+    def get_permission_name(module: str, action: str) -> str:
+        """
+        Get the canonical permission name for a module/action pair.
+        
+        Args:
+            module: The module name
+            action: The action name
+            
+        Returns:
+            The canonical permission name (e.g., 'admin_organizations_view')
+        """
+        # Check if there's a specific mapping
+        key = (module, action)
+        if key in RBACEnforcement.PERMISSION_MAP:
+            return RBACEnforcement.PERMISSION_MAP[key]
+        
+        # Default to module_action format
+        return f"{module}_{action}"
+    
+    @staticmethod
+    async def check_permission(
         user: User,
         module: str,
         action: str,
@@ -123,7 +153,7 @@ class RBACEnforcement:
         
         Args:
             user: The user to check
-            module: The module name (e.g., 'inventory', 'voucher')
+            module: The module name (e.g., 'inventory', 'voucher', 'organization')
             action: The action (e.g., 'create', 'read', 'update', 'delete')
             db: Database session
             
@@ -131,19 +161,19 @@ class RBACEnforcement:
             True if user has permission
             
         Raises:
-            HTTPException: If user lacks permission
+            HTTPException: If user lacks permission with concrete required permission
         """
         # Super admins bypass checks
         if getattr(user, 'is_super_admin', False):
             return True
         
-        # Build permission string
-        permission = f"{module}_{action}"
+        # Get the canonical permission name
+        permission = RBACEnforcement.get_permission_name(module, action)
         
         # Check service permission through RBAC
         rbac_service = RBACService(db)
         
-        if rbac_service.user_has_permission(user.id, permission):
+        if await rbac_service.user_has_permission(user.id, permission):
             logger.debug(f"User {user.id} has permission: {permission}")
             return True
         
@@ -152,7 +182,7 @@ class RBACEnforcement:
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Insufficient permissions. Required: {permission}"
+            detail=f"Insufficient permissions. Required permission: {permission}"
         )
     
     @staticmethod
@@ -167,11 +197,11 @@ class RBACEnforcement:
         Returns:
             A FastAPI dependency function
         """
-        def dependency(
+        async def dependency(
             current_user: User = Depends(get_current_active_user),
             db: Session = Depends(get_db)
         ) -> User:
-            RBACEnforcement.check_permission(current_user, module, action, db)
+            await RBACEnforcement.check_permission(current_user, module, action, db)
             return current_user
         
         return dependency
@@ -257,6 +287,9 @@ class CombinedEnforcement:
         # Get organization ID (None for super_admin without context)
         org_id = require_current_organization_id(current_user)
         
+        # Get the canonical permission name for error reporting
+        required_permission = RBACEnforcement.get_permission_name(self.module, self.action)
+        
         # Step 1: Check entitlement (org-level access)
         if check_entitlement_access is None or EntitlementDeniedError is None:
             # Entitlements not available, skip check
@@ -275,17 +308,25 @@ class CombinedEnforcement:
                 logger.warning(
                     f"User ID {current_user.id} (org_id: {org_id}) "
                     f"denied access to {self.module}/{self.submodule or 'all'} due to entitlement. "
-                    f"Status: {entitlement_status}, Reason: {reason}"
+                    f"Status: {entitlement_status}, Reason: {reason}. "
+                    f"Required permission: {required_permission}"
                 )
-                raise EntitlementDeniedError(
-                    module_key=self.module,
-                    submodule_key=self.submodule,
-                    entitlement_status=entitlement_status or "disabled",
-                    reason=reason or "Access denied"
+                # Raise with enhanced detail including required permission
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "error_type": "entitlement_denied",
+                        "module_key": self.module,
+                        "submodule_key": self.submodule,
+                        "status": entitlement_status or "disabled",
+                        "reason": reason or "Access denied",
+                        "required_permission": required_permission,
+                        "message": f"Organization does not have access to module '{self.module}'. {reason or 'Access denied'}"
+                    }
                 )
         
         # Step 2: Check RBAC permission (user-level access)
-        RBACEnforcement.check_permission(current_user, self.module, self.action, db)
+        await RBACEnforcement.check_permission(current_user, self.module, self.action, db)
         
         # Step 3: Return user and org_id for tenant isolation
         return current_user, org_id

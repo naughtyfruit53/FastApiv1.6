@@ -121,7 +121,7 @@ class Settings:
     
     FASTGST_API_URL: str = os.getenv("FASTGST_API_URL", "https://api.fastgst.in")
     
-    SNAPPYMAIL_URL: str = os.getenv("SNAPPYMAIL_URL", "http://localhost:8888")
+    # SNAPPYMAIL_URL removed - SnappyMail integration discontinued
     
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://naughtyfruit.in")
     

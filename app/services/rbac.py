@@ -314,23 +314,50 @@ class RBACService:
         
         user_result = await self.db.execute(select(User).filter_by(id=user_id))
         user = user_result.scalars().first()
-        if user:
-            logger.debug(f"User {user_id} role: {user.role}, is_super_admin: {user.is_super_admin}")
-            if user.is_super_admin or user.role in ['super_admin', 'org_admin', 'management']:
-                logger.debug(f"Granted permission '{permission_name}' to super_admin/org_admin/management user {user_id}")
-                return True
-            if user.role in ['org_admin', 'management']:
-                # Extended fallback permissions for org_admin and management
-                if (permission_name.startswith('crm_') or 
-                    permission_name == 'crm_admin' or 
-                    permission_name.startswith('mail:') or 
-                    permission_name in ['crm_commission_read', 'crm_commission_create', 
-                                      'crm_commission_update', 'crm_commission_delete']):
-                    logger.debug(f"Granted permission '{permission_name}' to org_admin/management user {user_id} via fallback")
-                    return True
+        if not user:
+            logger.warning(f"User {user_id} not found")
+            return False
+            
+        logger.debug(f"User {user_id} role: {user.role}, org_id: {user.organization_id}, is_super_admin: {user.is_super_admin}")
         
+        # Super admins bypass all checks
+        if user.is_super_admin:
+            logger.debug(f"Granted permission '{permission_name}' to super_admin user {user_id}")
+            return True
+        
+        # First, resolve user's role through service_roles table using users.role + users.organization_id
+        # This is the proper way to map the user's role string to a service_role row
+        if user.organization_id and user.role:
+            role_result = await self.db.execute(
+                select(Role).filter_by(
+                    organization_id=user.organization_id,
+                    name=user.role,
+                    is_active=True
+                )
+            )
+            role_from_users_table = role_result.scalars().first()
+            
+            if role_from_users_table:
+                logger.debug(f"Resolved user {user_id} role '{user.role}' to service_role id {role_from_users_table.id}")
+                # Check if this role has the required permission
+                perm_result = await self.db.execute(
+                    select(Permission)
+                    .join(RolePermission)
+                    .where(
+                        RolePermission.role_id == role_from_users_table.id,
+                        Permission.name == permission_name,
+                        Permission.is_active == True
+                    )
+                )
+                if perm_result.scalars().first():
+                    logger.debug(f"Granted permission '{permission_name}' to user {user_id} via service_role '{user.role}'")
+                    return True
+            else:
+                logger.warning(f"User {user_id} has role '{user.role}' but no matching service_role found in org {user.organization_id}")
+        
+        # Fallback: check through UserServiceRole assignments (explicit role assignments)
         user_roles = await self.get_user_roles(user_id)
-        logger.debug(f"User {user_id} active roles: {[role.name for role in user_roles]}")
+        logger.debug(f"User {user_id} explicit role assignments: {[role.name for role in user_roles]}")
         
         for role in user_roles:
             result = await self.db.execute(
@@ -343,10 +370,10 @@ class RBACService:
                 )
             )
             if result.scalars().first():
-                logger.debug(f"Granted permission '{permission_name}' to user {user_id} via role {role.name}")
+                logger.debug(f"Granted permission '{permission_name}' to user {user_id} via explicit role assignment '{role.name}'")
                 return True
         
-        logger.debug(f"Denied permission '{permission_name}' for user {user_id}")
+        logger.debug(f"Denied permission '{permission_name}' for user {user_id} - no matching role or permission found")
         return False
     
     async def get_user_permissions(self, user_id: int) -> Set[str]:
