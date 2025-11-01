@@ -407,4 +407,30 @@ def register_subrouters():
         logger.error(f"Failed to import/include exhibition_router: {str(e)}\n{traceback.format_exc()}")
         raise
 
+    # Entitlements API (app-level, read-only)
+    try:
+        from .entitlements import router as entitlements_router
+        logger.debug("Imported entitlements_router")
+        api_v1_router.include_router(entitlements_router, tags=["entitlements"])
+        entitlements_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in entitlements_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered entitlements endpoints: {len(entitlements_routes)} routes")
+        for route_path in entitlements_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include entitlements_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Admin Entitlements API (admin-only, write)
+    try:
+        from .admin_entitlements import router as admin_entitlements_router
+        logger.debug("Imported admin_entitlements_router")
+        api_v1_router.include_router(admin_entitlements_router, tags=["admin-entitlements"])
+        admin_ent_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in admin_entitlements_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered admin_entitlements endpoints: {len(admin_ent_routes)} routes")
+        for route_path in admin_ent_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include admin_entitlements_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
 register_subrouters()
