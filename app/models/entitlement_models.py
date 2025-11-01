@@ -1,6 +1,6 @@
 # app/models/entitlement_models.py
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Numeric, Index, UniqueConstraint, CheckConstraint
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Numeric, Index, UniqueConstraint, CheckConstraint, and_, ForeignKeyConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -135,7 +135,12 @@ class OrgEntitlement(Base):
     # Relationships
     organization: Mapped["Organization"] = relationship("Organization", back_populates="org_entitlements")
     module: Mapped["Module"] = relationship("Module", back_populates="org_entitlements")
-    subentitlements: Mapped[List["OrgSubentitlement"]] = relationship("OrgSubentitlement", back_populates="org_entitlement", cascade="all, delete-orphan", foreign_keys="[OrgSubentitlement.org_id, OrgSubentitlement.module_id]")
+    subentitlements: Mapped[List["OrgSubentitlement"]] = relationship(
+        "OrgSubentitlement",
+        back_populates="org_entitlement",
+        cascade="all, delete-orphan",
+        viewonly=True
+    )
 
     __table_args__ = (
         UniqueConstraint('org_id', 'module_id', name='uq_org_entitlements_org_module'),
@@ -164,10 +169,19 @@ class OrgSubentitlement(Base):
     organization: Mapped["Organization"] = relationship("Organization", back_populates="org_subentitlements")
     module: Mapped["Module"] = relationship("Module")
     submodule: Mapped["Submodule"] = relationship("Submodule", back_populates="org_subentitlements")
-    org_entitlement: Mapped["OrgEntitlement"] = relationship("OrgEntitlement", back_populates="subentitlements", foreign_keys=[org_id, module_id])
+    org_entitlement: Mapped["OrgEntitlement"] = relationship(
+        "OrgEntitlement",
+        back_populates="subentitlements",
+        viewonly=True
+    )
 
     __table_args__ = (
         UniqueConstraint('org_id', 'module_id', 'submodule_id', name='uq_org_subentitlements'),
+        ForeignKeyConstraint(
+            ['org_id', 'module_id'],
+            ['org_entitlements.org_id', 'org_entitlements.module_id'],
+            name='fk_org_subentitlements_entitlement'
+        ),
         Index('idx_org_subentitlements_org', 'org_id'),
         Index('idx_org_subentitlements_module', 'module_id'),
         Index('idx_org_subentitlements_submodule', 'submodule_id'),

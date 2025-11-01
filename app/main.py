@@ -16,6 +16,7 @@ from app.core.seed_super_admin import seed_super_admin
 from app.db.session import SessionLocal
 from sqlalchemy import select, text
 from sqlalchemy.exc import ProgrammingError
+from app.models.entitlement_models import *  # Import to register entitlement models
 
 logger = logging.getLogger(__name__)
 

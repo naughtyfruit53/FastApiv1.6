@@ -6,6 +6,10 @@ from sqlalchemy.sql import func
 from app.core.database import Base
 from typing import List, Optional
 from datetime import datetime, date
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.entitlement_models import OrgEntitlement, OrgSubentitlement, EntitlementEvent
 
 # Platform User Model - For SaaS platform-level users (kept here, removed from base.py)
 class PlatformUser(Base):
@@ -358,7 +362,7 @@ class Organization(Base):
         back_populates="organization"
     )
     
-    # Task Management relationships
+    # Task Management Relationships
     tasks: Mapped[List["Task"]] = relationship(
         "Task",
         back_populates="organization"
@@ -368,7 +372,7 @@ class Organization(Base):
         back_populates="organization"
     )
     
-    # Calendar Management relationships
+    # Calendar Management Relationships
     calendar_events: Mapped[List["CalendarEvent"]] = relationship(
         "CalendarEvent",
         back_populates="organization"
