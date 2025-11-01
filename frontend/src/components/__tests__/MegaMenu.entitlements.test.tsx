@@ -14,18 +14,15 @@ import MegaMenu from "../MegaMenu";
 import { AppEntitlementsResponse } from "../../services/entitlementsApi";
 
 // Mock services
-const mockGetUserPermissions = jest.fn();
-const mockGetCurrentOrganization = jest.fn();
-
 jest.mock("../../services/organizationService", () => ({
   organizationService: {
-    getCurrentOrganization: (...args: any[]) => mockGetCurrentOrganization(...args),
+    getCurrentOrganization: jest.fn(),
   },
 }));
 
 jest.mock("../../services/rbacService", () => ({
   rbacService: {
-    getUserPermissions: (...args: any[]) => mockGetUserPermissions(...args),
+    getUserPermissions: jest.fn(),
   },
 }));
 
@@ -85,12 +82,6 @@ describe("MegaMenu Module Entitlements", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockEntitlements = null;
-    mockGetUserPermissions.mockResolvedValue([]);
-    mockGetCurrentOrganization.mockResolvedValue({
-      id: 1,
-      name: "Test Organization",
-      enabled_modules: {},
-    });
   });
 
   describe("Email Module", () => {
