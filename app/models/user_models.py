@@ -420,6 +420,23 @@ class Organization(Base):
         back_populates="organization"
     )
 
+    # Entitlement relationships
+    org_entitlements: Mapped[List["OrgEntitlement"]] = relationship(
+        "OrgEntitlement",
+        back_populates="organization",
+        cascade="all, delete-orphan"
+    )
+    org_subentitlements: Mapped[List["OrgSubentitlement"]] = relationship(
+        "OrgSubentitlement",
+        back_populates="organization",
+        cascade="all, delete-orphan"
+    )
+    entitlement_events: Mapped[List["EntitlementEvent"]] = relationship(
+        "EntitlementEvent",
+        back_populates="organization",
+        cascade="all, delete-orphan"
+    )
+
     __table_args__ = (
         Index('idx_org_status_subdomain', 'status', 'subdomain'),
         {'extend_existing': True}
