@@ -6,7 +6,6 @@ const nextConfig = {
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
-    NEXT_PUBLIC_SNAPPYMAIL_URL: process.env.NEXT_PUBLIC_SNAPPYMAIL_URL || "http://localhost:8888",
   },
   transpilePackages: ["@mui/x-data-grid"],
   allowedDevOrigins: ["127.0.0.1", "localhost"],
