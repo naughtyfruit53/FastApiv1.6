@@ -8,71 +8,63 @@
 export interface BundleModule {
   key: string;
   displayName: string;
-  modules: string[];
+  submodules: string[]; // Renamed from modules to submodules for clarity
 }
 
 /**
  * Bundle to module mapping
- * - CRM → [sales, marketing]
- * - ERP → [master_data, vouchers, inventory, projects, tasks_calendar]
- * - Manufacturing → [manufacturing]
- * - Finance → [accounting, finance]
- * - Service → [service]
- * - HR → [hr] (legacy hr_management alias)
- * - Analytics → [reports_analytics, ai_analytics]
+ * Bundle key is the module_key, submodules are descriptive
+ * - crm: sales, marketing
+ * - erp: master_data, vouchers, inventory, projects, tasks_calendar
+ * - manufacturing: manufacturing
+ * - finance: accounting, finance
+ * - service: service
+ * - hr: hr
+ * - analytics: reports_analytics, ai_analytics
  */
 export const MODULE_BUNDLES: BundleModule[] = [
   {
     key: 'crm',
     displayName: 'CRM',
-    modules: ['sales', 'marketing'],
+    submodules: ['sales', 'marketing'],
   },
   {
     key: 'erp',
     displayName: 'ERP',
-    modules: ['master_data', 'vouchers', 'inventory', 'projects', 'tasks_calendar'],
+    submodules: ['master_data', 'vouchers', 'inventory', 'projects', 'tasks_calendar'],
   },
   {
     key: 'manufacturing',
     displayName: 'Manufacturing',
-    modules: ['manufacturing'],
+    submodules: ['manufacturing'],
   },
   {
     key: 'finance',
     displayName: 'Finance',
-    modules: ['accounting', 'finance'],
+    submodules: ['accounting', 'finance'],
   },
   {
     key: 'service',
     displayName: 'Service',
-    modules: ['service'],
+    submodules: ['service'],
   },
   {
     key: 'hr',
     displayName: 'HR',
-    modules: ['hr'], // Maps to hr, not hr_management (legacy-safe)
+    submodules: ['hr'],
   },
   {
     key: 'analytics',
     displayName: 'Analytics',
-    modules: ['reports_analytics', 'ai_analytics'],
+    submodules: ['reports_analytics', 'ai_analytics'],
   },
 ];
 
 /**
- * Get all modules for a set of selected bundles
+ * Get all module_keys for a set of selected bundles
  */
 export function getBundleModules(selectedBundles: string[]): string[] {
-  const modules = new Set<string>();
-  
-  selectedBundles.forEach((bundleKey) => {
-    const bundle = MODULE_BUNDLES.find((b) => b.key === bundleKey);
-    if (bundle) {
-      bundle.modules.forEach((mod) => modules.add(mod));
-    }
-  });
-  
-  return Array.from(modules);
+  return selectedBundles; // Now returns the bundle keys, which are module_keys
 }
 
 /**
@@ -82,7 +74,7 @@ export function getModuleBundles(moduleKey: string): string[] {
   const bundles: string[] = [];
   
   MODULE_BUNDLES.forEach((bundle) => {
-    if (bundle.modules.includes(moduleKey)) {
+    if (bundle.key === moduleKey) { // Check against key
       bundles.push(bundle.key);
     }
   });
@@ -97,9 +89,8 @@ export function getSelectedBundlesFromModules(enabledModules: string[]): string[
   const selectedBundles = new Set<string>();
   
   MODULE_BUNDLES.forEach((bundle) => {
-    // If all modules in the bundle are enabled, select the bundle
-    const allEnabled = bundle.modules.every((mod) => enabledModules.includes(mod));
-    if (allEnabled) {
+    // If the bundle's key (module_key) is enabled, select the bundle
+    if (enabledModules.includes(bundle.key)) {
       selectedBundles.add(bundle.key);
     }
   });
@@ -122,11 +113,8 @@ export function computeModuleChanges(
   const targetModules = getBundleModules(targetBundles);
   const changes: ModuleChange[] = [];
   
-  // Get all unique modules from all bundles
-  const allModules = new Set<string>();
-  MODULE_BUNDLES.forEach((bundle) => {
-    bundle.modules.forEach((mod) => allModules.add(mod));
-  });
+  // Get all unique module_keys from bundles
+  const allModules = new Set<string>(MODULE_BUNDLES.map(b => b.key));
   
   // Compute diff
   allModules.forEach((moduleKey) => {

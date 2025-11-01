@@ -6,7 +6,12 @@
 
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+let API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+
+// Normalize base URL to ensure /api/v1 is appended if missing
+if (!API_BASE_URL.endsWith('/api/v1')) {
+  API_BASE_URL = `${API_BASE_URL.replace(/\/$/, '')}/api/v1`;
+}
 
 export interface SubmoduleEntitlement {
   [key: string]: boolean; // submodule_key -> enabled

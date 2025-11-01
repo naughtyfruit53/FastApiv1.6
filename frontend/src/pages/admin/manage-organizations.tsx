@@ -40,7 +40,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { organizationService } from "../../services/organizationService";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../context/AuthContext";
 import ModuleSelectionModal from '../../components/ModuleSelectionModal';
 
 interface Organization {
@@ -480,8 +480,6 @@ const ManageOrganizations: React.FC = () => {
       <ModuleSelectionModal
         open={moduleControlDialogOpen}
         onClose={() => setModuleControlDialogOpen(false)}
-        selectedModules={orgModules}
-        onChange={setOrgModules}
         orgId={selectedOrg?.id}
         orgName={selectedOrg?.name}
       />

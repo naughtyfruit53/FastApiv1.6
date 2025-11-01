@@ -4,9 +4,8 @@
 RBAC service layer for Role-based access control
 """
 
-from typing import List, Optional, Dict, Set
-from sqlalchemy import select, and_, or_, func, insert
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from typing import List, Optional
+from sqlalchemy import select, and_, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
@@ -615,21 +614,3 @@ class RBACService:
         has_permission = await self.user_has_permission(user_id, permission_name)
         logger.debug(f"Permission check for '{permission_name}': {'granted' if has_permission else 'denied'}")
         return has_permission
-    
-    async def enforce_company_access(self, user_id: int, company_id: int, permission_name: Optional[str] = None):
-        """Enforce company access and optionally permission - raises HTTPException if denied"""
-        logger.debug(f"Enforcing company access for user_id {user_id}, company_id {company_id}, permission {permission_name}")
-        
-        if not await self.user_has_company_access(user_id, company_id):
-            logger.debug(f"Access denied: User {user_id} has no access to company {company_id}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: User does not have access to this company"
-            )
-        
-        if permission_name and not await self.user_has_company_permission(user_id, company_id, permission_name):
-            logger.debug(f"Access denied: User {user_id} lacks permission '{permission_name}' for company {company_id}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied: Missing permission '{permission_name}' for this company"
-            )

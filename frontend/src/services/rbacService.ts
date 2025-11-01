@@ -197,12 +197,16 @@ export const rbacService = {
     }
   },
   getUserPermissions: async (userId: number): Promise<UserPermissions> => {
+    if (typeof userId !== 'number' || isNaN(userId)) {
+      console.error('[RBAC Service] Invalid userId provided:', userId);
+      throw new Error('Invalid user ID - must be a number');
+    }
     try {
       const response = await api.get(`/rbac/users/${userId}/permissions`);
       return response.data;
     } catch (error: any) {
       console.error("Failed to fetch user permissions:", error);
-      return { role: '', roles: [], permissions: [], modules: [], submodules: {} };
+      throw error;
     }
   },
   // Bulk Operations

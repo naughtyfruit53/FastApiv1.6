@@ -15,6 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import {
   MODULE_BUNDLES,
   getSelectedBundlesFromModules,
@@ -32,7 +33,7 @@ interface ModuleSelectionModalProps {
   onClose: () => void;
   orgId?: number;
   orgName?: string;
-  token?: string; // Auth token for API calls
+  token?: string; // Auth token for API calls (optional, fallback to localStorage)
 }
 
 const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
@@ -40,19 +41,24 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
   onClose,
   orgId,
   orgName,
-  token,
+  token: propToken,
 }) => {
   const [selectedBundles, setSelectedBundles] = useState<Set<string>>(new Set());
   const { invalidateEntitlements } = useInvalidateEntitlements();
+  const localToken = localStorage.getItem('access_token') || ''; // Fallback if no prop token
+  const authToken = propToken || localToken;
 
   // Fetch current entitlements
-  const { data: entitlementsData, isLoading } = useQuery({
+  const { data: entitlementsData, isLoading, isError } = useQuery({
     queryKey: ['admin-entitlements', orgId],
     queryFn: () => {
-      if (!orgId || !token) throw new Error('Missing orgId or token');
-      return fetchOrgEntitlementsAdmin(orgId, token);
+      if (!orgId || !authToken) throw new Error('Missing orgId or token');
+      return fetchOrgEntitlementsAdmin(orgId, authToken);
     },
-    enabled: open && !!orgId && !!token,
+    enabled: open && !!orgId && !!authToken,
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to load current modules');
+    },
   });
 
   // Initialize selected bundles from current entitlements
@@ -70,14 +76,18 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async (request: UpdateEntitlementsRequest) => {
-      if (!orgId || !token) throw new Error('Missing orgId or token');
-      return updateOrgEntitlements(orgId, request, token);
+      if (!orgId || !authToken) throw new Error('Missing orgId or token');
+      return updateOrgEntitlements(orgId, request, authToken);
     },
     onSuccess: () => {
+      toast.success('Modules updated successfully');
       if (orgId) {
         invalidateEntitlements(orgId);
       }
       onClose();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update modules');
     },
   });
 
@@ -92,7 +102,10 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
   };
 
   const handleSave = () => {
-    if (!entitlementsData) return;
+    if (!entitlementsData) {
+      toast.warn('Cannot save: Current module data not loaded');
+      return;
+    }
 
     // Get current enabled modules
     const currentModules = entitlementsData.entitlements
@@ -104,7 +117,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
     const changes = computeModuleChanges(currentModules, targetBundles);
 
     if (changes.length === 0) {
-      // No changes, just close
+      toast.info('No changes detected');
       onClose();
       return;
     }
@@ -135,9 +148,13 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
           <Box display="flex" justifyContent="center" py={4}>
             <CircularProgress />
           </Box>
-        ) : updateMutation.isError ? (
+        ) : isError ? (
           <Alert severity="error" sx={{ mb: 2 }}>
-            Failed to update modules: {(updateMutation.error as Error)?.message || 'Unknown error'}
+            Failed to load current modules
+          </Alert>
+        ) : !authToken ? (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            Missing authentication token - please log in again
           </Alert>
         ) : null}
 
@@ -161,7 +178,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
                 <Box>
                   <Typography variant="body1">{bundle.displayName}</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {bundle.modules.join(', ')}
+                    {bundle.submodules.join(', ')}
                   </Typography>
                 </Box>
               }
@@ -177,7 +194,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
           onClick={handleSave}
           variant="contained"
           color="primary"
-          disabled={isLoading || updateMutation.isPending}
+          disabled={isLoading || updateMutation.isPending || !authToken}
         >
           {updateMutation.isPending ? 'Saving...' : 'Save'}
         </Button>

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 import logging
 
-from app.core.database import get_async_db
+from app.core.database import get_db
 from app.api.v1.auth import get_current_super_admin
 from app.services.entitlement_service import EntitlementService
 from app.schemas.entitlement_schemas import (
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/admin", tags=["admin-entitlements"])
 
 @router.get("/modules", response_model=ModulesListResponse)
 async def get_modules(
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """
@@ -49,7 +49,7 @@ async def get_modules(
 @router.get("/orgs/{org_id}/entitlements", response_model=OrgEntitlementsResponse)
 async def get_org_entitlements(
     org_id: int,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """
@@ -82,7 +82,7 @@ async def get_org_entitlements(
 async def update_org_entitlements(
     org_id: int,
     request_body: UpdateEntitlementsRequest,
-    db: AsyncSession = Depends(get_async_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """
