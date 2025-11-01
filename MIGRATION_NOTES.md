@@ -339,3 +339,215 @@ alembic downgrade 784448bbeca4  # Go back to before our migrations
 - Database: PostgreSQL with JSON `enabled_modules` column
 - RBAC: Organization-scoped service_roles with `organization_id NOT NULL`
 - Permissions: `admin_organizations_view` (id 13595), `admin_organizations_read` (id 13592)
+
+---
+
+## Account-Type RBAC Refactor (v2.0)
+
+### New Migrations
+
+#### Migration 6: Reset to Account-Type Roles (20251101_06_account_roles)
+**Purpose**: Replace legacy roles with standardized account-type roles
+
+**What it does**:
+- Creates four account-type roles for all organizations:
+  - `org_admin`: Organization Administrator (full access)
+  - `management`: Management (full access)
+  - `manager`: Manager (delegated access)
+  - `executive`: Executive (delegated access)
+- Marks legacy roles (admin, support, viewer) as inactive
+- Preserves historical data for audit purposes
+- Idempotent: safe to run multiple times
+
+**Role Hierarchy**:
+```
+org_admin    ─┐
+              ├─> Full auto-access to all enabled modules
+management   ─┘
+
+manager      ─┐
+              ├─> Delegated access (must be granted by org_admin/management)
+executive    ─┘
+```
+
+#### Migration 7: Simplify Permissions Model (20251101_07_permissions)
+**Purpose**: Seed canonical module/submodule permissions
+
+**What it does**:
+- Creates standardized permissions following naming pattern: `{module}_{submodule}_{action}`
+- Seeds permissions for core modules:
+  - Organization (dashboard, settings, users)
+  - CRM (leads, contacts, opportunities)
+  - ERP (dashboard, ledger, vouchers)
+  - Inventory (products, stock)
+  - HR (employees, attendance, payroll)
+  - Manufacturing (orders, BOM)
+  - Email (accounts, messages via OAuth)
+  - And more...
+- Automatically grants ALL permissions to `org_admin` and `management` roles
+- Prepares permissions for delegation to `manager` and `executive` roles
+
+**Example Permissions**:
+- `organization_dashboard_view`
+- `crm_leads_edit`
+- `erp_vouchers_view`
+- `email_accounts_manage`
+
+#### Migration 8: Update Organization Trigger (20251101_08_trigger_update)
+**Purpose**: Auto-seed account-type roles for new organizations
+
+**What it does**:
+- Replaces old trigger function with new account-type role seeding
+- Automatically creates all four roles when a new organization is created
+- Grants all active permissions to `org_admin` and `management` roles
+- Ensures consistency across all organizations
+
+**Function**: `seed_account_roles_for_org(p_org_id INTEGER)`
+
+### API Changes
+
+#### New Endpoints: Role Delegation
+
+**Base Path**: `/api/v1/role-delegation`
+
+1. **POST /delegate** - Delegate permissions to manager/executive
+   ```json
+   {
+     "target_role_name": "manager",
+     "permission_names": ["crm_leads_view", "crm_leads_edit"]
+   }
+   ```
+
+2. **POST /revoke** - Revoke delegated permissions
+   ```json
+   {
+     "target_role_name": "executive",
+     "permission_names": ["erp_vouchers_edit"]
+   }
+   ```
+
+3. **GET /role/{role_name}/permissions** - List role's current permissions
+
+**Access Control**:
+- Only `org_admin` and `management` can delegate/revoke permissions
+- Can only delegate to `manager` and `executive` roles
+- Cannot modify `org_admin` or `management` permissions
+
+### SnappyMail Complete Removal
+
+**Removed**:
+- ✅ Backend: `snappymail_configs` table (migration 20251101_05)
+- ✅ Backend: All SnappyMail service code
+- ✅ Frontend: `NEXT_PUBLIC_SNAPPYMAIL_URL` environment variable
+- ✅ Models: `SnappyMailConfig` class
+- ✅ Relationships: User snappymail_config relationship
+
+**Replaced With**:
+- OAuth2-based email integration
+- Support for Google, Microsoft, and generic XOAUTH2
+- Encrypted token storage in `user_email_tokens` table
+- Background email sync via API
+- `/api/v1/oauth` endpoints for authorization flow
+- `/api/v1/email` endpoints for email management
+
+### Email OAuth Integration
+
+**Models** (already in place):
+- `UserEmailToken`: Encrypted OAuth2 tokens with auto-refresh
+- `MailAccount`: Email account configuration with OAuth support
+- `OAuthState`: Temporary OAuth2 state during authorization
+
+**Supported Providers**:
+- Google (Gmail API)
+- Microsoft (Outlook/Office 365 API)
+- Generic XOAUTH2 (IMAP/SMTP)
+
+**Features**:
+- AES-GCM encrypted token storage
+- Automatic token refresh
+- Incremental sync (history_id for Gmail, delta tokens for Microsoft)
+- Background sync worker
+- Multi-account support per user
+
+### Migration Sequence
+
+```bash
+# Run all migrations
+alembic upgrade head
+
+# Or run specific migrations in order
+alembic upgrade 20251101_01_normalize
+alembic upgrade 20251101_02_seed_roles
+alembic upgrade 20251101_03_grant_perms
+alembic upgrade 20251101_04_trigger
+alembic upgrade 20251101_05_drop_snappymail
+alembic upgrade 20251101_06_account_roles
+alembic upgrade 20251101_07_permissions
+alembic upgrade 20251101_08_trigger_update
+```
+
+### Verification
+
+After running migrations, verify:
+
+1. **Account-Type Roles Created**:
+   ```sql
+   SELECT name, organization_id, is_active 
+   FROM service_roles 
+   WHERE name IN ('org_admin', 'management', 'manager', 'executive')
+   ORDER BY organization_id, name;
+   ```
+
+2. **Permissions Seeded**:
+   ```sql
+   SELECT COUNT(*) as permission_count 
+   FROM service_permissions 
+   WHERE is_active = true;
+   ```
+
+3. **org_admin/management Have Full Access**:
+   ```sql
+   SELECT r.name as role, COUNT(srp.permission_id) as permission_count
+   FROM service_roles r
+   JOIN service_role_permissions srp ON r.id = srp.role_id
+   WHERE r.name IN ('org_admin', 'management')
+   GROUP BY r.name;
+   ```
+
+4. **SnappyMail Removed**:
+   ```sql
+   SELECT table_name 
+   FROM information_schema.tables 
+   WHERE table_name = 'snappymail_configs';
+   -- Should return no rows
+   ```
+
+### Documentation
+
+See `RBAC_ACCOUNT_ROLES_GUIDE.md` for:
+- Complete role hierarchy explanation
+- Permission model details
+- API usage examples
+- Migration best practices
+- Troubleshooting guide
+
+### Breaking Changes
+
+⚠️ **Role Name Changes**:
+- Legacy `admin` role → Use `org_admin` instead
+- Legacy `manager` role → Renamed; review delegation requirements
+- Legacy `support`, `viewer` roles → Deprecated; use delegated permissions
+
+⚠️ **Email Integration**:
+- SnappyMail no longer supported
+- Must configure OAuth2 for email functionality
+- See OAuth documentation for setup
+
+### Rollback Considerations
+
+- Migrations are designed to be safe and idempotent
+- Legacy roles are marked inactive, not deleted
+- Historical data preserved in all tables
+- Manual intervention required for complete rollback
+- Downgrade operations not recommended due to data dependencies
+
