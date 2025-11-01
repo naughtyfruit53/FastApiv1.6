@@ -443,16 +443,14 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           .map((subSection: any) => ({
             ...subSection,
             items: filterMenuItems(subSection),
-          }))
-          .filter(() => true); // Keep all subsections visible, even if no items
+          })); // Keep all subsections visible, even if no items
 
         return {
           ...section,
           subSections: processedSubSections,
           hasDirectPath: hasDirectPath,
         };
-      })
-      .filter(() => true); // Keep all sections visible
+      }); // Keep all sections visible
 
     if (filteredSections.length === 0) {
       console.warn(`No items in submenu for ${activeMenu} - user may not have required permissions or modules enabled`);
