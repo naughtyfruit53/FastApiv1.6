@@ -18,6 +18,14 @@ from app.core.tenant import TenantContext, require_current_organization_id
 from app.services.rbac import RBACService
 import logging
 
+# Import entitlement checking at module level to avoid circular dependencies
+try:
+    from app.api.deps.entitlements import check_entitlement_access, EntitlementDeniedError
+except ImportError:
+    # Fallback if entitlements module not available
+    check_entitlement_access = None
+    EntitlementDeniedError = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -199,19 +207,49 @@ def enforce_tenant_and_permission(
 
 
 class CombinedEnforcement:
-    """Combined enforcement for convenience"""
+    """
+    Combined enforcement for convenience with entitlement-first, RBAC-second pattern.
     
-    def __init__(self, module: str, action: str):
+    This class implements a three-tier access control hierarchy:
+    1. Entitlement check (org-level): Does the organization have access to this module?
+    2. RBAC check (user-level): Does the user have permission for this action?
+    3. Tenant isolation: Ensure data access is scoped to the correct organization
+    
+    Example usage:
+        @router.get("/sales/leads")
+        async def get_leads(
+            auth: tuple = Depends(require_access("crm", "read")),
+            db: Session = Depends(get_db)
+        ):
+            current_user, org_id = auth
+            # Business logic here
+            
+        @router.get("/sales/reports")
+        async def get_reports(
+            auth: tuple = Depends(require_access("crm", "read", "advanced_analytics")),
+            db: Session = Depends(get_db)
+        ):
+            current_user, org_id = auth
+            # Business logic with submodule check
+    """
+    
+    def __init__(self, module: str, action: str, submodule: Optional[str] = None):
         self.module = module
         self.action = action
+        self.submodule = submodule
     
-    def __call__(
+    async def __call__(
         self,
         current_user: User = Depends(get_current_active_user),
         db: Session = Depends(get_db)
     ) -> tuple[User, Optional[int]]:
         """
-        Enforce both RBAC and tenant isolation.
+        Enforce entitlements first, then RBAC, then tenant isolation.
+        
+        Order of checks:
+        1. Entitlement check (org-level access)
+        2. RBAC permission check (user-level access)
+        3. Tenant isolation enforcement
         
         Returns:
             Tuple of (user, organization_id or None for super_admin)
@@ -219,19 +257,50 @@ class CombinedEnforcement:
         # Get organization ID (None for super_admin without context)
         org_id = require_current_organization_id(current_user)
         
-        # Check permission
+        # Step 1: Check entitlement (org-level access)
+        if check_entitlement_access is None or EntitlementDeniedError is None:
+            # Entitlements not available, skip check
+            logger.warning("Entitlements module not available, skipping entitlement check")
+        else:
+            is_entitled, entitlement_status, reason = await check_entitlement_access(
+                module_key=self.module,
+                submodule_key=self.submodule,
+                org_id=org_id,
+                db=db,
+                user=current_user,
+                allow_super_admin_bypass=True
+            )
+            
+            if not is_entitled:
+                logger.warning(
+                    f"User ID {current_user.id} (org_id: {org_id}) "
+                    f"denied access to {self.module}/{self.submodule or 'all'} due to entitlement. "
+                    f"Status: {entitlement_status}, Reason: {reason}"
+                )
+                raise EntitlementDeniedError(
+                    module_key=self.module,
+                    submodule_key=self.submodule,
+                    entitlement_status=entitlement_status or "disabled",
+                    reason=reason or "Access denied"
+                )
+        
+        # Step 2: Check RBAC permission (user-level access)
         RBACEnforcement.check_permission(current_user, self.module, self.action, db)
         
+        # Step 3: Return user and org_id for tenant isolation
         return current_user, org_id
 
 
-def require_access(module: str, action: str):
+def require_access(module: str, action: str, submodule: Optional[str] = None):
     """
     Convenience function to create a combined enforcement dependency.
     
+    Implements entitlement-first, RBAC-second pattern with tenant isolation.
+    
     Args:
-        module: The module name
-        action: The action to check
+        module: The module name (e.g., "crm", "manufacturing")
+        action: The RBAC action to check (e.g., "read", "write")
+        submodule: Optional submodule name for fine-grained entitlement control
         
     Returns:
         A CombinedEnforcement instance
@@ -244,8 +313,16 @@ def require_access(module: str, action: str):
         ):
             user, org_id = auth
             ...
+        
+        @router.get("/sales/leads")
+        async def get_leads(
+            auth: tuple = Depends(require_access("crm", "read", "lead_management")),
+            db: Session = Depends(get_db)
+        ):
+            user, org_id = auth
+            ...
     """
-    return CombinedEnforcement(module, action)
+    return CombinedEnforcement(module, action, submodule)
 
 
 # Query helper for common pattern
