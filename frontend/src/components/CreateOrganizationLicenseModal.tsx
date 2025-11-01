@@ -24,6 +24,8 @@ import {
 import { useForm } from "react-hook-form";
 import { organizationService } from "../services/organizationService"; // Adjust if needed
 import { usePincodeLookup } from "../hooks/usePincodeLookup";
+import ModuleSelectionModal from './ModuleSelectionModal'; // Import reusable modal
+
 interface CreateOrganizationLicenseModalProps {
   open: boolean;
   onClose: () => void;
@@ -130,15 +132,15 @@ const CreateOrganizationLicenseModal: React.FC<
   const [activationPeriod, setActivationPeriod] = useState<
     "month" | "year" | "perpetual"
   >("year");
-  const [selectedModules, setSelectedModules] = useState({
-    CRM: true,
-    ERP: true,
-    HR: true,
-    Inventory: true,
-    Service: true,
-    Analytics: true,
-    Finance: true,
-  });
+  const [selectedModules, setSelectedModules] = useState<{ [key: string]: boolean }>({
+    crm: true,
+    erp: true,
+    manufacturing: true,
+    finance: true,
+    service: true,
+    hr: true,
+    analytics: true
+  }); // Pre-ticked object
   const {
     register,
     handleSubmit,
@@ -218,7 +220,7 @@ const CreateOrganizationLicenseModal: React.FC<
       state_code: data.state_code.trim(),
       gst_number: data.gst_number?.trim() || undefined, // Optional field
       max_users: data.max_users,
-      enabled_modules: selectedModules, // Include selected modules
+      enabled_modules: selectedModules, // Send object {crm: true, ...}
     };
     console.log("[LicenseModal] Submitting license data:", submissionData);
     try {
@@ -263,18 +265,6 @@ const CreateOrganizationLicenseModal: React.FC<
     } finally {
       setLoading(false);
     }
-  };
-  const handleModuleChange = (module: string, enabled: boolean) => {
-    setSelectedModules((prev) => ({
-      ...prev,
-      [module]: enabled,
-    }));
-  };
-  const handleOpenModuleDialog = () => {
-    setModuleDialogOpen(true);
-  };
-  const handleCloseModuleDialog = () => {
-    setModuleDialogOpen(false);
   };
   return (
     <>
@@ -669,7 +659,7 @@ const CreateOrganizationLicenseModal: React.FC<
           {!success && (
             <>
               <Button
-                onClick={handleOpenModuleDialog}
+                onClick={() => setModuleDialogOpen(true)}
                 variant="text"
                 disabled={loading}
                 size="large"
@@ -728,41 +718,12 @@ const CreateOrganizationLicenseModal: React.FC<
           </Box>
         </Box>
       )}
-      {/* Module Selection Dialog */}
-      <Dialog
+      <ModuleSelectionModal
         open={moduleDialogOpen}
-        onClose={handleCloseModuleDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Module Selection for New Organization</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            Select which modules should be enabled for this organization. All
-            modules are enabled by default.
-          </Typography>
-          <FormGroup>
-            {Object.entries(selectedModules).map(([module, enabled]) => (
-              <FormControlLabel
-                key={module}
-                control={
-                  <Checkbox
-                    checked={enabled}
-                    onChange={(e) =>
-                      handleModuleChange(module, e.target.checked)
-                    }
-                    color="primary"
-                  />
-                }
-                label={module}
-              />
-            ))}
-          </FormGroup>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModuleDialog}>Done</Button>
-        </DialogActions>
-      </Dialog>
+        onClose={() => setModuleDialogOpen(false)}
+        selectedModules={selectedModules}
+        onChange={setSelectedModules}
+      />
       {/* License Activation Dialog */}
       <Dialog
         open={licenseActivationOpen}

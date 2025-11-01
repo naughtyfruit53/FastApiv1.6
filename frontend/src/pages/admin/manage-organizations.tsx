@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/manage-organizations.tsx
+
 "use client";
 import React, { useState } from "react";
 import {
@@ -39,6 +41,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { organizationService } from "../../services/organizationService";
 import { useAuth } from "../../hooks/useAuth";
+import ModuleSelectionModal from '../../components/ModuleSelectionModal';
+
 interface Organization {
   id: number;
   name: string;
@@ -50,6 +54,7 @@ interface Organization {
   max_users: number;
   created_at: string;
   company_details_completed: boolean;
+  enabled_modules: { [key: string]: boolean }; // Object for modules
 }
 const ManageOrganizations: React.FC = () => {
   const router = useRouter();
@@ -69,12 +74,6 @@ const ManageOrganizations: React.FC = () => {
   const { data: organizations, isLoading, error } = useQuery({
     queryKey: ["organizations"],
     queryFn: organizationService.getAllOrganizations,
-  });
-  
-  // Fetch available modules using service
-  const { data: availableModulesData } = useQuery({
-    queryKey: ["available-modules"],
-    queryFn: organizationService.getAvailableModules,
   });
   
   if (error) {
@@ -150,58 +149,12 @@ const ManageOrganizations: React.FC = () => {
     try {
       const config = isSuperAdmin ? {headers: {'X-Organization-ID': `${org.id}`}} : undefined;
       const data = await organizationService.getOrganizationModules(org.id, config);
-      setOrgModules(
-        data.enabled_modules || {
-          CRM: true,
-          ERP: true,
-          HR: true,
-          Inventory: true,
-          Service: true,
-          Analytics: true,
-          Finance: true,
-        },
-      );
+      setOrgModules(data.enabled_modules || {});
     } catch (err) {
       console.error("Failed to fetch organization modules:", err);
-      setOrgModules({
-        CRM: true,
-        ERP: true,
-        HR: true,
-        Inventory: true,
-        Service: true,
-        Analytics: true,
-        Finance: true,
-      });
+      setOrgModules({});
     }
     setModuleControlDialogOpen(true);
-  };
-  const updateModulesMutation = useMutation({
-    mutationFn: async ({ modules, config }: { modules: { [key: string]: boolean }; config?: any }) => {
-      if (!selectedOrg) {
-        throw new Error("No organization selected");
-      }
-      // Use service method
-      return organizationService.updateOrganizationModules(selectedOrg.id, { enabled_modules: modules }, config);
-    },
-    onSuccess: () => {
-      setModuleControlDialogOpen(false);
-      setSelectedOrg(null);
-      // Show success message
-      console.log("Organization modules updated successfully");
-    },
-    onError: (error) => {
-      console.error("Failed to update organization modules:", error);
-    },
-  });
-  const handleModuleChange = (module: string, enabled: boolean) => {
-    setOrgModules((prev) => ({
-      ...prev,
-      [module]: enabled,
-    }));
-  };
-  const confirmModuleUpdate = () => {
-    const config = isSuperAdmin ? {headers: {'X-Organization-ID': `${selectedOrg?.id}`}} : undefined;
-    updateModulesMutation.mutate({modules: orgModules, config});
   };
   const confirmAction = () => {
     if (selectedOrg && actionType) {
@@ -523,62 +476,15 @@ const ManageOrganizations: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      {/* Module Control Dialog */}
-      <Dialog
+      {/* Module Control Modal */}
+      <ModuleSelectionModal
         open={moduleControlDialogOpen}
         onClose={() => setModuleControlDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Module Control - {selectedOrg?.name}</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            Control which modules are enabled for this organization. Changes are
-            applied in real time.
-          </Typography>
-          <FormGroup>
-            {Object.entries(availableModulesData || {}).map(
-              ([moduleKey, moduleInfo]: [string, any]) => ( // Fixed typing for moduleInfo
-                <FormControlLabel
-                  key={moduleKey}
-                  control={
-                    <Checkbox
-                      checked={orgModules[moduleKey] || false}
-                      onChange={(e) =>
-                        handleModuleChange(moduleKey, e.target.checked)
-                      }
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight="medium">
-                        {moduleInfo.name || moduleKey} {/* Fallback to key if no name */}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {moduleInfo.description || ''} {/* Fallback empty desc */}
-                      </Typography>
-                    </Box>
-                  }
-                />
-              ),
-            )}
-          </FormGroup>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModuleControlDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={confirmModuleUpdate}
-            variant="contained"
-            color="primary"
-            disabled={updateModulesMutation.isPending}
-          >
-            {updateModulesMutation.isPending ? "Updating..." : "Update Modules"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        selectedModules={orgModules}
+        onChange={setOrgModules}
+        orgId={selectedOrg?.id}
+        orgName={selectedOrg?.name}
+      />
     </Container>
   );
 };

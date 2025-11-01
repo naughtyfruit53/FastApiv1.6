@@ -19,7 +19,7 @@ export interface MenuAccessParams {
   requireModule?: string;
   requireSubmodule?: { module: string; submodule: string };
   entitlements: AppEntitlementsResponse | null | undefined;
-  isAdminLike: boolean; // org_admin or super_admin
+  isAdmin: boolean; // org_admin or super_admin
   isSuperAdmin?: boolean;
 }
 
@@ -29,19 +29,25 @@ export interface MenuAccessParams {
  * Rules:
  * - Super admin: always enabled
  * - Missing/disabled module:
- *   - Non-admin: hidden
- *   - Admin-like: disabled (with lock, tooltip, CTA)
+ *   - Non-admin: disabled (show but not clickable)
+ *   - Admin: disabled (with lock, tooltip, CTA)
  * - Trial module: enabled with "Trial" badge
  * - Submodule disabled: mirrors module rules
+ * - Email: always enabled, irrespective of module
  * 
  * @param params Menu access parameters
  * @returns MenuItemAccess result
  */
 export function evalMenuItemAccess(params: MenuAccessParams): MenuItemAccess {
-  const { requireModule, requireSubmodule, entitlements, isAdminLike, isSuperAdmin } = params;
+  const { requireModule, requireSubmodule, entitlements, isAdmin, isSuperAdmin } = params;
 
   // Super admin bypasses all checks
   if (isSuperAdmin) {
+    return { result: 'enabled' };
+  }
+
+  // Special case: Email always enabled
+  if (requireModule === 'email' || requireSubmodule?.module === 'email' || params.requireModule?.includes('email')) {
     return { result: 'enabled' };
   }
 
@@ -69,17 +75,11 @@ export function evalMenuItemAccess(params: MenuAccessParams): MenuItemAccess {
 
   if (!moduleEnt || moduleEnt.status === 'disabled') {
     // Module is disabled or not found
-    if (isAdminLike) {
-      return {
-        result: 'disabled',
-        reason: `Module '${moduleKey}' is disabled. Contact your administrator to enable it.`,
-      };
-    } else {
-      return {
-        result: 'hidden',
-        reason: `Module '${moduleKey}' is not available for your organization.`,
-      };
-    }
+    const reason = `Module '${moduleKey}' is disabled. Contact your administrator to enable it.`;
+    return {
+      result: 'disabled',
+      reason,
+    };
   }
 
   // Check if module is in trial
@@ -89,17 +89,11 @@ export function evalMenuItemAccess(params: MenuAccessParams): MenuItemAccess {
   // Check trial expiration
   if (isTrial && trialExpiresAt && trialExpiresAt < new Date()) {
     // Trial expired
-    if (isAdminLike) {
-      return {
-        result: 'disabled',
-        reason: `Module '${moduleKey}' trial has expired. Please upgrade to continue using this feature.`,
-      };
-    } else {
-      return {
-        result: 'hidden',
-        reason: `Module '${moduleKey}' trial has expired.`,
-      };
-    }
+    const reason = `Module '${moduleKey}' trial has expired. Please upgrade to continue using this feature.`;
+    return {
+      result: 'disabled',
+      reason,
+    };
   }
 
   // If checking submodule
@@ -117,17 +111,11 @@ export function evalMenuItemAccess(params: MenuAccessParams): MenuItemAccess {
 
     // Check if submodule is disabled
     if (submoduleEnabled === false) {
-      if (isAdminLike) {
-        return {
-          result: 'disabled',
-          reason: `Feature '${submoduleKey}' is disabled. Contact your administrator to enable it.`,
-        };
-      } else {
-        return {
-          result: 'hidden',
-          reason: `Feature '${submoduleKey}' is not available.`,
-        };
-      }
+      const reason = `Feature '${submoduleKey}' is disabled. Contact your administrator to enable it.`;
+      return {
+        result: 'disabled',
+        reason,
+      };
     }
   }
 
@@ -144,7 +132,7 @@ export function evalMenuItemAccess(params: MenuAccessParams): MenuItemAccess {
  */
 export function isMenuItemVisible(params: MenuAccessParams): boolean {
   const access = evalMenuItemAccess(params);
-  return access.result !== 'hidden';
+  return access.result !== 'hidden'; // Always true now, since we show all
 }
 
 /**

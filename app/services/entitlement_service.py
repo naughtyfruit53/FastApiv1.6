@@ -16,6 +16,7 @@ from app.schemas.entitlement_schemas import (
     OrgEntitlementsResponse, UpdateEntitlementsRequest, UpdateEntitlementsResponse,
     AppEntitlementsResponse, AppModuleEntitlement, EntitlementChanges
 )
+from app.api.v1.entitlements import invalidate_entitlements_cache  # Import for real-time cache invalidation
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class EntitlementService:
                 submodules=[
                     SubmoduleResponse(
                         id=sub.id,
+                        id=sub.id,
                         submodule_key=sub.submodule_key,
                         display_name=sub.display_name,
                         description=sub.description,
@@ -79,7 +81,7 @@ class EntitlementService:
             .where(Module.is_active == True)
             .order_by(Module.sort_order, Module.display_name)
         )
-        modules = modules_result.scalars().all()
+        modules = result.scalars().all()
 
         # Get org entitlements
         org_ent_result = await self.db.execute(
@@ -123,7 +125,7 @@ class EntitlementService:
 
                 submodules.append(
                     SubmoduleEntitlementResponse(
-                        submodule_id=submodule.id,
+                        id=submodule.id,
                         submodule_key=submodule.submodule_key,
                         submodule_display_name=submodule.display_name,
                         enabled=submodule_enabled,
@@ -156,7 +158,7 @@ class EntitlementService:
         request: UpdateEntitlementsRequest,
         actor_user_id: int
     ) -> UpdateEntitlementsResponse:
-        """Update organization entitlements"""
+        """Update organization entitlements (diff-only changes)"""
         # Verify organization exists
         org_result = await self.db.execute(
             select(Organization).where(Organization.id == org_id)
@@ -286,6 +288,9 @@ class EntitlementService:
         await self.db.commit()
         await self.db.refresh(event)
 
+        # Invalidate cache for real-time update
+        await invalidate_entitlements_cache(org_id)
+
         # Get updated entitlements
         updated_entitlements = await self.get_org_entitlements(org_id)
 
@@ -410,3 +415,8 @@ class EntitlementService:
                 return False, 'disabled', f"Submodule '{submodule_key}' is disabled for this organization"
 
         return True, org_ent.status, None
+
+    @staticmethod
+    def get_available_modules() -> List[str]:
+        """Get available modules for selection (7 as specified)"""
+        return ['crm', 'erp', 'manufacturing', 'finance', 'service', 'hr', 'analytics']

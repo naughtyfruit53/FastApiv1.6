@@ -1,52 +1,38 @@
 legacy_flag,legacy_route_pattern,target_module,target_submodule,default_status,notes
-enabled_modules.sales,/sales/*,sales,,enabled,Legacy sales module flag
-enabled_modules.inventory,/inventory/*,inventory,,enabled,Legacy inventory module flag
-enabled_modules.manufacturing,/manufacturing/*,manufacturing,,enabled,Legacy manufacturing module flag
-enabled_modules.finance,/finance/*,finance,,enabled,Legacy finance module flag
-enabled_modules.service,/service/*,service,,enabled,Legacy service module flag
-enabled_modules.projects,/projects/*,projects,,enabled,Legacy projects module flag
-enabled_modules.hr,/hr/*,hr,,enabled,Legacy HR module flag
-enabled_modules.marketing,/marketing/*,marketing,,enabled,Legacy marketing module flag
-enabled_modules.ai_analytics,/ai-analytics/*,ai_analytics,,enabled,Legacy AI analytics flag
-enabled_modules.reports,/reports/*,reports,,enabled,Legacy reports flag
-enabled_modules.vouchers,/vouchers/*,vouchers,,enabled,Legacy vouchers flag
-enabled_modules.accounting,/accounting/*,accounting,,enabled,Legacy accounting flag
-enabled_modules.email,/email/*,email,,enabled,Legacy email flag
-enabled_modules.tasks_calendar,/calendar/*,tasks_calendar,,enabled,Legacy tasks & calendar flag
+enabled_modules.crm,/sales/*|/marketing/*,crm,,enabled,Legacy CRM (sales+marketing) flag
+enabled_modules.erp,/masters/*|/inventory/*|/vouchers/*|/projects/*|/tasks/*|/calendar/*|/email/*,erp,,enabled,Legacy ERP flag
+enabled_modules.manufacturing,/manufacturing/*|/order-book,manufacturing,,enabled,Legacy manufacturing flag
+enabled_modules.finance,/finance/*|/accounting/*|/reports/cash-flow|/reports/trial-balance|/reports/profit-loss|/reports/balance-sheet,finance,,enabled,Legacy finance flag
+enabled_modules.service,/service/*|/service-desk/*|/sla,service,,enabled,Legacy service flag
+enabled_modules.hr,/hr/*,hr,,enabled,Legacy HR flag
+enabled_modules.analytics,/reports/*|/ai-analytics/*|/analytics/*,analytics,,enabled,Legacy analytics flag
 enabled_modules.settings,/settings/*,settings,,enabled,Settings always enabled
-enabled_modules.master_data,/masters/*,master_data,,enabled,Master data always enabled
-route_access.vendors,/masters/vendors,master_data,vendors,enabled,Legacy vendors route access
-route_access.customers,/masters/customers,master_data,customers,enabled,Legacy customers route access
-route_access.products,/masters/products,master_data,products,enabled,Legacy products route access
-route_access.employees,/masters/employees,master_data,employees,enabled,Legacy employees route access
-route_access.sales_orders,/sales/orders,sales,orders,enabled,Legacy sales orders access
-route_access.quotations,/sales/quotations,sales,quotations,enabled,Legacy quotations access
-route_access.leads,/sales/leads,sales,lead_management,enabled,Legacy leads access
-route_access.opportunities,/sales/opportunities,sales,opportunity_tracking,enabled,Legacy opportunities access
+route_access.vendors,/masters/vendors,erp,vendors,enabled,Legacy vendors route access
+route_access.customers,/masters/customers,erp,customers,enabled,Legacy customers route access
+route_access.products,/masters/products,erp,products,enabled,Legacy products route access
+route_access.employees,/masters/employees,erp,employees,enabled,Legacy employees route access
+route_access.sales_orders,/sales/orders,crm,orders,enabled,Legacy sales orders access
+route_access.quotations,/sales/quotations,crm,quotations,enabled,Legacy quotations access
+route_access.leads,/sales/leads,crm,lead_management,enabled,Legacy leads access
+route_access.opportunities,/sales/opportunities,crm,opportunity_tracking,enabled,Legacy opportunities access
 route_access.manufacturing_orders,/order-book,manufacturing,order_book,enabled,Legacy manufacturing orders access
 route_access.production_order,/vouchers/Manufacturing-Vouchers/production-order,manufacturing,production_order,enabled,Legacy production order access
 route_access.work_order,/vouchers/Manufacturing-Vouchers/work-order,manufacturing,work_order,enabled,Legacy work order access
-route_access.inventory_stock,/inventory,inventory,current_stock,enabled,Legacy inventory stock access
-route_access.stock_movements,/inventory/movements,inventory,stock_movements,enabled,Legacy stock movements access
+route_access.inventory_stock,/inventory,erp,current_stock,enabled,Legacy inventory stock access
+route_access.stock_movements,/inventory/movements,erp,stock_movements,enabled,Legacy stock movements access
 route_access.service_tickets,/service/tickets,service,tickets,enabled,Legacy service tickets access
 route_access.service_appointments,/service/appointments,service,appointments,enabled,Legacy service appointments access
 route_access.finance_dashboard,/finance/dashboard,finance,finance_dashboard,enabled,Legacy finance dashboard access
 route_access.customer_invoices,/finance/customer-invoices,finance,customer_invoices,enabled,Legacy customer invoices access
 route_access.vendor_bills,/finance/vendor-bills,finance,vendor_bills,enabled,Legacy vendor bills access
-route_access.projects_list,/projects,projects,all_projects,enabled,Legacy projects list access
-route_access.project_analytics,/projects/analytics,projects,project_analytics,enabled,Legacy project analytics access
-route_access.ai_analytics_dashboard,/ai-analytics/dashboard,ai_analytics,analytics_dashboard,enabled,Legacy AI dashboard access
-route_access.sales_analytics,/reports/sales-analytics,reports,sales_analytics,enabled,Legacy sales analytics access
-route_access.purchase_analytics,/reports/purchase-analytics,reports,purchase_analytics,enabled,Legacy purchase analytics access
-route_access.vouchers_sales_order,/vouchers/Sales/sales-order,vouchers,sales_order,enabled,Legacy voucher sales order access
-route_access.vouchers_purchase_order,/vouchers/Purchase/purchase-order,vouchers,purchase_order,enabled,Legacy voucher purchase order access
-route_access.vouchers_payment,/vouchers/Accounting/payment-voucher,vouchers,payment_voucher,enabled,Legacy payment voucher access
-route_access.vouchers_receipt,/vouchers/Accounting/receipt-voucher,vouchers,receipt_voucher,enabled,Legacy receipt voucher access
+route_access.vouchers_sales_order,/vouchers/Sales/sales-order,erp,sales_order,enabled,Legacy voucher sales order access
+route_access.vouchers_purchase_order,/vouchers/Purchase/purchase-order,erp,purchase_order,enabled,Legacy voucher purchase order access
+route_access.vouchers_payment,/vouchers/Accounting/payment-voucher,erp,payment_voucher,enabled,Legacy payment voucher access
+route_access.vouchers_receipt,/vouchers/Accounting/receipt-voucher,erp,receipt_voucher,enabled,Legacy receipt voucher access
 route_access.hr_employees,/hr/employees,hr,employee_directory,enabled,Legacy HR employees access
 route_access.hr_payroll,/hr/payroll,hr,payroll_management,enabled,Legacy payroll access
-route_access.marketing_campaigns,/marketing/campaigns,marketing,campaigns,enabled,Legacy marketing campaigns access
-route_access.email_inbox,/email/inbox,email,inbox,enabled,Legacy email inbox access
-route_access.calendar_view,/calendar,tasks_calendar,calendar_view,enabled,Legacy calendar access
-route_access.tasks_list,/calendar/my-tasks,tasks_calendar,my_tasks,enabled,Legacy tasks list access
-route_access.accounting_coa,/accounting/chart-of-accounts,accounting,chart_of_accounts,enabled,Legacy COA access
-route_access.accounting_journal,/accounting/journal-entries,accounting,journal_entries,enabled,Legacy journal entries access
+route_access.email_inbox,/email/inbox,erp,inbox,enabled,Legacy email inbox access
+route_access.calendar_view,/calendar,erp,calendar_view,enabled,Legacy calendar access
+route_access.tasks_list,/tasks,erp,my_tasks,enabled,Legacy tasks list access
+route_access.accounting_coa,/accounting/chart-of-accounts,finance,chart_of_accounts,enabled,Legacy COA access
+route_access.accounting_journal,/accounting/journal-entries,finance,journal_entries,enabled,Legacy journal entries access

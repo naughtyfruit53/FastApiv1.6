@@ -44,43 +44,44 @@ class OrganizationService:
     async def get_app_statistics(db: AsyncSession) -> Dict:
         """Get application-level statistics"""
         result = await db.execute(select(func.count(Organization.id)))
-        total_licenses = result.scalar_one()
+        total_licenses = result.scalar_one() or 0
         
         result = await db.execute(select(func.count(Organization.id)).where(Organization.status == "active"))
-        active_organizations = result.scalar_one()
+        active_organizations = result.scalar_one() or 0
         
         result = await db.execute(select(func.count(Organization.id)).where(Organization.status == "trial"))
-        trial_organizations = result.scalar_one()
+        trial_organizations = result.scalar_one() or 0
         
         result = await db.execute(select(func.count(User.id)).where(User.organization_id.isnot(None), User.is_active == True))
-        total_users = result.scalar_one()
+        total_users = result.scalar_one() or 0
         
         result = await db.execute(select(func.count(User.id)).where(User.is_super_admin == True, User.is_active == True))
-        super_admins = result.scalar_one()
+        super_admins = result.scalar_one() or 0
         
         plan_breakdown = {}
         result = await db.execute(select(Organization.plan_type).distinct())
         plan_types = result.scalars().all()
         for plan_type in plan_types:
             result = await db.execute(select(func.count(Organization.id)).where(Organization.plan_type == plan_type))
-            count = result.scalar_one()
+            count = result.scalar_one() or 0
             plan_breakdown[plan_type] = count
         
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         result = await db.execute(select(func.count(Organization.id)).where(Organization.created_at >= thirty_days_ago))
-        new_licenses_this_month = result.scalar_one()
+        new_licenses_this_month = result.scalar_one() or 0
         
-        total_storage_used_gb = total_licenses * 0.5
-        average_users_per_org = round(total_users / total_licenses) if total_licenses > 0 else 0
-        
-        total_storage_used_gb = total_licenses * 0.5
-        average_users_per_org = round(total_users / total_licenses) if total_licenses > 0 else 0
-        
+        # Fixed: Add proper query for failed_login_attempts (sum across all users)
+        result = await db.execute(select(func.sum(User.failed_login_attempts)))
         failed_login_attempts = result.scalar_one() or 0
+        
+        # Dummy storage calculation (replace with real if needed)
+        total_storage_used_gb = total_licenses * 0.5
+        
+        average_users_per_org = round(total_users / total_licenses) if total_licenses > 0 else 0
         
         seven_days_ago = datetime.utcnow() - timedelta(days=7)
         result = await db.execute(select(func.count(Organization.id)).where(Organization.created_at >= seven_days_ago))
-        recent_new_orgs = result.scalar_one()
+        recent_new_orgs = result.scalar_one() or 0
         
         return {
             "total_licenses_issued": total_licenses,
@@ -330,7 +331,6 @@ class OrganizationService:
             logger.exception(f"Failed to create organization license: {e}")
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    @staticmethod
     @staticmethod
     def get_available_modules() -> Dict:
         """Get available modules in the application"""

@@ -184,8 +184,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     } else {
       setAnchorEl(event.currentTarget);
       setActiveMenu(menuName);
-      // Auto-select first section if none is selected (improves UX)
-      if (!selectedSection && menuName !== 'menu') {
+      // Auto-select first section if not selected (improves UX)
+      if (!selectedSection && !isMobile) {
         const sections = menuName === 'menu' ? mainMenuSections(isSuperAdmin) : menuItem?.sections || [];
         if (sections.length > 0) {
           setSelectedSection(sections[0].title);
@@ -346,7 +346,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             const [module, action] = item.permission.split('.');
             if (!hasPermission(module, action)) {
               console.log(`Permission check failed for item ${item.name}: requires ${item.permission}`);
-              return false;
+              return true; // Still show, but will be disabled below
             }
           }
           
@@ -354,12 +354,12 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           if (item.requireModule) {
             if (!hasModuleAccess(item.requireModule)) {
               console.log(`Module access check failed for item ${item.name}: requires module ${item.requireModule}`);
-              return false;
+              return true; // Show but disable
             }
             // Also check organization enabled_modules
             if (!isModuleEnabled(item.requireModule)) {
               console.log(`Module not enabled for item ${item.name}: module ${item.requireModule}`);
-              return false;
+              return true; // Show but disable
             }
           }
           
@@ -368,16 +368,17 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             const { module, submodule } = item.requireSubmodule;
             if (!hasSubmoduleAccess(module, submodule)) {
               console.log(`Submodule access check failed for item ${item.name}: requires ${module}.${submodule}`);
-              return false;
+              return true; // Show but disable
             }
           }
           
-          return true;
+          return true; // Show and enable
         })
         .map((item: any) => {
           const disabled =
             (item.role && !canManageUsers(user)) ||
-            (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission)));
+            (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission))) ||
+            item.__disabled;
           return { ...item, __disabled: Boolean(disabled) };
         });
     };
@@ -397,7 +398,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       return section;
     });
 
-    // Filter sections - include sections with at least one permitted item or direct paths
+    // Filter sections - include all sections for visibility, even if empty (but filter items inside)
     const filteredSections = normalizedSections
       .map((section: any) => {
         // Check if this section has a direct path (e.g., Email)
@@ -412,7 +413,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             ...subSection,
             items: filterMenuItems(subSection),
           }))
-          .filter((subSection: any) => subSection.items.length > 0);
+          .filter((subSection: any) => true); // Keep all subsections visible, even if no items
 
         return {
           ...section,
@@ -420,7 +421,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           hasDirectPath: hasDirectPath,
         };
       })
-      .filter((section: any) => section.subSections.length > 0 || section.hasDirectPath);
+      .filter((section: any) => true); // Keep all sections visible
 
     if (filteredSections.length === 0) {
       console.warn(`No items in submenu for ${activeMenu} - user may not have required permissions or modules enabled`);
@@ -547,7 +548,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>Search results</Typography>
                 <List dense>
                   {filteredMenuItems.map((item, i) => (
-                    <ListItemButton key={i} onClick={() => navigateTo(item.path)}>
+                    <ListItemButton key={i} onClick={() => navigateTo(item.path)} disabled={item.__disabled}>
                       <ListItemText primary={item.name} />
                     </ListItemButton>
                   ))}
@@ -556,7 +557,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             ) : (
               <>
                 {selectedSection ? (
-                  <Grid container spacing={2}>
+                  <Grid container spacing= {2}>
                     {filteredSections
                       .find((s: any) => s.title === selectedSection)
                       ?.subSections.map((subSection: any, subIndex: number) => (
@@ -570,7 +571,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                             {subSection.items.map((item: any, itemIndex: number) => {
                               const disabled =
                                 (item.role && !canManageUsers(user)) ||
-                                (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission)));
+                                (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission))) ||
+                                item.__disabled;
                               return (
                                 <Tooltip key={itemIndex} title={disabled ? 'You do not have permission. Click Request.' : ''} arrow>
                                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
@@ -682,6 +684,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             <ListItemButton
               key={subIndex}
               onClick={() => navigateTo(subItem.path)}
+              disabled={subItem.__disabled}
               sx={{
                 px: 3,
                 py: 1,
@@ -702,7 +705,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   };
 
   const renderSearchResults = () => {
-    if (filteredMenuItems.length === 0) return null;
+    if (filteredMenuItems.length > 0) return null;
     return (
       <Menu
         open={filteredMenuItems.length > 0}
@@ -717,7 +720,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         }}
       >
         {filteredMenuItems.map((item, index) => (
-          <MenuItem key={index} onClick={() => navigateTo(item.path)}>
+          <MenuItem key={index} onClick={() => navigateTo(item.path)} disabled={item.__disabled}>
             {item.name}
           </MenuItem>
         ))}

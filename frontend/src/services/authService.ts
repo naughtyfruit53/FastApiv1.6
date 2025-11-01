@@ -78,7 +78,7 @@ export const authService = {
         console.log("[AuthService] Stored refresh token");
       }
       if (response.data.user_role) {
-        localStorage.set_item(USER_ROLE_KEY, response.data.user_role);
+        localStorage.setItem(USER_ROLE_KEY, response.data.user_role);
         console.log("[AuthService] Stored user_role:", response.data.user_role);
       }
       localStorage.setItem(
@@ -213,12 +213,8 @@ export const authService = {
       return response.data;
     } catch (error: any) {
       console.error("[AuthService] Token refresh failed:", error);
-      // Clear invalid tokens
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      localStorage.removeItem(USER_ROLE_KEY);
-      localStorage.removeItem(IS_SUPER_ADMIN_KEY);
-      return null;  // Return null instead of throw
+      // Instead of clear, return null
+      return null;
     }
   },
   isTokenValid: () => {
@@ -588,7 +584,7 @@ export const companyService = {
         return null;
       }
       console.error("[CompanyService] Error fetching company:", error);
-      return null; // Return null on error to avoid throwing
+      return null; // Instead of throw, return null on error to avoid throwing
     }
   },
   isCompanySetupRequired: async () => {
