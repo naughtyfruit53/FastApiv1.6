@@ -26,7 +26,7 @@ ROLE_ORG_ADMIN = "org_admin"
 ALWAYS_ON_MODULES = {'email'}
 
 # RBAC-only modules (non-billable, skip entitlement check)
-RBAC_ONLY_MODULES = {'settings', 'admin', 'administration', 'organization'}
+RBAC_ONLY_MODULES = {'settings', 'admin', 'administration', 'organization', 'rbac', 'organization_module'}
 
 # Entitlements gating is always enabled - no feature flag override
 # Strict enforcement: all access must go through proper entitlement checks
@@ -222,7 +222,7 @@ def require_permission_with_entitlement(
     async def dependency(
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(get_current_active_user),
-        _entitlement: None = Depends(require_entitlement(module_key, submodule_key))
+        _: None = Depends(require_entitlement(module_key, submodule_key))
     ) -> None:
         """Dependency that performs both entitlement and permission checks"""
         

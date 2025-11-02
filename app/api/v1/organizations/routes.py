@@ -39,6 +39,10 @@ def get_rbac(db: AsyncSession = Depends(get_db)):
 from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole
 from app.core.modules_registry import get_default_enabled_modules
 
+# Import for entitlements endpoint
+from app.services.entitlement_service import EntitlementService
+from app.schemas.entitlement_schemas import AppEntitlementsResponse
+
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["organizations"])
 
@@ -415,3 +419,32 @@ async def reset_organization_data(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to reset organization data. Please try again."
         )
+
+# NEW: Non-admin endpoint to fetch current org entitlements
+@router.get("/entitlements", response_model=AppEntitlementsResponse)
+async def get_entitlements(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get entitlements for the current organization (org admin or super admin)"""
+    if current_user.organization_id is None:
+        if not current_user.is_super_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+        # For super admin with null org_id, return all enabled as placeholder
+        from app.core.modules_registry import get_default_enabled_modules
+        return AppEntitlementsResponse(
+            org_id=0,
+            entitlements={
+                k.lower(): AppModuleEntitlement(
+                    module_key=k.lower(),
+                    status='enabled',
+                    submodules={}
+                ) for k in get_default_enabled_modules()
+            }
+        )
+
+    service = EntitlementService(db)
+    return await service.get_app_entitlements(current_user.organization_id)

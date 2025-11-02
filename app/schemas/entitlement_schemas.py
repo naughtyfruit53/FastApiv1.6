@@ -79,6 +79,7 @@ class ModuleChange(BaseModel):
     module_key: str = Field(..., description="Module key to update")
     status: str = Field(..., description="New status: enabled, disabled, or trial")
     trial_expires_at: Optional[datetime] = Field(None, description="Trial expiration date (required if status is trial)")
+    source: Optional[str] = Field(None, description="Source of the change (e.g., manual, subscription)")
 
     @validator('status')
     def validate_status(cls, v):
@@ -98,6 +99,7 @@ class SubmoduleChange(BaseModel):
     module_key: str = Field(..., description="Module key")
     submodule_key: str = Field(..., description="Submodule key to update")
     enabled: bool = Field(..., description="Whether submodule is enabled")
+    source: Optional[str] = Field(None, description="Source of the change (e.g., manual, subscription)")
 
 
 class EntitlementChanges(BaseModel):

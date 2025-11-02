@@ -130,6 +130,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
           module_key: change.module_key,
           status: change.status,
           trial_expires_at: null,
+          source: 'manual',  // Add source here
         })),
         submodules: [],
       },

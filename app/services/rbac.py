@@ -528,6 +528,12 @@ class RBACService:
                 "display_name": "Viewer",
                 "description": "Read-only access to data",
                 "permissions": role_permissions_map.get("viewer", [])
+            },
+            {
+                "name": RoleType.ORG_ADMIN.value,
+                "display_name": "Organization Admin",
+                "description": "Full organization management access",
+                "permissions": role_permissions_map.get("org_admin", [])  # Add if defined in rbac_permissions
             }
         ]
         

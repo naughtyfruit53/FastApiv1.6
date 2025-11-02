@@ -7,6 +7,7 @@ Service CRM RBAC API endpoints for role and permission management
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -396,13 +397,6 @@ async def get_user_service_roles(
     """Get all service roles assigned to a user, including self"""
     logger.info(f"User {current_user.id} requesting roles for user {user_id}")
     
-    # STRICT ENFORCEMENT: Super admins must have organization context
-    if current_user.organization_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Organization context required. Please specify an organization."
-        )
-
     # Allow users to view their own roles
     if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
         raise HTTPException(
@@ -571,7 +565,8 @@ async def get_user_permissions(
     logger.info(f"User {current_user.id} requesting permissions for user {user_id}")
     
     # STRICT ENFORCEMENT: All users must have organization context
-    if current_user.organization_id is None:
+    # But allow super admins (org_id=None) to proceed
+    if not current_user.is_super_admin and current_user.organization_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Organization context required. Please specify an organization."

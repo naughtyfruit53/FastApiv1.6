@@ -66,21 +66,21 @@ class EntitlementService:
     async def get_org_entitlements(self, org_id: int) -> OrgEntitlementsResponse:
         """Get effective entitlements for an organization"""
         # Get organization
-        org_result = await self.db.execute(
+        result = await self.db.execute(
             select(Organization).where(Organization.id == org_id)
         )
-        org = org_result.scalar_one_or_none()
+        org = result.scalar_one_or_none()
         if not org:
             raise ValueError(f"Organization with id {org_id} not found")
 
         # Get all modules
-        modules_result = await self.db.execute(
+        result = await self.db.execute(
             select(Module)
             .options(selectinload(Module.submodules))
             .where(Module.is_active == True)
             .order_by(Module.sort_order, Module.display_name)
         )
-        modules = modules_result.scalars().all()
+        modules = result.scalars().all()
 
         # Get org entitlements
         org_ent_result = await self.db.execute(
@@ -183,7 +183,7 @@ class EntitlementService:
         diff_data = {"modules": [], "submodules": []}
 
         # Apply module changes
-        for module_change in request.modules or []:
+        for module_change in request.changes.modules or []:
             normalized_key = module_change.module_key.lower()
             module = modules_by_key.get(normalized_key)
             if not module:
@@ -229,7 +229,7 @@ class EntitlementService:
             })
 
         # Apply submodule changes
-        for sub_change in request.submodules or []:
+        for sub_change in request.changes.submodules or []:
             normalized_module_key = sub_change.module_key.lower()
             normalized_sub_key = sub_change.submodule_key.lower()
             
@@ -345,10 +345,51 @@ class EntitlementService:
         )
         org_entitlements = org_ent_result.scalars().all()
 
+        # NEW: If no entitlements found, auto-migrate from enabled_modules
+        if not org_entitlements:
+            logger.info(f"No entitlements found for org {org_id} - auto-migrating from enabled_modules")
+            
+            # Get organization
+            org_result = await self.db.execute(
+                select(Organization).where(Organization.id == org_id)
+            )
+            org = org_result.scalar_one_or_none()
+            if not org:
+                raise ValueError(f"Organization {org_id} not found")
+            
+            # Get all active modules
+            modules_result = await self.db.execute(
+                select(Module).where(Module.is_active == True)
+            )
+            modules_by_key = {m.module_key.upper(): m for m in modules_result.scalars().all()}
+            
+            # Create entitlements based on enabled_modules
+            for upper_key, enabled in (org.enabled_modules or {}).items():
+                module = modules_by_key.get(upper_key)
+                if module:
+                    ent = OrgEntitlement(
+                        org_id=org_id,
+                        module_id=module.id,
+                        status='enabled' if enabled else 'disabled',
+                        source='auto_migration'
+                    )
+                    self.db.add(ent)
+            
+            await self.db.commit()
+            
+            # Refetch org_entitlements after migration
+            org_ent_result = await self.db.execute(
+                select(OrgEntitlement)
+                .where(OrgEntitlement.org_id == org_id)
+                .options(joinedload(OrgEntitlement.module))
+            )
+            org_entitlements = org_ent_result.scalars().all()
+            
+            logger.info(f"Auto-migrated {len(org_entitlements)} entitlements for org {org_id}")
+
         # Get org subentitlements
         org_subent_result = await self.db.execute(
-            select(OrgSubentitlement)
-            .where(OrgSubentitlement.org_id == org_id)
+            select(OrgSubentitlement).where(OrgSubentitlement.org_id == org_id)
             .options(joinedload(OrgSubentitlement.submodule))
         )
         org_subentitlements = {}

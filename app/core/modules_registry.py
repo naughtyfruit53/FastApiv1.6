@@ -1,4 +1,5 @@
 # app/core/modules_registry.py
+
 """
 Comprehensive Module and Submodule Registry for RBAC System
 Defines all modules, submodules, and their hierarchical structure
@@ -289,6 +290,33 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "reports",
     ],
     
+    # Streaming Analytics Module
+    ModuleName.STREAMING_ANALYTICS.value: [
+        "real_time_dashboards",
+        "event_processing",
+        "alerts",
+        "data_streams",
+        "analytics",
+    ],
+    
+    # AB Testing Module
+    ModuleName.AB_TESTING.value: [
+        "experiments",
+        "variants",
+        "metrics",
+        "results",
+        "analytics",
+    ],
+    
+    # Website Agent Module
+    ModuleName.WEBSITE_AGENT.value: [
+        "crawlers",
+        "scrapers",
+        "data_extraction",
+        "analytics",
+        "reports",
+    ],
+    
     # Email Module
     ModuleName.EMAIL.value: [
         "inbox",
@@ -337,46 +365,123 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "analytics",
     ],
     
-    # Settings Module (added)
-    ModuleName.SETTINGS.value: [
-        "general",
-        "company",
-        "voucher",
-        "role_management",
-        "service",
-        "audit_logs",
-        "notification",
-        "user_management",
-        "system_reports",
-        "migration",
-        "ui_testing",
-        "notification_demo",
-        "transport",
-        "assets",
-        "bank_accounts",
+    # Master Data Module
+    ModuleName.MASTER_DATA.value: [
+        "customers",
+        "vendors",
+        "products",
+        "bom",
+        "employees",
+        "chart_of_accounts",
+        "expense_accounts",
+        "payment_terms",
+        "tax_codes",
+        "units",
+        "company_details",
+        "multi_company",
     ],
     
-    # Admin Module (added)
-    ModuleName.ADMIN.value: [
+    # Vouchers Module
+    ModuleName.VOUCHERS.value: [
+        "sales_vouchers",
+        "purchase_vouchers",
+        "payment_vouchers",
+        "receipt_vouchers",
+        "journal_vouchers",
+        "contra_vouchers",
+        "debit_note",
+        "credit_note",
+        "delivery_challan",
+        "goods_receipt_note",
+        "quotation",
+        "proforma_invoice",
+        "purchase_order",
+        "sales_order",
+        "purchase_return",
+        "sales_return",
+        "inter_department_voucher",
+    ],
+    
+    # Accounting Module
+    ModuleName.ACCOUNTING.value: [
+        "ledger",
+        "trial_balance",
+        "profit_loss",
+        "balance_sheet",
+        "cash_flow",
+        "customer_aging",
+        "vendor_aging",
+    ],
+    
+    # Reports Analytics Module
+    ModuleName.REPORTS_ANALYTICS.value: [
+        "balance_sheet",
+        "cash_flow",
+        "ledgers",
+        "profit_loss",
+        "trial_balance",
+    ],
+    
+    # Sales Module
+    ModuleName.SALES.value: [
+        "customers",
+        "leads",
+        "opportunities",
+        "contacts",
+        "commissions",
+        "pipeline",
+        "reports",
+        "customer_analytics",
         "dashboard",
+        "accounts",
+    ],
+    
+    # Projects Module
+    ModuleName.PROJECTS.value: [
+        "planning",
+        "documents",
+        "resources",
+        "analytics",
+    ],
+    
+    # HR Management Module
+    ModuleName.HR_MANAGEMENT.value: [
+        "employees_directory",
+        "employees",
+        "dashboard",
+    ],
+    
+    # Tasks Calendar Module
+    ModuleName.TASKS_CALENDAR.value: [
+        "dashboard",
+        "create",
+        "assignments",
+        "events",
+    ],
+    
+    # Settings Module
+    ModuleName.SETTINGS.value: [
+        "general_settings",
+        "company",
         "user_management",
-        "role_management",
+        "voucher_settings",
+        "data_management",
+        "factory_reset",
+    ],
+    
+    # Admin Module
+    ModuleName.ADMIN.value: [
+        "app_user_management",
         "audit_logs",
-        "system_settings",
         "notifications",
         "license_management",
-        "organizations",
-        "app_statistics",
+        "manage_organizations",
     ],
     
-    # Organization Module (added for dashboard)
+    # Organization Module
     ModuleName.ORGANIZATION.value: [
-        "dashboard",
-        "settings",
+        "create",
         "users",
-        "statistics",
-        "activities",
-        "reports",
     ],
 }
 

@@ -15,6 +15,7 @@ class ServiceRoleType(str, Enum):
     MANAGER = "manager"
     SUPPORT = "support"
     VIEWER = "viewer"
+    ORG_ADMIN = "org_admin"  # Added for org_admin role
 
 
 class ServiceModule(str, Enum):

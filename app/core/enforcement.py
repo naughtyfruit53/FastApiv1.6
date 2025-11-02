@@ -300,8 +300,7 @@ class CombinedEnforcement:
                 submodule_key=self.submodule,
                 org_id=org_id,
                 db=db,
-                user=current_user,
-                allow_super_admin_bypass=True
+                user=current_user
             )
             
             if not is_entitled:

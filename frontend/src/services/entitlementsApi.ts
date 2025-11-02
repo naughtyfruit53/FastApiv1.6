@@ -110,14 +110,14 @@ export interface UpdateEntitlementsResponse {
 }
 
 /**
- * Fetch entitlements for an organization (app use, cached)
+ * Fetch entitlements for the current organization (app use, cached)
+ * Changed: No orgId in path, backend handles current org
  */
-export async function fetchOrgEntitlements(
-  orgId: number,
+export async function fetchEntitlements(
   token: string
 ): Promise<AppEntitlementsResponse> {
   const response = await axios.get<AppEntitlementsResponse>(
-    `${API_BASE_URL}/orgs/${orgId}/entitlements`,
+    `${API_BASE_URL}/organizations/entitlements`,
     {
       headers: {
         Authorization: `Bearer ${token}`,

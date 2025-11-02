@@ -35,14 +35,15 @@ import { useRouter } from 'next/navigation';
 import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
 import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers } from '../types/user.types';
 import { useQuery } from '@tanstack/react-query';
-import { rbacService } from '../services/rbacService';
 import { organizationService } from '../services/organizationService';
 import MobileNav from './MobileNav';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { menuItems, mainMenuSections } from './menuConfig';
 import { usePermissions } from '../context/PermissionContext';
 import { useEntitlements } from '../hooks/useEntitlements';
+import { useAuth } from '../context/AuthContext';  // Add this import
 import { evalMenuItemAccess, getMenuItemBadge, getMenuItemTooltip } from '../permissions/menuAccess';
+import { ACCESS_TOKEN_KEY } from "../constants/auth";  // Import constant
 
 interface MegaMenuProps {
   user?: any;
@@ -66,6 +67,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   const router = useRouter();
   const { isMobile } = useMobileDetection();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const { organizationId } = useAuth();  // Add this from AuthContext
 
   // Common button style for enhanced UI/UX
   const modernButtonStyle = {
@@ -104,28 +106,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     },
   });
 
-  // Query for current user's service permissions
-  const { data: _userServicePermissions = [] } = useQuery({
-    queryKey: ['userServicePermissions'],
-    queryFn: rbacService.getUserPermissions,
-    enabled: !!user && !isAppSuperAdmin(user),
-    retry: false,
-    staleTime: 0,
-    onSuccess: (data) => {
-      console.log('User permissions fetched:', data);
-    },
-  });
-
   const isSuperAdmin = isAppSuperAdmin(user);
   const isGodSuperAdmin = user?.email === 'naughtyfruit53@gmail.com';
   const isAdminLike = isSuperAdmin || isOrgSuperAdmin(user);
 
   // Fetch entitlements for menu access control
-  const authToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-  const { entitlements } = useEntitlements(
-    organizationData?.id,
-    authToken || undefined
-  );
+  const authToken = typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
+  const { entitlements } = useEntitlements(organizationData?.id, authToken || undefined);
 
   // Keyboard: Esc closes menus; Ctrl/Cmd+K focuses search
   useEffect(() => {
@@ -224,16 +211,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     router.push('/dashboard');
     handleMenuClose();
   };
-
-  const hasServicePermission = (permission: string): boolean => {
-    try {
-      return contextUserPermissions.includes(permission);
-    } catch {
-      return false;
-    }
-  };
-
-  // Removed unused function hasAnyServicePermission
 
   const isModuleEnabled = (module: string): boolean => {
     // STRICT ENFORCEMENT: No super admin bypass, default to false if unknown
@@ -356,6 +333,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             entitlements: entitlements,
             isAdmin: isAdminLike,
             isSuperAdmin: isSuperAdmin,
+            orgId: organizationId,  // Pass orgId here
           });
           
           // If access is 'hidden', hide for non-admin users
@@ -382,12 +360,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             entitlements: entitlements,
             isAdmin: isAdminLike,
             isSuperAdmin: isSuperAdmin,
+            orgId: organizationId,  // Pass orgId here
           });
           
           const disabled =
             accessResult.result === 'disabled' ||
             (item.role && !canManageUsers(user)) ||
-            (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission)));
+            (item.servicePermission && !(isModuleEnabled('service') || hasPermission(item.servicePermission.split('.')[0], item.servicePermission.split('.')[1])));
           
           const badge = getMenuItemBadge({
             requireModule: item.requireModule,
@@ -395,6 +374,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             entitlements: entitlements,
             isAdmin: isAdminLike,
             isSuperAdmin: isSuperAdmin,
+            orgId: organizationId,  // Pass orgId here
           });
           
           const tooltip = getMenuItemTooltip({
@@ -403,6 +383,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
             entitlements: entitlements,
             isAdmin: isAdminLike,
             isSuperAdmin: isSuperAdmin,
+            orgId: organizationId,  // Pass orgId here
           });
           
           return { 
@@ -601,7 +582,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                             {subSection.items.map((item: any, itemIndex: number) => {
                               const disabled =
                                 (item.role && !canManageUsers(user)) ||
-                                (item.servicePermission && !(isModuleEnabled('service') || hasServicePermission(item.servicePermission))) ||
+                                (item.servicePermission && !(isModuleEnabled('service') || hasPermission(item.servicePermission.split('.')[0], item.servicePermission.split('.')[1]))) ||
                                 item.__disabled;
                               const tooltipText = item.__tooltip || (disabled ? 'Module not enabled. Contact your administrator.' : '');
                               return (
