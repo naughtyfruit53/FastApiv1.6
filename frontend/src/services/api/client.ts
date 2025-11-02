@@ -13,6 +13,7 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import axiosRetry from 'axios-retry';
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../../constants/auth';
+import { getApiUrl } from '../../utils/config';
 
 interface ApiResponse<T = any> {
   data: T;
@@ -29,7 +30,8 @@ class ApiClient {
   }> = [];
 
   constructor() {
-    const baseURL = '/api/v1';  // Use proxy path for all API calls
+    // Use centralized config to prevent URL duplication
+    const baseURL = getApiUrl();  // Returns http://localhost:8000/api/v1 (no duplication)
     const isDev = process.env.NODE_ENV === 'development';
 
     this.client = axios.create({
@@ -217,6 +219,15 @@ class ApiClient {
             module: module,
             timestamp: new Date().toISOString(),
           });
+          
+          // Enhance error with user-friendly message
+          const enhancedError = new Error(
+            errorData?.detail || 
+            `You don't have permission to access this resource. ${permission ? `Required permission: ${permission}` : ''}`
+          ) as AxiosError;
+          enhancedError.response = error.response;
+          enhancedError.config = error.config;
+          return Promise.reject(enhancedError);
         }
 
         // Handle 404 Not Found - could be access denial for cross-org resources
@@ -234,6 +245,14 @@ class ApiClient {
                 detail: errorData.detail,
                 timestamp: new Date().toISOString(),
               });
+              
+              // Enhance error with user-friendly message
+              const enhancedError = new Error(
+                errorData?.detail || 'Resource not found or you do not have access to it'
+              ) as AxiosError;
+              enhancedError.response = error.response;
+              enhancedError.config = error.config;
+              return Promise.reject(enhancedError);
             }
           }
         }

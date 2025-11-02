@@ -1,8 +1,9 @@
 // frontend/src/services/resetService.ts
 
 import axios from "axios";
+import { getApiUrl } from "../utils/config";
 
-const API_BASE_URL = "http://localhost:8000/api/v1";
+const API_BASE_URL = getApiUrl();
 
 export const requestResetOTP = async (
   scope: string,

@@ -4,8 +4,9 @@
  */
 
 import axios from 'axios';
+import { getApiUrl } from '../utils/config';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = getApiUrl();
 
 // Types
 export interface ChatMessage {
@@ -118,7 +119,7 @@ class AIService {
   async processChatMessage(request: ChatMessage): Promise<ChatResponse> {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/api/v1/chatbot/process`,
+        `${API_BASE_URL}/chatbot/process`,
         request,
         { headers: this.getHeaders() }
       );
@@ -135,7 +136,7 @@ class AIService {
   async getChatSuggestions(): Promise<{ suggestions: string[] }> {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/chatbot/suggestions`,
+        `${API_BASE_URL}/chatbot/suggestions`,
         { headers: this.getHeaders() }
       );
       return response.data;
@@ -151,7 +152,7 @@ class AIService {
   async getBusinessInsights(): Promise<{ insights: SmartInsight[]; recommendations: string[] }> {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/chatbot/business-insights`,
+        `${API_BASE_URL}/chatbot/business-insights`,
         { headers: this.getHeaders() }
       );
       return response.data;
@@ -171,7 +172,7 @@ class AIService {
   async classifyIntent(request: IntentClassificationRequest): Promise<IntentClassificationResponse> {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/api/v1/ai/intent/classify`,
+        `${API_BASE_URL}/ai/intent/classify`,
         request,
         { headers: this.getHeaders() }
       );
@@ -188,7 +189,7 @@ class AIService {
   async getBusinessAdvice(request: BusinessAdviceRequest): Promise<BusinessAdviceResponse> {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/api/v1/ai/advice`,
+        `${API_BASE_URL}/ai/advice`,
         request,
         { headers: this.getHeaders() }
       );
@@ -205,7 +206,7 @@ class AIService {
   async getAdviceCategories(): Promise<{ categories: Array<{ id: string; name: string; description: string }> }> {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai/advice/categories`,
+        `${API_BASE_URL}/ai/advice/categories`,
         { headers: this.getHeaders() }
       );
       return response.data;
@@ -222,7 +223,7 @@ class AIService {
     try {
       const params = query ? { query } : {};
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai/navigation/suggestions`,
+        `${API_BASE_URL}/ai/navigation/suggestions`,
         { headers: this.getHeaders(), params }
       );
       return response.data;
@@ -239,7 +240,7 @@ class AIService {
     try {
       const params = context ? { context } : {};
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai/navigation/quickactions`,
+        `${API_BASE_URL}/ai/navigation/quickactions`,
         { headers: this.getHeaders(), params }
       );
       return response.data;
@@ -256,7 +257,7 @@ class AIService {
     try {
       const params = category ? { category } : {};
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai/insights/smart`,
+        `${API_BASE_URL}/ai/insights/smart`,
         { headers: this.getHeaders(), params }
       );
       return response.data;
@@ -273,7 +274,7 @@ class AIService {
     try {
       const params = context ? { context } : {};
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai/insights/recommendations`,
+        `${API_BASE_URL}/ai/insights/recommendations`,
         { headers: this.getHeaders(), params }
       );
       return response.data;
@@ -289,7 +290,7 @@ class AIService {
   async getChatbotConfig(): Promise<any> {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai/chatbot/config`,
+        `${API_BASE_URL}/ai/chatbot/config`,
         { headers: this.getHeaders() }
       );
       return response.data;
@@ -309,7 +310,7 @@ class AIService {
   async getAIAnalyticsDashboard(): Promise<AIAnalyticsDashboard> {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai-analytics/dashboard`,
+        `${API_BASE_URL}/ai-analytics/dashboard`,
         { headers: this.getHeaders() }
       );
       return response.data;
@@ -329,7 +330,7 @@ class AIService {
       if (model_type) params.model_type = model_type;
       
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai-analytics/models`,
+        `${API_BASE_URL}/ai-analytics/models`,
         { headers: this.getHeaders(), params }
       );
       return response.data;
@@ -345,7 +346,7 @@ class AIService {
   async getAIModel(modelId: number): Promise<AIModel> {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai-analytics/models/${modelId}`,
+        `${API_BASE_URL}/ai-analytics/models/${modelId}`,
         { headers: this.getHeaders() }
       );
       return response.data;
@@ -361,7 +362,7 @@ class AIService {
   async makePrediction(request: PredictionRequest): Promise<PredictionResponse> {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/api/v1/ai-analytics/predict`,
+        `${API_BASE_URL}/ai-analytics/predict`,
         request,
         { headers: this.getHeaders() }
       );
@@ -381,7 +382,7 @@ class AIService {
       if (modelId) params.model_id = modelId;
       
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai-analytics/predictions`,
+        `${API_BASE_URL}/ai-analytics/predictions`,
         { headers: this.getHeaders(), params }
       );
       return response.data;
@@ -397,7 +398,7 @@ class AIService {
   async detectAnomalies(dataSource: string, timeRangeHours: number = 24): Promise<any[]> {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/api/v1/ai-analytics/anomalies/detect`,
+        `${API_BASE_URL}/ai-analytics/anomalies/detect`,
         null,
         {
           headers: this.getHeaders(),
@@ -421,7 +422,7 @@ class AIService {
     try {
       const params = severity ? { severity } : {};
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai-analytics/anomalies`,
+        `${API_BASE_URL}/ai-analytics/anomalies`,
         { headers: this.getHeaders(), params }
       );
       return response.data;
@@ -438,7 +439,7 @@ class AIService {
     try {
       const params = categories ? { categories: categories.join(',') } : {};
       const response = await axios.post(
-        `${API_BASE_URL}/api/v1/ai-analytics/insights/generate`,
+        `${API_BASE_URL}/ai-analytics/insights/generate`,
         null,
         { headers: this.getHeaders(), params }
       );
@@ -459,7 +460,7 @@ class AIService {
       if (category) params.category = category;
       
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai-analytics/insights`,
+        `${API_BASE_URL}/ai-analytics/insights`,
         { headers: this.getHeaders(), params }
       );
       return response.data;
@@ -479,7 +480,7 @@ class AIService {
       if (isActive !== undefined) params.is_active = isActive;
       
       const response = await axios.get(
-        `${API_BASE_URL}/api/v1/ai-analytics/workflows`,
+        `${API_BASE_URL}/ai-analytics/workflows`,
         { headers: this.getHeaders(), params }
       );
       return response.data;

@@ -1,7 +1,9 @@
 // Revised: v1/frontend/src/utils/apiUtils.ts
 import axios from "axios";
+import { getApiUrl } from "./config";
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
+  baseURL: getApiUrl(), // Use centralized config to prevent URL duplication
   headers: {
     "Content-Type": "application/json",
   },
