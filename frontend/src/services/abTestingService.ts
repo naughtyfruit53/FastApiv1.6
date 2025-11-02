@@ -4,9 +4,9 @@
  */
 
 import axios from 'axios';
+import { getApiUrl } from '../utils/config';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const AB_TESTING_API = `${API_BASE_URL}/api/v1/ab-testing`;
+const AB_TESTING_API = `${getApiUrl()}/ab-testing`;
 
 export enum ExperimentStatus {
   DRAFT = 'draft',

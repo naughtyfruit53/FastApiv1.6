@@ -1,7 +1,34 @@
 // Configuration and feature flags for the frontend application
 
+/**
+ * Get the base API URL without /api/v1
+ * @returns Base URL (e.g., http://localhost:8000)
+ */
+export const getApiBaseUrl = (): string => {
+  let baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  
+  // Remove trailing slashes
+  baseUrl = baseUrl.replace(/\/+$/, '');
+  
+  // Remove /api/v1 if it was accidentally included
+  if (baseUrl.endsWith('/api/v1')) {
+    baseUrl = baseUrl.slice(0, -7);
+  }
+  
+  return baseUrl;
+};
+
+/**
+ * Get the full API URL with /api/v1
+ * @returns Full API URL (e.g., http://localhost:8000/api/v1)
+ */
+export const getApiUrl = (): string => {
+  return `${getApiBaseUrl()}/api/v1`;
+};
+
 export const config = {
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+  apiUrl: getApiBaseUrl(),
+  apiUrlWithPath: getApiUrl(),
 
   // Feature flags
   features: {

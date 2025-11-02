@@ -4,9 +4,9 @@
  */
 
 import axios from 'axios';
+import { getApiUrl, getApiBaseUrl } from '../utils/config';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const STREAMING_API = `${API_BASE_URL}/api/v1/streaming-analytics`;
+const STREAMING_API = `${getApiUrl()}/streaming-analytics`;
 
 export enum StreamStatus {
   ACTIVE = 'active',
@@ -340,7 +340,9 @@ class StreamingAnalyticsService {
   createWebSocketConnection(onMessage: (data: any) => void): WebSocket | null {
     try {
       const token = localStorage.getItem('token');
-      const wsUrl = `${API_BASE_URL.replace('http', 'ws')}/api/v1/streaming-analytics/ws/live-stream`;
+      // Convert HTTP(S) URL to WS(S) URL safely
+      const apiUrl = getApiUrl();
+      const wsUrl = apiUrl.replace(/^http(s?):\/\//, 'ws$1://') + '/streaming-analytics/ws/live-stream';
       
       const ws = new WebSocket(wsUrl);
 
