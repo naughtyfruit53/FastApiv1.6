@@ -59,47 +59,15 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       };
     }
 
-    const isSuperAdmin = user.is_super_admin || false;
+    // STRICT ENFORCEMENT: No computed permissions for super admins
+    // All permissions must come from backend RBAC system
     const isOrgSuperAdmin = ['super_admin', 'admin', 'management'].includes(user.role || '');
 
     let permissions: string[] = [];
     let modules: string[] = [];
     let submodules: Record<string, string[]> = {};
 
-    if (isSuperAdmin) {
-      // Super admin has all permissions
-      permissions = [
-        'dashboard.*',
-        'finance.*',
-        'sales.*',
-        'crm.*',
-        'inventory.*',
-        'hr.*',
-        'service.*',
-        'reports.*',
-        'settings.*',
-        'admin.*',
-        'master_data.*',
-        'manufacturing.*',
-        'vouchers.*',
-        'accounting.*',
-        'reportsAnalytics.*',
-        'aiAnalytics.*',
-        'marketing.*',
-        'projects.*',
-        'tasks_calendar.*',
-        'email.*',
-      ];
-      modules = [
-        'dashboard', 'finance', 'sales', 'crm', 'inventory', 'hr', 'service', 'reports', 'settings', 'admin',
-        'master_data', 'manufacturing', 'vouchers', 'accounting', 'reportsAnalytics', 'aiAnalytics',
-        'marketing', 'projects', 'tasks_calendar', 'email'
-      ];
-      submodules = modules.reduce((acc, mod) => {
-        acc[mod] = ['all'];
-        return acc;
-      }, {} as Record<string, string[]>);
-    } else if (isOrgSuperAdmin) {
+    if (isOrgSuperAdmin) {
       // Organization admin has most permissions except super admin functions
       permissions = [
         'dashboard.*',

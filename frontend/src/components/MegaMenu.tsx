@@ -236,11 +236,12 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   // Removed unused function hasAnyServicePermission
 
   const isModuleEnabled = (module: string): boolean => {
-    if (isSuperAdmin) return true;
+    // STRICT ENFORCEMENT: No super admin bypass, default to false if unknown
     const normalizedModule = module.toUpperCase();
-    const enabled = organizationData?.enabled_modules?.[normalizedModule] ?? true;
+    const enabled = organizationData?.enabled_modules?.[normalizedModule] ?? false;
     console.log(`Module check - ${module} (normalized: ${normalizedModule}):`, enabled, {
       allModules: organizationData?.enabled_modules,
+      isSuperAdmin,
       timestamp: new Date().toISOString(),
     });
     return enabled;

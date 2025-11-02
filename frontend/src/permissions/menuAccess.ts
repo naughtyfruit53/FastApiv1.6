@@ -26,27 +26,20 @@ export interface MenuAccessParams {
 /**
  * Evaluate menu item access based on entitlements
  * 
- * Rules:
- * - Super admin: always enabled
- * - Missing/disabled module:
- *   - Non-admin: disabled (show but not clickable)
- *   - Admin: disabled (with lock, tooltip, CTA)
+ * STRICT ENFORCEMENT Rules:
+ * - Super admin: NO BYPASS - must have explicit entitlements
+ * - Missing/disabled module: ALWAYS disabled (show with lock, tooltip, CTA)
  * - Trial module: enabled with "Trial" badge
- * - Submodule disabled: mirrors module rules
- * - Email: always enabled, irrespective of module
+ * - Submodule disabled: ALWAYS disabled
+ * - Email: always enabled (non-billable module)
  * 
  * @param params Menu access parameters
  * @returns MenuItemAccess result
  */
 export function evalMenuItemAccess(params: MenuAccessParams): MenuItemAccess {
-  const { requireModule, requireSubmodule, entitlements, isAdmin: _isAdmin, isSuperAdmin } = params;
+  const { requireModule, requireSubmodule, entitlements, isAdmin: _isAdmin, isSuperAdmin: _isSuperAdmin } = params;
 
-  // Super admin bypasses all checks
-  if (isSuperAdmin) {
-    return { result: 'enabled' };
-  }
-
-  // Special case: Email always enabled
+  // Special case: Email always enabled (non-billable)
   if (requireModule === 'email' || requireSubmodule?.module === 'email' || params.requireModule?.includes('email')) {
     return { result: 'enabled' };
   }
@@ -56,7 +49,7 @@ export function evalMenuItemAccess(params: MenuAccessParams): MenuItemAccess {
     return { result: 'enabled' };
   }
 
-  // If entitlements not loaded yet, show as disabled temporarily
+  // If entitlements not loaded yet, show as disabled with loading message
   if (!entitlements) {
     return { result: 'disabled', reason: 'Loading entitlements...' };
   }
