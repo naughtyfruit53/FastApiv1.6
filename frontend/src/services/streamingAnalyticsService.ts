@@ -340,7 +340,9 @@ class StreamingAnalyticsService {
   createWebSocketConnection(onMessage: (data: any) => void): WebSocket | null {
     try {
       const token = localStorage.getItem('token');
-      const wsUrl = `${getApiUrl().replace('http', 'ws')}/streaming-analytics/ws/live-stream`;
+      // Convert HTTP(S) URL to WS(S) URL safely
+      const apiUrl = getApiUrl();
+      const wsUrl = apiUrl.replace(/^http(s?):\/\//, 'ws$1://') + '/streaming-analytics/ws/live-stream';
       
       const ws = new WebSocket(wsUrl);
 

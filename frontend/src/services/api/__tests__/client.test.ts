@@ -51,7 +51,9 @@ describe('API Client', () => {
     it('should use centralized API URL without duplication', () => {
       // The client should use getApiUrl() which returns /api/v1
       // Not /api/v1/api/v1
-      const baseURL = (apiClient as any).client?.defaults?.baseURL || '';
+      // Note: In a real implementation, consider exposing baseURL through a proper getter
+      const clientInternal = apiClient as { client?: { defaults?: { baseURL?: string } } };
+      const baseURL = clientInternal.client?.defaults?.baseURL || '';
       expect(baseURL).toBe('http://localhost:8000/api/v1');
       expect(baseURL).not.toContain('/api/v1/api/v1');
     });

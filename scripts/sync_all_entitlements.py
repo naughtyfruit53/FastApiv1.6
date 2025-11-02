@@ -136,6 +136,9 @@ async def main():
             # Step 3: Validate
             await validate_entitlements(session)
             
+            # Commit all changes
+            await session.commit()
+            
             logger.info("\n" + "=" * 60)
             logger.info("✓ Synchronization completed successfully!")
             logger.info("=" * 60)

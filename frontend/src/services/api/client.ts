@@ -30,8 +30,9 @@ class ApiClient {
   }> = [];
 
   constructor() {
-    // Use centralized config to prevent URL duplication
-    const baseURL = getApiUrl();  // Returns http://localhost:8000/api/v1 (no duplication)
+    // Use centralized config to get the full API URL including /api/v1
+    // getApiUrl() returns the complete URL (e.g., http://localhost:8000/api/v1)
+    const baseURL = getApiUrl();
     const isDev = process.env.NODE_ENV === 'development';
 
     this.client = axios.create({
