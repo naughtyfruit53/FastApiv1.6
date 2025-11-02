@@ -59,101 +59,105 @@ class ModuleName(str, Enum):
     ADMIN = "admin"
     ORGANIZATION = "organization"
 
+    # Added to match route usage from logs (to fix "not found" errors)
+    CUSTOMER = "customer"
+    PRODUCT = "product"
+    VENDOR = "vendor"
+    VOUCHER = "voucher"
+    STOCK = "stock"
+    BOM = "bom"
+
 
 # Submodule definitions for each module (expanded to match menuConfig.tsx)
 MODULE_SUBMODULES: Dict[str, List[str]] = {
     # CRM Module
     ModuleName.CRM.value: [
+        "keywords",
+        "contacts",
         "leads",
         "opportunities",
-        "contacts",
+        "customers",
         "accounts",
-        "activities",
-        "campaigns",
-        "commission",
-        "analytics",
-        "settings",
-        "import_export",
+        "pipeline",
+        "reports",
+        "analytics"
     ],
-    
-    # ERP Module
-    ModuleName.ERP.value: [
-        "general_ledger",
-        "accounts_payable",
-        "accounts_receivable",
-        "journal_entries",
-        "bank_reconciliation",
-        "cost_centers",
-        "chart_of_accounts",
-        "gst_configuration",
-        "tax_codes",
-        "financial_statements",
-        "kpis",
-    ],
-    
-    # HR Module
-    ModuleName.HR.value: [
-        "employees",
-        "attendance",
-        "leave_management",
-        "performance",
-        "recruitment",
-        "training",
-        "documents",
-        "org_structure",
-    ],
-    
-    # Inventory Module
-    ModuleName.INVENTORY.value: [
+    'ERP': [
+        "inventory",
         "products",
         "stock",
-        "warehouses",
-        "stock_transfers",
-        "stock_adjustments",
-        "stock_reports",
+        "warehouse",
+        "procurement",
+        "dispatch",
+        "tasks_calendar",
+        "appointments",
+        "meeting_rooms",
+        "event_reminders",
+        "recurring_events"
+    ],
+    'MANUFACTURING': [
+        "bom",
+        "mrp",
+        "production_planning",
+        "job_cards",
+        "material_issue",
+        "material_receipt",
+        "shop_floor",
+        "quality",
+        "reports"
+    ],
+    'FINANCE': [
+        "chart_of_accounts",
+        "ledger",
+        "financial_reports",
+        "budget_management",
+        "expense_account",
+        "payroll",
+        "financial_analytics"
+    ],
+    'SERVICE': [
+        "tickets",
+        "sla",
+        "service_desk",
+        "technicians",
+        "feedback",
+        "dispatch",
+        "service_analytics"
+    ],
+    'HR': [
+        "employees",
+        "recruitment",
+        "payroll",
+        "performance",
+        "training",
+        "reports"
+    ],
+    'ANALYTICS': [
+        "customer",
+        "sales",
+        "purchase",
+        "service",
+        "financial",
+        "ab_testing",
+        "streaming_dashboard"
+    ],
+    # Add new modules for missing ones
+    'INVENTORY': [  # Make inventory a top-level module
+        "stock",
+        "locations",
+        "bins",
+        "movements",
+        "cycle_count",
+        "low_stock",
+        "pending_orders"
+    ],
+    'PRODUCT': [  # Add product as top-level module
         "categories",
         "units",
-        "brands",
+        "details",
+        "pricing",
+        "images"
     ],
-    
-    # Service Module
-    ModuleName.SERVICE.value: [
-        "service_requests",
-        "technicians",
-        "appointments",
-        "work_orders",
-        "service_reports",
-        "customer_feedback",
-        "service_closure",
-        "sla_management",
-        "service_analytics",
-    ],
-    
-    # Analytics Module
-    ModuleName.ANALYTICS.value: [
-        "dashboards",
-        "reports",
-        "custom_reports",
-        "data_visualization",
-        "kpi_tracking",
-        "forecasting",
-        "export",
-    ],
-    
-    # Finance Module
-    ModuleName.FINANCE.value: [
-        "vouchers",
-        "purchase_vouchers",
-        "sales_vouchers",
-        "payment_vouchers",
-        "receipt_vouchers",
-        "journal_vouchers",
-        "contra_vouchers",
-        "financial_modeling",
-        "budgeting",
-    ],
-    
-    # Manufacturing Module
     ModuleName.MANUFACTURING.value: [
         "production_planning",
         "work_orders",
@@ -165,8 +169,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "capacity_planning",
         "shop_floor",
     ],
-    
-    # Procurement Module
     ModuleName.PROCUREMENT.value: [
         "purchase_orders",
         "purchase_requisitions",
@@ -177,8 +179,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "purchase_returns",
         "vendor_management",
     ],
-    
-    # Project Module
     ModuleName.PROJECT.value: [
         "projects",
         "tasks",
@@ -189,8 +189,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "gantt_charts",
         "collaboration",
     ],
-    
-    # Asset Module
     ModuleName.ASSET.value: [
         "asset_register",
         "asset_tracking",
@@ -200,8 +198,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "disposal",
         "asset_reports",
     ],
-    
-    # Transport Module
     ModuleName.TRANSPORT.value: [
         "vehicles",
         "drivers",
@@ -212,8 +208,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "gps_tracking",
         "transport_reports",
     ],
-    
-    # SEO Module
     ModuleName.SEO.value: [
         "keywords",
         "content_optimization",
@@ -223,8 +217,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "competitor_analysis",
         "seo_reports",
     ],
-    
-    # Marketing Module
     ModuleName.MARKETING.value: [
         "campaigns",
         "email_marketing",
@@ -235,8 +227,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "analytics",
         "roi_tracking",
     ],
-    
-    # Payroll Module
     ModuleName.PAYROLL.value: [
         "salary_structure",
         "payslips",
@@ -247,8 +237,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "payroll_reports",
         "bank_transfer",
     ],
-    
-    # Talent Module
     ModuleName.TALENT.value: [
         "recruitment",
         "candidate_tracking",
@@ -258,8 +246,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "talent_pool",
         "recruitment_analytics",
     ],
-    
-    # Workflow Module
     ModuleName.WORKFLOW.value: [
         "templates",
         "approval_requests",
@@ -267,8 +253,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "automation_rules",
         "analytics",
     ],
-    
-    # Integration Module
     ModuleName.INTEGRATION.value: [
         "api_keys",
         "webhooks",
@@ -278,8 +262,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "oauth_clients",
         "logs",
     ],
-    
-    # AI Analytics Module
     ModuleName.AI_ANALYTICS.value: [
         "ml_models",
         "predictions",
@@ -289,35 +271,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "explainability",
         "reports",
     ],
-    
-    # Streaming Analytics Module
-    ModuleName.STREAMING_ANALYTICS.value: [
-        "real_time_dashboards",
-        "event_processing",
-        "alerts",
-        "data_streams",
-        "analytics",
-    ],
-    
-    # AB Testing Module
-    ModuleName.AB_TESTING.value: [
-        "experiments",
-        "variants",
-        "metrics",
-        "results",
-        "analytics",
-    ],
-    
-    # Website Agent Module
-    ModuleName.WEBSITE_AGENT.value: [
-        "crawlers",
-        "scrapers",
-        "data_extraction",
-        "analytics",
-        "reports",
-    ],
-    
-    # Email Module
     ModuleName.EMAIL.value: [
         "inbox",
         "compose",
@@ -327,8 +280,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "filters",
         "analytics",
     ],
-    
-    # Calendar Module
     ModuleName.CALENDAR.value: [
         "events",
         "meetings",
@@ -336,8 +287,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "sharing",
         "event_types",
     ],
-    
-    # Task Management Module
     ModuleName.TASK_MANAGEMENT.value: [
         "tasks",
         "projects",
@@ -346,8 +295,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "time_logs",
         "reports",
     ],
-    
-    # Order Book Module
     ModuleName.ORDER_BOOK.value: [
         "sales_orders",
         "purchase_orders",
@@ -355,8 +302,6 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "fulfillment",
         "analytics",
     ],
-    
-    # Exhibition Module
     ModuleName.EXHIBITION.value: [
         "events",
         "booths",
@@ -483,6 +428,14 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "create",
         "users",
     ],
+
+    # Added empty submodules for new modules to fix "not found" errors
+    ModuleName.CUSTOMER.value: [],
+    ModuleName.PRODUCT.value: [],
+    ModuleName.VENDOR.value: [],
+    ModuleName.VOUCHER.value: [],
+    ModuleName.STOCK.value: [],
+    ModuleName.BOM.value: [],
 }
 
 

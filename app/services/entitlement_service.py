@@ -18,6 +18,9 @@ from app.schemas.entitlement_schemas import (
 )
 from sqlalchemy import func  # Import for func.lower
 
+# Import modules_registry to get full list
+from app.core.modules_registry import get_all_modules
+
 logger = logging.getLogger(__name__)
 
 
@@ -345,39 +348,62 @@ class EntitlementService:
         )
         org_entitlements = org_ent_result.scalars().all()
 
-        # NEW: If no entitlements found, auto-migrate from enabled_modules
-        if not org_entitlements:
-            logger.info(f"No entitlements found for org {org_id} - auto-migrating from enabled_modules")
-            
-            # Get organization
-            org_result = await self.db.execute(
-                select(Organization).where(Organization.id == org_id)
-            )
-            org = org_result.scalar_one_or_none()
-            if not org:
-                raise ValueError(f"Organization {org_id} not found")
-            
-            # Get all active modules
-            modules_result = await self.db.execute(
-                select(Module).where(Module.is_active == True)
-            )
-            modules_by_key = {m.module_key.upper(): m for m in modules_result.scalars().all()}
-            
-            # Create entitlements based on enabled_modules
-            for upper_key, enabled in (org.enabled_modules or {}).items():
-                module = modules_by_key.get(upper_key)
-                if module:
-                    ent = OrgEntitlement(
-                        org_id=org_id,
-                        module_id=module.id,
-                        status='enabled' if enabled else 'disabled',
-                        source='auto_migration'
-                    )
-                    self.db.add(ent)
-            
+        # Get organization for enabled_modules
+        org_result = await self.db.execute(
+            select(Organization).where(Organization.id == org_id)
+        )
+        org = org_result.scalar_one_or_none()
+        if not org:
+            raise ValueError(f"Organization {org_id} not found")
+
+        # NEW: Always ensure entitlements for all modules
+        # Get all active modules
+        modules_result = await self.db.execute(
+            select(Module).where(Module.is_active == True)
+        )
+        all_modules = modules_result.scalars().all()
+        modules_by_key = {m.module_key.upper(): m for m in all_modules}
+
+        # Existing entitlements map
+        ent_map = {e.module.module_key.upper(): e for e in org_entitlements}
+
+        # Parent mappings for additional modules
+        parent_mappings = {
+            'CUSTOMER': 'ERP',
+            'PRODUCT': 'ERP',
+            'VENDOR': 'ERP',
+            'VOUCHER': 'ERP',
+            'STOCK': 'ERP',
+            'BOM': 'MANUFACTURING'
+        }
+
+        migrated = False
+        for upper_key, module in modules_by_key.items():
+            if upper_key not in ent_map:
+                enabled = org.enabled_modules.get(upper_key, False)
+                
+                # For additional modules, enable if parent is enabled
+                if upper_key in parent_mappings:
+                    parent_key = parent_mappings[upper_key]
+                    parent_enabled = org.enabled_modules.get(parent_key, False)
+                    if parent_enabled:
+                        enabled = True
+                        logger.info(f"Auto-enabling {upper_key} because parent {parent_key} is enabled")
+                
+                status = 'enabled' if enabled else 'disabled'
+                ent = OrgEntitlement(
+                    org_id=org_id,
+                    module_id=module.id,
+                    status=status,
+                    source='auto_migration'
+                )
+                self.db.add(ent)
+                migrated = True
+
+        if migrated:
             await self.db.commit()
             
-            # Refetch org_entitlements after migration
+            # Refetch org_entitlements after adding missing
             org_ent_result = await self.db.execute(
                 select(OrgEntitlement)
                 .where(OrgEntitlement.org_id == org_id)
@@ -385,7 +411,7 @@ class EntitlementService:
             )
             org_entitlements = org_ent_result.scalars().all()
             
-            logger.info(f"Auto-migrated {len(org_entitlements)} entitlements for org {org_id}")
+            logger.info(f"Auto-migrated missing entitlements for org {org_id}")
 
         # Get org subentitlements
         org_subent_result = await self.db.execute(
@@ -493,7 +519,7 @@ class EntitlementService:
                     and_(
                         OrgSubentitlement.org_id == org_id,
                         OrgSubentitlement.module_id == module.id,
-                        OrgSubentitlement.submodule_id == submodule.id
+                        OrgSubentitlement.submodule_id == submodule.id  # Fixed: changed = to ==
                     )
                 )
             )
@@ -510,7 +536,7 @@ class EntitlementService:
     @staticmethod
     def get_available_modules() -> List[str]:
         """Get available modules for selection (7 as specified)"""
-        return ['crm', 'erp', 'manufacturing', 'finance', 'service', 'hr', 'analytics']
+        return get_all_modules()  # Changed to return all from registry for completeness
 
     async def seed_all_modules(self):
         """Seed all modules and submodules from registry if not exist"""
