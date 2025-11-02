@@ -15,7 +15,7 @@ from google.auth.exceptions import RefreshError
 # from microsoftgraph.client import Client as MicrosoftGraphClient  # Commented out to avoid import error; install 'microsoftgraph-python' if needed
 from app.core.config import settings
 from app.models.oauth_models import UserEmailToken, OAuthProvider, TokenStatus
-from app.utils.crypto_aes_gcm import encrypt_aes_gcm, decrypt_aes_gcm
+from app.utils.crypto_aes_gcm import encrypt_aes_gcm, decrypt_aes_gcm, EncryptionKeysAESGCM
 from app.utils.encryption import EncryptionKeys
 from app.core.database import SessionLocal
 from app.utils.crypto_aes_gcm import EncryptionKeysAESGCM
@@ -283,7 +283,7 @@ class OAuth2Service:
                     f"Failed to refresh token {token_id}. Token marked as REFRESH_FAILED. "
                     f"Remediation: User must revoke app access in their {token.provider} account "
                     f"settings and re-authorize the application to grant offline access. "
-                    f"Email: {token.email_address}. Check if project is in 'Testing' mode."
+                    f"Email: {token.email_address}"
                 )
                 return None
             
@@ -359,7 +359,7 @@ class OAuth2Service:
                 except RefreshError as re:
                     error_msg = f"Google OAuth refresh error: {str(re)}. Possible bad token or revoked access. Error details: {re.args}"
                     if 'invalid_grant' in str(re):
-                        error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/google. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.)"
+                        error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/google. If the app is in 'Testing' mode in Google Console, switch to 'In production' to get permanent refresh tokens (no 7-day expiry). Steps: 1. Go to console.cloud.google.com/apis/credentials/consent. 2. Set 'Publishing status' to 'In production'. 3. Save. Then revoke and re-auth.)"
                     logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
                     raise ValueError(error_msg)
                 except Exception as e:
@@ -395,7 +395,7 @@ class OAuth2Service:
                     if 'error' in result:
                         error_msg = f"Microsoft OAuth error: {result.get('error_description', result.get('error'))}"
                         if 'invalid_grant' in error_msg:
-                            error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/microsoft. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.)"
+                            error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/microsoft. If the app is in 'Testing' mode in Microsoft Azure, switch to production to get permanent refresh tokens (no expiry limits). Steps: 1. Go to portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/Overview. 2. Publish the app if needed. Then revoke and re-auth.)"
                         logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
                         raise ValueError(error_msg)
                     if 'access_token' not in result:
@@ -428,7 +428,7 @@ class OAuth2Service:
                 )
                 return True
             else:
-                raise ValueError("No new access token or expiry received from OAuth provider. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.")
+                raise ValueError("No new access token or expiry received from OAuth provider. If the app is in 'Testing' mode, switch to 'In production' to get permanent refresh tokens (no 7-day expiry). Steps for Google: 1. Go to console.cloud.google.com/apis/credentials/consent. 2. Set 'Publishing status' to 'In production'. 3. Save. Then revoke the token and re-authorize.")
             
         except Exception as e:
             error_msg = str(e)
@@ -657,7 +657,7 @@ class OAuth2Service:
                 except RefreshError as re:
                     error_msg = f"Google OAuth refresh error: {str(re)}. Possible bad token or revoked access. Error details: {re.args}"
                     if 'invalid_grant' in str(re):
-                        error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/google. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.)"
+                        error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/google. If the app is in 'Testing' mode in Google Console, switch to 'In production' to get permanent refresh tokens (no 7-day expiry). Steps: 1. Go to console.cloud.google.com/apis/credentials/consent. 2. Set 'Publishing status' to 'In production'. 3. Save. Then revoke and re-auth.)"
                     logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
                     raise ValueError(error_msg)
                 except Exception as e:
@@ -693,7 +693,7 @@ class OAuth2Service:
                     if 'error' in result:
                         error_msg = f"Microsoft OAuth error: {result.get('error_description', result.get('error'))}"
                         if 'invalid_grant' in error_msg:
-                            error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/microsoft. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.)"
+                            error_msg += " (invalid_grant: Likely revoked or expired refresh token. Revoke via /api/v1/email/oauth/revoke/{token_id} and re-authorize via /api/v1/oauth/login/microsoft. If the app is in 'Testing' mode in Microsoft Azure, switch to production to get permanent refresh tokens (no expiry limits). Steps: 1. Go to portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/Overview. 2. Publish the app if needed. Then revoke and re-auth.)"
                         logger.error(f"{error_msg}. Token: {token_id}, Email: {token.email_address}")
                         raise ValueError(error_msg)
                     if 'access_token' not in result:
@@ -726,7 +726,7 @@ class OAuth2Service:
                 )
                 return True
             else:
-                raise ValueError("No new access token or expiry received from OAuth provider. If recently changed to production, the old refresh token may still expire (7-day limit from testing). Revoke and re-auth to get a permanent one.")
+                raise ValueError("No new access token or expiry received from OAuth provider. If the app is in 'Testing' mode, switch to 'In production' to get permanent refresh tokens (no 7-day expiry). Steps for Google: 1. Go to console.cloud.google.com/apis/credentials/consent. 2. Set 'Publishing status' to 'In production'. 3. Save. Then revoke the token and re-authorize.")
             
         except Exception as e:
             error_msg = str(e)

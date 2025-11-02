@@ -100,12 +100,12 @@ def upgrade():
             if is_jsonb:
                 # For JSONB, can use direct JSONB operations
                 connection.execute(text(
-                    "UPDATE organizations SET enabled_modules = :modules::jsonb WHERE id = :org_id"
+                    "UPDATE organizations SET enabled_modules = (:modules)::jsonb WHERE id = :org_id"
                 ), {"modules": json.dumps(normalized_modules), "org_id": org_id})
             else:
                 # For JSON, use standard JSON operations
                 connection.execute(text(
-                    "UPDATE organizations SET enabled_modules = :modules::json WHERE id = :org_id"
+                    "UPDATE organizations SET enabled_modules = (:modules)::json WHERE id = :org_id"
                 ), {"modules": json.dumps(normalized_modules), "org_id": org_id})
         
         print(f"Updated enabled_modules for {len(orgs_to_update)} organizations")
@@ -116,11 +116,11 @@ def upgrade():
     default_modules = {"organization": True}
     if is_jsonb:
         connection.execute(text(
-            "UPDATE organizations SET enabled_modules = :modules::jsonb WHERE enabled_modules IS NULL"
+            "UPDATE organizations SET enabled_modules = (:modules)::jsonb WHERE enabled_modules IS NULL"
         ), {"modules": json.dumps(default_modules)})
     else:
         connection.execute(text(
-            "UPDATE organizations SET enabled_modules = :modules::json WHERE enabled_modules IS NULL"
+            "UPDATE organizations SET enabled_modules = (:modules)::json WHERE enabled_modules IS NULL"
         ), {"modules": json.dumps(default_modules)})
     
     updated_null = connection.execute(text(

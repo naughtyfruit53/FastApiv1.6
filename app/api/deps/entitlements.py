@@ -26,7 +26,7 @@ ROLE_ORG_ADMIN = "org_admin"
 ALWAYS_ON_MODULES = {'email'}
 
 # RBAC-only modules (non-billable, skip entitlement check)
-RBAC_ONLY_MODULES = {'settings', 'admin', 'administration'}
+RBAC_ONLY_MODULES = {'settings', 'admin', 'administration', 'organization'}
 
 # Feature flag for entitlements gating (can be overridden via environment variable)
 import os
@@ -91,14 +91,6 @@ def require_entitlement(
             db: AsyncSession = Depends(get_db),
             current_user: User = Depends(get_current_active_user),
             _: None = Depends(require_entitlement("sales"))
-        ):
-            # ... endpoint logic
-    
-        @router.get("/sales/leads")
-        async def get_leads(
-            db: AsyncSession = Depends(get_db),
-            current_user: User = Depends(get_current_active_user),
-            _: None = Depends(require_entitlement("sales", "lead_management"))
         ):
             # ... endpoint logic
     

@@ -28,19 +28,21 @@ def upgrade():
     # Drop old trigger and function if they exist
     print("Dropping old trigger and function...")
     connection.execute(text("DROP TRIGGER IF EXISTS trigger_seed_org_roles ON organizations"))
-    connection.execute(text("DROP FUNCTION IF EXISTS seed_roles_and_grants_for_org(INTEGER)"))
+    connection.execute(text("DROP FUNCTION IF EXISTS seed_roles_and_grants_for_org()"))
     
     # Create updated function with account-type roles
     print("Creating updated trigger function...")
     connection.execute(text("""
-        CREATE OR REPLACE FUNCTION seed_account_roles_for_org(p_org_id INTEGER)
-        RETURNS VOID AS $$
+        CREATE OR REPLACE FUNCTION seed_account_roles_for_org()
+        RETURNS TRIGGER AS $$
         DECLARE
+            p_org_id INTEGER;
             v_role_id INTEGER;
             v_perm_id INTEGER;
             v_admin_role_id INTEGER;
             v_mgmt_role_id INTEGER;
         BEGIN
+            p_org_id := NEW.id;
             -- Create account-type roles for the new organization
             
             -- 1. org_admin role
@@ -103,9 +105,11 @@ def upgrade():
             END IF;
             
             RAISE NOTICE 'Successfully seeded account-type roles for organization %', p_org_id;
+            RETURN NEW;
         EXCEPTION
             WHEN OTHERS THEN
                 RAISE WARNING 'Error seeding roles for organization %: %', p_org_id, SQLERRM;
+                RETURN NEW;
         END;
         $$ LANGUAGE plpgsql;
     """))
@@ -116,7 +120,7 @@ def upgrade():
         CREATE TRIGGER trigger_seed_account_roles
         AFTER INSERT ON organizations
         FOR EACH ROW
-        EXECUTE FUNCTION seed_account_roles_for_org(NEW.id);
+        EXECUTE FUNCTION seed_account_roles_for_org();
     """))
     
     print("Trigger updated successfully")
@@ -128,7 +132,7 @@ def downgrade():
     
     print("Dropping updated trigger...")
     connection.execute(text("DROP TRIGGER IF EXISTS trigger_seed_account_roles ON organizations"))
-    connection.execute(text("DROP FUNCTION IF EXISTS seed_account_roles_for_org(INTEGER)"))
+    connection.execute(text("DROP FUNCTION IF EXISTS seed_account_roles_for_org()"))
     
     print("Downgrade complete - old trigger not restored")
     print("Run migration 20251101_04 if you need the old trigger back")

@@ -11,51 +11,52 @@ from enum import Enum
 class ModuleName(str, Enum):
     """All available modules in the system"""
     # Core Business Modules
-    CRM = "CRM"
-    ERP = "ERP"
-    HR = "HR"
-    INVENTORY = "Inventory"
-    SERVICE = "Service"
-    ANALYTICS = "Analytics"
-    FINANCE = "Finance"
+    CRM = "crm"
+    ERP = "erp"
+    HR = "hr"
+    INVENTORY = "inventory"
+    SERVICE = "service"
+    ANALYTICS = "analytics"
+    FINANCE = "finance"
     
     # Extended Modules
-    MANUFACTURING = "Manufacturing"
-    PROCUREMENT = "Procurement"
-    PROJECT = "Project"
-    ASSET = "Asset"
-    TRANSPORT = "Transport"
-    SEO = "SEO"
-    MARKETING = "Marketing"
-    PAYROLL = "Payroll"
-    TALENT = "Talent"
+    MANUFACTURING = "manufacturing"
+    PROCUREMENT = "procurement"
+    PROJECT = "project"
+    ASSET = "asset"
+    TRANSPORT = "transport"
+    SEO = "seo"
+    MARKETING = "marketing"
+    PAYROLL = "payroll"
+    TALENT = "talent"
     
     # Advanced Modules
-    WORKFLOW = "Workflow"
-    INTEGRATION = "Integration"
-    AI_ANALYTICS = "AI_Analytics"
-    STREAMING_ANALYTICS = "Streaming_Analytics"
-    AB_TESTING = "AB_Testing"
-    WEBSITE_AGENT = "Website_Agent"
-    EMAIL = "Email"
-    CALENDAR = "Calendar"
-    TASK_MANAGEMENT = "Task_Management"
-    ORDER_BOOK = "Order_Book"
-    EXHIBITION = "Exhibition"
+    WORKFLOW = "workflow"
+    INTEGRATION = "integration"
+    AI_ANALYTICS = "ai_analytics"
+    STREAMING_ANALYTICS = "streaming_analytics"
+    AB_TESTING = "ab_testing"
+    WEBSITE_AGENT = "website_agent"
+    EMAIL = "email"
+    CALENDAR = "calendar"
+    TASK_MANAGEMENT = "task_management"
+    ORDER_BOOK = "order_book"
+    EXHIBITION = "exhibition"
     
     # New from menuConfig - to match frontend
-    MASTER_DATA = "Master_Data"
-    VOUCHERS = "Vouchers"
-    ACCOUNTING = "Accounting"
-    REPORTS_ANALYTICS = "Reports_Analytics"
-    SALES = "Sales"
-    PROJECTS = "Projects"
-    HR_MANAGEMENT = "HR_Management"
-    TASKS_CALENDAR = "Tasks_Calendar"
+    MASTER_DATA = "master_data"
+    VOUCHERS = "vouchers"
+    ACCOUNTING = "accounting"
+    REPORTS_ANALYTICS = "reports_analytics"
+    SALES = "sales"
+    PROJECTS = "projects"
+    HR_MANAGEMENT = "hr_management"
+    TASKS_CALENDAR = "tasks_calendar"
     
     # Additional modules for menu items
     SETTINGS = "settings"
     ADMIN = "admin"
+    ORGANIZATION = "organization"
 
 
 # Submodule definitions for each module (expanded to match menuConfig.tsx)
@@ -367,6 +368,16 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "organizations",
         "app_statistics",
     ],
+    
+    # Organization Module (added for dashboard)
+    ModuleName.ORGANIZATION.value: [
+        "dashboard",
+        "settings",
+        "users",
+        "statistics",
+        "activities",
+        "reports",
+    ],
 }
 
 
@@ -432,7 +443,7 @@ def get_module_submodules(module: str) -> List[str]:
 
 def get_default_enabled_modules() -> Dict[str, bool]:
     """Get default enabled modules for new organizations"""
-    return {module: True for module in get_all_modules()}
+    return {module.upper(): True for module in get_all_modules()}
 
 
 def validate_module(module: str) -> bool:

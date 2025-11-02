@@ -16,6 +16,7 @@ import ModernLoading from "../../components/ModernLoading";
 import { useAuth } from "../../context/AuthContext";
 import { isAppSuperAdmin, isOrgSuperAdmin } from "../../types/user.types";
 import CompanyDetailsModal from "../../components/CompanyDetailsModal";
+import { usePermissions } from "../../context/PermissionContext";  // Added import for permissions
 
 interface OrgStatistics {
   total_products: number;
@@ -46,6 +47,7 @@ interface OrgStatistics {
 
 const OrgDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();  // Added hook for permission check
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,18 @@ const OrgDashboard: React.FC = () => {
       setLoading(true);
       const data = await adminService.getOrgStatistics();
       console.log("Org statistics response:", data); // Debug API response
-      const inventoryValue = await adminService.getInventoryValue();
+      let inventoryValue = 0;
+      // Added permission check before fetching inventory value
+      if (hasPermission('inventory', 'read')) {
+        try {
+          inventoryValue = await adminService.getInventoryValue();
+        } catch (invError) {
+          console.error("Inventory value fetch failed:", invError);
+          // Set to 0 on error, continue loading
+        }
+      } else {
+        console.log("No permission for inventory read - skipping fetch and setting value to 0");
+      }
       setStatistics({
         ...data,
         inventory_value: inventoryValue,

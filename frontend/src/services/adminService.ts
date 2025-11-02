@@ -74,7 +74,7 @@ const adminService = {
       return response.data.total_value;
     } catch (error) {
       console.error("Failed to fetch inventory value:", error);
-      throw error;
+      return 0;  // Return 0 on error to allow dashboard to load
     }
   },
   // Add more admin-related API calls as needed, e.g., manage licenses, organizations, etc.

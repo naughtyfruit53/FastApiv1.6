@@ -17,6 +17,8 @@ from app.db.session import SessionLocal
 from sqlalchemy import select, text
 from sqlalchemy.exc import ProgrammingError
 from app.models.entitlement_models import *  # Import to register entitlement models
+from app.services.entitlement_service import EntitlementService  # Import for seeding
+from app.models.user_models import Organization  # For org loop
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +160,22 @@ async def init_org_modules(background_tasks: BackgroundTasks):
             logger.error(f"Error backfilling organization modules: {str(e)}")
             await db.rollback()
 
+# Seed all modules and sync enabled_modules on startup
+async def seed_and_sync_entitlements(background_tasks: BackgroundTasks):
+    async with AsyncSessionLocal() as db:
+        try:
+            service = EntitlementService(db)
+            created = await service.seed_all_modules()
+            logger.info(f"Seeded {created} modules/submodules on startup")
+            
+            orgs = (await db.execute(select(Organization))).scalars().all()
+            for org in orgs:
+                synced = await service.sync_enabled_modules(org.id)
+                logger.info(f"Synced enabled_modules for org {org.id} on startup: {synced}")
+        except Exception as e:
+            logger.error(f"Error during startup seeding/sync: {str(e)}")
+            await db.rollback()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -190,6 +208,7 @@ async def lifespan(app: FastAPI):
     background_tasks.add_task(init_default_permissions, background_tasks)
     background_tasks.add_task(init_org_roles, background_tasks)
     background_tasks.add_task(init_org_modules, background_tasks)
+    background_tasks.add_task(seed_and_sync_entitlements, background_tasks)  # New: Seed and sync entitlements
     
     yield
     # Shutdown

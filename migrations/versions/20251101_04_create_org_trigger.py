@@ -46,21 +46,23 @@ def upgrade():
     """))
     
     connection.execute(text("""
-        DROP FUNCTION IF EXISTS seed_roles_and_grants_for_org(INTEGER);
+        DROP FUNCTION IF EXISTS seed_roles_and_grants_for_org();
     """))
     
     print("Creating seed_roles_and_grants_for_org function...")
     
     # Create the function that seeds roles and grants
     connection.execute(text("""
-        CREATE OR REPLACE FUNCTION seed_roles_and_grants_for_org(p_org_id INTEGER)
-        RETURNS VOID AS $$
+        CREATE OR REPLACE FUNCTION seed_roles_and_grants_for_org()
+        RETURNS TRIGGER AS $$
         DECLARE
+            p_org_id INTEGER;
             v_admin_role_id INTEGER;
             v_org_admin_role_id INTEGER;
             v_perm_view_id INTEGER;
             v_perm_read_id INTEGER;
         BEGIN
+            p_org_id := NEW.id;
             -- Log the operation
             RAISE NOTICE 'Seeding roles and grants for organization %', p_org_id;
             
@@ -138,9 +140,11 @@ def upgrade():
             END IF;
             
             RAISE NOTICE 'Successfully seeded roles and grants for organization %', p_org_id;
+            RETURN NEW;
         EXCEPTION
             WHEN OTHERS THEN
                 RAISE WARNING 'Error seeding roles for org %: %', p_org_id, SQLERRM;
+                RETURN NEW;
         END;
         $$ LANGUAGE plpgsql;
     """))
@@ -152,7 +156,7 @@ def upgrade():
         CREATE TRIGGER trigger_seed_org_roles
         AFTER INSERT ON organizations
         FOR EACH ROW
-        EXECUTE FUNCTION seed_roles_and_grants_for_org(NEW.id);
+        EXECUTE FUNCTION seed_roles_and_grants_for_org();
     """))
     
     print("Trigger created successfully!")
@@ -174,7 +178,7 @@ def downgrade():
     """))
     
     connection.execute(text("""
-        DROP FUNCTION IF EXISTS seed_roles_and_grants_for_org(INTEGER);
+        DROP FUNCTION IF EXISTS seed_roles_and_grants_for_org();
     """))
     
     print("Trigger and function dropped")

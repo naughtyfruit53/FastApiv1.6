@@ -16,6 +16,7 @@ from app.schemas.entitlement_schemas import (
     OrgEntitlementsResponse, UpdateEntitlementsRequest, UpdateEntitlementsResponse,
     AppEntitlementsResponse, AppModuleEntitlement, EntitlementChanges
 )
+from sqlalchemy import func  # Import for func.lower
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +170,7 @@ class EntitlementService:
         modules_result = await self.db.execute(
             select(Module).where(Module.is_active == True)
         )
-        modules_by_key = {m.module_key: m for m in modules_result.scalars().all()}
+        modules_by_key = {m.module_key.lower(): m for m in modules_result.scalars().all()}  # Normalize to lower
 
         # Get all submodules by (module_id, submodule_key)
         submodules_result = await self.db.execute(
@@ -177,11 +178,105 @@ class EntitlementService:
         )
         submodules_map = {}
         for sub in submodules_result.scalars().all():
-            submodules_map[(sub.module_id, sub.submodule_key)] = sub
+            submodules_map[(sub.module_id, sub.submodule_key.lower())] = sub  # Normalize to lower
 
         diff_data = {"modules": [], "submodules": []}
 
-        # ... (existing code for applying module and submodule changes remains unchanged)
+        # Apply module changes
+        for module_change in request.modules or []:
+            normalized_key = module_change.module_key.lower()
+            module = modules_by_key.get(normalized_key)
+            if not module:
+                raise ValueError(f"Module with key '{module_change.module_key}' not found")
+
+            stmt = select(OrgEntitlement).where(
+                and_(
+                    OrgEntitlement.org_id == org_id,
+                    OrgEntitlement.module_id == module.id
+                )
+            )
+            result = await self.db.execute(stmt)
+            ent = result.scalar_one_or_none()
+
+            new_status = module_change.status
+            new_trial_expires_at = module_change.trial_expires_at
+            new_source = module_change.source or 'manual'
+
+            old_status = ent.status if ent else 'disabled'
+            old_trial_expires_at = ent.trial_expires_at if ent else None
+
+            if ent:
+                ent.status = new_status
+                ent.trial_expires_at = new_trial_expires_at
+                ent.source = new_source
+                ent.updated_at = datetime.utcnow()
+            else:
+                ent = OrgEntitlement(
+                    org_id=org_id,
+                    module_id=module.id,
+                    status=new_status,
+                    trial_expires_at=new_trial_expires_at,
+                    source=new_source
+                )
+                self.db.add(ent)
+
+            diff_data["modules"].append({
+                "module_key": module.module_key,
+                "old_status": old_status,
+                "new_status": new_status,
+                "old_trial_expires_at": old_trial_expires_at,
+                "new_trial_expires_at": new_trial_expires_at
+            })
+
+        # Apply submodule changes
+        for sub_change in request.submodules or []:
+            normalized_module_key = sub_change.module_key.lower()
+            normalized_sub_key = sub_change.submodule_key.lower()
+            
+            module = modules_by_key.get(normalized_module_key)
+            if not module:
+                raise ValueError(f"Module with key '{sub_change.module_key}' not found")
+            
+            key = (module.id, normalized_sub_key)
+            submodule = submodules_map.get(key)
+            if not submodule:
+                raise ValueError(f"Submodule '{sub_change.submodule_key}' not found in module '{sub_change.module_key}'")
+
+            stmt = select(OrgSubentitlement).where(
+                and_(
+                    OrgSubentitlement.org_id == org_id,
+                    OrgSubentitlement.module_id == module.id,
+                    OrgSubentitlement.submodule_id == submodule.id
+                )
+            )
+            result = await self.db.execute(stmt)
+            subent = result.scalar_one_or_none()
+
+            new_enabled = sub_change.enabled
+            new_source = sub_change.source or 'manual'
+
+            old_enabled = subent.enabled if subent else True
+
+            if subent:
+                subent.enabled = new_enabled
+                subent.source = new_source
+                subent.updated_at = datetime.utcnow()
+            else:
+                subent = OrgSubentitlement(
+                    org_id=org_id,
+                    module_id=module.id,
+                    submodule_id=submodule.id,
+                    enabled=new_enabled,
+                    source=new_source
+                )
+                self.db.add(subent)
+
+            diff_data["submodules"].append({
+                "module_key": module.module_key,
+                "submodule_key": submodule.submodule_key,
+                "old_enabled": old_enabled,
+                "new_enabled": new_enabled
+            })
 
         # Create entitlement event
         event = EntitlementEvent(
@@ -290,19 +385,28 @@ class EntitlementService:
         Check if organization has entitlement for a module/submodule.
         Returns: (is_entitled, status, reason)
         """
-        # Get module
+        # Normalize keys to lower for case-insensitive check
+        normalized_module_key = module_key.lower()
+        normalized_submodule_key = submodule_key.lower() if submodule_key else None
+        
+        logger.debug(f"Checking entitlement for org {org_id}, module: {normalized_module_key}, submodule: {normalized_submodule_key}")
+        
+        # Get module (case-insensitive query using func.lower)
         module_result = await self.db.execute(
             select(Module).where(
                 and_(
-                    Module.module_key == module_key,
+                    func.lower(Module.module_key) == normalized_module_key,
                     Module.is_active == True
                 )
             )
         )
         module = module_result.scalar_one_or_none()
         if not module:
+            logger.warning(f"Module not found in database for key: {normalized_module_key}")
             return False, 'disabled', f"Module '{module_key}' not found"
 
+        logger.debug(f"Found module ID {module.id} for key {normalized_module_key}")
+        
         # Get org entitlement
         org_ent_result = await self.db.execute(
             select(OrgEntitlement).where(
@@ -315,28 +419,33 @@ class EntitlementService:
         org_ent = org_ent_result.scalar_one_or_none()
 
         if not org_ent or org_ent.status == 'disabled':
+            logger.info(f"Module {normalized_module_key} disabled for org {org_id}")
             return False, 'disabled', f"Module '{module_key}' is disabled for this organization"
 
         if org_ent.status == 'trial':
             if org_ent.trial_expires_at and org_ent.trial_expires_at < datetime.utcnow():
+                logger.info(f"Trial expired for module {normalized_module_key} in org {org_id}")
                 return False, 'trial_expired', f"Module '{module_key}' trial has expired"
 
         # If checking submodule
-        if submodule_key:
-            # Get submodule
+        if normalized_submodule_key:
+            # Get submodule (case-insensitive)
             submodule_result = await self.db.execute(
                 select(Submodule).where(
                     and_(
                         Submodule.module_id == module.id,
-                        Submodule.submodule_key == submodule_key,
+                        func.lower(Submodule.submodule_key) == normalized_submodule_key,
                         Submodule.is_active == True
                     )
                 )
             )
             submodule = submodule_result.scalar_one_or_none()
             if not submodule:
+                logger.warning(f"Submodule not found: {normalized_submodule_key} in module {normalized_module_key}")
                 return False, 'disabled', f"Submodule '{submodule_key}' not found in module '{module_key}'"
 
+            logger.debug(f"Found submodule ID {submodule.id} for key {normalized_submodule_key}")
+            
             # Get org subentitlement
             org_subent_result = await self.db.execute(
                 select(OrgSubentitlement).where(
@@ -351,11 +460,102 @@ class EntitlementService:
 
             # If subentitlement exists and is disabled
             if org_subent and not org_subent.enabled:
+                logger.info(f"Submodule {normalized_submodule_key} disabled for org {org_id}")
                 return False, 'disabled', f"Submodule '{submodule_key}' is disabled for this organization"
 
+        logger.info(f"Entitlement granted for module {normalized_module_key} in org {org_id}")
         return True, org_ent.status, None
 
     @staticmethod
     def get_available_modules() -> List[str]:
         """Get available modules for selection (7 as specified)"""
         return ['crm', 'erp', 'manufacturing', 'finance', 'service', 'hr', 'analytics']
+
+    async def seed_all_modules(self):
+        """Seed all modules and submodules from registry if not exist"""
+        from app.core.modules_registry import MODULE_SUBMODULES
+        
+        created_count = 0
+        
+        for module_name, submodules in MODULE_SUBMODULES.items():
+            normalized_module = module_name.lower()
+            
+            # Check if module exists (case-insensitive)
+            module_result = await self.db.execute(
+                select(Module).where(func.lower(Module.module_key) == normalized_module)
+            )
+            module = module_result.scalar_one_or_none()
+            
+            if not module:
+                module = Module(
+                    module_key=normalized_module,
+                    display_name=module_name,
+                    description=f"{module_name} module",
+                    icon="default",
+                    sort_order=0,
+                    is_active=True
+                )
+                self.db.add(module)
+                await self.db.flush()
+                created_count += 1
+                logger.info(f"Created module: {normalized_module}")
+            
+            # Seed submodules
+            for sub_name in submodules:
+                normalized_sub = sub_name.lower()
+                sub_result = await self.db.execute(
+                    select(Submodule).where(
+                        and_(
+                            Submodule.module_id == module.id,
+                            func.lower(Submodule.submodule_key) == normalized_sub
+                        )
+                    )
+                )
+                if not sub_result.scalar_one_or_none():
+                    submodule = Submodule(
+                        module_id=module.id,
+                        submodule_key=normalized_sub,
+                        display_name=sub_name,
+                        description=f"{sub_name} submodule",
+                        menu_path=f"/{normalized_module}/{normalized_sub}",
+                        permission_key=f"{normalized_module}_{normalized_sub}",
+                        sort_order=0,
+                        is_active=True
+                    )
+                    self.db.add(submodule)
+                    created_count += 1
+                    logger.info(f"Created submodule: {normalized_sub} for module {normalized_module}")
+        
+        await self.db.commit()
+        logger.info(f"Seeded {created_count} modules/submodules")
+        return created_count
+
+    async def sync_enabled_modules(self, org_id: int):
+        """Sync organization's enabled_modules with actual modules in registry"""
+        from app.core.modules_registry import get_all_modules
+        
+        # Get current enabled_modules
+        org_result = await self.db.execute(
+            select(Organization.enabled_modules).where(Organization.id == org_id)
+        )
+        current_enabled = org_result.scalar() or {}
+        
+        # Get all available modules (lower)
+        available = {m.lower(): True for m in get_all_modules()}
+        
+        # Sync: only keep enabled if in available, default False for new
+        synced = {}
+        for key in available:
+            upper_key = key.upper()
+            synced[upper_key] = current_enabled.get(upper_key, False)
+        
+        # Update organization
+        await self.db.execute(
+            Organization.__table__.update()
+            .where(Organization.id == org_id)
+            .values(enabled_modules=synced)
+        )
+        await self.db.commit()
+        
+        logger.info(f"Synced enabled_modules for org {org_id}: {synced}")
+        return synced
