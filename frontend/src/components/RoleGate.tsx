@@ -37,12 +37,10 @@ const RoleGate: React.FC<RoleGateProps> = ({
     return null;
   }
 
-  // Check if user has super admin privileges
-  const isSuperAdmin = user.is_super_admin === true;
+  // STRICT ENFORCEMENT: No super admin bypass
   
   // Check role-based access
   const hasRoleAccess = allowedRoles.length === 0 || 
-    isSuperAdmin || 
     allowedRoles.includes(user.role);
 
   // Check permission-based access
@@ -54,18 +52,17 @@ const RoleGate: React.FC<RoleGateProps> = ({
     );
   }
 
-  // Check module access
+  // Check module access - no bypass for any role
   let hasModuleAccess = !requireModule;
   if (requireModule && userPermissions) {
-    hasModuleAccess = isSuperAdmin || userPermissions.modules.includes(requireModule);
+    hasModuleAccess = userPermissions.modules.includes(requireModule);
   }
 
-  // Check submodule access
+  // Check submodule access - no bypass for any role
   let hasSubmoduleAccess = !requireSubmodule;
   if (requireSubmodule && userPermissions) {
     const { module, submodule } = requireSubmodule;
-    hasSubmoduleAccess = isSuperAdmin || 
-      (userPermissions.submodules[module]?.includes(submodule) ?? false);
+    hasSubmoduleAccess = userPermissions.submodules[module]?.includes(submodule) ?? false;
   }
 
   const hasAccess = hasRoleAccess && hasPermissionAccess && hasModuleAccess && hasSubmoduleAccess;

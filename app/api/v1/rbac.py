@@ -396,9 +396,12 @@ async def get_user_service_roles(
     """Get all service roles assigned to a user, including self"""
     logger.info(f"User {current_user.id} requesting roles for user {user_id}")
     
-    if current_user.organization_id is None and current_user.is_super_admin:
-        # Super admin with no organization: return empty list as fallback
-        return []
+    # STRICT ENFORCEMENT: Super admins must have organization context
+    if current_user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization context required. Please specify an organization."
+        )
 
     # Allow users to view their own roles
     if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
@@ -564,51 +567,33 @@ async def get_user_permissions(
     current_user: User = Depends(get_current_active_user),
     rbac_service: RBACService = Depends(get_rbac_service),
 ):
-    """Get all permissions for a user, including self - with resilient error handling"""
+    """Get all permissions for a user, including self - STRICT enforcement, no fallbacks"""
     logger.info(f"User {current_user.id} requesting permissions for user {user_id}")
     
-    if current_user.organization_id is None and current_user.is_super_admin:
-        # Super admin with no organization: return fallback empty permissions
-        return {
-            "user_id": user_id,
-            "permissions": [],
-            "service_roles": [],
-            "total_permissions": 0
-        }
+    # STRICT ENFORCEMENT: All users must have organization context
+    if current_user.organization_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization context required. Please specify an organization."
+        )
 
-    try:
-        # Allow users to view their own permissions
-        if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not enough permissions to view other users' permissions"
-            )
-        
-        permissions = await rbac_service.get_user_permissions(user_id)
-        roles = await rbac_service.get_user_roles(user_id)
-        
-        return {
-            "user_id": user_id,
-            "permissions": list(permissions),
-            "service_roles": roles,
-            "total_permissions": len(permissions)
-        }
-    except HTTPException:
-        # Re-raise HTTP exceptions (like 403 Forbidden)
-        raise
-    except Exception as e:
-        # Log the error and return safe fallback payload instead of 500
-        logger.error(f"Error fetching permissions for user {user_id}: {str(e)}", exc_info=True)
-        
-        # Return safe fallback - empty permissions instead of failing
-        return {
-            "user_id": user_id,
-            "permissions": [],
-            "service_roles": [],
-            "total_permissions": 0,
-            "error": "Failed to fetch permissions",
-            "fallback": True
-        }
+    # Allow users to view their own permissions
+    if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to view other users' permissions"
+        )
+    
+    # No try-catch fallback - let errors propagate
+    permissions = await rbac_service.get_user_permissions(user_id)
+    roles = await rbac_service.get_user_roles(user_id)
+    
+    return {
+        "user_id": user_id,
+        "permissions": list(permissions),
+        "service_roles": roles,
+        "total_permissions": len(permissions)
+    }
 
 # Bulk Operations
 @router.post("/roles/assign/bulk", response_model=BulkRoleAssignmentResponse)

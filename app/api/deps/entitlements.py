@@ -28,9 +28,9 @@ ALWAYS_ON_MODULES = {'email'}
 # RBAC-only modules (non-billable, skip entitlement check)
 RBAC_ONLY_MODULES = {'settings', 'admin', 'administration', 'organization'}
 
-# Feature flag for entitlements gating (can be overridden via environment variable)
-import os
-ENABLE_ENTITLEMENTS_GATING = os.getenv('ENABLE_ENTITLEMENTS_GATING', 'true').lower() == 'true'
+# Entitlements gating is always enabled - no feature flag override
+# Strict enforcement: all access must go through proper entitlement checks
+ENABLE_ENTITLEMENTS_GATING = True
 
 
 class EntitlementDeniedError(HTTPException):
@@ -73,17 +73,16 @@ class PermissionDeniedError(HTTPException):
 
 def require_entitlement(
     module_key: str,
-    submodule_key: Optional[str] = None,
-    allow_super_admin_bypass: bool = True,
-    audit_bypass: bool = True
+    submodule_key: Optional[str] = None
 ):
     """
-    Unified dependency/decorator for entitlement checking.
+    Unified dependency/decorator for entitlement checking with STRICT enforcement.
     
-    Implements entitlement-first, RBAC-second enforcement with exceptions:
+    NO BYPASSES: All users, including super admins, must have proper entitlements.
+    
+    Exceptions (non-billable modules):
     - Email: always-on (skip entitlement check)
     - Settings/Admin: RBAC-only (skip entitlement check)
-    - Super Admin: bypass entitlement checks (with optional audit logging)
     
     Usage:
         @router.get("/sales/dashboard")
@@ -97,8 +96,6 @@ def require_entitlement(
     Args:
         module_key: Module key to check (e.g., "sales", "manufacturing")
         submodule_key: Optional submodule key (e.g., "lead_management")
-        allow_super_admin_bypass: If True, super admins bypass entitlement checks
-        audit_bypass: If True, log when super admin bypasses disabled module
     
     Returns:
         FastAPI dependency that checks entitlements
@@ -113,12 +110,7 @@ def require_entitlement(
     ) -> None:
         """Dependency that performs the entitlement check"""
         
-        # Feature flag check
-        if not ENABLE_ENTITLEMENTS_GATING:
-            logger.debug(f"Entitlements gating disabled by feature flag for {module_key}")
-            return
-        
-        # Exception 1: Email is always-on
+        # Exception 1: Email is always-on (non-billable)
         if module_key in ALWAYS_ON_MODULES:
             logger.debug(f"Module '{module_key}' is always-on, skipping entitlement check")
             return
@@ -128,17 +120,7 @@ def require_entitlement(
             logger.debug(f"Module '{module_key}' is RBAC-only, skipping entitlement check")
             return
         
-        # Exception 3: Super Admin bypass
-        if allow_super_admin_bypass and current_user.role == ROLE_SUPER_ADMIN:
-            if audit_bypass:
-                logger.info(
-                    f"Super admin {current_user.email} (ID: {current_user.id}) "
-                    f"bypassed entitlement check for {module_key}"
-                    + (f"/{submodule_key}" if submodule_key else "")
-                )
-            return
-        
-        # Check entitlement
+        # STRICT ENFORCEMENT: Check entitlement for ALL users including super admins
         service = EntitlementService(db)
         is_entitled, entitlement_status, reason = await service.check_entitlement(
             org_id=current_user.organization_id,
@@ -148,7 +130,7 @@ def require_entitlement(
         
         if not is_entitled:
             logger.warning(
-                f"User {current_user.email} (org_id: {current_user.organization_id}) "
+                f"User {current_user.email} (role: {current_user.role}, org_id: {current_user.organization_id}) "
                 f"denied access to {module_key}"
                 + (f"/{submodule_key}" if submodule_key else "")
                 + f". Status: {entitlement_status}, Reason: {reason}"
@@ -157,11 +139,11 @@ def require_entitlement(
                 module_key=module_key,
                 submodule_key=submodule_key,
                 entitlement_status=entitlement_status or "disabled",
-                reason=reason or "Access denied"
+                reason=reason or "Module not enabled for your organization"
             )
         
         logger.debug(
-            f"User {current_user.email} granted access to {module_key}"
+            f"User {current_user.email} (role: {current_user.role}) granted access to {module_key}"
             + (f"/{submodule_key}" if submodule_key else "")
             + f". Status: {entitlement_status}"
         )
@@ -174,11 +156,12 @@ async def check_entitlement_access(
     submodule_key: Optional[str],
     org_id: int,
     db: AsyncSession,
-    user: Optional[User] = None,
-    allow_super_admin_bypass: bool = True
+    user: Optional[User] = None
 ) -> tuple[bool, Optional[str], Optional[str]]:
     """
     Helper function to check entitlement access without using as a dependency.
+    STRICT ENFORCEMENT: No bypasses for any user role.
+    
     Returns: (is_entitled, status, reason)
     
     Args:
@@ -186,30 +169,21 @@ async def check_entitlement_access(
         submodule_key: Optional submodule key
         org_id: Organization ID
         db: Database session
-        user: Optional user (for super admin bypass check)
-        allow_super_admin_bypass: If True, super admins bypass entitlement checks
+        user: Optional user (for logging purposes only)
     
     Returns:
         Tuple of (is_entitled, status, reason)
     """
     
-    # Feature flag check
-    if not ENABLE_ENTITLEMENTS_GATING:
-        return True, 'enabled', 'Feature flag disabled'
-    
-    # Exception 1: Email is always-on
+    # Exception 1: Email is always-on (non-billable)
     if module_key in ALWAYS_ON_MODULES:
         return True, 'enabled', 'Always-on module'
     
-    # Exception 2: Settings/Admin are RBAC-only
+    # Exception 2: Settings/Admin are RBAC-only (non-billable)
     if module_key in RBAC_ONLY_MODULES:
         return True, 'enabled', 'RBAC-only module'
     
-    # Exception 3: Super Admin bypass
-    if user and allow_super_admin_bypass and user.role == ROLE_SUPER_ADMIN:
-        return True, 'enabled', 'Super admin bypass'
-    
-    # Check entitlement
+    # STRICT ENFORCEMENT: Check entitlement for ALL users
     service = EntitlementService(db)
     return await service.check_entitlement(
         org_id=org_id,

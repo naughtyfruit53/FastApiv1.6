@@ -126,59 +126,47 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
 
   /**
    * Check if user has a specific permission
+   * STRICT ENFORCEMENT: No bypass for super admins
    * @param module - Module name (e.g., 'voucher', 'inventory', 'admin')
    * @param action - Action name (e.g., 'read', 'create', 'update', 'delete')
-   * @returns true if user has the permission or is super admin
+   * @returns true if user has the explicit permission
    */
   const hasPermission = useCallback((module: string, action: string): boolean => {
-    // Super admins bypass all permission checks
-    if (isSuperAdmin) {
-      return true;
-    }
-    
     const permUnderscore = `${module}_${action}`;
     const permColon = `${module}:${action}`;
     const hasPerm = permissions.includes(permUnderscore) || permissions.includes(permColon);
     
-    console.log(`Checking permission: ${permUnderscore} or ${permColon} - Result: ${hasPerm}`);
+    console.log(`Checking permission: ${permUnderscore} or ${permColon} - Result: ${hasPerm} (isSuperAdmin: ${isSuperAdmin})`);
     
     return hasPerm;
   }, [permissions, isSuperAdmin]);
 
   /**
    * Check if user has any of the specified permissions
+   * STRICT ENFORCEMENT: No bypass for super admins
    * @param permissionList - Array of permission strings (e.g., ['voucher_read', 'voucher_create'])
-   * @returns true if user has at least one of the permissions or is super admin
+   * @returns true if user has at least one of the explicit permissions
    */
   const hasAnyPermission = useCallback((permissionList: string[]): boolean => {
-    // Super admins bypass all permission checks
-    if (isSuperAdmin) {
-      return true;
-    }
-    
     return permissionList.some(permission => {
       // Support both formats in list
       const [module, action] = permission.split(/[_:]/); // split on _ or :
       return hasPermission(module, action);
     });
-  }, [hasPermission, isSuperAdmin]);
+  }, [hasPermission]);
 
   /**
    * Check if user has all of the specified permissions
+   * STRICT ENFORCEMENT: No bypass for super admins
    * @param permissionList - Array of permission strings
-   * @returns true if user has all of the permissions or is super admin
+   * @returns true if user has all of the explicit permissions
    */
   const hasAllPermissions = useCallback((permissionList: string[]): boolean => {
-    // Super admins bypass all permission checks
-    if (isSuperAdmin) {
-      return true;
-    }
-    
     return permissionList.every(permission => {
       const [module, action] = permission.split(/[_:]/);
       return hasPermission(module, action);
     });
-  }, [hasPermission, isSuperAdmin]);
+  }, [hasPermission]);
 
   /**
    * Manually refresh permissions
