@@ -629,3 +629,143 @@ class EntitlementService:
         
         logger.info(f"Synced enabled_modules for org {org_id}: {synced}")
         return synced
+
+    async def activate_category(
+        self,
+        org_id: int,
+        category: str,
+        actor_user_id: int,
+        reason: str = "Category-based activation"
+    ) -> UpdateEntitlementsResponse:
+        """
+        Activate all modules in a product category for an organization.
+        This provides instant access to all features in the selected category.
+        
+        Args:
+            org_id: Organization ID
+            category: Product category key (e.g., 'crm_suite', 'erp_suite')
+            actor_user_id: User performing the activation
+            reason: Reason for activation (for audit trail)
+        
+        Returns:
+            UpdateEntitlementsResponse with details of activation
+        """
+        from app.core.module_categories import get_modules_for_category, get_category_info
+        
+        # Get modules for this category
+        module_keys = get_modules_for_category(category)
+        if not module_keys:
+            raise ValueError(f"Category '{category}' not found or has no modules")
+        
+        category_info = get_category_info(category)
+        logger.info(f"Activating category '{category_info['display_name']}' with {len(module_keys)} modules for org {org_id}")
+        
+        # Build changes for all modules in the category
+        from app.schemas.entitlement_schemas import UpdateEntitlementsRequest, EntitlementChanges, ModuleEntitlementChange
+        
+        module_changes = []
+        for module_key in module_keys:
+            module_changes.append(
+                ModuleEntitlementChange(
+                    module_key=module_key,
+                    status='enabled',
+                    source=f'category:{category}'
+                )
+            )
+        
+        changes = EntitlementChanges(modules=module_changes)
+        request = UpdateEntitlementsRequest(
+            reason=f"{reason} - Category: {category_info['display_name']}",
+            changes=changes
+        )
+        
+        # Use existing update method to apply changes
+        return await self.update_org_entitlements(org_id, request, actor_user_id)
+
+    async def deactivate_category(
+        self,
+        org_id: int,
+        category: str,
+        actor_user_id: int,
+        reason: str = "Category-based deactivation"
+    ) -> UpdateEntitlementsResponse:
+        """
+        Deactivate all modules in a product category for an organization.
+        
+        Args:
+            org_id: Organization ID
+            category: Product category key
+            actor_user_id: User performing the deactivation
+            reason: Reason for deactivation (for audit trail)
+        
+        Returns:
+            UpdateEntitlementsResponse with details of deactivation
+        """
+        from app.core.module_categories import get_modules_for_category, get_category_info
+        
+        # Get modules for this category
+        module_keys = get_modules_for_category(category)
+        if not module_keys:
+            raise ValueError(f"Category '{category}' not found or has no modules")
+        
+        category_info = get_category_info(category)
+        logger.info(f"Deactivating category '{category_info['display_name']}' with {len(module_keys)} modules for org {org_id}")
+        
+        # Build changes for all modules in the category
+        from app.schemas.entitlement_schemas import UpdateEntitlementsRequest, EntitlementChanges, ModuleEntitlementChange
+        
+        module_changes = []
+        for module_key in module_keys:
+            module_changes.append(
+                ModuleEntitlementChange(
+                    module_key=module_key,
+                    status='disabled',
+                    source=f'category:{category}'
+                )
+            )
+        
+        changes = EntitlementChanges(modules=module_changes)
+        request = UpdateEntitlementsRequest(
+            reason=f"{reason} - Category: {category_info['display_name']}",
+            changes=changes
+        )
+        
+        # Use existing update method to apply changes
+        return await self.update_org_entitlements(org_id, request, actor_user_id)
+
+    async def get_activated_categories(self, org_id: int) -> List[str]:
+        """
+        Get list of categories that are fully or partially activated for an organization.
+        
+        Args:
+            org_id: Organization ID
+        
+        Returns:
+            List of activated category keys
+        """
+        from app.core.module_categories import CATEGORY_MODULE_MAP, get_category_for_module
+        
+        # Get all enabled modules for the organization
+        org_ent_result = await self.db.execute(
+            select(OrgEntitlement)
+            .where(OrgEntitlement.org_id == org_id)
+            .options(joinedload(OrgEntitlement.module))
+        )
+        org_entitlements = org_ent_result.scalars().all()
+        
+        enabled_modules = set()
+        now = datetime.utcnow()
+        for ent in org_entitlements:
+            if ent.status == 'enabled':
+                enabled_modules.add(ent.module.module_key)
+            elif ent.status == 'trial' and (ent.trial_expires_at is None or ent.trial_expires_at > now):
+                enabled_modules.add(ent.module.module_key)
+        
+        # Check which categories are activated
+        activated_categories = []
+        for category, modules in CATEGORY_MODULE_MAP.items():
+            # Category is considered activated if at least one of its modules is enabled
+            if any(module in enabled_modules for module in modules):
+                activated_categories.append(category)
+        
+        return activated_categories
