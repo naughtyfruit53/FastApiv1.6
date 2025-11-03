@@ -15,6 +15,8 @@ from app.schemas.vouchers.purchase import PurchaseOrderCreate, PurchaseOrderInDB
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 import logging
+from app.utils.gst_calculator import calculate_gst_amounts
+from app.utils.voucher_gst_helper import get_state_codes_for_purchase
 from datetime import timezone, datetime
 from dateutil import parser as date_parser
 import re
@@ -203,6 +205,16 @@ async def create_purchase_order(
         db.add(db_invoice)
         await db.flush()
         
+        # STRICT GST ENFORCEMENT: Get state codes (NO FALLBACK)
+        company_state_code, vendor_state_code = await get_state_codes_for_purchase(
+            db=db,
+            org_id=org_id,
+            vendor_id=invoice_data.get('vendor_id'),
+            voucher_type="purchase order"
+        )
+        
+        logger.info(f"Purchase Order GST: Company State={company_state_code}, Vendor State={vendor_state_code}")
+        
         total_amount = 0.0
         total_cgst = 0.0
         total_sgst = 0.0
@@ -227,12 +239,22 @@ async def create_purchase_order(
                 item_dict['discount_amount'] = discount_amount
                 item_dict['taxable_amount'] = gross_amount - discount_amount
             
+            # SMART GST CALCULATION: Use company and vendor state codes
             taxable = item_dict['taxable_amount']
             if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
-                half_rate = item_dict['gst_rate'] / 2 / 100
-                item_dict['cgst_amount'] = taxable * half_rate
-                item_dict['sgst_amount'] = taxable * half_rate
-                item_dict['igst_amount'] = 0.0
+                # calculate_gst_amounts will validate state codes and raise ValueError if missing
+                gst_amounts = calculate_gst_amounts(
+                    taxable_amount=taxable,
+                    gst_rate=item_dict['gst_rate'],
+                    company_state_code=company_state_code,
+                    customer_state_code=vendor_state_code,
+                    organization_id=org_id,
+                    entity_id=invoice_data.get('vendor_id'),
+                    entity_type='vendor'
+                )
+                item_dict['cgst_amount'] = gst_amounts['cgst_amount']
+                item_dict['sgst_amount'] = gst_amounts['sgst_amount']
+                item_dict['igst_amount'] = gst_amounts['igst_amount']
             
             item_dict['total_amount'] = (
                 item_dict['taxable_amount'] +
