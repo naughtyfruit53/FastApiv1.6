@@ -13,11 +13,14 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.core.enforcement import require_access, TenantEnforcement
 from app.models import User
+from app.models.user_models import Organization
+from app.models.customer_models import Customer
 from app.models.vouchers.sales import SalesVoucher, SalesVoucherItem
 from app.schemas.vouchers import SalesVoucherCreate, SalesVoucherInDB, SalesVoucherUpdate
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 from app.services.pdf_generation_service import pdf_generator
+from app.utils.gst_calculator import calculate_gst_amounts
 import logging
 import asyncio
 import re
@@ -147,6 +150,22 @@ async def create_sales_voucher(
         db.add(db_invoice)
         await db.flush()
         
+        # Get organization's state code for GST calculation
+        org_result = await db.execute(
+            select(Organization.state_code).where(Organization.id == org_id)
+        )
+        company_state_code = org_result.scalar_one_or_none() or "27"  # Default to Maharashtra if not set
+        
+        # Get customer's state code if customer is specified
+        customer_state_code = None
+        if invoice_data.get('customer_id'):
+            customer_result = await db.execute(
+                select(Customer.state_code).where(Customer.id == invoice_data['customer_id'])
+            )
+            customer_state_code = customer_result.scalar_one_or_none()
+        
+        logger.info(f"GST Calculation: Company State={company_state_code}, Customer State={customer_state_code}")
+        
         # Initialize sums for header
         total_amount = 0.0
         total_cgst = 0.0
@@ -174,13 +193,22 @@ async def create_sales_voucher(
                 item_dict['discount_amount'] = discount_amount
                 item_dict['taxable_amount'] = gross_amount - discount_amount
             
-            # Recalculate tax amounts if they are 0 (assuming intra-state by default; adjust if inter-state logic added later)
+            # SMART GST CALCULATION: Use company and customer state codes
             taxable = item_dict['taxable_amount']
             if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
-                half_rate = item_dict['gst_rate'] / 2 / 100
-                item_dict['cgst_amount'] = taxable * half_rate
-                item_dict['sgst_amount'] = taxable * half_rate
-                item_dict['igst_amount'] = 0.0
+                gst_amounts = calculate_gst_amounts(
+                    taxable_amount=taxable,
+                    gst_rate=item_dict['gst_rate'],
+                    company_state_code=company_state_code,
+                    customer_state_code=customer_state_code
+                )
+                item_dict['cgst_amount'] = gst_amounts['cgst_amount']
+                item_dict['sgst_amount'] = gst_amounts['sgst_amount']
+                item_dict['igst_amount'] = gst_amounts['igst_amount']
+                
+                logger.debug(f"Item GST: Taxable={taxable}, Rate={item_dict['gst_rate']}%, "
+                           f"CGST={item_dict['cgst_amount']}, SGST={item_dict['sgst_amount']}, "
+                           f"IGST={item_dict['igst_amount']}")
             
             # Always calculate total_amount to ensure it's not None or incorrect
             item_dict['total_amount'] = (
