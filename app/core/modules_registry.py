@@ -93,7 +93,9 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "appointments",
         "meeting_rooms",
         "event_reminders",
-        "recurring_events"
+        "recurring_events",
+        "vendors",  # Added to fix "Submodule 'vendors' not found in module 'erp'"
+        "customers"  # Added for consistency with vendors
     ],
     'MANUFACTURING': [
         "bom",
@@ -107,13 +109,15 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "reports"
     ],
     'FINANCE': [
-        "chart_of_accounts",
-        "ledger",
-        "financial_reports",
-        "budget_management",
-        "expense_account",
-        "payroll",
-        "financial_analytics"
+        "salary_structure",
+        "salary_components",
+        "payslips",
+        "deductions",
+        "bonuses",
+        "tax_calculation",
+        "statutory_compliance",
+        "payroll_reports",
+        "bank_transfer"
     ],
     'SERVICE': [
         "tickets",
@@ -125,12 +129,15 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "service_analytics"
     ],
     'HR': [
-        "employees",
-        "recruitment",
-        "payroll",
-        "performance",
-        "training",
-        "reports"
+        "salary",
+        "salary_structure",
+        "payslips",
+        "deductions",
+        "bonuses",
+        "tax_calculation",
+        "statutory_compliance",
+        "payroll_reports",
+        "bank_transfer"
     ],
     'ANALYTICS': [
         "customer",
@@ -229,13 +236,14 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
     ],
     ModuleName.PAYROLL.value: [
         "salary_structure",
+        "salary_components",
         "payslips",
         "deductions",
         "bonuses",
         "tax_calculation",
         "statutory_compliance",
         "payroll_reports",
-        "bank_transfer",
+        "bank_transfer"
     ],
     ModuleName.TALENT.value: [
         "recruitment",

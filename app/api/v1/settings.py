@@ -1,16 +1,16 @@
-# Revised: v1/app/api/settings.py
+# Revised: app/api/v1/settings.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List, Optional
 from app.core.database import get_db
 from app.core.enforcement import require_access
-from app.models import User, Organization
+from app.models.user_models import User, Organization
 from app.services.reset_service import ResetService
 from app.services.otp_service import OTPService
 from app.core.tenant import require_current_organization_id
 from app.schemas.reset import DataResetRequest, ResetScope, DataResetType
-from app.api.v1.auth import get_current_active_user
+from app.api.v1.auth import get_current_active_user, get_current_super_admin, get_current_admin_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ router = APIRouter()
 async def request_factory_reset_otp(
     scope: ResetScope,
     organization_id: Optional[int] = None,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """Request OTP for factory reset (Org Admin for org, Super Admin for org or all)"""
@@ -35,7 +35,9 @@ async def request_factory_reset_otp(
                 else:
                     organization_id = current_user.organization_id
             # Verify org exists and access
-            org = db.query(Organization).filter(Organization.id == organization_id).first()
+            org_stmt = select(Organization).where(Organization.id == organization_id)
+            org_result = await db.execute(org_stmt)
+            org = org_result.scalars().first()
             if not org:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
             if not current_user.is_super_admin and current_user.organization_id != organization_id:
@@ -70,7 +72,7 @@ async def request_factory_reset_otp(
 @router.post("/factory-reset/confirm")
 async def confirm_factory_reset(
     otp: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """Confirm factory reset with OTP"""
@@ -113,7 +115,7 @@ async def confirm_factory_reset(
 async def reset_organization_data(
     reset_request: DataResetRequest = None,
     confirm: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
     """Reset all data for the current organization (Org Admin+ only)"""
@@ -147,7 +149,9 @@ async def reset_organization_data(
                 )
         
         # Verify organization exists
-        organization = db.query(Organization).filter(Organization.id == org_id).first()
+        org_stmt = select(Organization).where(Organization.id == org_id)
+        org_result = await db.execute(org_stmt)
+        organization = org_result.scalars().first()
         if not organization:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -190,7 +194,7 @@ async def reset_organization_data(
 async def reset_entity_data(
     entity_id: int,
     confirm: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """Reset all data for a specific entity/organization (Entity Super Admin only)"""
@@ -203,7 +207,9 @@ async def reset_entity_data(
     
     try:
         # Verify the organization exists
-        organization = db.query(Organization).filter(Organization.id == entity_id).first()
+        org_stmt = select(Organization).where(Organization.id == entity_id)
+        org_result = await db.execute(org_stmt)
+        organization = org_result.scalars().first()
         if not organization:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -251,7 +257,7 @@ async def reset_entity_data(
 async def reset_all_organizations(
     confirm: bool = False,
     force: bool = False,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """Reset data for ALL organizations (Super Admin only) - DANGEROUS OPERATION"""
@@ -304,13 +310,15 @@ async def reset_all_organizations(
 async def suspend_organization(
     organization_id: int,
     reason: str = "Administrative action",
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """Suspend an organization account (Super Admin only)"""
     
     try:
-        organization = db.query(Organization).filter(Organization.id == organization_id).first()
+        org_stmt = select(Organization).where(Organization.id == organization_id)
+        org_result = await db.execute(org_stmt)
+        organization = org_result.scalars().first()
         if not organization:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -325,7 +333,7 @@ async def suspend_organization(
         
         # Update organization status
         organization.status = "suspended"
-        db.commit()
+        await db.commit()
         
         logger.info(f"Organization {organization_id} suspended by user {current_user.id}. Reason: {reason}")
         
@@ -349,13 +357,15 @@ async def suspend_organization(
 @router.post("/organization/{organization_id}/activate")
 async def activate_organization(
     organization_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """Activate a suspended organization (Super Admin only)"""
     
     try:
-        organization = db.query(Organization).filter(Organization.id == organization_id).first()
+        org_stmt = select(Organization).where(Organization.id == organization_id)
+        org_result = await db.execute(org_stmt)
+        organization = org_result.scalars().first()
         if not organization:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -370,7 +380,7 @@ async def activate_organization(
         
         # Update organization status
         organization.status = "active"
-        db.commit()
+        await db.commit()
         
         logger.info(f"Organization {organization_id} activated by user {current_user.id}")
         
@@ -394,7 +404,7 @@ async def activate_organization(
 async def update_max_users(
     organization_id: int,
     max_users: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_super_admin)
 ):
     """Update the maximum number of users allowed for an organization"""
@@ -406,7 +416,9 @@ async def update_max_users(
         )
     
     try:
-        organization = db.query(Organization).filter(Organization.id == organization_id).first()
+        org_stmt = select(Organization).where(Organization.id == organization_id)
+        org_result = await db.execute(org_stmt)
+        organization = org_result.scalars().first()
         if not organization:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -415,7 +427,7 @@ async def update_max_users(
         
         old_max_users = organization.max_users
         organization.max_users = max_users
-        db.commit()
+        await db.commit()
         
         logger.info(f"Organization {organization_id} max users updated from {old_max_users} to {max_users} by user {current_user.id}")
         
@@ -441,7 +453,7 @@ async def update_max_users(
 @router.get("/menu-visibility")
 async def get_settings_menu_visibility(
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get settings menu items visibility based on user role and entitlements.
@@ -455,7 +467,6 @@ async def get_settings_menu_visibility(
     Returns dict of module -> bool indicating visibility
     """
     from app.services.permission_enforcement import PermissionEnforcer
-    from sqlalchemy.ext.asyncio import AsyncSession
     
     # Convert to async session if needed
     if not isinstance(db, AsyncSession):

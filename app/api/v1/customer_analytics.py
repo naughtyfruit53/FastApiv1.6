@@ -18,8 +18,8 @@ from datetime import datetime, timedelta
 
 from app.core.database import get_db
 from app.core.enforcement import require_access
-from app.models import User, Customer, CustomerSegment
-from app.models.base import CustomerInteraction
+from app.models.user_models import User
+from app.models.customer_models import Customer, CustomerSegment, CustomerInteraction
 from app.services.customer_analytics_service import CustomerAnalyticsService
 from app.schemas.customer_analytics import (
     CustomerAnalyticsResponse,

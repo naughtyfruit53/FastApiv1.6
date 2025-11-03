@@ -1,17 +1,21 @@
+# app/api/v1/management_reports.py
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, or_, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func, and_, or_, desc
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 from app.core.database import get_db
 from app.core.enforcement import require_access
-from app.models import User, Product, Stock, Vendor, Customer, Organization
-from app.models.vouchers import (
-    PurchaseVoucher, SalesVoucher, PurchaseOrder, SalesOrder,
-    PaymentVoucher, ReceiptVoucher
-)
+from app.models.user_models import User, Organization
+from app.models.product_models import Product, Stock
+from app.models.customer_models import Vendor, Customer
+from app.models.vouchers.purchase import PurchaseVoucher, PurchaseOrder
+from app.models.vouchers.presales import SalesOrder
+from app.models.vouchers.sales import SalesVoucher
+from app.models.vouchers.financial import PaymentVoucher, ReceiptVoucher
 from app.models.analytics_models import ReportConfiguration
 from app.services.excel_service import ExcelService, ReportsExcelService
 import logging
@@ -23,14 +27,20 @@ router = APIRouter(prefix="/management-reports", tags=["management-reports"])
 async def get_executive_dashboard(
     period: str = "month",  # day, week, month, quarter, year
     auth: tuple = Depends(require_access("management_reports", "read")),
-    db:  = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get executive dashboard with key business metrics and KPIs.
     Requires elevated permissions for management-level reporting.
     """
+    current_user, org_id = auth
     try:
-        # Check permissions - only admins and authorized users can access        if period == "day":
+        # Check permissions - only admins and authorized users can access
+        if not current_user.is_admin:  # Assuming User has is_admin; adjust if needed
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+
+        end_date = date.today()
+        if period == "day":
             start_date = end_date
         elif period == "week":
             start_date = end_date - timedelta(days=7)
@@ -45,47 +55,36 @@ async def get_executive_dashboard(
             start_date = end_date.replace(day=1)  # Default to month
         
         # Revenue and Sales Metrics
-        sales_query = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(SalesVoucher.date >= start_date)
-        
-        total_revenue = sales_query.with_entities(
-            func.sum(SalesVoucher.total_amount)
-        ).scalar() or Decimal(0)
-        
-        sales_count = sales_query.count()
+        sales_stmt = select(SalesVoucher).where(SalesVoucher.organization_id == org_id, SalesVoucher.date >= start_date)
+        total_revenue_stmt = select(func.sum(SalesVoucher.total_amount)).where(SalesVoucher.organization_id == org_id, SalesVoucher.date >= start_date)
+        total_revenue = (await db.execute(total_revenue_stmt)).scalar() or Decimal(0)
+        sales_count_stmt = select(func.count(SalesVoucher.id)).where(SalesVoucher.organization_id == org_id, SalesVoucher.date >= start_date)
+        sales_count = (await db.execute(sales_count_stmt)).scalar() or 0
         
         # Purchase and Cost Metrics
-        purchase_query = db.query(PurchaseVoucher).filter(PurchaseVoucher.organization_id == org_id).filter(PurchaseVoucher.date >= start_date)
-        
-        total_costs = purchase_query.with_entities(
-            func.sum(PurchaseVoucher.total_amount)
-        ).scalar() or Decimal(0)
-        
-        purchase_count = purchase_query.count()
+        purchase_stmt = select(PurchaseVoucher).where(PurchaseVoucher.organization_id == org_id, PurchaseVoucher.date >= start_date)
+        total_costs_stmt = select(func.sum(PurchaseVoucher.total_amount)).where(PurchaseVoucher.organization_id == org_id, PurchaseVoucher.date >= start_date)
+        total_costs = (await db.execute(total_costs_stmt)).scalar() or Decimal(0)
+        purchase_count_stmt = select(func.count(PurchaseVoucher.id)).where(PurchaseVoucher.organization_id == org_id, PurchaseVoucher.date >= start_date)
+        purchase_count = (await db.execute(purchase_count_stmt)).scalar() or 0
         
         # Customer Metrics
-        active_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(Customer.is_active == True).count()
-        
-        new_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(
-            Customer.created_at >= start_date,
-            Customer.is_active == True
-        ).count()
+        active_customers_stmt = select(func.count(Customer.id)).where(Customer.organization_id == org_id, Customer.is_active == True)
+        active_customers = (await db.execute(active_customers_stmt)).scalar() or 0
+        new_customers_stmt = select(func.count(Customer.id)).where(Customer.organization_id == org_id, Customer.created_at >= start_date, Customer.is_active == True)
+        new_customers = (await db.execute(new_customers_stmt)).scalar() or 0
         
         # Inventory Metrics
-        total_products = db.query(Product).filter(Product.organization_id == org_id).filter(Product.is_active == True).count()
-        
-        low_stock_items = db.query(Stock).filter(Stock.organization_id == org_id).join(Product).filter(
-            Stock.quantity <= Product.reorder_level,
-            Product.is_active == True
-        ).count()
+        total_products_stmt = select(func.count(Product.id)).where(Product.organization_id == org_id, Product.is_active == True)
+        total_products = (await db.execute(total_products_stmt)).scalar() or 0
+        low_stock_items_stmt = select(func.count(Stock.id)).select_from(Stock).join(Product).where(Stock.organization_id == org_id, Stock.quantity <= Product.reorder_level, Product.is_active == True)
+        low_stock_items = (await db.execute(low_stock_items_stmt)).scalar() or 0
         
         # Outstanding Amounts
-        pending_receivables = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(SalesVoucher.status.in_(["pending", "partial"])).with_entities(
-            func.sum(SalesVoucher.total_amount)
-        ).scalar() or Decimal(0)
-        
-        pending_payables = db.query(PurchaseVoucher).filter(PurchaseVoucher.organization_id == org_id).filter(PurchaseVoucher.status.in_(["pending", "partial"])).with_entities(
-            func.sum(PurchaseVoucher.total_amount)
-        ).scalar() or Decimal(0)
+        pending_receivables_stmt = select(func.sum(SalesVoucher.total_amount)).where(SalesVoucher.organization_id == org_id, SalesVoucher.status.in_(["pending", "partial"]))
+        pending_receivables = (await db.execute(pending_receivables_stmt)).scalar() or Decimal(0)
+        pending_payables_stmt = select(func.sum(PurchaseVoucher.total_amount)).where(PurchaseVoucher.organization_id == org_id, PurchaseVoucher.status.in_(["pending", "partial"]))
+        pending_payables = (await db.execute(pending_payables_stmt)).scalar() or Decimal(0)
         
         # Calculate key ratios and trends
         gross_profit = total_revenue - total_costs
@@ -135,21 +134,25 @@ async def get_executive_dashboard(
             detail="Failed to generate executive dashboard"
         )
 
-
 @router.get("/business-intelligence")
 async def get_business_intelligence(
     metric_type: str = "overview",  # overview, sales, customers, inventory, financial
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     auth: tuple = Depends(require_access("management_reports", "read")),
-    db:  = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get business intelligence reports with advanced analytics and insights.
     """
+    current_user, org_id = auth
     try:
-        # Check permissions        if not start_date:
-            start_date = end_date - timedelta(days=180)
+        # Check permissions
+        if not current_user.is_admin:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+
+        end_date = date.today() if not end_date else end_date
+        start_date = end_date - timedelta(days=180) if not start_date else start_date
         
         if metric_type == "sales":
             return await _get_sales_intelligence(db, org_id, start_date, end_date)
@@ -176,18 +179,23 @@ async def get_business_intelligence(
             detail="Failed to generate business intelligence report"
         )
 
-
 @router.get("/operational-kpis")
 async def get_operational_kpis(
     kpi_category: str = "all",  # all, efficiency, quality, customer, financial
     auth: tuple = Depends(require_access("management_reports", "read")),
-    db:  = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get operational KPIs for performance monitoring and management insights.
     """
+    current_user, org_id = auth
     try:
-        # Check permissions        current_month_start = current_date.replace(day=1)
+        # Check permissions
+        if not current_user.is_admin:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+
+        current_date = date.today()
+        current_month_start = current_date.replace(day=1)
         prev_month_end = current_month_start - timedelta(days=1)
         prev_month_start = prev_month_end.replace(day=1)
         
@@ -229,20 +237,29 @@ async def get_operational_kpis(
             detail="Failed to generate operational KPIs"
         )
 
-
 @router.post("/scheduled-reports")
 async def create_scheduled_report(
     report_config: Dict[str, Any],
     auth: tuple = Depends(require_access("management_reports", "read")),
-    db:  = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Create a scheduled management report configuration.
     """
+    current_user, org_id = auth
     try:
-        # Check permissions        db.add(new_config)
-        db.commit()
-        db.refresh(new_config)
+        # Check permissions
+        if not current_user.is_admin:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+
+        new_config = ReportConfiguration(
+            **report_config,
+            organization_id=org_id,
+            created_by_id=current_user.id
+        )
+        db.add(new_config)
+        await db.commit()
+        await db.refresh(new_config)
         
         return {
             "id": new_config.id,
@@ -259,20 +276,24 @@ async def create_scheduled_report(
             detail="Failed to create scheduled report"
         )
 
-
 @router.get("/export/executive-dashboard")
 async def export_executive_dashboard(
     format: str = "excel",  # excel, pdf
     period: str = "month",
     auth: tuple = Depends(require_access("management_reports", "read")),
-    db:  = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Export executive dashboard data to Excel or PDF.
     """
+    current_user, org_id = auth
     try:
-        # Check permissions        # Get dashboard data
-        dashboard_data = await get_executive_dashboard(period, db, current_user)
+        # Check permissions
+        if not current_user.is_admin:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+
+        # Get dashboard data
+        dashboard_data = await get_executive_dashboard(period=period, auth=auth, db=db)
         
         if format.lower() == "excel":
             excel_data = ReportsExcelService.export_management_dashboard(dashboard_data)
@@ -294,28 +315,26 @@ async def export_executive_dashboard(
             detail="Failed to export executive dashboard"
         )
 
-
 # Helper functions for business intelligence
-async def _get_sales_intelligence(db: Session, org_id: int, start_date: date, end_date: date):
+async def _get_sales_intelligence(db: AsyncSession, org_id: int, start_date: date, end_date: date):
     """Get sales-specific business intelligence metrics."""
-    sales_query = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(
-        SalesVoucher.date >= start_date,
-        SalesVoucher.date <= end_date
-    )
-    
     # Monthly sales trend
-    monthly_sales = sales_query.with_entities(
+    monthly_sales_stmt = select(
         func.extract('month', SalesVoucher.date).label('month'),
         func.sum(SalesVoucher.total_amount).label('total'),
         func.count(SalesVoucher.id).label('count')
-    ).group_by(func.extract('month', SalesVoucher.date)).all()
+    ).where(SalesVoucher.organization_id == org_id, SalesVoucher.date >= start_date, SalesVoucher.date <= end_date).group_by(func.extract('month', SalesVoucher.date))
+    monthly_sales = await db.execute(monthly_sales_stmt)
+    monthly_sales = monthly_sales.all()
     
     # Top customers
-    top_customers = sales_query.join(Customer).with_entities(
+    top_customers_stmt = select(
         Customer.name,
         func.sum(SalesVoucher.total_amount).label('total_sales'),
         func.count(SalesVoucher.id).label('order_count')
-    ).group_by(Customer.name).order_by(desc(func.sum(SalesVoucher.total_amount))).limit(10).all()
+    ).join(Customer).where(SalesVoucher.organization_id == org_id, SalesVoucher.date >= start_date, SalesVoucher.date <= end_date).group_by(Customer.name).order_by(desc(func.sum(SalesVoucher.total_amount))).limit(10)
+    top_customers = await db.execute(top_customers_stmt)
+    top_customers = top_customers.all()
     
     return {
         "monthly_trends": [
@@ -328,16 +347,14 @@ async def _get_sales_intelligence(db: Session, org_id: int, start_date: date, en
         ]
     }
 
-
-async def _get_customer_intelligence(db: Session, org_id: int, start_date: date, end_date: date):
+async def _get_customer_intelligence(db: AsyncSession, org_id: int, start_date: date, end_date: date):
     """Get customer-specific business intelligence metrics."""
     # Customer acquisition and retention metrics
-    total_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(Customer.is_active == True).count()
+    total_customers_stmt = select(func.count(Customer.id)).where(Customer.organization_id == org_id, Customer.is_active == True)
+    total_customers = (await db.execute(total_customers_stmt)).scalar() or 0
     
-    new_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(
-        Customer.created_at >= start_date,
-        Customer.is_active == True
-    ).count()
+    new_customers_stmt = select(func.count(Customer.id)).where(Customer.organization_id == org_id, Customer.created_at >= start_date, Customer.is_active == True)
+    new_customers = (await db.execute(new_customers_stmt)).scalar() or 0
     
     return {
         "total_active_customers": total_customers,
@@ -345,16 +362,14 @@ async def _get_customer_intelligence(db: Session, org_id: int, start_date: date,
         "acquisition_rate": (new_customers / total_customers * 100) if total_customers > 0 else 0
     }
 
-
-async def _get_inventory_intelligence(db: Session, org_id: int, start_date: date, end_date: date):
+async def _get_inventory_intelligence(db: AsyncSession, org_id: int, start_date: date, end_date: date):
     """Get inventory-specific business intelligence metrics."""
     # Inventory turnover and performance metrics
-    total_products = db.query(Product).filter(Product.organization_id == org_id).filter(Product.is_active == True).count()
+    total_products_stmt = select(func.count(Product.id)).where(Product.organization_id == org_id, Product.is_active == True)
+    total_products = (await db.execute(total_products_stmt)).scalar() or 0
     
-    low_stock_count = db.query(Stock).filter(Stock.organization_id == org_id).join(Product).filter(
-        Stock.quantity <= Product.reorder_level,
-        Product.is_active == True
-    ).count()
+    low_stock_count_stmt = select(func.count(Stock.id)).select_from(Stock).join(Product).where(Stock.organization_id == org_id, Stock.quantity <= Product.reorder_level, Product.is_active == True)
+    low_stock_count = (await db.execute(low_stock_count_stmt)).scalar() or 0
     
     return {
         "total_products": total_products,
@@ -362,19 +377,14 @@ async def _get_inventory_intelligence(db: Session, org_id: int, start_date: date
         "stock_health_percentage": ((total_products - low_stock_count) / total_products * 100) if total_products > 0 else 100
     }
 
-
-async def _get_financial_intelligence(db: Session, org_id: int, start_date: date, end_date: date):
+async def _get_financial_intelligence(db: AsyncSession, org_id: int, start_date: date, end_date: date):
     """Get financial-specific business intelligence metrics."""
     # Cash flow and financial health metrics
-    total_receivables = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(
-        SalesVoucher.date >= start_date,
-        SalesVoucher.status.in_(["pending", "partial"])
-    ).with_entities(func.sum(SalesVoucher.total_amount)).scalar() or Decimal(0)
+    total_receivables_stmt = select(func.sum(SalesVoucher.total_amount)).where(SalesVoucher.organization_id == org_id, SalesVoucher.date >= start_date, SalesVoucher.status.in_(["pending", "partial"]))
+    total_receivables = (await db.execute(total_receivables_stmt)).scalar() or Decimal(0)
     
-    total_payables = db.query(PurchaseVoucher).filter(PurchaseVoucher.organization_id == org_id).filter(
-        PurchaseVoucher.date >= start_date,
-        PurchaseVoucher.status.in_(["pending", "partial"])
-    ).with_entities(func.sum(PurchaseVoucher.total_amount)).scalar() or Decimal(0)
+    total_payables_stmt = select(func.sum(PurchaseVoucher.total_amount)).where(PurchaseVoucher.organization_id == org_id, PurchaseVoucher.date >= start_date, PurchaseVoucher.status.in_(["pending", "partial"]))
+    total_payables = (await db.execute(total_payables_stmt)).scalar() or Decimal(0)
     
     return {
         "total_receivables": float(total_receivables),
@@ -382,14 +392,15 @@ async def _get_financial_intelligence(db: Session, org_id: int, start_date: date
         "net_position": float(total_receivables - total_payables)
     }
 
-
 # KPI calculation helper functions
-async def _calculate_efficiency_kpis(db: Session, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
+async def _calculate_efficiency_kpis(db: AsyncSession, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
     """Calculate efficiency-related KPIs."""
     # Order processing time, inventory turnover, etc.
-    current_orders = db.query(SalesOrder).filter(SalesOrder.organization_id == org_id).filter(SalesOrder.date >= current_start, SalesOrder.date <= current_end).count()
+    current_orders_stmt = select(func.count(SalesOrder.id)).where(SalesOrder.organization_id == org_id, SalesOrder.date >= current_start, SalesOrder.date <= current_end)
+    current_orders = (await db.execute(current_orders_stmt)).scalar() or 0
     
-    prev_orders = db.query(SalesOrder).filter(SalesOrder.organization_id == org_id).filter(SalesOrder.date >= prev_start, SalesOrder.date <= prev_end).count()
+    prev_orders_stmt = select(func.count(SalesOrder.id)).where(SalesOrder.organization_id == org_id, SalesOrder.date >= prev_start, SalesOrder.date <= prev_end)
+    prev_orders = (await db.execute(prev_orders_stmt)).scalar() or 0
     
     order_growth = ((current_orders - prev_orders) / prev_orders * 100) if prev_orders > 0 else 0
     
@@ -401,29 +412,21 @@ async def _calculate_efficiency_kpis(db: Session, org_id: int, current_start: da
         }
     }
 
-
-async def _calculate_quality_kpis(db: Session, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
+async def _calculate_quality_kpis(db: AsyncSession, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
     """Calculate quality-related KPIs."""
-    # For now, return placeholder data
+    # For now, return placeholder data (implement real queries if models available)
     return {
         "defect_rate": {"current": 2.1, "previous": 2.8, "improvement": True},
         "customer_satisfaction": {"current": 4.2, "previous": 4.0, "improvement": True}
     }
 
-
-async def _calculate_customer_kpis(db: Session, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
+async def _calculate_customer_kpis(db: AsyncSession, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
     """Calculate customer-related KPIs."""
-    current_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(
-        Customer.created_at >= current_start,
-        Customer.created_at <= current_end,
-        Customer.is_active == True
-    ).count()
+    current_customers_stmt = select(func.count(Customer.id)).where(Customer.organization_id == org_id, Customer.created_at >= current_start, Customer.created_at <= current_end, Customer.is_active == True)
+    current_customers = (await db.execute(current_customers_stmt)).scalar() or 0
     
-    prev_customers = db.query(Customer).filter(Customer.organization_id == org_id).filter(
-        Customer.created_at >= prev_start,
-        Customer.created_at <= prev_end,
-        Customer.is_active == True
-    ).count()
+    prev_customers_stmt = select(func.count(Customer.id)).where(Customer.organization_id == org_id, Customer.created_at >= prev_start, Customer.created_at <= prev_end, Customer.is_active == True)
+    prev_customers = (await db.execute(prev_customers_stmt)).scalar() or 0
     
     acquisition_growth = ((current_customers - prev_customers) / prev_customers * 100) if prev_customers > 0 else 0
     
@@ -435,18 +438,13 @@ async def _calculate_customer_kpis(db: Session, org_id: int, current_start: date
         }
     }
 
-
-async def _calculate_financial_kpis(db: Session, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
+async def _calculate_financial_kpis(db: AsyncSession, org_id: int, current_start: date, current_end: date, prev_start: date, prev_end: date):
     """Calculate financial-related KPIs."""
-    current_revenue = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(
-        SalesVoucher.date >= current_start,
-        SalesVoucher.date <= current_end
-    ).with_entities(func.sum(SalesVoucher.total_amount)).scalar() or Decimal(0)
+    current_revenue_stmt = select(func.sum(SalesVoucher.total_amount)).where(SalesVoucher.organization_id == org_id, SalesVoucher.date >= current_start, SalesVoucher.date <= current_end)
+    current_revenue = (await db.execute(current_revenue_stmt)).scalar() or Decimal(0)
     
-    prev_revenue = db.query(SalesVoucher).filter(SalesVoucher.organization_id == org_id).filter(
-        SalesVoucher.date >= prev_start,
-        SalesVoucher.date <= prev_end
-    ).with_entities(func.sum(SalesVoucher.total_amount)).scalar() or Decimal(0)
+    prev_revenue_stmt = select(func.sum(SalesVoucher.total_amount)).where(SalesVoucher.organization_id == org_id, SalesVoucher.date >= prev_start, SalesVoucher.date <= prev_end)
+    prev_revenue = (await db.execute(prev_revenue_stmt)).scalar() or Decimal(0)
     
     revenue_growth = ((current_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
     
