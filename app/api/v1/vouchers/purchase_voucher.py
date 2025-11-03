@@ -208,14 +208,7 @@ async def create_purchase_voucher(
             # SMART GST CALCULATION: Use company and vendor state codes
             taxable = item_dict['taxable_amount']
             if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
-                # Ensure we have both state codes for GST calculation
-                if not vendor_state_code:
-                    logger.error("Cannot calculate GST without vendor state code")
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Vendor state code is required for GST calculation"
-                    )
-                
+                # calculate_gst_amounts will validate state codes and raise ValueError if missing
                 gst_amounts = calculate_gst_amounts(
                     taxable_amount=taxable,
                     gst_rate=item_dict['gst_rate'],

@@ -38,16 +38,16 @@ def calculate_gst_amounts(
     Raises:
         ValueError: If company_state_code or customer_state_code is missing or invalid
     """
-    # Validate required state codes
-    if not company_state_code or not company_state_code.strip():
-        error_msg = "company_state_code is required for GST calculation"
-        logger.error(error_msg)
-        raise ValueError(error_msg)
+    def _validate_state_code(code: str, field_name: str) -> None:
+        """Helper to validate state code"""
+        if not code or not code.strip():
+            error_msg = f"{field_name} is required for GST calculation"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
     
-    if not customer_state_code or not customer_state_code.strip():
-        error_msg = "customer_state_code is required for GST calculation"
-        logger.error(error_msg)
-        raise ValueError(error_msg)
+    # Validate required state codes
+    _validate_state_code(company_state_code, "company_state_code")
+    _validate_state_code(customer_state_code, "customer_state_code")
     
     # Normalize state codes to uppercase for comparison
     company_state = company_state_code.strip().upper()

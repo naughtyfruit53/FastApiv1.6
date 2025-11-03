@@ -15,10 +15,13 @@ import pytest
 
 
 # Import directly without going through app/__init__.py
+# Note: We inline the GST calculator here to avoid importing FastAPI and other heavy dependencies
+# during test execution. This allows tests to run independently without full app initialization.
 def calculate_gst_amounts(taxable_amount: float, gst_rate: float, 
                          company_state_code: str, customer_state_code: str) -> dict:
     """
-    Inline copy of GST calculator for testing without full app initialization
+    Inline copy of GST calculator for testing without full app initialization.
+    This is a simplified version that matches the core logic in app/utils/gst_calculator.py
     """
     # Validate required state codes
     if not company_state_code or not company_state_code.strip():

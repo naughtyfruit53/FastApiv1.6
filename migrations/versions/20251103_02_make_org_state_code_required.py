@@ -23,7 +23,9 @@ def upgrade():
     """Make state_code required in organizations table"""
     
     # First, set a default state_code for any organizations that don't have one
-    # Using '27' (Maharashtra) as a reasonable default for India
+    # Using '27' (Maharashtra) as a reasonable default for India-based organizations.
+    # Note: Administrators should review and update this for their specific location
+    # after running the migration.
     op.execute("""
         UPDATE organizations 
         SET state_code = '27' 
