@@ -43,38 +43,57 @@ def upgrade():
     # Check if any NULL values exist and raise error if found
     conn = op.get_bind()
     
-    # Check organizations
-    result = conn.execute(sa.text(
-        "SELECT COUNT(*) as cnt FROM organizations WHERE state_code IS NULL OR state_code = ''"
-    ))
-    org_nulls = result.scalar()
-    if org_nulls > 0:
-        raise ValueError(
-            f"Found {org_nulls} organizations with missing state_code. "
-            "Please update all organizations with valid state codes before running this migration."
-        )
+    # Define tables for metadata-based queries
+    from sqlalchemy import MetaData, Table
+    metadata = MetaData()
     
-    # Check customers
-    result = conn.execute(sa.text(
-        "SELECT COUNT(*) as cnt FROM customers WHERE state_code IS NULL OR state_code = ''"
-    ))
-    cust_nulls = result.scalar()
-    if cust_nulls > 0:
-        raise ValueError(
-            f"Found {cust_nulls} customers with missing state_code. "
-            "Please update all customers with valid state codes before running this migration."
+    try:
+        # Try to reflect tables - if they don't exist, skip validation
+        organizations = Table('organizations', metadata, autoload_with=conn)
+        customers = Table('customers', metadata, autoload_with=conn)
+        vendors = Table('vendors', metadata, autoload_with=conn)
+        
+        # Check organizations
+        result = conn.execute(
+            sa.select(sa.func.count()).select_from(organizations).where(
+                (organizations.c.state_code.is_(None)) | (organizations.c.state_code == '')
+            )
         )
-    
-    # Check vendors
-    result = conn.execute(sa.text(
-        "SELECT COUNT(*) as cnt FROM vendors WHERE state_code IS NULL OR state_code = ''"
-    ))
-    vendor_nulls = result.scalar()
-    if vendor_nulls > 0:
-        raise ValueError(
-            f"Found {vendor_nulls} vendors with missing state_code. "
-            "Please update all vendors with valid state codes before running this migration."
+        org_nulls = result.scalar()
+        if org_nulls and org_nulls > 0:
+            raise ValueError(
+                f"Found {org_nulls} organizations with missing state_code. "
+                "Please update all organizations with valid state codes before running this migration."
+            )
+        
+        # Check customers
+        result = conn.execute(
+            sa.select(sa.func.count()).select_from(customers).where(
+                (customers.c.state_code.is_(None)) | (customers.c.state_code == '')
+            )
         )
+        cust_nulls = result.scalar()
+        if cust_nulls and cust_nulls > 0:
+            raise ValueError(
+                f"Found {cust_nulls} customers with missing state_code. "
+                "Please update all customers with valid state codes before running this migration."
+            )
+        
+        # Check vendors
+        result = conn.execute(
+            sa.select(sa.func.count()).select_from(vendors).where(
+                (vendors.c.state_code.is_(None)) | (vendors.c.state_code == '')
+            )
+        )
+        vendor_nulls = result.scalar()
+        if vendor_nulls and vendor_nulls > 0:
+            raise ValueError(
+                f"Found {vendor_nulls} vendors with missing state_code. "
+                "Please update all vendors with valid state codes before running this migration."
+            )
+    except sa.exc.NoSuchTableError:
+        # Tables don't exist yet, this is fine (probably fresh install)
+        pass
     
     # If we got here, all data is clean - apply NOT NULL constraints
     # (Note: Models already define NOT NULL, but we can add explicit constraints)

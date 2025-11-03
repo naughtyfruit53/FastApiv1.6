@@ -11,7 +11,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Strict enforcement flag - NO FALLBACK allowed
+# Strict enforcement flag - NO FALLBACK allowed (for future configuration if needed)
+# Currently always enforced, but keeping for potential feature toggle
 STRICT_STATE_CODE_ENFORCEMENT = True
 
 
@@ -53,7 +54,7 @@ def calculate_gst_amounts(
     def _validate_state_code(code: str, field_name: str) -> None:
         """Helper to validate state code - STRICT ENFORCEMENT"""
         if not code or not code.strip():
-            error_msg = f"{field_name} is required for GST calculation (NO FALLBACK allowed)"
+            error_msg = f"{field_name} is required for GST calculation"
             logger.error(f"GST VALIDATION FAILED: {error_msg} - org_id={organization_id}, entity_id={entity_id}, entity_type={entity_type}")
             raise ValueError(error_msg)
     

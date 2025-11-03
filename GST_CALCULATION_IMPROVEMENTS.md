@@ -380,6 +380,6 @@ All GST calculations are now logged with:
 
 ---
 
-**Last Updated**: 2025-11-03
+**Last Updated**: 2024-11-03
 **Version**: 1.6.0
 **Status**: Strict Enforcement Active - NO FALLBACK
