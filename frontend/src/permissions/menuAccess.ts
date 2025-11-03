@@ -2,6 +2,7 @@
 
 /**
  * Menu access evaluation logic based on entitlements
+ * Updated to support 10-category structure with RBAC-only modules
  */
 
 import { AppEntitlementsResponse } from '../services/entitlementsApi';
@@ -25,6 +26,18 @@ export interface MenuAccessParams {
 }
 
 /**
+ * Always-on modules that don't require entitlement checks
+ * These are available to all users regardless of subscription/plan
+ */
+const ALWAYS_ON_MODULES = ['email'];
+
+/**
+ * RBAC-only modules controlled by role permissions, not entitlements
+ * These are administration modules that aren't billable features
+ */
+const RBAC_ONLY_MODULES = ['settings', 'admin', 'organization'];
+
+/**
  * Evaluate menu item access based on entitlements
  * 
  * STRICT ENFORCEMENT Rules:
@@ -46,26 +59,37 @@ export function evalMenuItemAccess(params: MenuAccessParams): MenuItemAccess {
     hasEntitlements: !!entitlements,
     entitlementsKeys: entitlements ? Object.keys(entitlements) : null,
     isSuperAdmin: params.isSuperAdmin,
+    isAdmin: params.isAdmin,
     orgId,
     timestamp: new Date().toISOString(),
   });
 
-  // Special case: Email always enabled (non-billable)
-  if (requireModule === 'email' || requireSubmodule?.module === 'email' || params.requireModule?.includes('email')) {
-    console.log('[evalMenuItemAccess] Email module - always enabled');
-    return { result: 'enabled' };
+  // Determine module key to check
+  const moduleKey = requireSubmodule ? requireSubmodule.module : requireModule;
+
+  // Special case: Always-on modules (email)
+  if (moduleKey && ALWAYS_ON_MODULES.includes(moduleKey)) {
+    console.log('[evalMenuItemAccess] Always-on module - enabled:', moduleKey);
+    return { result: 'enabled', reason: 'Always-on module' };
   }
 
-  // For super admin with null org_id, enable RBAC_ONLY_MODULES like 'settings'
-  if (orgId === null && params.isSuperAdmin && (requireModule === 'settings' || requireModule === 'admin' || requireModule === 'rbac')) {
-    console.log('[evalMenuItemAccess] Super admin null org access granted for:', requireModule);
+  // Special case: RBAC-only modules (settings, admin, organization)
+  // These are controlled by role permissions, not entitlements
+  if (moduleKey && RBAC_ONLY_MODULES.includes(moduleKey)) {
+    // For org_admin and super_admin, allow access based on role, not entitlement
+    if (params.isAdmin || params.isSuperAdmin) {
+      console.log('[evalMenuItemAccess] RBAC-only module - enabled for admin:', moduleKey);
+      return { result: 'enabled', reason: 'Admin role access (RBAC-only)' };
+    }
+    // For non-admins, deny access
+    console.log('[evalMenuItemAccess] RBAC-only module - denied for non-admin:', moduleKey);
+    return { result: 'disabled', reason: 'Admin access required' };
+  }
+
+  // For super admin with null org_id (platform admin context)
+  if (orgId === null && params.isSuperAdmin) {
+    console.log('[evalMenuItemAccess] Platform super admin - enabled');
     return { result: 'enabled', reason: 'Platform admin access granted' };
-  }
-
-  // For all settings submenus, enable for super admin
-  if (params.isSuperAdmin && (requireModule === 'settings' || requireSubmodule?.module === 'settings')) {
-    console.log('[evalMenuItemAccess] Settings access granted for super admin');
-    return { result: 'enabled', reason: 'Super admin settings access' };
   }
 
   // If no entitlement requirement, allow access
@@ -80,11 +104,10 @@ export function evalMenuItemAccess(params: MenuAccessParams): MenuItemAccess {
     return { result: 'disabled', reason: 'Loading entitlements...' };
   }
 
-  // Determine module and submodule to check
-  const moduleKey = requireSubmodule ? requireSubmodule.module : requireModule;
+  // Determine submodule to check
   const submoduleKey = requireSubmodule?.submodule;
 
-  console.log('[evalMenuItemAccess] Checking module/submodule:', { moduleKey, submoduleKey });
+  console.log('[evalMenuItemAccess] Checking entitlement for:', { moduleKey, submoduleKey });
 
   if (!moduleKey) {
     // No requirement, allow access
