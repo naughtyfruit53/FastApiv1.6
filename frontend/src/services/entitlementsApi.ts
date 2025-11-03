@@ -179,3 +179,127 @@ export async function updateOrgEntitlements(
   );
   return response.data;
 }
+
+// ===== Category-Based Entitlements (10-Category Structure) =====
+
+export interface CategoryInfo {
+  key: string;
+  display_name: string;
+  description: string;
+  modules: string[];
+  module_count: number;
+}
+
+export interface CategoryListResponse {
+  categories: CategoryInfo[];
+}
+
+export interface ActivateCategoryRequest {
+  category: string;
+  reason: string;
+}
+
+export interface DeactivateCategoryRequest {
+  category: string;
+  reason: string;
+}
+
+export interface OrgActivatedCategoriesResponse {
+  org_id: number;
+  activated_categories: string[];
+}
+
+/**
+ * Fetch all available product categories (super admin only)
+ */
+export async function fetchCategories(
+  token: string
+): Promise<CategoryListResponse> {
+  const response = await axios.get<CategoryListResponse>(
+    `${API_BASE_URL}/admin/categories`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Get details of a specific category (super admin only)
+ */
+export async function fetchCategory(
+  category: string,
+  token: string
+): Promise<CategoryInfo> {
+  const response = await axios.get<CategoryInfo>(
+    `${API_BASE_URL}/admin/categories/${category}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Activate a category for an organization (super admin only)
+ */
+export async function activateCategory(
+  orgId: number,
+  request: ActivateCategoryRequest,
+  token: string
+): Promise<UpdateEntitlementsResponse> {
+  const response = await axios.post<UpdateEntitlementsResponse>(
+    `${API_BASE_URL}/admin/categories/orgs/${orgId}/activate`,
+    request,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Deactivate a category for an organization (super admin only)
+ */
+export async function deactivateCategory(
+  orgId: number,
+  request: DeactivateCategoryRequest,
+  token: string
+): Promise<UpdateEntitlementsResponse> {
+  const response = await axios.post<UpdateEntitlementsResponse>(
+    `${API_BASE_URL}/admin/categories/orgs/${orgId}/deactivate`,
+    request,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Get activated categories for an organization (super admin only)
+ */
+export async function fetchActivatedCategories(
+  orgId: number,
+  token: string
+): Promise<OrgActivatedCategoriesResponse> {
+  const response = await axios.get<OrgActivatedCategoriesResponse>(
+    `${API_BASE_URL}/admin/categories/orgs/${orgId}/activated`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data;
+}
