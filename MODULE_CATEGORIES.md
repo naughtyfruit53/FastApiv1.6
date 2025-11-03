@@ -2,7 +2,11 @@
 
 ## Overview
 
-This document provides a comprehensive categorization of all modules and submodules in the FastAPI v1.6 Business Suite. Each module is organized into distinct product categories to enable category-based entitlement activation and licensing.
+This document provides a comprehensive categorization of all modules and submodules in the FastAPI v1.6 Business Suite. Each module is organized into **10 distinct product categories** to enable category-based entitlement activation and licensing.
+
+**Last Updated**: 2024-11-03  
+**Version**: 2.0.0 (10-Category Consolidation)  
+**Status**: Complete
 
 ## Product Categories
 
@@ -359,11 +363,12 @@ This document provides a comprehensive categorization of all modules and submodu
 
 ---
 
-### 10. Asset & Transport Management
+### 10. Operations & Assets Management
 
-**Description**: Asset tracking and transportation operations.
+**Description**: Comprehensive suite covering asset & transport management, workflow automation, system integrations, communication tools, and system administration. This category consolidates operational tools and includes always-on modules (email) and RBAC-only modules (settings/admin/organization).
 
 **Primary Modules**:
+
 - **ASSET** (`asset`)
   - asset_register
   - asset_tracking
@@ -383,15 +388,6 @@ This document provides a comprehensive categorization of all modules and submodu
   - gps_tracking
   - transport_reports
 
-**Use Cases**: Asset lifecycle management, vehicle fleet management, route optimization, maintenance scheduling
-
----
-
-### 11. Workflow & Automation
-
-**Description**: Business process automation and workflow management.
-
-**Primary Modules**:
 - **WORKFLOW** (`workflow`)
   - templates
   - approval_requests
@@ -399,15 +395,6 @@ This document provides a comprehensive categorization of all modules and submodu
   - automation_rules
   - analytics
 
-**Use Cases**: Approval workflows, process automation, business rule engines, workflow monitoring
-
----
-
-### 12. Integration & Platform
-
-**Description**: System integrations and platform capabilities.
-
-**Primary Modules**:
 - **INTEGRATION** (`integration`)
   - api_keys
   - webhooks
@@ -417,15 +404,6 @@ This document provides a comprehensive categorization of all modules and submodu
   - oauth_clients
   - logs
 
-**Use Cases**: Third-party integrations, API management, data synchronization, OAuth authentication
-
----
-
-### 13. Communication & Collaboration (Always-On)
-
-**Description**: Essential communication tools available to all users.
-
-**Primary Modules**:
 - **EMAIL** (`email`) - *Always-On*
   - inbox
   - compose
@@ -442,15 +420,6 @@ This document provides a comprehensive categorization of all modules and submodu
   - sharing
   - event_types
 
-**Use Cases**: Email communication, calendar scheduling, meeting coordination
-
----
-
-### 14. Additional Features
-
-**Description**: Specialized and emerging capabilities.
-
-**Primary Modules**:
 - **EXHIBITION** (`exhibition`)
   - events
   - booths
@@ -470,15 +439,6 @@ This document provides a comprehensive categorization of all modules and submodu
 - **STOCK** (`stock`)
   - (Stock-specific features)
 
-**Use Cases**: Event management, specialized business operations
-
----
-
-### 15. Administration & Settings (RBAC-Only)
-
-**Description**: System administration and configuration - not billable, always available to admins.
-
-**Primary Modules**:
 - **SETTINGS** (`settings`) - *RBAC-Only*
   - general_settings
   - company
@@ -498,28 +458,26 @@ This document provides a comprehensive categorization of all modules and submodu
   - create
   - users
 
-**Use Cases**: System configuration, user administration, organization management, audit logging
+**Use Cases**: Asset lifecycle management, vehicle fleet management, route optimization, approval workflows, third-party integrations, email communication, calendar scheduling, system configuration, user administration, organization management
 
 ---
 
-## Category-to-Module Mapping Summary
+## Category-to-Module Mapping Summary (10 Categories)
 
 ```
-CRM → [crm, sales, marketing, seo]
-ERP → [erp, inventory, procurement, order_book, master_data, product, vouchers]
-Manufacturing → [manufacturing, bom]
-Finance & Accounting → [finance, accounting, reports_analytics, payroll]
-Service → [service]
-HR → [hr, hr_management, talent]
-Analytics → [analytics, streaming_analytics, ab_testing]
-AI → [ai_analytics, website_agent]
-Project Management → [project, projects, task_management, tasks_calendar]
-Asset & Transport → [asset, transport]
-Workflow & Automation → [workflow]
-Integration → [integration]
-Communication → [email, calendar] (Always-On for email)
-Additional Features → [exhibition, customer, vendor, voucher, stock]
-Administration → [settings, admin, organization] (RBAC-Only, non-billable)
+1. CRM → [crm, sales, marketing, seo]
+2. ERP → [erp, inventory, procurement, order_book, master_data, product, vouchers]
+3. Manufacturing → [manufacturing, bom]
+4. Finance & Accounting → [finance, accounting, reports_analytics, payroll]
+5. Service → [service]
+6. HR → [hr, hr_management, talent]
+7. Analytics → [analytics, streaming_analytics, ab_testing]
+8. AI → [ai_analytics, website_agent]
+9. Project Management → [project, projects, task_management, tasks_calendar]
+10. Operations & Assets → [asset, transport, workflow, integration, email*, calendar, exhibition, customer, vendor, voucher, stock, settings**, admin**, organization**]
+
+* email = Always-On (available to all users regardless of entitlement)
+** settings, admin, organization = RBAC-Only (controlled by role permissions, non-billable)
 ```
 
 ## Module Status Types
@@ -615,6 +573,25 @@ Some modules may have dependencies on others:
 
 ---
 
-**Last Updated**: 2024-11-03
-**Version**: 1.0.0
-**Status**: Complete
+## Summary of Changes (v2.0.0)
+
+### Consolidated from 15 to 10 Categories
+
+**Previous Structure (15 categories):**
+1-9: (Same as current 1-9)
+10. Asset & Transport
+11. Workflow & Automation
+12. Integration & Platform
+13. Communication & Collaboration
+14. Additional Features
+15. Administration & Settings
+
+**New Structure (10 categories):**
+1-9: (Unchanged)
+10. Operations & Assets Management (consolidates categories 10-15)
+
+**Rationale:**
+- Simplifies licensing and entitlement management
+- Groups operational/infrastructure modules together
+- Maintains clear separation between billable and non-billable features
+- Reduces complexity for customers choosing module bundles

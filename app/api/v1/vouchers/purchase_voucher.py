@@ -150,19 +150,31 @@ async def create_purchase_voucher(
         db.add(db_invoice)
         await db.flush()
         
-        # Get organization's state code for GST calculation
+        # Get organization's state code for GST calculation (REQUIRED)
         org_result = await db.execute(
             select(Organization.state_code).where(Organization.id == org_id)
         )
-        company_state_code = org_result.scalar_one_or_none() or "27"  # Default to Maharashtra if not set
+        company_state_code = org_result.scalar_one_or_none()
+        if not company_state_code:
+            logger.error(f"Organization {org_id} is missing state_code - required for GST calculation")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Organization state code is required for GST calculation. Please update organization details."
+            )
         
-        # Get vendor's state code if vendor is specified
+        # Get vendor's state code if vendor is specified (REQUIRED for GST)
         vendor_state_code = None
         if invoice_data.get('vendor_id'):
             vendor_result = await db.execute(
                 select(Vendor.state_code).where(Vendor.id == invoice_data['vendor_id'])
             )
             vendor_state_code = vendor_result.scalar_one_or_none()
+            if not vendor_state_code:
+                logger.error(f"Vendor {invoice_data['vendor_id']} is missing state_code - required for GST calculation")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Vendor state code is required for GST calculation. Please update vendor details."
+                )
         
         logger.info(f"Purchase GST Calculation: Company State={company_state_code}, Vendor State={vendor_state_code}")
         
@@ -196,6 +208,7 @@ async def create_purchase_voucher(
             # SMART GST CALCULATION: Use company and vendor state codes
             taxable = item_dict['taxable_amount']
             if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
+                # calculate_gst_amounts will validate state codes and raise ValueError if missing
                 gst_amounts = calculate_gst_amounts(
                     taxable_amount=taxable,
                     gst_rate=item_dict['gst_rate'],

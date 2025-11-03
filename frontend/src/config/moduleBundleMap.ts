@@ -2,69 +2,101 @@
 
 /**
  * Module bundle mapping for ModuleSelectionModal
- * Maps high-level bundles to specific module entitlements
+ * Maps high-level bundles (categories) to specific module entitlements.
+ * Updated to support 10-category structure - categories are now fetched from API.
  */
 
 export interface BundleModule {
   key: string;
   displayName: string;
-  submodules: string[]; // Renamed from modules to submodules for clarity
+  description?: string;
+  modules: string[]; // Module keys in this category
+  module_count?: number;
 }
 
 /**
- * Bundle to module mapping
- * Bundle key is the module_key, submodules are descriptive
- * - crm: sales, marketing
- * - erp: master_data, vouchers, inventory, projects, tasks_calendar
- * - manufacturing: manufacturing
- * - finance: accounting, finance
- * - service: service
- * - hr: hr
- * - analytics: reports_analytics, ai_analytics
+ * Legacy static bundle mapping (kept for backward compatibility during migration)
+ * New code should fetch categories dynamically from /admin/categories API
+ * 
+ * 10-Category Structure:
+ * 1. CRM Suite
+ * 2. ERP Suite
+ * 3. Manufacturing Suite
+ * 4. Finance & Accounting Suite
+ * 5. Service Management Suite
+ * 6. Human Resources Suite
+ * 7. Analytics & BI Suite
+ * 8. AI & Machine Learning Suite
+ * 9. Project Management Suite
+ * 10. Operations & Assets Management Suite
  */
 export const MODULE_BUNDLES: BundleModule[] = [
   {
-    key: 'crm',
-    displayName: 'CRM',
-    submodules: ['sales', 'marketing'],
+    key: 'crm_suite',
+    displayName: 'CRM Suite',
+    modules: ['crm', 'sales', 'marketing', 'seo'],
   },
   {
-    key: 'erp',
-    displayName: 'ERP',
-    submodules: ['master_data', 'vouchers', 'inventory', 'projects', 'tasks_calendar'],
+    key: 'erp_suite',
+    displayName: 'ERP Suite',
+    modules: ['erp', 'inventory', 'procurement', 'order_book', 'master_data', 'product', 'vouchers'],
   },
   {
-    key: 'manufacturing',
-    displayName: 'Manufacturing',
-    submodules: ['manufacturing'],
+    key: 'manufacturing_suite',
+    displayName: 'Manufacturing Suite',
+    modules: ['manufacturing', 'bom'],
   },
   {
-    key: 'finance',
-    displayName: 'Finance',
-    submodules: ['accounting', 'finance'],
+    key: 'finance_suite',
+    displayName: 'Finance & Accounting Suite',
+    modules: ['finance', 'accounting', 'reports_analytics', 'payroll'],
   },
   {
-    key: 'service',
-    displayName: 'Service',
-    submodules: ['service'],
+    key: 'service_suite',
+    displayName: 'Service Management Suite',
+    modules: ['service'],
   },
   {
-    key: 'hr',
-    displayName: 'HR',
-    submodules: ['hr'],
+    key: 'hr_suite',
+    displayName: 'Human Resources Suite',
+    modules: ['hr', 'hr_management', 'talent'],
   },
   {
-    key: 'analytics',
-    displayName: 'Analytics',
-    submodules: ['reports_analytics', 'ai_analytics'],
+    key: 'analytics_suite',
+    displayName: 'Analytics & BI Suite',
+    modules: ['analytics', 'streaming_analytics', 'ab_testing'],
+  },
+  {
+    key: 'ai_suite',
+    displayName: 'AI & Machine Learning Suite',
+    modules: ['ai_analytics', 'website_agent'],
+  },
+  {
+    key: 'project_management_suite',
+    displayName: 'Project Management Suite',
+    modules: ['project', 'projects', 'task_management', 'tasks_calendar'],
+  },
+  {
+    key: 'operations_assets_suite',
+    displayName: 'Operations & Assets Management Suite',
+    modules: ['asset', 'transport', 'workflow', 'integration', 'email', 'calendar', 'exhibition', 'customer', 'vendor', 'voucher', 'stock', 'settings', 'admin', 'organization'],
   },
 ];
 
 /**
- * Get all module_keys for a set of selected bundles
+ * Get all module_keys for a set of selected bundles (categories)
  */
 export function getBundleModules(selectedBundles: string[]): string[] {
-  return selectedBundles; // Now returns the bundle keys, which are module_keys
+  const allModules: string[] = [];
+  
+  selectedBundles.forEach((bundleKey) => {
+    const bundle = MODULE_BUNDLES.find(b => b.key === bundleKey);
+    if (bundle) {
+      allModules.push(...bundle.modules);
+    }
+  });
+  
+  return allModules;
 }
 
 /**
@@ -83,14 +115,19 @@ export function getModuleBundles(moduleKey: string): string[] {
 }
 
 /**
- * Get selected bundles from current module entitlements
+ * Get selected bundles (categories) from current module entitlements
+ * A category is considered selected if ANY of its modules are enabled
  */
 export function getSelectedBundlesFromModules(enabledModules: string[]): string[] {
   const selectedBundles = new Set<string>();
   
   MODULE_BUNDLES.forEach((bundle) => {
-    // If the bundle's key (module_key) is enabled, select the bundle
-    if (enabledModules.includes(bundle.key)) {
+    // Check if any module in this bundle is enabled
+    const hasEnabledModule = bundle.modules.some(moduleKey => 
+      enabledModules.includes(moduleKey)
+    );
+    
+    if (hasEnabledModule) {
       selectedBundles.add(bundle.key);
     }
   });
@@ -113,8 +150,11 @@ export function computeModuleChanges(
   const targetModules = getBundleModules(targetBundles);
   const changes: ModuleChange[] = [];
   
-  // Get all unique module_keys from bundles
-  const allModules = new Set<string>(MODULE_BUNDLES.map(b => b.key));
+  // Get all unique module_keys from all bundles
+  const allModules = new Set<string>();
+  MODULE_BUNDLES.forEach(bundle => {
+    bundle.modules.forEach(moduleKey => allModules.add(moduleKey));
+  });
   
   // Compute diff
   allModules.forEach((moduleKey) => {
