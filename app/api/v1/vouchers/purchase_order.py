@@ -131,7 +131,7 @@ async def check_backdated_conflict(
     
     try:
         parsed_date = date_parser.parse(voucher_date)
-        conflict_info = await VoucherNumberService.check_backdated_voucher(
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "PO", org_id, PurchaseOrder, parsed_date
         )
         return conflict_info

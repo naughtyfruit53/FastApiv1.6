@@ -127,7 +127,7 @@ class EntitlementService:
 
                 submodules.append(
                     SubmoduleEntitlementResponse(
-                        id=submodule.id,
+                        submodule_id=submodule.id,
                         submodule_key=submodule.submodule_key,
                         submodule_display_name=submodule.display_name,
                         enabled=submodule_enabled,
@@ -374,7 +374,8 @@ class EntitlementService:
             'VENDOR': 'ERP',
             'VOUCHER': 'ERP',
             'STOCK': 'ERP',
-            'BOM': 'MANUFACTURING'
+            'BOM': 'MANUFACTURING',
+            'SETTINGS': 'ERP'  # NEW: Auto-enable settings if ERP enabled
         }
 
         migrated = False

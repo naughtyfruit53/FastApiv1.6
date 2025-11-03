@@ -125,5 +125,7 @@ def get_default_role_permissions() -> dict[str, list[str]]:  # CHANGED Dict[str,
         "viewer": [
             p for p in all_permissions 
             if "read" in p or "view" in p
-        ]
+        ],
+        # Explicitly add permissions for org_admin role
+        "org_admin": all_permissions + ["settings_view", "settings_update"],
     }

@@ -19,7 +19,7 @@ class ModuleName(str, Enum):
     SERVICE = "service"
     ANALYTICS = "analytics"
     FINANCE = "finance"
-    
+
     # Extended Modules
     MANUFACTURING = "manufacturing"
     PROCUREMENT = "procurement"
@@ -30,7 +30,7 @@ class ModuleName(str, Enum):
     MARKETING = "marketing"
     PAYROLL = "payroll"
     TALENT = "talent"
-    
+
     # Advanced Modules
     WORKFLOW = "workflow"
     INTEGRATION = "integration"
@@ -43,7 +43,7 @@ class ModuleName(str, Enum):
     TASK_MANAGEMENT = "task_management"
     ORDER_BOOK = "order_book"
     EXHIBITION = "exhibition"
-    
+
     # New from menuConfig - to match frontend
     MASTER_DATA = "master_data"
     VOUCHERS = "vouchers"
@@ -53,7 +53,7 @@ class ModuleName(str, Enum):
     PROJECTS = "projects"
     HR_MANAGEMENT = "hr_management"
     TASKS_CALENDAR = "tasks_calendar"
-    
+
     # Additional modules for menu items
     SETTINGS = "settings"
     ADMIN = "admin"
@@ -317,7 +317,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "leads",
         "analytics",
     ],
-    
+
     # Master Data Module
     ModuleName.MASTER_DATA.value: [
         "customers",
@@ -333,7 +333,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "company_details",
         "multi_company",
     ],
-    
+
     # Vouchers Module
     ModuleName.VOUCHERS.value: [
         "sales_vouchers",
@@ -354,7 +354,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "sales_return",
         "inter_department_voucher",
     ],
-    
+
     # Accounting Module
     ModuleName.ACCOUNTING.value: [
         "ledger",
@@ -365,7 +365,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "customer_aging",
         "vendor_aging",
     ],
-    
+
     # Reports Analytics Module
     ModuleName.REPORTS_ANALYTICS.value: [
         "balance_sheet",
@@ -374,7 +374,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "profit_loss",
         "trial_balance",
     ],
-    
+
     # Sales Module
     ModuleName.SALES.value: [
         "customers",
@@ -388,7 +388,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "dashboard",
         "accounts",
     ],
-    
+
     # Projects Module
     ModuleName.PROJECTS.value: [
         "planning",
@@ -396,14 +396,14 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "resources",
         "analytics",
     ],
-    
+
     # HR Management Module
     ModuleName.HR_MANAGEMENT.value: [
         "employees_directory",
         "employees",
         "dashboard",
     ],
-    
+
     # Tasks Calendar Module
     ModuleName.TASKS_CALENDAR.value: [
         "dashboard",
@@ -411,7 +411,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "assignments",
         "events",
     ],
-    
+
     # Settings Module
     ModuleName.SETTINGS.value: [
         "general_settings",
@@ -421,7 +421,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "data_management",
         "factory_reset",
     ],
-    
+
     # Admin Module
     ModuleName.ADMIN.value: [
         "app_user_management",
@@ -430,7 +430,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "license_management",
         "manage_organizations",
     ],
-    
+
     # Organization Module
     ModuleName.ORGANIZATION.value: [
         "create",
@@ -455,7 +455,7 @@ class PermissionAction(str, Enum):
     READ = "read"
     UPDATE = "update"
     DELETE = "delete"
-    
+
     # Advanced actions
     APPROVE = "approve"
     REJECT = "reject"
@@ -463,35 +463,35 @@ class PermissionAction(str, Enum):
     REVIEW = "review"
     PUBLISH = "publish"
     ARCHIVE = "archive"
-    
+
     # Data operations
     EXPORT = "export"
     IMPORT = "import"
     SYNC = "sync"
     BACKUP = "backup"
     RESTORE = "restore"
-    
+
     # Special permissions
     ADMIN = "admin"
     MANAGE = "manage"
     VIEW_ALL = "view_all"
     EDIT_ALL = "edit_all"
-    
+
     # Communication
     SEND = "send"
     COMPOSE = "compose"
     REPLY = "reply"
     FORWARD = "forward"
-    
-    # Conversion and transformation
+
+    # Post type
     CONVERT = "convert"
     TRANSFORM = "transform"
-    
+
     # Closure and finalization
     CLOSE = "close"
     FINALIZE = "finalize"
     REOPEN = "reopen"
-    
+
     # Assignment
     ASSIGN = "assign"
     REASSIGN = "reassign"
@@ -509,7 +509,10 @@ def get_module_submodules(module: str) -> List[str]:
 
 def get_default_enabled_modules() -> Dict[str, bool]:
     """Get default enabled modules for new organizations"""
-    return {module.upper(): True for module in get_all_modules()}
+    defaults = {module.upper(): True for module in get_all_modules()}
+    # Explicitly enable SETTINGS by default
+    defaults['SETTINGS'] = True
+    return defaults
 
 
 def validate_module(module: str) -> bool:

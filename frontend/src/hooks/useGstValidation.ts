@@ -18,12 +18,10 @@ export const useGstValidation = (selectedVendorId: any, vendorList: any[]) => {
     const selectedVendor = vendorList?.find((v) => v.id === selectedVendorId);
     if (selectedVendorId && !selectedVendor?.state_code && !selectedVendor?.gst_number) {
       setGstError("Vendor state code or GST number is missing. Please update vendor details.");
-    } else if (!companyState) {
-      setGstError("Company state code or GST number is missing. Please update company details in settings.");
     } else {
       setGstError(null);
     }
-  }, [selectedVendorId, vendorList, companyState, companyLoading]);
+  }, [selectedVendorId, vendorList, companyLoading]);
 
   return { gstError };
 };

@@ -85,6 +85,8 @@ async def get_current_organization(
             city="Global",
             state="Global",
             pin_code="123456",
+            country="India",
+            state_code="00",
             gst_number=None,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
@@ -98,6 +100,13 @@ async def get_current_organization(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found"
+        )
+
+    # NEW: Check for missing required fields and raise 400 if incomplete (for non-super-admins)
+    if not organization.state_code and not organization.gst_number:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Company state code or GST number is missing. Please update in settings."
         )
 
     # Ensure enabled_modules is always populated with defaults if None/empty
@@ -230,43 +239,6 @@ async def factory_default_system(
             detail="Failed to perform factory default reset. Please try again."
         )
 
-@router.post("/", response_model=OrganizationInDB)
-async def create_organization(
-    org_data: OrganizationCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: Any = Depends(require_platform_permission(Permission.CREATE_ORGANIZATIONS))
-):
-    """Create new organization (Super admin only)"""
-  
-    try:
-        result = await db.execute(select(Organization).where(
-            or_(Organization.name == org_data.name, Organization.subdomain == org_data.subdomain)
-        ))
-        existing_org = result.scalars().first()
-        if existing_org:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Organization name or subdomain already exists"
-            )
-      
-        new_org = Organization(**org_data.dict())
-        db.add(new_org)
-        await db.commit()
-        await db.refresh(new_org)
-        
-        # Seed standard chart of accounts for the new organization
-        create_default_accounts(db, new_org.id)
-        
-        return new_org
-    except HTTPException:
-        raise
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create organization"
-        )
-
 @router.post("/{organization_id}/join")
 async def join_organization(
     organization_id: int,
@@ -383,29 +355,6 @@ async def verify_reset_otp_and_reset(
                 detail="Invalid or expired OTP"
             )
         
-        from app.services.org_reset_service import OrgResetService
-        result = await OrgResetService.reset_organization_business_data(db, org_id)
-        return {
-            "message": "Organization data has been reset successfully",
-            "details": result.get("deleted", {}),
-            "organization_state": "business_data_cleared"
-        }
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to reset organization data. Please try again."
-        )
-
-@router.post("/reset-data")
-async def reset_organization_data(
-    auth: tuple = Depends(require_access("organization", "delete")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Reset organization business data (requires organization delete permission)"""
-    current_user, org_id = auth
-  
-    try:
         from app.services.org_reset_service import OrgResetService
         result = await OrgResetService.reset_organization_business_data(db, org_id)
         return {

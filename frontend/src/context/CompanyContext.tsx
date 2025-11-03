@@ -56,7 +56,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
     onSuccess: (data) => {
       if (!data || (!data.state_code && !data.gst_number)) {
         setIsCompanySetupNeeded(true);
-        toast.error("Company state code or GST number is missing. Please update in settings.", {
+        toast.error("Company setup required. Redirecting to settings.", {
           toastId: "company-setup-required",
         });
         if (router.pathname !== "/settings/company") {
@@ -76,11 +76,20 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
       if (status === 401) {
         console.log("[CompanyContext] 401 Unauthorized - redirecting to login");
         router.push("/login");
-      } else if (status === 404 || err.isCompanySetupRequired) {
-        console.log("[CompanyContext] Company setup needed due to 404/missing company");
+      } else if (status === 404) {
+        console.log("[CompanyContext] Company not found (404) - setup needed");
         setIsCompanySetupNeeded(true);
         toast.error("Company details not found. Please complete company setup.", {
           toastId: "company-setup-not-found",
+        });
+        if (router.pathname !== "/settings/company") {
+          router.push("/settings/company");
+        }
+      } else if (status === 400 && err.message.includes("state code or GST number")) {
+        console.log("[CompanyContext] 400 Setup required - redirecting");
+        setIsCompanySetupNeeded(true);
+        toast.error("Company setup required. Redirecting to settings.", {
+          toastId: "company-setup-required",
         });
         if (router.pathname !== "/settings/company") {
           router.push("/settings/company");
