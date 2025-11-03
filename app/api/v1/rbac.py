@@ -395,8 +395,6 @@ async def get_user_service_roles(
     rbac_service: RBACService = Depends(get_rbac_service),
 ):
     """Get all service roles assigned to a user, including self"""
-    logger.info(f"User {current_user.id} requesting roles for user {user_id}")
-    
     # Allow users to view their own roles
     if current_user.id != user_id and current_user.role not in ["admin", "org_admin", "super_admin"]:
         raise HTTPException(

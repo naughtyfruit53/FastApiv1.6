@@ -360,7 +360,7 @@ def register_subrouters():
         raise
 
     try:
-        from ..products import router as products_router
+        from .products import router as products_router  # CHANGED: from ..products to .products
         logger.debug("Imported products_router")
         api_v1_router.include_router(products_router, prefix="/products", tags=["products"])
         products_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in products_router.routes if isinstance(route, APIRoute)]

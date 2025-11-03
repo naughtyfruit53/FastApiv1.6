@@ -1,4 +1,4 @@
-# Revised: app/api/vendors.py
+# Revised: app/api/v1/vendors.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
@@ -10,6 +10,10 @@ from app.core.enforcement import require_access
 from app.models import User, Vendor, VendorFile
 from app.schemas.base import VendorCreate, VendorUpdate, VendorInDB, BulkImportResponse, VendorFileResponse
 from app.services.excel_service import VendorExcelService, ExcelService
+
+# NEW: Import for entitlement check
+from app.api.deps.entitlements import require_permission_with_entitlement
+
 import logging
 import os
 import uuid
@@ -26,7 +30,8 @@ async def get_vendors(
     limit: int = 1000000,
     search: Optional[str] = None,
     active_only: bool = True,
-    auth: tuple = Depends(require_access("vendor", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get all vendors for the organization"""
@@ -51,7 +56,8 @@ async def get_vendors(
 @router.post("", response_model=VendorInDB)
 async def create_vendor(
     vendor: VendorCreate,
-    auth: tuple = Depends(require_access("vendor", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.create", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Create new vendor"""
@@ -109,7 +115,8 @@ async def create_vendor(
 @router.get("/{vendor_id}", response_model=VendorInDB)
 async def get_vendor(
     vendor_id: int,
-    auth: tuple = Depends(require_access("vendor", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get vendor by ID with organization validation"""
@@ -132,7 +139,8 @@ async def get_vendor(
 async def update_vendor(
     vendor_id: int,
     vendor: VendorUpdate,
-    auth: tuple = Depends(require_access("vendor", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.update", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Update vendor with organization validation"""
@@ -176,7 +184,8 @@ async def update_vendor(
 @router.delete("/{vendor_id}")
 async def delete_vendor(
     vendor_id: int,
-    auth: tuple = Depends(require_access("vendor", "delete")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.delete", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete vendor with organization validation"""
@@ -205,7 +214,8 @@ async def delete_vendor(
 async def search_vendors_for_dropdown(
     search_term: str,
     limit: int = 10,
-    auth: tuple = Depends(require_access("vendor", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Search vendors for dropdown/autocomplete with organization filtering"""
@@ -225,7 +235,8 @@ async def search_vendors_for_dropdown(
 
 @router.get("/template/excel")
 async def download_vendors_template(
-    auth: tuple = Depends(require_access("vendor", "read"))
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors"))
 ):
     """Download Excel template for vendors bulk import"""
     current_user, org_id = auth
@@ -238,7 +249,8 @@ async def export_vendors_excel(
     limit: int = 1000,
     search: Optional[str] = None,
     active_only: bool = True,
-    auth: tuple = Depends(require_access("vendor", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Export vendors to Excel"""
@@ -278,7 +290,8 @@ async def export_vendors_excel(
 @router.post("/import/excel", response_model=BulkImportResponse)
 async def import_vendors_excel(
     file: UploadFile = File(...),
-    auth: tuple = Depends(require_access("vendor", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.create", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Import vendors from Excel file"""
@@ -368,7 +381,8 @@ async def upload_vendor_file(
     vendor_id: int,
     file: UploadFile = File(...),
     file_type: str = "general",
-    auth: tuple = Depends(require_access("vendor", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.update", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Upload a file for a vendor (GST certificate, PAN card, etc.)"""
@@ -445,7 +459,6 @@ async def upload_vendor_file(
         original_filename=db_file.original_filename,
         file_size=db_file.file_size,
         content_type=db_file.content_type,
-        file_type=db_file.file_type,
         vendor_id=db_file.vendor_id,
         created_at=db_file.created_at
     )
@@ -454,7 +467,8 @@ async def upload_vendor_file(
 async def get_vendor_files(
     vendor_id: int,
     file_type: Optional[str] = None,
-    auth: tuple = Depends(require_access("vendor", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get all files for a vendor, optionally filtered by file type"""
@@ -491,7 +505,6 @@ async def get_vendor_files(
             original_filename=f.original_filename,
             file_size=f.file_size,
             content_type=f.content_type,
-            file_type=f.file_type,
             vendor_id=f.vendor_id,
             created_at=f.created_at
         ) for f in files
@@ -501,7 +514,8 @@ async def get_vendor_files(
 async def download_vendor_file(
     vendor_id: int,
     file_id: int,
-    auth: tuple = Depends(require_access("vendor", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Download a vendor file"""
@@ -538,7 +552,8 @@ async def download_vendor_file(
 async def delete_vendor_file(
     vendor_id: int,
     file_id: int,
-    auth: tuple = Depends(require_access("vendor", "delete")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.delete", "vendors")),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a vendor file"""

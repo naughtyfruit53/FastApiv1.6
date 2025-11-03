@@ -8,7 +8,7 @@ Implements entitlement-first, RBAC-second approach with exceptions.
 from functools import wraps
 from fastapi import HTTPException, status, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional, Callable
+from typing import Optional, Callable, Tuple
 import logging
 
 from app.core.database import get_db
@@ -201,6 +201,9 @@ def require_permission_with_entitlement(
     Composed dependency that checks both entitlements and RBAC permissions.
     Enforces entitlement-first, then RBAC-second pattern.
     
+    NEW: For org_admin, skip RBAC if entitlement passes (use entitlements only).
+    For other roles, check both.
+    
     Usage:
         @router.post("/sales/leads")
         async def create_lead(
@@ -208,7 +211,8 @@ def require_permission_with_entitlement(
             current_user: User = Depends(get_current_active_user),
             _: None = Depends(require_permission_with_entitlement("sales", "crm.create"))
         ):
-            # ... endpoint logic
+            # Endpoint logic here
+            pass
     
     Args:
         module_key: Module key to check
@@ -223,11 +227,16 @@ def require_permission_with_entitlement(
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(get_current_active_user),
         _: None = Depends(require_entitlement(module_key, submodule_key))
-    ) -> None:
+    ) -> Tuple[User, int]:  # NEW: Return tuple (current_user, org_id)
         """Dependency that performs both entitlement and permission checks"""
         
+        # NEW: Skip RBAC for org_admin if entitlement passed (rely on entitlements only)
+        if current_user.role.lower() == 'org_admin':
+            logger.debug(f"Skipping RBAC check for org_admin {current_user.email} - entitlement granted access")
+            return current_user, current_user.organization_id  # Return tuple
+        
         # Check RBAC permission
-        from app.core.rbac import check_permission
+        from app.core.rbac_dependencies import check_permission  # FIXED: Changed from app.core.rbac to rbac_dependencies (based on app structure)
         
         has_permission = await check_permission(
             db=db,
@@ -248,5 +257,7 @@ def require_permission_with_entitlement(
         logger.debug(
             f"User {current_user.email} granted access with permission {permission}"
         )
+        
+        return current_user, current_user.organization_id  # NEW: Return tuple
     
     return dependency

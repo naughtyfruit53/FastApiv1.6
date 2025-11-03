@@ -31,6 +31,9 @@ from app.schemas.master_data import (
 )
 from app.services.master_service import search_hsn_codes  # Added import for HSN search
 
+# NEW: Import for entitlement check
+from app.api.deps.entitlements import require_permission_with_entitlement
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -61,8 +64,8 @@ class MasterDataService:
         if category.parent_category_id is None:
             return f"/{category.id}/"
         
-        result = await db.execute(select(Category).filter_by(id=category.parent_category_id))
-        parent = result.scalars().first()
+        parent_result = await db.execute(select(Category).filter_by(id=category.parent_category_id))
+        parent = parent_result.scalars().first()
         if parent:
             parent_path = parent.path or await MasterDataService.calculate_category_path(parent, db)
             return f"{parent_path}{category.id}/"
@@ -119,7 +122,8 @@ class MasterDataService:
 @router.get("/dashboard", response_model=MasterDataStats)
 async def get_master_data_dashboard(
     company_id: Optional[int] = Query(None, description="Filter by specific company"),
-    auth: tuple = Depends(require_access("master_data", "read")),
+    # CHANGED: Use entitlement with submodule (assuming master_data under erp)
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get master data dashboard statistics"""
@@ -182,7 +186,8 @@ async def get_categories(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     category_filter: CategoryFilter = Depends(),
-    auth: tuple = Depends(require_access("master_data", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get categories with filtering and pagination"""
@@ -235,8 +240,9 @@ async def get_categories(
 @router.post("/categories", response_model=CategoryResponse)
 async def create_category(
     category_data: CategoryCreate,
-    auth: tuple = Depends(require_access("master_data", "create")),
-    db: AsyncSession = Depends(get_db)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
+    db: AsyncSession = Depends(get_db),
 ):
     """Create a new category"""
     current_user, organization_id = auth
@@ -310,7 +316,8 @@ async def create_category(
 @router.get("/categories/{category_id}", response_model=CategoryResponse)
 async def get_category(
     category_id: int,
-    auth: tuple = Depends(require_access("master_data", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Get a specific category"""
@@ -331,7 +338,8 @@ async def get_category(
 async def update_category(
     category_id: int,
     category_data: CategoryUpdate,
-    auth: tuple = Depends(require_access("master_data", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.update", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Update a category"""
@@ -385,7 +393,8 @@ async def update_category(
 @router.delete("/categories/{category_id}")
 async def delete_category(
     category_id: int,
-    auth: tuple = Depends(require_access("master_data", "delete")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.delete", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a category"""
@@ -432,7 +441,8 @@ async def get_units(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     unit_filter: UnitFilter = Depends(),
-    auth: tuple = Depends(require_access("master_data", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get units with filtering and pagination"""
@@ -485,7 +495,8 @@ async def get_units(
 @router.post("/units", response_model=UnitResponse)
 async def create_unit(
     unit_data: UnitCreate,
-    auth: tuple = Depends(require_access("master_data", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new unit"""
@@ -554,7 +565,8 @@ async def create_unit(
 @router.get("/units/{unit_id}", response_model=UnitResponse)
 async def get_unit(
     unit_id: int,
-    auth: tuple = Depends(require_access("master_data", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Get a specific unit"""
@@ -575,7 +587,8 @@ async def get_unit(
 async def update_unit(
     unit_id: int,
     unit_data: UnitUpdate,
-    auth: tuple = Depends(require_access("master_data", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.update", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Update an existing unit"""
@@ -628,7 +641,8 @@ async def update_unit(
 @router.delete("/units/{unit_id}")
 async def delete_unit(
     unit_id: int,
-    auth: tuple = Depends(require_access("master_data", "delete")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.delete", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a unit"""
@@ -663,7 +677,8 @@ async def delete_unit(
 @router.post("/units/convert", response_model=UnitConversion)
 async def convert_units(
     conversion_data: UnitConversion,
-    auth: tuple = Depends(require_access("master_data", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Convert value between units"""
@@ -707,7 +722,8 @@ async def get_tax_codes(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     tax_filter: TaxCodeFilter = Depends(),
-    auth: tuple = Depends(require_access("master_data", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get tax codes with filtering and pagination"""
@@ -760,7 +776,8 @@ async def get_tax_codes(
 @router.post("/tax-codes", response_model=TaxCodeResponse)
 async def create_tax_code(
     tax_code_data: TaxCodeCreate,
-    auth: tuple = Depends(require_access("master_data", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new tax code"""
@@ -815,7 +832,8 @@ async def create_tax_code(
 @router.get("/tax-codes/{tax_code_id}", response_model=TaxCodeResponse)
 async def get_tax_code(
     tax_code_id: int,
-    auth: tuple = Depends(require_access("master_data", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Get a specific tax code"""
@@ -836,7 +854,8 @@ async def get_tax_code(
 async def update_tax_code(
     tax_code_id: int,
     tax_code_data: TaxCodeUpdate,
-    auth: tuple = Depends(require_access("master_data", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.update", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Update an existing tax code"""
@@ -889,7 +908,8 @@ async def update_tax_code(
 @router.delete("/tax-codes/{tax_code_id}")
 async def delete_tax_code(
     tax_code_id: int,
-    auth: tuple = Depends(require_access("master_data", "delete")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.delete", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a tax code"""
@@ -924,7 +944,8 @@ async def delete_tax_code(
 @router.post("/tax-codes/calculate", response_model=TaxCalculation)
 async def calculate_tax(
     tax_calculation: TaxCalculation,
-    auth: tuple = Depends(require_access("master_data", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Calculate tax for a given amount"""
@@ -964,7 +985,8 @@ async def get_payment_terms(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     payment_terms_filter: PaymentTermsExtendedFilter = Depends(),
-    auth: tuple = Depends(require_access("master_data", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get payment terms with filtering and pagination"""
@@ -1014,7 +1036,8 @@ async def get_payment_terms(
 @router.post("/payment-terms", response_model=PaymentTermsExtendedResponse)
 async def create_payment_terms(
     payment_terms_data: PaymentTermsExtendedCreate,
-    auth: tuple = Depends(require_access("master_data", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Create new payment terms"""
@@ -1054,7 +1077,7 @@ async def create_payment_terms(
             is_default=payment_terms_data.is_default,
             early_payment_discount_days=payment_terms_data.early_payment_discount_days,
             early_payment_discount_rate=payment_terms_data.early_payment_discount_rate,
-            late_payment_penalty_days=payment_terms_data.late_payment_penalty_days,
+            late_payment_penalty_penalty_days=payment_terms_data.late_payment_penalty_penalty_days,
             late_payment_penalty_rate=payment_terms_data.late_payment_penalty_rate,
             payment_schedule=payment_terms_data.payment_schedule,
             credit_limit_amount=payment_terms_data.credit_limit_amount,
@@ -1084,7 +1107,8 @@ async def create_payment_terms(
 @router.get("/payment-terms/{payment_terms_id}", response_model=PaymentTermsExtendedResponse)
 async def get_payment_terms_by_id(
     payment_terms_id: int,
-    auth: tuple = Depends(require_access("master_data", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Get a specific payment terms"""
@@ -1105,7 +1129,8 @@ async def get_payment_terms_by_id(
 async def update_payment_terms(
     payment_terms_id: int,
     payment_terms_data: PaymentTermsExtendedUpdate,
-    auth: tuple = Depends(require_access("master_data", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.update", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Update an existing payment terms"""
@@ -1158,7 +1183,8 @@ async def update_payment_terms(
 @router.delete("/payment-terms/{payment_terms_id}")
 async def delete_payment_terms(
     payment_terms_id: int,
-    auth: tuple = Depends(require_access("master_data", "delete")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.delete", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a payment terms"""
@@ -1197,7 +1223,8 @@ async def delete_payment_terms(
 @router.post("/categories/bulk-update")
 async def bulk_update_categories(
     bulk_update: BulkCategoryUpdate,
-    auth: tuple = Depends(require_access("master_data", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
 ):
     """Bulk update categories"""
@@ -1237,7 +1264,8 @@ async def bulk_update_categories(
 async def hsn_search(
     query: str = Query(..., min_length=2, description="HSN code or description to search (min 2 chars)"),
     limit: int = Query(10, ge=1, le=50, description="Max results to return"),
-    auth: tuple = Depends(require_access("master_data", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db)
 ):
     """Search HSN codes with dynamic GST rates from external API"""

@@ -1,4 +1,4 @@
-# Revised: app/api/customers.py
+# Revised: app/api/v1/customers.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
@@ -11,6 +11,10 @@ from app.models import User, Customer, CustomerFile
 from app.schemas.base import CustomerCreate, CustomerUpdate, CustomerInDB, BulkImportResponse, CustomerFileResponse
 from app.services.excel_service import CustomerExcelService, ExcelService
 from app.services.rbac import RBACService
+
+# NEW: Import for entitlement check
+from app.api.deps.entitlements import require_permission_with_entitlement
+
 import logging
 import os
 import uuid
@@ -26,7 +30,8 @@ async def get_customers(
     search: Optional[str] = None,
     active_only: bool = True,
     company_id: Optional[int] = Query(None, description="Filter by specific company (if user has access)"),
-    auth: tuple = Depends(require_access("customer", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.read", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get customers with company scoping"""
@@ -90,10 +95,11 @@ async def get_customers(
 @router.get("/{customer_id}", response_model=CustomerInDB)
 async def get_customer(
     customer_id: int,
-    auth: tuple = Depends(require_access("customer", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.read", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get customer by ID"""
+    """Get customer by ID with organization validation"""
     current_user, org_id = auth
     
     stmt = select(Customer).where(
@@ -113,7 +119,8 @@ async def get_customer(
 @router.post("", response_model=CustomerInDB)
 async def create_customer(
     customer: CustomerCreate,
-    auth: tuple = Depends(require_access("customer", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.create", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Create new customer with company scoping"""
@@ -187,7 +194,8 @@ async def create_customer(
 async def update_customer(
     customer_id: int,
     customer_update: CustomerUpdate,
-    auth: tuple = Depends(require_access("customer", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.update", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Update customer"""
@@ -233,7 +241,8 @@ async def update_customer(
 @router.delete("/{customer_id}")
 async def delete_customer(
     customer_id: int,
-    auth: tuple = Depends(require_access("customer", "delete")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.delete", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete customer"""
@@ -265,7 +274,8 @@ async def delete_customer(
 
 @router.get("/template/excel")
 async def download_customers_template(
-    auth: tuple = Depends(require_access("customer", "read"))
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.read", "customers"))
 ):
     """Download Excel template for customers bulk import"""
     current_user, org_id = auth
@@ -278,7 +288,8 @@ async def export_customers_excel(
     limit: int = 1000,
     search: Optional[str] = None,
     active_only: bool = True,
-    auth: tuple = Depends(require_access("customer", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.read", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Export customers to Excel"""
@@ -325,7 +336,8 @@ async def export_customers_excel(
 @router.post("/import/excel", response_model=BulkImportResponse)
 async def import_customers_excel(
     file: UploadFile = File(...),
-    auth: tuple = Depends(require_access("customer", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.create", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Import customers from Excel file"""
@@ -429,7 +441,8 @@ async def upload_customer_file(
     customer_id: int,
     file: UploadFile = File(...),
     file_type: str = "general",
-    auth: tuple = Depends(require_access("customer", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.update", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Upload a file for a customer (GST certificate, PAN card, etc.)"""
@@ -520,7 +533,8 @@ async def upload_customer_file(
 async def get_customer_files(
     customer_id: int,
     file_type: Optional[str] = None,
-    auth: tuple = Depends(require_access("customer", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.read", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get all files for a customer, optionally filtered by file type"""
@@ -569,7 +583,8 @@ async def get_customer_files(
 async def download_customer_file(
     customer_id: int,
     file_id: int,
-    auth: tuple = Depends(require_access("customer", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.read", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Download a customer file"""
@@ -608,7 +623,8 @@ async def download_customer_file(
 async def delete_customer_file(
     customer_id: int,
     file_id: int,
-    auth: tuple = Depends(require_access("customer", "delete")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "customers.delete", "customers")),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a customer file"""

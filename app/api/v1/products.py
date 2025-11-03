@@ -18,6 +18,9 @@ from app.models import User, Product, Stock, ProductFile, Organization, Company
 from app.schemas.base import ProductCreate, ProductUpdate, ProductInDB, ProductResponse, BulkImportResponse, ProductFileResponse
 from app.services.excel_service import ProductExcelService, ExcelService
 
+# NEW: Import for entitlement check
+from app.api.deps.entitlements import require_permission_with_entitlement
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -27,7 +30,8 @@ async def get_products(
     limit: int = 1000000,
     search: Optional[str] = None,
     active_only: bool = True,
-    auth: tuple = Depends(require_access("product", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.read", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get products in current organization"""
@@ -63,7 +67,8 @@ async def get_products(
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
     product_id: int,
-    auth: tuple = Depends(require_access("product", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.read", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get product by ID"""
@@ -86,7 +91,8 @@ async def get_product(
 @router.post("", response_model=ProductResponse)
 async def create_product(
     product: ProductCreate,
-    auth: tuple = Depends(require_access("product", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.create", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Create new product"""
@@ -137,7 +143,8 @@ async def create_product(
 async def update_product(
     product_id: int,
     product_update: ProductUpdate,
-    auth: tuple = Depends(require_access("product", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.update", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Update product"""
@@ -189,7 +196,8 @@ async def update_product(
 @router.delete("/{product_id}")
 async def delete_product(
     product_id: int,
-    auth: tuple = Depends(require_access("product", "delete")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.delete", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete product (admin only)"""
@@ -219,7 +227,8 @@ async def delete_product(
 @router.post("/validate-product-ids")
 async def validate_product_ids(
     product_ids: List[int],
-    auth: tuple = Depends(require_access("product", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.read", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Validate product IDs and check for missing or invalid names"""
@@ -255,7 +264,8 @@ async def validate_product_ids(
 
 @router.get("/template/excel")
 async def download_products_template(
-    auth: tuple = Depends(require_access("product", "read"))
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.read", "products"))
 ):
     """Download Excel template for products bulk import"""
     current_user, org_id = auth
@@ -268,7 +278,8 @@ async def export_products_excel(
     limit: int = 1000,
     search: Optional[str] = None,
     active_only: bool = True,
-    auth: tuple = Depends(require_access("product", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.read", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Export products to Excel"""
@@ -301,7 +312,6 @@ async def export_products_excel(
             "unit": product.unit,
             "unit_price": product.unit_price,
             "gst_rate": product.gst_rate,
-            "is_gst_inclusive": product.is_gst_inclusive,
             "reorder_level": product.reorder_level,
             "description": product.description or "",
             "is_manufactured": product.is_manufactured,
@@ -313,7 +323,8 @@ async def export_products_excel(
 @router.post("/import/excel", response_model=BulkImportResponse)
 async def import_products_excel(
     file: UploadFile = File(...),
-    auth: tuple = Depends(require_access("product", "create")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.create", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Import products from Excel file"""
@@ -490,7 +501,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def upload_product_file(
     product_id: int,
     file: UploadFile = File(...),
-    auth: tuple = Depends(require_access("product", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.update", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Upload a file for a product (max 5 files per product)"""
@@ -580,7 +592,8 @@ async def upload_product_file(
 @router.get("/{product_id}/files", response_model=List[ProductFileResponse])
 async def get_product_files(
     product_id: int,
-    auth: tuple = Depends(require_access("product", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.read", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get all files for a product"""
@@ -623,7 +636,8 @@ async def get_product_files(
 async def download_product_file(
     product_id: int,
     file_id: int,
-    auth: tuple = Depends(require_access("product", "read")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.read", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Download a product file"""
@@ -661,7 +675,8 @@ async def download_product_file(
 async def delete_product_file(
     product_id: int,
     file_id: int,
-    auth: tuple = Depends(require_access("product", "delete")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.delete", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a product file"""
@@ -703,7 +718,8 @@ async def delete_product_file(
 @router.post("/check-consistency")
 async def check_products_stock_consistency(
     fix_issues: bool = False,
-    auth: tuple = Depends(require_access("product", "update")),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "products.update", "products")),
     db: AsyncSession = Depends(get_db)
 ):
     """

@@ -101,6 +101,24 @@ class Permission:
     CRM_COMMISSION_UPDATE = "crm_commission_update"
     CRM_COMMISSION_DELETE = "crm_commission_delete"
 
+    # NEW: Inventory permissions
+    INVENTORY_READ = "inventory.read"
+    INVENTORY_CREATE = "inventory.create"
+    INVENTORY_UPDATE = "inventory.update"
+    INVENTORY_DELETE = "inventory.delete"
+
+    # NEW: Products permissions
+    PRODUCTS_READ = "products.read"
+    PRODUCTS_CREATE = "products.create"
+    PRODUCTS_UPDATE = "products.update"
+    PRODUCTS_DELETE = "products.delete"
+
+    # NEW: Master Data permissions
+    MASTER_DATA_READ = "master_data.read"
+    MASTER_DATA_CREATE = "master_data.create"
+    MASTER_DATA_UPDATE = "master_data.update"
+    MASTER_DATA_DELETE = "master_data.delete"
+
 
 class PermissionChecker:
     """Service for checking user permissions"""
@@ -129,6 +147,19 @@ class PermissionChecker:
             Permission.FACTORY_RESET,
             Permission.VIEW_VOUCHERS,
             Permission.MANAGE_VOUCHERS,
+            # NEW: Add inventory/products/master_data for super_admin
+            Permission.INVENTORY_READ,
+            Permission.INVENTORY_CREATE,
+            Permission.INVENTORY_UPDATE,
+            Permission.INVENTORY_DELETE,
+            Permission.PRODUCTS_READ,
+            Permission.PRODUCTS_CREATE,
+            Permission.PRODUCTS_UPDATE,
+            Permission.PRODUCTS_DELETE,
+            Permission.MASTER_DATA_READ,
+            Permission.MASTER_DATA_CREATE,
+            Permission.MASTER_DATA_UPDATE,
+            Permission.MASTER_DATA_DELETE,
             # Note: App Super Admins don't have ACCESS_ORG_SETTINGS (per requirements)
         ],
         'org_admin': [
@@ -144,6 +175,19 @@ class PermissionChecker:
             Permission.ACCESS_ORG_SETTINGS,  # Org admins have access to org settings
             Permission.VIEW_VOUCHERS,
             Permission.MANAGE_VOUCHERS,
+            # NEW: Add inventory/products/master_data for org_admin
+            Permission.INVENTORY_READ,
+            Permission.INVENTORY_CREATE,
+            Permission.INVENTORY_UPDATE,
+            Permission.INVENTORY_DELETE,
+            Permission.PRODUCTS_READ,
+            Permission.PRODUCTS_CREATE,
+            Permission.PRODUCTS_UPDATE,
+            Permission.PRODUCTS_DELETE,
+            Permission.MASTER_DATA_READ,
+            Permission.MASTER_DATA_CREATE,
+            Permission.MASTER_DATA_UPDATE,
+            Permission.MASTER_DATA_DELETE,
         ],
         'management': [
             Permission.MANAGE_USERS,
@@ -158,6 +202,19 @@ class PermissionChecker:
             Permission.ACCESS_ORG_SETTINGS,
             Permission.VIEW_VOUCHERS,
             Permission.MANAGE_VOUCHERS,
+            # NEW: Add inventory/products/master_data for management
+            Permission.INVENTORY_READ,
+            Permission.INVENTORY_CREATE,
+            Permission.INVENTORY_UPDATE,
+            Permission.INVENTORY_DELETE,
+            Permission.PRODUCTS_READ,
+            Permission.PRODUCTS_CREATE,
+            Permission.PRODUCTS_UPDATE,
+            Permission.PRODUCTS_DELETE,
+            Permission.MASTER_DATA_READ,
+            Permission.MASTER_DATA_CREATE,
+            Permission.MASTER_DATA_UPDATE,
+            Permission.MASTER_DATA_DELETE,
         ],
         'manager': [
             Permission.VIEW_USERS,  # Can view users (their executives)
@@ -166,11 +223,19 @@ class PermissionChecker:
             Permission.VIEW_AUDIT_LOGS,
             Permission.ACCESS_ORG_SETTINGS,  # Limited access
             Permission.VIEW_VOUCHERS,
+            # NEW: Add read-only for inventory/products/master_data
+            Permission.INVENTORY_READ,
+            Permission.PRODUCTS_READ,
+            Permission.MASTER_DATA_READ,
         ],
         'executive': [
             Permission.RESET_OWN_PASSWORD,
             Permission.ACCESS_ORG_SETTINGS,  # Basic access
             Permission.VIEW_VOUCHERS,
+            # NEW: Add read-only for inventory/products/master_data
+            Permission.INVENTORY_READ,
+            Permission.PRODUCTS_READ,
+            Permission.MASTER_DATA_READ,
         ],
     }
     
