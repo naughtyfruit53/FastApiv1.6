@@ -1,8 +1,9 @@
 # app/utils/gst_calculator.py
 
 """
-Smart GST Calculator
-Implements intelligent GST calculation based on company and customer state codes
+Smart GST Calculator with Strict State Code Enforcement
+Implements intelligent GST calculation based on company and customer state codes.
+Version 1.6+: NO FALLBACK - state codes are strictly required.
 """
 
 from typing import Tuple, Dict, Optional
@@ -10,15 +11,23 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Strict enforcement flag - NO FALLBACK allowed
+STRICT_STATE_CODE_ENFORCEMENT = True
+
 
 def calculate_gst_amounts(
     taxable_amount: float,
     gst_rate: float,
     company_state_code: str,
-    customer_state_code: str
+    customer_state_code: str,
+    organization_id: Optional[int] = None,
+    entity_id: Optional[int] = None,
+    entity_type: Optional[str] = None
 ) -> Dict[str, float]:
     """
     Calculate GST amounts (CGST, SGST, or IGST) based on state codes.
+    
+    STRICT ENFORCEMENT (v1.6+): NO FALLBACK - Both state codes are REQUIRED.
     
     GST Rules:
     - If customer_state_code is same as company_state_code: Intra-state transaction
@@ -29,8 +38,11 @@ def calculate_gst_amounts(
     Args:
         taxable_amount: The taxable amount (after discounts)
         gst_rate: GST rate as a percentage (e.g., 18 for 18%)
-        company_state_code: State code of the company/seller (REQUIRED)
-        customer_state_code: State code of the customer/buyer (REQUIRED)
+        company_state_code: State code of the company/seller (REQUIRED - NO FALLBACK)
+        customer_state_code: State code of the customer/buyer (REQUIRED - NO FALLBACK)
+        organization_id: Optional organization ID for audit logging
+        entity_id: Optional entity ID (customer/vendor) for audit logging
+        entity_type: Optional entity type (customer/vendor) for audit logging
     
     Returns:
         Dictionary with cgst_amount, sgst_amount, igst_amount, and is_inter_state flag
@@ -39,10 +51,10 @@ def calculate_gst_amounts(
         ValueError: If company_state_code or customer_state_code is missing or invalid
     """
     def _validate_state_code(code: str, field_name: str) -> None:
-        """Helper to validate state code"""
+        """Helper to validate state code - STRICT ENFORCEMENT"""
         if not code or not code.strip():
-            error_msg = f"{field_name} is required for GST calculation"
-            logger.error(error_msg)
+            error_msg = f"{field_name} is required for GST calculation (NO FALLBACK allowed)"
+            logger.error(f"GST VALIDATION FAILED: {error_msg} - org_id={organization_id}, entity_id={entity_id}, entity_type={entity_type}")
             raise ValueError(error_msg)
     
     # Validate required state codes
@@ -53,9 +65,17 @@ def calculate_gst_amounts(
     company_state = company_state_code.strip().upper()
     customer_state = customer_state_code.strip().upper()
     
-    # Log the GST calculation attempt
-    logger.info(f"Calculating GST: taxable_amount={taxable_amount}, gst_rate={gst_rate}%, "
-                f"company_state={company_state}, customer_state={customer_state}")
+    # Audit log the GST calculation attempt
+    audit_context = {
+        "organization_id": organization_id,
+        "entity_id": entity_id,
+        "entity_type": entity_type,
+        "taxable_amount": taxable_amount,
+        "gst_rate": gst_rate,
+        "company_state_code": company_state,
+        "customer_state_code": customer_state
+    }
+    logger.info(f"GST CALCULATION: {audit_context}")
     
     # Determine if intra-state or inter-state transaction
     if customer_state == company_state:
@@ -66,8 +86,8 @@ def calculate_gst_amounts(
         igst_amount = 0.0
         is_inter_state = False
         
-        logger.info(f"Intra-state GST: Company={company_state}, Customer={customer_state}, "
-                    f"CGST={cgst_amount}, SGST={sgst_amount}")
+        logger.info(f"GST RESULT [INTRA-STATE]: Company={company_state}, Customer={customer_state}, "
+                    f"CGST={cgst_amount}, SGST={sgst_amount}, org_id={organization_id}")
     else:
         # Inter-state transaction: IGST
         full_rate = gst_rate / 100
@@ -76,8 +96,8 @@ def calculate_gst_amounts(
         igst_amount = round(taxable_amount * full_rate, 2)
         is_inter_state = True
         
-        logger.info(f"Inter-state GST: Company={company_state}, Customer={customer_state}, "
-                    f"IGST={igst_amount}")
+        logger.info(f"GST RESULT [INTER-STATE]: Company={company_state}, Customer={customer_state}, "
+                    f"IGST={igst_amount}, org_id={organization_id}")
     
     return {
         "cgst_amount": cgst_amount,

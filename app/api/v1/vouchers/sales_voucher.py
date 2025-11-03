@@ -21,6 +21,7 @@ from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 from app.services.pdf_generation_service import pdf_generator
 from app.utils.gst_calculator import calculate_gst_amounts
+from app.utils.voucher_gst_helper import get_state_codes_for_sales
 import logging
 import asyncio
 import re
@@ -150,33 +151,15 @@ async def create_sales_voucher(
         db.add(db_invoice)
         await db.flush()
         
-        # Get organization's state code for GST calculation (REQUIRED)
-        org_result = await db.execute(
-            select(Organization.state_code).where(Organization.id == org_id)
+        # STRICT GST ENFORCEMENT: Get state codes (NO FALLBACK)
+        company_state_code, customer_state_code = await get_state_codes_for_sales(
+            db=db,
+            org_id=org_id,
+            customer_id=invoice_data.get('customer_id'),
+            voucher_type="sales voucher"
         )
-        company_state_code = org_result.scalar_one_or_none()
-        if not company_state_code:
-            logger.error(f"Organization {org_id} is missing state_code - required for GST calculation")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Organization state code is required for GST calculation. Please update organization details."
-            )
         
-        # Get customer's state code if customer is specified (REQUIRED for GST)
-        customer_state_code = None
-        if invoice_data.get('customer_id'):
-            customer_result = await db.execute(
-                select(Customer.state_code).where(Customer.id == invoice_data['customer_id'])
-            )
-            customer_state_code = customer_result.scalar_one_or_none()
-            if not customer_state_code:
-                logger.error(f"Customer {invoice_data['customer_id']} is missing state_code - required for GST calculation")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Customer state code is required for GST calculation. Please update customer details."
-                )
-        
-        logger.info(f"GST Calculation: Company State={company_state_code}, Customer State={customer_state_code}")
+        logger.info(f"Sales Voucher GST: Company State={company_state_code}, Customer State={customer_state_code}")
         
         # Initialize sums for header
         total_amount = 0.0
@@ -213,7 +196,10 @@ async def create_sales_voucher(
                     taxable_amount=taxable,
                     gst_rate=item_dict['gst_rate'],
                     company_state_code=company_state_code,
-                    customer_state_code=customer_state_code
+                    customer_state_code=customer_state_code,
+                    organization_id=org_id,
+                    entity_id=invoice_data.get('customer_id'),
+                    entity_type='customer'
                 )
                 item_dict['cgst_amount'] = gst_amounts['cgst_amount']
                 item_dict['sgst_amount'] = gst_amounts['sgst_amount']
