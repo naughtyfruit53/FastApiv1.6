@@ -34,6 +34,7 @@ interface ModuleSelectionModalProps {
   orgId?: number;
   orgName?: string;
   token?: string; // Auth token for API calls (optional, fallback to localStorage)
+  isSuperAdmin?: boolean; // Whether the current user is a super admin
 }
 
 const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
@@ -42,6 +43,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
   orgId,
   orgName,
   token: propToken,
+  isSuperAdmin = false,
 }) => {
   const [selectedBundles, setSelectedBundles] = useState<Set<string>>(new Set());
   const { invalidateEntitlements } = useInvalidateEntitlements();
@@ -145,6 +147,19 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
         Module Bundle Selection {orgName ? `- ${orgName}` : ''}
       </DialogTitle>
       <DialogContent>
+        {!isSuperAdmin && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body2" fontWeight="bold" sx={{ mb: 0.5 }}>
+              Super Admin Access Required
+            </Typography>
+            <Typography variant="body2">
+              Module entitlement management is restricted to platform administrators only.
+              Organization administrators cannot activate or deactivate modules.
+              Please contact your platform administrator to request module changes.
+            </Typography>
+          </Alert>
+        )}
+        
         {isLoading ? (
           <Box display="flex" justifyContent="center" py={4}>
             <CircularProgress />
@@ -160,7 +175,10 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
         ) : null}
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Select the module bundles to enable for this organization. Each bundle activates multiple related modules.
+          {isSuperAdmin 
+            ? 'Select the module bundles to enable for this organization. Each bundle activates multiple related modules.'
+            : 'View the current module bundles for this organization. Only super admins can modify module entitlements.'
+          }
         </Typography>
 
         <FormGroup>
@@ -172,7 +190,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
                   checked={selectedBundles.has(bundle.key)}
                   onChange={() => handleBundleToggle(bundle.key)}
                   color="primary"
-                  disabled={isLoading || updateMutation.isPending}
+                  disabled={!isSuperAdmin || isLoading || updateMutation.isPending}
                 />
               }
               label={
@@ -189,16 +207,18 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={updateMutation.isPending}>
-          Cancel
+          {isSuperAdmin ? 'Cancel' : 'Close'}
         </Button>
-        <Button
-          onClick={handleSave}
-          variant="contained"
-          color="primary"
-          disabled={isLoading || updateMutation.isPending || !authToken}
-        >
-          {updateMutation.isPending ? 'Saving...' : 'Save'}
-        </Button>
+        {isSuperAdmin && (
+          <Button
+            onClick={handleSave}
+            variant="contained"
+            color="primary"
+            disabled={isLoading || updateMutation.isPending || !authToken}
+          >
+            {updateMutation.isPending ? 'Saving...' : 'Save'}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

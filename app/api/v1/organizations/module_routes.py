@@ -43,8 +43,13 @@ async def get_organization_modules(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get organization's enabled modules.
+    Get organization's enabled modules (read-only).
+    
     Returns both enabled modules and list of all available modules in the system.
+    This endpoint is read-only. Only super_admin can update module entitlements
+    via the PUT endpoint.
+    
+    **Requires**: organization_module read permission (org_admin or super_admin)
     """
     current_user, org_id = auth
     
@@ -84,12 +89,18 @@ async def get_organization_modules(
 async def update_organization_modules(
     organization_id: int,
     modules_data: dict,
-    auth: tuple = Depends(require_access("organization_module", "update")),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Update organization's enabled modules (requires organization_module update permission).
-    Idempotent - can be called multiple times with same data.
+    Update organization's enabled modules.
+    
+    **IMPORTANT**: This endpoint is restricted to super_admin only.
+    Module entitlement management is a licensing/billing operation that only
+    platform administrators can perform. Organization admins cannot activate
+    or deactivate modules for their organization.
+    
+    **Requires**: super_admin role
     
     Request body format:
     {
@@ -101,19 +112,27 @@ async def update_organization_modules(
         }
     }
     """
-    current_user, org_id = auth
+    # Strict super_admin check - this is a licensing operation
+    if not current_user.is_super_admin:
+        logger.warning(
+            f"User {current_user.email} (role: {current_user.role}) attempted to update modules "
+            f"for organization {organization_id}. Only super_admin can perform this action."
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_type": "permission_denied",
+                "message": "Module entitlement management is restricted to platform administrators only. "
+                           "Organization administrators cannot activate or deactivate modules. "
+                           "Please contact your platform administrator to request module changes.",
+                "required_role": "super_admin",
+                "current_role": current_user.role
+            }
+        )
     
-    if current_user.is_super_admin:
-        # Super admin can update any organization's modules by explicit org_id
-        org_id = organization_id
-        TenantContext.set_organization_id(org_id)
-    else:
-        # Enforce tenant isolation for non-super_admin users
-        if organization_id != org_id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Organization not found"
-            )
+    # Super admin can update any organization's modules by explicit org_id
+    org_id = organization_id
+    TenantContext.set_organization_id(org_id)
   
     result = await db.execute(select(Organization).filter(Organization.id == organization_id))
     organization = result.scalars().first()

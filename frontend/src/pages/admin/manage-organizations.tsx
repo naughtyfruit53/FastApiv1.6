@@ -25,6 +25,7 @@ import {
   Checkbox,
   FormControlLabel,
   FormGroup,
+  Tooltip,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import {
@@ -347,14 +348,23 @@ const ManageOrganizations: React.FC = () => {
                     >
                       <Visibility />
                     </IconButton>
-                    <IconButton
-                      size="small"
-                      color="secondary"
-                      onClick={() => handleModuleControl(org)}
-                      title="Module Control"
+                    <Tooltip 
+                      title={isSuperAdmin 
+                        ? "Manage module entitlements (Super Admin only)" 
+                        : "Module entitlement management requires Super Admin access"
+                      }
                     >
-                      <Settings />
-                    </IconButton>
+                      <span>
+                        <IconButton
+                          size="small"
+                          color="secondary"
+                          onClick={() => handleModuleControl(org)}
+                          disabled={!isSuperAdmin}
+                        >
+                          <Settings />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                     <IconButton
                       size="small"
                       color="primary"
@@ -482,6 +492,7 @@ const ManageOrganizations: React.FC = () => {
         onClose={() => setModuleControlDialogOpen(false)}
         orgId={selectedOrg?.id}
         orgName={selectedOrg?.name}
+        isSuperAdmin={isSuperAdmin}
       />
     </Container>
   );
