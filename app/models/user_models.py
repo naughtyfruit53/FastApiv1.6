@@ -72,7 +72,7 @@ class Organization(Base):
     state: Mapped[str] = mapped_column(String, nullable=False)
     pin_code: Mapped[str] = mapped_column(String, nullable=False)
     country: Mapped[str] = mapped_column(String, nullable=False, default="India")
-    state_code: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    state_code: Mapped[str] = mapped_column(String, nullable=False)  # Required for GST calculation
 
     # Legal details
     gst_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)

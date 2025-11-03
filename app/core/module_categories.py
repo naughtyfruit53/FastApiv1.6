@@ -2,7 +2,8 @@
 
 """
 Module Categories Configuration
-Maps product categories to their constituent modules for category-based entitlement activation
+Maps product categories to their constituent modules for category-based entitlement activation.
+Consolidated to 10 categories as per entitlements overhaul requirements.
 """
 
 from typing import Dict, List
@@ -10,7 +11,7 @@ from enum import Enum
 
 
 class ProductCategory(str, Enum):
-    """Product categories for bundled entitlement activation"""
+    """Product categories for bundled entitlement activation (10 categories)"""
     CRM = "crm_suite"
     ERP = "erp_suite"
     MANUFACTURING = "manufacturing_suite"
@@ -20,11 +21,7 @@ class ProductCategory(str, Enum):
     ANALYTICS = "analytics_suite"
     AI = "ai_suite"
     PROJECT_MANAGEMENT = "project_management_suite"
-    ASSET_TRANSPORT = "asset_transport_suite"
-    WORKFLOW = "workflow_suite"
-    INTEGRATION = "integration_suite"
-    COMMUNICATION = "communication_suite"
-    ADDITIONAL = "additional_features"
+    OPERATIONS_ASSETS = "operations_assets_suite"
 
 
 # Category to module mapping
@@ -86,25 +83,13 @@ CATEGORY_MODULE_MAP: Dict[str, List[str]] = {
         "tasks_calendar"
     ],
     
-    ProductCategory.ASSET_TRANSPORT: [
+    ProductCategory.OPERATIONS_ASSETS: [
         "asset",
-        "transport"
-    ],
-    
-    ProductCategory.WORKFLOW: [
-        "workflow"
-    ],
-    
-    ProductCategory.INTEGRATION: [
-        "integration"
-    ],
-    
-    ProductCategory.COMMUNICATION: [
+        "transport",
+        "workflow",
+        "integration",
         "email",
-        "calendar"
-    ],
-    
-    ProductCategory.ADDITIONAL: [
+        "calendar",
         "exhibition",
         "customer",
         "vendor",
@@ -132,11 +117,7 @@ CATEGORY_DISPLAY_NAMES: Dict[str, str] = {
     ProductCategory.ANALYTICS: "Analytics & BI Suite",
     ProductCategory.AI: "AI & Machine Learning Suite",
     ProductCategory.PROJECT_MANAGEMENT: "Project Management Suite",
-    ProductCategory.ASSET_TRANSPORT: "Asset & Transport Management Suite",
-    ProductCategory.WORKFLOW: "Workflow & Automation Suite",
-    ProductCategory.INTEGRATION: "Integration Platform",
-    ProductCategory.COMMUNICATION: "Communication & Collaboration",
-    ProductCategory.ADDITIONAL: "Additional Features"
+    ProductCategory.OPERATIONS_ASSETS: "Operations & Assets Management Suite"
 }
 
 
@@ -151,11 +132,7 @@ CATEGORY_DESCRIPTIONS: Dict[str, str] = {
     ProductCategory.ANALYTICS: "Business intelligence, reporting, and analytics capabilities",
     ProductCategory.AI: "Artificial intelligence, machine learning, and predictive analytics",
     ProductCategory.PROJECT_MANAGEMENT: "Project planning, task management, and collaboration tools",
-    ProductCategory.ASSET_TRANSPORT: "Asset lifecycle and transportation fleet management",
-    ProductCategory.WORKFLOW: "Business process automation and workflow management",
-    ProductCategory.INTEGRATION: "Third-party integrations, APIs, and data synchronization",
-    ProductCategory.COMMUNICATION: "Email, calendar, and collaboration tools",
-    ProductCategory.ADDITIONAL: "Specialized business features and emerging capabilities"
+    ProductCategory.OPERATIONS_ASSETS: "Asset & transport management, workflow automation, integrations, communication (email/calendar), and system settings/admin (RBAC-only)"
 }
 
 
