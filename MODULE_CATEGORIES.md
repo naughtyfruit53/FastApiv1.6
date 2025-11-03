@@ -592,12 +592,14 @@ All other modules require explicit entitlement activation at the organization le
 ## Implementation Notes
 
 ### Category-Based Activation
-When an Org Admin selects a category:
+When an **App Super Admin** selects a category for an organization:
 1. All modules in that category are instantly enabled
 2. All submodules within those modules become available
 3. The organization's `enabled_modules` is updated
 4. Changes are immediately reflected in the UI
 5. Entitlement cache is invalidated
+
+**Important**: Category activation is performed by **App Super Admin** only, not Org Admin. This is a licensing/billing operation that controls what features an organization has access to.
 
 ### Module Dependencies
 Some modules may have dependencies on others:
