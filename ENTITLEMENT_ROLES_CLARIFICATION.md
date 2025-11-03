@@ -24,7 +24,7 @@ This document clarifies the roles and responsibilities in the entitlement manage
 - ✅ Can set trial periods and manage license types
 - ✅ Can override all entitlement restrictions
 
-**API Endpoints**:
+**API Endpoints (Super Admin Only)**:
 - `POST /api/v1/admin/categories/orgs/{org_id}/activate`
 - `POST /api/v1/admin/categories/orgs/{org_id}/deactivate`
 - `GET /api/v1/admin/categories`
@@ -32,6 +32,7 @@ This document clarifies the roles and responsibilities in the entitlement manage
 - `GET /api/v1/admin/modules`
 - `PUT /api/v1/admin/orgs/{org_id}/entitlements`
 - `GET /api/v1/admin/orgs/{org_id}/entitlements`
+- `PUT /api/v1/organizations/{org_id}/modules` ⚠️ **Super Admin Only**
 
 ### 2. Org Admin (Organization Administrator)
 **Scope**: Single organization
@@ -50,8 +51,9 @@ This document clarifies the roles and responsibilities in the entitlement manage
 - ✅ Can work within all entitled modules
 - ✅ Automatically gets access when super admin activates modules
 
-**API Endpoints**:
+**API Endpoints (Read-Only Access)**:
 - `GET /api/v1/orgs/{org_id}/entitlements` (read-only view)
+- `GET /api/v1/organizations/{org_id}/modules` (read-only view)
 
 ### 3. Management (Organization Management Role)
 **Scope**: Single organization
@@ -149,6 +151,49 @@ async def activate_category_for_org(
 ):
 ```
 
+### Admin Entitlement Management Endpoints (Super Admin Only)
+
+All endpoints under `/api/v1/admin/` for entitlement management require **super_admin** role:
+
+```python
+@router.put("/orgs/{org_id}/entitlements")
+async def update_org_entitlements(
+    org_id: int,
+    request_body: UpdateEntitlementsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_super_admin)  # ← Super admin required
+):
+```
+
+### Organization Module Management (Super Admin Only)
+
+The PUT endpoint for organization modules is **strictly restricted to super_admin**:
+
+```python
+@router.put("/{organization_id:int}/modules")
+async def update_organization_modules(
+    organization_id: int,
+    modules_data: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # Strict super_admin check - this is a licensing operation
+    if not current_user.is_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_type": "permission_denied",
+                "message": "Module entitlement management is restricted to platform administrators only. "
+                           "Organization administrators cannot activate or deactivate modules. "
+                           "Please contact your platform administrator to request module changes.",
+                "required_role": "super_admin",
+                "current_role": current_user.role
+            }
+        )
+```
+
+**Important**: This endpoint bypasses RBAC and enforces a direct `is_super_admin` check to prevent any org admin from modifying module entitlements, even with elevated permissions.
+
 ### Organization Entitlements Endpoints (Read-Only for Org Admin)
 
 Endpoint under `/api/v1/orgs/{org_id}/entitlements` is read-only:
@@ -161,6 +206,18 @@ async def get_app_entitlements(
     current_user: User = Depends(get_current_active_user)  # ← Org admin can view
 ):
     # Returns current entitlements (read-only)
+```
+
+### Organization Modules GET Endpoint (Read-Only for Org Admin)
+
+```python
+@router.get("/{organization_id:int}/modules")
+async def get_organization_modules(
+    organization_id: int,
+    auth: tuple = Depends(require_access("organization_module", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    # Org admins can view but not modify
 ```
 
 ## Security Considerations
