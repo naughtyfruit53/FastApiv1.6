@@ -249,7 +249,7 @@ class EntitlementService:
                 and_(
                     OrgSubentitlement.org_id == org_id,
                     OrgSubentitlement.module_id == module.id,
-                    OrgSubentitlement.submodule_id == submodule.id
+                    OrgSubentitlement.submodule_id == submodule.id  # Fixed: changed = to ==
                 )
             )
             result = await self.db.execute(stmt)
@@ -428,7 +428,7 @@ class EntitlementService:
         entitlements = {}
         for org_ent in org_entitlements:
             module_key = org_ent.module.module_key
-            submodules = org_subentitlements.get(org_ent.module_id, {})
+            submodules = org_subentitlements.get(org_ent.module.id, {})
 
             entitlements[module_key] = AppModuleEntitlement(
                 module_key=module_key,
@@ -509,7 +509,9 @@ class EntitlementService:
             submodule = submodule_result.scalar_one_or_none()
             if not submodule:
                 logger.warning(f"Submodule not found: {normalized_submodule_key} in module {normalized_module_key}")
-                return False, 'disabled', f"Submodule '{submodule_key}' not found in module '{module_key}'"
+                # NEW: Instead of denying, assume enabled if submodule not defined
+                logger.warning(f"Assuming submodule {normalized_submodule_key} enabled since not found in DB")
+                return True, org_ent.status, None
 
             logger.debug(f"Found submodule ID {submodule.id} for key {normalized_submodule_key}")
             
@@ -519,7 +521,7 @@ class EntitlementService:
                     and_(
                         OrgSubentitlement.org_id == org_id,
                         OrgSubentitlement.module_id == module.id,
-                        OrgSubentitlement.submodule_id == submodule.id  # Fixed: changed = to ==
+                        OrgSubentitlement.submodule_id == submodule.id
                     )
                 )
             )

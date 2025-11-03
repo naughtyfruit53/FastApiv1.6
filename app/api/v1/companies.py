@@ -1,4 +1,4 @@
-# Revised: app/api/companies.py
+# app/api/v1/companies.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
@@ -26,7 +26,7 @@ router = APIRouter()
 LOGO_UPLOAD_DIR = "uploads/company_logos"
 os.makedirs(LOGO_UPLOAD_DIR, exist_ok=True)
 
-@router.get("/", response_model=List[CompanyInDB])
+@router.get("", response_model=List[CompanyInDB])
 async def get_companies(
     auth: tuple = Depends(require_access("company", "read")),
     db: AsyncSession = Depends(get_db)
@@ -129,7 +129,7 @@ async def get_company(
     
     return company
 
-@router.post("/", response_model=CompanyResponse)
+@router.post("", response_model=CompanyResponse)
 async def create_company(
     company: CompanyCreate,
     auth: tuple = Depends(require_access("company", "create")),
@@ -438,142 +438,6 @@ async def import_companies_excel(
             detail=f"Error processing import: {str(e)}"
         )
 
-@router.post("/{company_id}/logo", response_model=dict)
-async def upload_company_logo(
-    company_id: int,
-    file: UploadFile = File(...),
-    auth: tuple = Depends(require_access("company", "update")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Upload company logo (admin only)"""
-    current_user, org_id = auth
-    
-    stmt = select(Company).where(
-        Company.id == company_id,
-        Company.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    company = result.scalar_one_or_none()
-    if not company:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company not found"
-        )
-    
-    # Validate file type (only allow image files)
-    if not file.content_type or not file.content_type.startswith('image/'):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only image files are allowed for company logo"
-        )
-    
-    # Validate file size (max 5MB for logo)
-    if file.size and file.size > 5 * 1024 * 1024:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Logo file size must be less than 5MB"
-        )
-    
-    # Remove old logo if exists
-    if company.logo_path and os.path.exists(company.logo_path):
-        try:
-            os.remove(company.logo_path)
-        except OSError:
-            logger.warning(f"Failed to remove old logo file: {company.logo_path}")
-    
-    # Generate unique filename
-    file_extension = os.path.splitext(file.filename or "")[1]
-    if not file_extension:
-        file_extension = ".png"  # Default extension
-    unique_filename = f"logo_{company.id}_{uuid.uuid4()}{file_extension}"
-    file_path = os.path.join(LOGO_UPLOAD_DIR, unique_filename)
-    
-    # Save file to disk
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    # Update company logo logo path
-    company.logo_path = file_path
-    await db.commit()
-    await db.refresh(company)
-    logger.info(f"Logo uploaded for company {company.name} by {current_user.email}")
-    return {
-        "message": "Logo uploaded successfully",
-        "logo_path": file_path,
-        "filename": unique_filename
-    }
-
-@router.delete("/{company_id}/logo")
-async def delete_company_logo(
-    company_id: int,
-    auth: tuple = Depends(require_access("company", "delete")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Delete company logo (admin only)"""
-    current_user, org_id = auth
-    
-    stmt = select(Company).where(
-        Company.id == company_id,
-        Company.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    company = result.scalar_one_or_none()
-    if not company:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company not found"
-        )
-    
-    # Remove logo file if exists
-    if company.logo_path and os.path.exists(company.logo_path):
-        try:
-            os.remove(company.logo_path)
-        except OSError:
-            logger.warning(f"Failed to remove logo file: {company.logo_path}")
-    
-    # Clear logo path in database
-    company.logo_path = None
-    await db.commit()
-    await db.refresh(company)
-    
-    logger.info(f"Logo deleted for company {company.name} by {current_user.email}")
-    return {"message": "Logo deleted successfully"}
-
-@router.get("/{company_id}/logo")
-async def get_company_logo(
-    company_id: int,
-    auth: tuple = Depends(require_access("company", "read")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get company logo file"""
-    current_user, org_id = auth
-    
-    stmt = select(Company).where(
-        Company.id == company_id,
-        Company.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    company = result.scalar_one_or_none()
-    if not company:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company not found"
-        )
-    
-    if not company.logo_path or not os.path.exists(company.logo_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Logo not found"
-        )
-    
-    # Return file response
-    from fastapi.responses import FileResponse
-    return FileResponse(
-        company.logo_path,
-        media_type="image/png",
-        filename=f"logo_{company.name.replace(' ', '_').lower()}.png"
-    )
-
 # User-Company Assignment Endpoints
 
 @router.get("/{company_id}/users", response_model=List[UserCompanyAssignmentInDB])
@@ -585,7 +449,7 @@ async def get_company_users(
     """Get users assigned to a specific company"""
     current_user, org_id = auth
     
-    # Check company exists and user has access
+    # Check company exists and belongs to current user's org
     stmt = select(Company).where(
         Company.id == company_id,
         Company.organization_id == org_id

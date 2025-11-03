@@ -167,10 +167,9 @@ class RBACService:
             )
             
             for permission_id in updates.permission_ids:
-                perm_result = await self.db.execute(
-                    select(Permission).filter_by(id=permission_id, is_active=True)
-                )
-                permission = perm_result.scalars().first()
+                stmt = select(Permission).filter_by(id=permission_id, is_active=True)
+                result = await self.db.execute(stmt)
+                permission = result.scalars().first()
                 
                 if permission:
                     role_permission = RolePermission(
@@ -508,13 +507,13 @@ class RBACService:
             {
                 "name": RoleType.ADMIN.value,
                 "display_name": "Admin",
-                "description": "Full access to all functionality across all modules",
+                "description": "Full access to all modules",
                 "permissions": role_permissions_map.get("admin", [])
             },
             {
                 "name": RoleType.MANAGER.value,
                 "display_name": "Manager",
-                "description": "Manage operations across assigned modules",
+                "description": "Module-level access",
                 "permissions": role_permissions_map.get("manager", [])
             },
             {

@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from io import BytesIO
 from app.core.database import get_db
-from app.core.enforcement import require_access, TenantEnforcement
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user
 from app.models import User, Product
 from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem, GoodsReceiptNote, GoodsReceiptNoteItem
@@ -21,7 +21,7 @@ import re
 from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["purchase-orders"])
+router = APIRouter(prefix="/purchase-orders", tags=["purchase-orders"])
 
 @router.get("", response_model=List[PurchaseOrderInDB])
 @router.get("/", response_model=List[PurchaseOrderInDB])
@@ -131,7 +131,7 @@ async def check_backdated_conflict(
     
     try:
         parsed_date = date_parser.parse(voucher_date)
-        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+        conflict_info = await VoucherNumberService.check_backdated_voucher(
             db, "PO", org_id, PurchaseOrder, parsed_date
         )
         return conflict_info
@@ -548,6 +548,7 @@ async def delete_purchase_order(
     db: AsyncSession = Depends(get_db),
     auth: tuple = Depends(require_access("voucher", "delete"))
 ):
+    """Delete purchase order"""
     current_user, org_id = auth
     
     try:

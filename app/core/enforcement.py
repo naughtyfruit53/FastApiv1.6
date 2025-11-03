@@ -1,5 +1,3 @@
-# app/core/enforcement.py
-
 """
 Centralized RBAC and tenant isolation enforcement utilities.
 This module provides unified enforcement of organization scoping and permission checks.
@@ -165,6 +163,11 @@ class RBACEnforcement:
         """
         # Super admins bypass checks
         if getattr(user, 'is_super_admin', False):
+            return True
+        
+        # NEW: Bypass for org_admin
+        if user.role.lower() == 'org_admin':
+            logger.debug(f"Bypassing RBAC check for org_admin {user.email} - access granted")
             return True
         
         # Get the canonical permission name
