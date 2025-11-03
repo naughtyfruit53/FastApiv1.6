@@ -33,12 +33,12 @@ async def request_factory_reset_otp(
                 if current_user.is_super_admin:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="organization_id required for organization scope")
                 else:
-                    organization_id = org_id
+                    organization_id = current_user.organization_id
             # Verify org exists and access
             org = db.query(Organization).filter(Organization.id == organization_id).first()
             if not org:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
-            if not current_user.is_super_admin and org_id != organization_id:
+            if not current_user.is_super_admin and current_user.organization_id != organization_id:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to organization")
         
         elif scope == ResetScope.ALL_ORGANIZATIONS:
@@ -139,12 +139,12 @@ async def reset_organization_data(
                 )
         else:
             # Org admin can only reset their own organization
+            org_id = current_user.organization_id
             if not org_id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="User must belong to an organization to reset data"
                 )
-    current_user, org_id = auth
         
         # Verify organization exists
         organization = db.query(Organization).filter(Organization.id == org_id).first()
