@@ -94,7 +94,10 @@ CATEGORY_MODULE_MAP: Dict[str, List[str]] = {
         "customer",
         "vendor",
         "voucher",
-        "stock"
+        "stock",
+        "settings",
+        "admin",
+        "organization"
     ]
 }
 
