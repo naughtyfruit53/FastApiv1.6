@@ -13,7 +13,6 @@ from app.api.v1.auth import get_current_active_user
 from app.models import Organization, User, Product, Customer, Vendor, Stock
 from app.schemas.user import UserRole
 from app.schemas import OrganizationUpdate, OrganizationInDB
-import logging
 from app.utils.supabase_auth import supabase_auth_service
 from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole  # Changed to absolute from rbac_models
 

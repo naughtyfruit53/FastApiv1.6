@@ -348,23 +348,29 @@ const ManageOrganizations: React.FC = () => {
                     >
                       <Visibility />
                     </IconButton>
-                    <Tooltip 
-                      title={isSuperAdmin 
-                        ? "Manage module entitlements (Super Admin only)" 
-                        : "Module entitlement management requires Super Admin access"
-                      }
-                    >
-                      <span>
+                    {isSuperAdmin ? (
+                      <Tooltip title="Manage module entitlements (Super Admin only)">
                         <IconButton
                           size="small"
                           color="secondary"
                           onClick={() => handleModuleControl(org)}
-                          disabled={!isSuperAdmin}
                         >
                           <Settings />
                         </IconButton>
-                      </span>
-                    </Tooltip>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="Module entitlement management requires Super Admin access">
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="secondary"
+                            disabled
+                          >
+                            <Settings />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    )}
                     <IconButton
                       size="small"
                       color="primary"

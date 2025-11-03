@@ -141,6 +141,9 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
     updateMutation.mutate(request);
   };
 
+  // Computed property for checkbox disabled state
+  const isCheckboxDisabled = !isSuperAdmin || isLoading || updateMutation.isPending;
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
@@ -190,7 +193,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
                   checked={selectedBundles.has(bundle.key)}
                   onChange={() => handleBundleToggle(bundle.key)}
                   color="primary"
-                  disabled={!isSuperAdmin || isLoading || updateMutation.isPending}
+                  disabled={isCheckboxDisabled}
                 />
               }
               label={
