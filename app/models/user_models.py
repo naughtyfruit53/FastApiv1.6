@@ -464,7 +464,12 @@ class User(Base):
 
     # User details
     full_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    role: Mapped[str] = mapped_column(String, nullable=False, default="executive") # executive, manager, management, super_admin, org_admin
+    # NEW ROLE SYSTEM: Only 4 org-wide roles: org_admin, management, manager, executive
+    # org_admin: Full access based on entitlement only (no RBAC)
+    # management: Full owner-like access via RBAC (except Org Admin creation)
+    # manager: Module-level access assigned at creation/management
+    # executive: Submodule-level access based on reporting manager's modules
+    role: Mapped[str] = mapped_column(String, nullable=False, default="executive") # org_admin, management, manager, executive (super_admin for platform-level only)
     department: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     designation: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     employee_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)

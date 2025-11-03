@@ -10,6 +10,7 @@ from app.services.reset_service import ResetService
 from app.services.otp_service import OTPService
 from app.core.tenant import require_current_organization_id
 from app.schemas.reset import DataResetRequest, ResetScope, DataResetType
+from app.api.v1.auth import get_current_active_user
 import logging
 
 logger = logging.getLogger(__name__)
@@ -32,12 +33,12 @@ async def request_factory_reset_otp(
                 if current_user.is_super_admin:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="organization_id required for organization scope")
                 else:
-                    organization_id = org_id
+                    organization_id = current_user.organization_id
             # Verify org exists and access
             org = db.query(Organization).filter(Organization.id == organization_id).first()
             if not org:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
-            if not current_user.is_super_admin and org_id != organization_id:
+            if not current_user.is_super_admin and current_user.organization_id != organization_id:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to organization")
         
         elif scope == ResetScope.ALL_ORGANIZATIONS:
@@ -138,12 +139,12 @@ async def reset_organization_data(
                 )
         else:
             # Org admin can only reset their own organization
+            org_id = current_user.organization_id
             if not org_id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="User must belong to an organization to reset data"
                 )
-    current_user, org_id = auth
         
         # Verify organization exists
         organization = db.query(Organization).filter(Organization.id == org_id).first()
@@ -434,3 +435,61 @@ async def update_max_users(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update max users: {str(e)}"
         )
+
+
+# NEW: Settings menu visibility based on new 4-role system
+@router.get("/menu-visibility")
+async def get_settings_menu_visibility(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get settings menu items visibility based on user role and entitlements.
+    
+    NEW ROLE SYSTEM:
+    - Org Admin: All settings based on entitlement
+    - Management: All settings with RBAC access
+    - Manager: Settings for assigned modules only
+    - Executive: No settings access
+    
+    Returns dict of module -> bool indicating visibility
+    """
+    from app.services.permission_enforcement import PermissionEnforcer
+    from sqlalchemy.ext.asyncio import AsyncSession
+    
+    # Convert to async session if needed
+    if not isinstance(db, AsyncSession):
+        logger.warning("Non-async session passed to async endpoint")
+        return {"error": "Database session error"}
+    
+    enforcer = PermissionEnforcer(db)
+    
+    # Get all accessible modules
+    accessible_modules = await enforcer.get_accessible_modules(current_user)
+    
+    # Settings menu visibility
+    # Executives don't see settings
+    if current_user.role == "executive":
+        return {"visible_settings": {}}
+    
+    # Build settings visibility dict
+    settings_visibility = {}
+    
+    # Define which modules have settings
+    modules_with_settings = [
+        "CRM", "ERP", "HR", "Inventory", "Service", "Analytics", 
+        "Finance", "Manufacturing", "Procurement", "Project", 
+        "Asset", "Transport", "Marketing", "Payroll"
+    ]
+    
+    for module in modules_with_settings:
+        if module in accessible_modules:
+            settings_visibility[module] = await enforcer.check_settings_menu_access(
+                current_user, 
+                module
+            )
+    
+    return {
+        "role": current_user.role,
+        "visible_settings": settings_visibility
+    }

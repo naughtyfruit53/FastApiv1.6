@@ -11,11 +11,20 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
-    SUPER_ADMIN = "super_admin"
-    ORG_ADMIN = "org_admin"
-    MANAGEMENT = "management"
-    MANAGER = "manager"
-    EXECUTIVE = "executive"
+    """
+    NEW ROLE SYSTEM - Only 4 org-wide roles:
+    - ORG_ADMIN: Full access based on entitlement only (no RBAC). Can create all roles including Management.
+    - MANAGEMENT: Full owner-like access via RBAC (except Org Admin creation). Can assign/edit module access.
+    - MANAGER: Module-level access assigned at creation/management. Selected modules only.
+    - EXECUTIVE: Submodule-level access based on reporting manager's modules. Can be upgraded.
+    
+    Note: SUPER_ADMIN is platform-level only, not organization-level.
+    """
+    SUPER_ADMIN = "super_admin"  # Platform-level only
+    ORG_ADMIN = "org_admin"      # Organization owner, entitlement-based access
+    MANAGEMENT = "management"    # Full RBAC access, manages managers/executives
+    MANAGER = "manager"          # Module-level access
+    EXECUTIVE = "executive"      # Submodule-level access
 
 class EmailLogin(BaseModel):
     email: EmailStr

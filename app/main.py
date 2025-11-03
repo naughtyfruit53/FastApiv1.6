@@ -349,19 +349,19 @@ def include_minimal_routers():
         raise  # Core
     
     try:
-        from app.api.companies import router as companies_router
+        from app.api.v1.companies import router as companies_router
         routers.append((companies_router, "/api/v1/companies", ["companies"]))
     except Exception as e:
         logger.error(f"Failed to import companies router: {str(e)}")
     
     try:
-        from app.api.vendors import router as vendors_router
+        from app.api.v1.vendors import router as vendors_router
         routers.append((vendors_router, "/api/v1/vendors", ["vendors"]))
     except Exception as e:
         logger.error(f"Failed to import vendors router: {str(e)}")
     
     try:
-        from app.api.customers import router as customers_router
+        from app.api.v1.customers import router as customers_router
         routers.append((customers_router, "/api/v1/customers", ["customers"]))
     except Exception as e:
         logger.error(f"Failed to import customers router: {str(e)}")
