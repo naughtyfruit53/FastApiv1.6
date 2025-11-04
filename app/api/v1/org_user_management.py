@@ -212,7 +212,7 @@ async def create_org_user(
                 assigned_by_id=current_user.id
             )
         
-        # Log to audit log
+        # Log to audit log (in separate try-catch to not block user creation)
         try:
             audit_log = AuditLog(
                 organization_id=org_id,
@@ -234,7 +234,9 @@ async def create_org_user(
             db.add(audit_log)
             await db.commit()
         except Exception as e:
+            # Audit log failure should not block user creation
             logger.error(f"Failed to log audit: {e}")
+            await db.rollback()  # Rollback audit log only
         
         logger.info(f"User {user_data.email} created with role {user_data.role.value}")
         return db_user
@@ -493,6 +495,8 @@ async def delete_user(
             detail="Current user must belong to an organization"
         )
     
+    org_id = current_user.organization_id
+    
     # Prevent self-deletion
     if user_id == current_user.id:
         raise HTTPException(
@@ -565,31 +569,37 @@ async def delete_user(
     
     # Soft delete or hard delete - using soft delete by setting is_active = False
     user_to_delete.is_active = False
-    await db.commit()
     
-    # Log to audit log
+    # Log to audit log (add before commit to ensure consistency)
+    audit_log = AuditLog(
+        organization_id=org_id,
+        entity_type="user",
+        entity_id=user_id,
+        entity_name=user_to_delete.full_name or user_to_delete.email,
+        action="delete",
+        action_description=f"User {user_to_delete.email} (role: {user_to_delete.role}) deleted by {current_user.email}",
+        user_id=current_user.id,
+        user_email=current_user.email,
+        status="success",
+        metadata={
+            "deleted_user_id": user_id,
+            "deleted_user_email": user_to_delete.email,
+            "deleted_user_role": user_to_delete.role,
+            "deleted_by_role": current_user.role
+        }
+    )
+    db.add(audit_log)
+    
+    # Commit both changes together in a transaction
     try:
-        audit_log = AuditLog(
-            organization_id=org_id,
-            entity_type="user",
-            entity_id=user_id,
-            entity_name=user_to_delete.full_name or user_to_delete.email,
-            action="delete",
-            action_description=f"User {user_to_delete.email} (role: {user_to_delete.role}) deleted by {current_user.email}",
-            user_id=current_user.id,
-            user_email=current_user.email,
-            status="success",
-            metadata={
-                "deleted_user_id": user_id,
-                "deleted_user_email": user_to_delete.email,
-                "deleted_user_role": user_to_delete.role,
-                "deleted_by_role": current_user.role
-            }
-        )
-        db.add(audit_log)
         await db.commit()
     except Exception as e:
-        logger.error(f"Failed to log audit: {e}")
+        await db.rollback()
+        logger.error(f"Failed to delete user and log audit: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete user"
+        )
     
     logger.info(f"User {user_to_delete.email} (id={user_id}) deleted by {current_user.email}")
     
