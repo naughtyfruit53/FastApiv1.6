@@ -265,17 +265,20 @@ summary = get_gst_summary(items, company_state_code="27")
 
 ## Configuration
 
-### Default State Code
-If organization's state code is not set, the system defaults to:
-- **Default**: "27" (Maharashtra)
-
-This can be changed in the voucher creation logic or by ensuring organizations have their state_code set.
+### Strict State Code Enforcement (v1.6+)
+**BREAKING CHANGE**: As of version 1.6, state code enforcement is now **STRICT**:
+- **NO FALLBACK**: System will NOT default to "27" (Maharashtra) or any other state code
+- **REQUIRED**: Organization state_code MUST be set before creating any GST vouchers
+- **VALIDATION**: All voucher endpoints validate state_code presence and return HTTP 400 if missing
+- **AUDIT LOGGING**: All GST calculations log state_code usage for compliance tracking
 
 ### Enabling Company Profile Settings
 The company profile (state_code) is part of the Organization model and is:
+- **REQUIRED**: state_code field is NOT NULL in the database
 - **Always enabled**: No entitlement check required
 - **Accessible to**: Org Admin and Management roles
 - **Editable via**: Organization settings API
+- **Frontend Warning**: Banner displays on all voucher forms if state_code is missing
 
 ## Migration Path
 
@@ -342,24 +345,41 @@ Test cases should cover:
 ### Common Issues
 
 **Q: What if organization state code is not set?**
-A: System defaults to "27" (Maharashtra). Update organization settings to set correct state code.
+A: ⚠️ **STRICT ENFORCEMENT**: Voucher creation will FAIL with HTTP 400 error. You MUST update organization settings to set correct state code before creating any GST vouchers. Frontend displays a prominent warning banner.
 
 **Q: What if customer/vendor doesn't have state code?**
-A: Transaction defaults to intra-state. Ensure master data completeness.
+A: ⚠️ **STRICT ENFORCEMENT**: Voucher creation will FAIL with HTTP 400 error. You MUST update customer/vendor master data before creating vouchers with them. Frontend displays a prominent warning banner.
 
 **Q: Can I override the automatic calculation?**
-A: Yes, if CGST/SGST/IGST amounts are explicitly provided in the API request, they are used as-is.
+A: Yes, if CGST/SGST/IGST amounts are explicitly provided in the API request, they are used as-is. However, state_code validation still applies.
 
 **Q: Does this apply to all voucher types?**
-A: Currently implemented for Sales and Purchase vouchers. Can be extended to other voucher types.
+A: Yes, as of v1.6, ALL GST-relevant voucher types enforce strict state_code requirements:
+  - Sales vouchers, Purchase vouchers
+  - Quotations, Proforma invoices
+  - Sales orders, Purchase orders
+  - Sales returns, Purchase returns
+  - Delivery challans, Goods receipt notes
+  - Credit notes, Debit notes
+  - Payment/Receipt/Journal/Contra vouchers (where GST applies)
 
 ### Documentation References
 - GST Calculator: `app/utils/gst_calculator.py`
-- Sales Voucher: `app/api/v1/vouchers/sales_voucher.py`
-- Purchase Voucher: `app/api/v1/vouchers/purchase_voucher.py`
+- All Voucher Endpoints: `app/api/v1/vouchers/*.py`
+- Audit Logging: `app/models/audit_log.py`
+- Frontend Banner: `frontend/src/components/CompanyStateCodeBanner.tsx` (if applicable)
+
+### Audit Trail
+All GST calculations are now logged with:
+- Timestamp of calculation
+- Organization ID and state_code used
+- Customer/Vendor ID and state_code used
+- Transaction type (intra-state vs inter-state)
+- Calculated CGST/SGST/IGST amounts
+- Any validation errors or warnings
 
 ---
 
 **Last Updated**: 2024-11-03
-**Version**: 1.0.0
-**Status**: Implemented and Active
+**Version**: 1.6.0
+**Status**: Strict Enforcement Active - NO FALLBACK
