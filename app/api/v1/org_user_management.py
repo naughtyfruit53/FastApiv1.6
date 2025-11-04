@@ -19,6 +19,7 @@ from pydantic import BaseModel, EmailStr, Field
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.user_models import User
+from app.models.audit_log import AuditLog
 from app.schemas.user import UserRole, UserInDB, UserCreate
 from app.services.org_role_service import OrgRoleService
 from app.core.security import get_password_hash
@@ -210,6 +211,30 @@ async def create_org_user(
                 manager_id=user_data.reporting_manager_id,
                 assigned_by_id=current_user.id
             )
+        
+        # Log to audit log
+        try:
+            audit_log = AuditLog(
+                organization_id=org_id,
+                entity_type="user",
+                entity_id=db_user.id,
+                entity_name=db_user.full_name or db_user.email,
+                action="create",
+                action_description=f"User {db_user.email} (role: {db_user.role}) created by {current_user.email}",
+                user_id=current_user.id,
+                user_email=current_user.email,
+                status="success",
+                metadata={
+                    "created_user_id": db_user.id,
+                    "created_user_email": db_user.email,
+                    "created_user_role": db_user.role,
+                    "created_by_role": current_user.role
+                }
+            )
+            db.add(audit_log)
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to log audit: {e}")
         
         logger.info(f"User {user_data.email} created with role {user_data.role.value}")
         return db_user
@@ -541,6 +566,30 @@ async def delete_user(
     # Soft delete or hard delete - using soft delete by setting is_active = False
     user_to_delete.is_active = False
     await db.commit()
+    
+    # Log to audit log
+    try:
+        audit_log = AuditLog(
+            organization_id=org_id,
+            entity_type="user",
+            entity_id=user_id,
+            entity_name=user_to_delete.full_name or user_to_delete.email,
+            action="delete",
+            action_description=f"User {user_to_delete.email} (role: {user_to_delete.role}) deleted by {current_user.email}",
+            user_id=current_user.id,
+            user_email=current_user.email,
+            status="success",
+            metadata={
+                "deleted_user_id": user_id,
+                "deleted_user_email": user_to_delete.email,
+                "deleted_user_role": user_to_delete.role,
+                "deleted_by_role": current_user.role
+            }
+        )
+        db.add(audit_log)
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Failed to log audit: {e}")
     
     logger.info(f"User {user_to_delete.email} (id={user_id}) deleted by {current_user.email}")
     
