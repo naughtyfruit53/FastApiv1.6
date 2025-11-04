@@ -57,20 +57,47 @@ async def update_organization_settings(
     auth: tuple = Depends(require_access("settings", "update")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update organization settings (requires settings update permission)"""
+    """Update organization settings (requires settings update permission)
+    
+    Note: Voucher prefix and counter reset period can only be updated by org_admin
+    """
     current_user, org_id = auth
     result = await db.execute(select(OrganizationSettings).filter(
         OrganizationSettings.organization_id == org_id
     ))
     settings = result.scalar_one_or_none()
     
+    update_data = settings_update.dict(exclude_unset=True)
+    
+    # Restrict voucher_prefix and voucher_counter_reset_period to org_admin only
+    restricted_fields = ['voucher_prefix', 'voucher_counter_reset_period', 'voucher_prefix_enabled']
+    has_restricted_fields = any(field in update_data for field in restricted_fields)
+    
+    if has_restricted_fields and current_user.role.lower() != 'org_admin':
+        # Remove restricted fields for non-org_admin users
+        for field in restricted_fields:
+            if field in update_data:
+                del update_data[field]
+        
+        # If no other fields to update, return error
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error_type": "permission_denied",
+                    "message": "Only org_admin users can modify voucher prefix and counter reset period settings",
+                    "restricted_fields": restricted_fields,
+                    "required_role": "org_admin",
+                    "current_role": current_user.role
+                }
+            )
+    
     if not settings:
-        settings_data = settings_update.dict(exclude_unset=True)
+        settings_data = update_data
         settings_data['organization_id'] = org_id
         settings = OrganizationSettings(**settings_data)
         db.add(settings)
     else:
-        update_data = settings_update.dict(exclude_unset=True)
         for field, value in update_data.items():
             setattr(settings, field, value)
     

@@ -316,6 +316,10 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           if (item.superAdminOnly && !isSuperAdmin) {
             return false;
           }
+          // Filter out items that require org_admin access (unless they are org_admin or higher)
+          if (item.orgAdminOnly && !isAdminLike && !isSuperAdmin) {
+            return false;
+          }
           // Hide org-specific permission items for app superadmin
           if (item.servicePermission && isSuperAdmin) return false;
           // Hide org-role specific items for app superadmin

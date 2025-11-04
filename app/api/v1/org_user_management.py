@@ -445,3 +445,107 @@ async def get_managers(
     )
     
     return result.scalars().all()
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete a user from the organization.
+    
+    Rules:
+    - org_admin can delete any user except themselves
+    - management can delete managers and executives
+    - managers can delete executives under their management
+    - Cannot delete super_admin users
+    """
+    if not current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current user must belong to an organization"
+        )
+    
+    # Prevent self-deletion
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own account"
+        )
+    
+    # Get user to delete
+    result = await db.execute(
+        select(User).where(
+            User.id == user_id,
+            User.organization_id == current_user.organization_id
+        )
+    )
+    user_to_delete = result.scalar_one_or_none()
+    
+    if not user_to_delete:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Prevent deletion of super_admin
+    if user_to_delete.is_super_admin or user_to_delete.role == 'super_admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot delete super admin users"
+        )
+    
+    # Check permissions based on current user role
+    requester_role = current_user.role.lower()
+    target_role = user_to_delete.role.lower()
+    
+    if requester_role == 'org_admin':
+        # org_admin can delete anyone except themselves and super_admin (already checked)
+        pass
+    elif requester_role == 'management':
+        # management can delete managers and executives
+        if target_role not in ['manager', 'executive']:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Management users cannot delete {target_role} users"
+            )
+    elif requester_role == 'manager':
+        # managers can only delete executives under their management
+        if target_role != 'executive':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Managers can only delete executives"
+            )
+        if user_to_delete.reporting_manager_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Can only delete executives reporting to you"
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to delete users"
+        )
+    
+    # Delete user from Supabase Auth if exists
+    if user_to_delete.supabase_uuid:
+        try:
+            supabase_auth_service.delete_user(user_to_delete.supabase_uuid)
+            logger.info(f"Deleted user {user_to_delete.email} from Supabase")
+        except Exception as e:
+            logger.warning(f"Failed to delete user from Supabase: {e}")
+            # Continue with database deletion even if Supabase fails
+    
+    # Soft delete or hard delete - using soft delete by setting is_active = False
+    user_to_delete.is_active = False
+    await db.commit()
+    
+    logger.info(f"User {user_to_delete.email} (id={user_id}) deleted by {current_user.email}")
+    
+    return {
+        "message": f"User {user_to_delete.email} deleted successfully",
+        "deleted_user_id": user_id,
+        "deleted_user_email": user_to_delete.email
+    }
