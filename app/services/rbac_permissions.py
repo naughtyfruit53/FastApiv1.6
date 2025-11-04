@@ -111,6 +111,7 @@ def get_default_role_permissions() -> dict[str, list[str]]:  # CHANGED Dict[str,
     
     return {
         "admin": all_permissions,  # Full access
+        "management": all_permissions,  # NEW: Added management with full access
         "manager": [
             p for p in all_permissions 
             if not p.startswith("admin_") 

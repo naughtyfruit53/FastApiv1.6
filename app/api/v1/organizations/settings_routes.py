@@ -20,7 +20,7 @@ router = APIRouter(prefix="/settings", tags=["organization-settings"])
 
 @router.get("/", response_model=OrganizationSettingsResponse)
 async def get_organization_settings(
-    auth: tuple = Depends(require_access("organization_settings", "read")),
+    auth: tuple = Depends(require_access("settings", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get organization settings for the current user's organization"""
@@ -54,10 +54,10 @@ async def get_organization_settings(
 @router.put("/", response_model=OrganizationSettingsResponse)
 async def update_organization_settings(
     settings_update: OrganizationSettingsUpdate,
-    auth: tuple = Depends(require_access("organization_settings", "update")),
+    auth: tuple = Depends(require_access("settings", "update")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update organization settings (requires organization_settings update permission)"""
+    """Update organization settings (requires settings update permission)"""
     current_user, org_id = auth
     result = await db.execute(select(OrganizationSettings).filter(
         OrganizationSettings.organization_id == org_id
@@ -82,10 +82,10 @@ async def update_organization_settings(
 @router.post("/", response_model=OrganizationSettingsResponse, status_code=status.HTTP_201_CREATED)
 async def create_organization_settings(
     settings_create: OrganizationSettingsCreate,
-    auth: tuple = Depends(require_access("organization_settings", "create")),
+    auth: tuple = Depends(require_access("settings", "create")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Create organization settings (requires organization_settings create permission)"""
+    """Create organization settings (requires settings create permission)"""
     current_user, org_id = auth
     result = await db.execute(select(OrganizationSettings).filter(
         OrganizationSettings.organization_id == settings_create.organization_id
@@ -108,7 +108,7 @@ async def create_organization_settings(
 @router.get("/tally/configuration", response_model=TallyConfig)
 async def get_tally_config(
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("organization_settings", "read"))
+    auth: tuple = Depends(require_access("settings", "read"))
 ):
     """Get Tally configuration for the organization"""
     current_user, org_id = auth
@@ -140,7 +140,7 @@ async def get_tally_config(
 async def update_tally_config(
     config: TallyConfig,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("organization_settings", "read"))
+    auth: tuple = Depends(require_access("settings", "update"))
 ):
     """Update Tally configuration for the organization"""
     current_user, org_id = auth
@@ -184,7 +184,7 @@ async def update_tally_config(
 async def test_tally_connection(
     config: TallyConnectionTest,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("organization_settings", "read"))
+    auth: tuple = Depends(require_access("settings", "read"))
 ):
     """Test Tally connection"""
     current_user, org_id = auth
@@ -196,7 +196,7 @@ async def test_tally_connection(
 async def sync_with_tally(
     sync_type: str,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("organization_settings", "read"))
+    auth: tuple = Depends(require_access("settings", "update"))
 ):
     """Initiate Tally sync"""
     current_user, org_id = auth

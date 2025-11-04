@@ -216,7 +216,7 @@ class UserRBACService:
             org = None
         
         # Handle based on role
-        if role in ["org_admin", "management", "super_admin"]:
+        if role in ["org_admin", "super_admin"]:
             # Full access to all enabled modules
             if org and org.enabled_modules:
                 user.assigned_modules = org.enabled_modules.copy()
@@ -229,6 +229,20 @@ class UserRBACService:
             user.reporting_manager_id = None
             
             logger.info(f"Granted full module access to {role} user {user_id}")
+        
+        elif role == "management":
+            # Use org.enabled_modules (respect entitlements)
+            if org and org.enabled_modules:
+                user.assigned_modules = org.enabled_modules.copy()
+            else:
+                from app.core.modules_registry import get_default_enabled_modules
+                user.assigned_modules = get_default_enabled_modules()
+            
+            # Clear submodule permissions (full access)
+            user.sub_module_permissions = None
+            user.reporting_manager_id = None
+            
+            logger.info(f"Granted entitled module access to management user {user_id}")
         
         elif role == "manager":
             # Require assigned modules
@@ -301,3 +315,45 @@ class UserRBACService:
         permissions["rbac_permissions"] = list(user_permissions)
         
         return permissions
+    
+    async def migrate_management_modules(self, org_id: int) -> int:
+        """
+        Migrate existing management users in an organization to have assigned_modules
+        matching the organization's enabled_modules.
+        
+        Args:
+            org_id: Organization ID to migrate
+        
+        Returns:
+            Number of users updated
+        """
+        # Get organization
+        org_result = await self.db.execute(
+            select(Organization).filter_by(id=org_id)
+        )
+        org = org_result.scalars().first()
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+        
+        # Get enabled modules
+        enabled_modules = org.enabled_modules or {}
+        
+        # Get all management users in org
+        users_result = await self.db.execute(
+            select(User).filter_by(organization_id=org_id, role="management")
+        )
+        management_users = users_result.scalars().all()
+        
+        updated_count = 0
+        for user in management_users:
+            # Only update if assigned_modules is None or empty
+            if not user.assigned_modules:
+                user.assigned_modules = enabled_modules.copy()
+                updated_count += 1
+                logger.info(f"Updated modules for management user {user.id} in org {org_id}")
+        
+        if updated_count > 0:
+            await self.db.commit()
+        
+        logger.info(f"Migrated {updated_count} management users in org {org_id}")
+        return updated_count

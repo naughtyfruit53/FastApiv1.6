@@ -8,8 +8,8 @@ from typing import List, Optional
 from datetime import datetime, date
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from app.models.entitlement_models import OrgEntitlement, OrgSubentitlement, EntitlementEvent
+# Import entitlement models to resolve relationships (moved outside TYPE_CHECKING for runtime)
+from app.models.entitlement_models import OrgEntitlement, OrgSubentitlement, EntitlementEvent
 
 # Platform User Model - For SaaS platform-level users (kept here, removed from base.py)
 class PlatformUser(Base):
@@ -98,7 +98,7 @@ class Organization(Base):
     date_format: Mapped[str] = mapped_column(String, default="DD/MM/YYYY")
     financial_year_start: Mapped[str] = mapped_column(String, default="04/01") # April 1st
 
-    # Module Access Control - Organization level module enablement
+    # Module Access Control - Organization level module enable/disable
     enabled_modules: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {
         # Core Business Modules
         "CRM": True,
@@ -425,18 +425,18 @@ class Organization(Base):
     )
 
     # Entitlement relationships
-    org_entitlements: Mapped[List["OrgEntitlement"]] = relationship(
-        "OrgEntitlement",
+    org_entitlements: Mapped[List[OrgEntitlement]] = relationship(
+        OrgEntitlement,
         back_populates="organization",
         cascade="all, delete-orphan"
     )
-    org_subentitlements: Mapped[List["OrgSubentitlement"]] = relationship(
-        "OrgSubentitlement",
+    org_subentitlements: Mapped[List[OrgSubentitlement]] = relationship(
+        OrgSubentitlement,
         back_populates="organization",
         cascade="all, delete-orphan"
     )
-    entitlement_events: Mapped[List["EntitlementEvent"]] = relationship(
-        "EntitlementEvent",
+    entitlement_events: Mapped[List[EntitlementEvent]] = relationship(
+        EntitlementEvent,
         back_populates="organization",
         cascade="all, delete-orphan"
     )
@@ -480,11 +480,11 @@ class User(Base):
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
     has_stock_access: Mapped[bool] = mapped_column(Boolean, default=True) # Module access for stock functionality
 
-    # Module Access Control - User level module assignments
+    # Module Access Control - User level module enablement
     assigned_modules: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {
         # Core Business Modules
         "CRM": True,
-        "ERP": True,
+        "ERP": True, 
         "HR": True,
         "Inventory": True,
         "Service": True,
@@ -507,7 +507,7 @@ class User(Base):
         "Integration": True,
         "AI_Analytics": True,
         "Streaming_Analytics": True,
-        "AB_Testing": True,
+        "AB_Test": True,
         "Website_Agent": True,
         "Email": True,
         "Calendar": True,
