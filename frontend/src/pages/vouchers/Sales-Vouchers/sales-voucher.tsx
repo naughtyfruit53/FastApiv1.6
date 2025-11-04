@@ -38,6 +38,7 @@ import { useVoucherPage } from '../../../hooks/useVoucherPage';
 import { getVoucherConfig, getVoucherStyles, calculateVoucherTotals } from '../../../utils/voucherUtils';
 import { getStock } from '../../../services/masterService';
 import { voucherService } from '../../../services/vouchersService';
+import { organizationService } from '../../../services/organizationService';
 import api from '../../../lib/api';
 import { useCompany } from "../../../context/CompanyContext";
 import { useGstValidation } from "../../../hooks/useGstValidation";
@@ -49,6 +50,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form"; // Added missing import for useWatch
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance"; // Added for customer balance display
 import { formatCurrency } from "../../../utils/currencyUtils";
+import Link from 'next/link';
 
 const SalesVoucherPage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
@@ -171,6 +173,26 @@ const SalesVoucherPage: React.FC = () => {
   const [conflictInfo, setConflictInfo] = useState<any>(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [pendingDate, setPendingDate] = useState<string | null>(null);
+
+  // Force invalidate and refetch company data on mount to ensure fresh state_code
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["currentCompany"] });
+    queryClient.refetchQueries({ queryKey: ["currentCompany"] });
+    queryClient.invalidateQueries({ queryKey: ["currentOrganization"] });
+    queryClient.refetchQueries({ queryKey: ["currentOrganization"] });
+  }, [queryClient]);
+
+  // Manual force fresh fetch on mount
+  useEffect(() => {
+    const forceFetch = async () => {
+      try {
+        await organizationService.getCurrentOrganization();
+      } catch (error) {
+        console.error('Failed to force fetch organization:', error);
+      }
+    };
+    forceFetch();
+  }, []);
 
   const handleToggleDescription = (checked: boolean) => {
     setDescriptionEnabled(checked);
@@ -451,7 +473,7 @@ const handleCancelConflict = () => {
     };
     
     fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
+  }, [watch, mode, setValue]);
 
   const onSubmit = (data: any) => {
     if (totalRoundOff !== 0) {
@@ -550,6 +572,11 @@ const handleCancelConflict = () => {
   const formContent = (
     <Box>
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
+      {!companyLoading && !company?.state_code && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Organization state code not set. Please set it in <Link href="/settings/company">Company Profile</Link> for accurate GST calculation.
+        </Alert>
+      )}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing={1}>
           <Grid size={6}>
@@ -593,7 +620,7 @@ const handleCancelConflict = () => {
               size="small" 
               options={enhancedCustomerOptions} 
               getOptionLabel={(option: any) => {
-                if (typeof option === 'number') return '';
+                if (typeof option === 'number') return "";
                 return option?.name || "";
               }} 
               value={customerList?.find((c: any) => c.id === watch("customer_id")) || null} 
@@ -807,7 +834,7 @@ const handleCancelConflict = () => {
       <AddCustomerModal open={showAddCustomerModal} onClose={() => setShowAddCustomerModal(false)} onAdd={(newCustomer) => { setValue("customer_id", newCustomer.id); refreshMasterData(); }} loading={addCustomerLoading} setLoading={setAddCustomerLoading} />
       <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
-      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Sales Voucher" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Voucher")} />
+      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Sales Voucher" onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Voucher")} onClose={() => {}} />
       <VoucherDateConflictModal
         open={showConflictModal}
         onClose={handleCancelConflict}

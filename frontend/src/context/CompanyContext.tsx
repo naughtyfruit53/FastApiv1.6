@@ -24,7 +24,6 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
   const enabled =
     !authLoading &&
     !!user &&
-    !!localStorage.getItem("token") &&
     router.pathname !== "/login";
 
   const [isCompanySetupNeeded, setIsCompanySetupNeeded] = useState(false);
@@ -53,6 +52,10 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
     enabled,
     retry: 3, // Retry up to 3 times on failure
     retryDelay: 1000, // 1 second delay between retries
+    refetchOnMount: 'always', // Always refetch on component mount
+    refetchOnWindowFocus: 'always', // Refetch on window focus
+    staleTime: 0, // Data is always stale
+    cacheTime: 0, // No caching
     onSuccess: (data) => {
       if (!data || (!data.state_code && !data.gst_number)) {
         setIsCompanySetupNeeded(true);

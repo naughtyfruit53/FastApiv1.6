@@ -106,7 +106,7 @@ export function getModuleBundles(moduleKey: string): string[] {
   const bundles: string[] = [];
   
   MODULE_BUNDLES.forEach((bundle) => {
-    if (bundle.key === moduleKey) { // Check against key
+    if (bundle.modules.includes(moduleKey)) {
       bundles.push(bundle.key);
     }
   });

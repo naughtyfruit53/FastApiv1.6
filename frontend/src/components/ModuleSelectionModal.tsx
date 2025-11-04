@@ -200,7 +200,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
                 <Box>
                   <Typography variant="body1">{bundle.displayName}</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {bundle.submodules.join(', ')}
+                    {bundle.modules.join(', ')}
                   </Typography>
                 </Box>
               }
