@@ -203,10 +203,20 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
         }
       });
     } catch (error: any) {
-      setGstUploadError(
-        error.response?.data?.detail ||
-          "Failed to fetch GST details. Please check GSTIN.",
-      );
+      let errorMessage = "Failed to fetch GST details. Please check GSTIN.";
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (data.message) {
+          errorMessage = data.message;
+        } else if (data.detail) {
+          errorMessage = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+        } else {
+          errorMessage = JSON.stringify(data);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setGstUploadError(errorMessage);
     } finally {
       setGstSearchLoading(false);
     }

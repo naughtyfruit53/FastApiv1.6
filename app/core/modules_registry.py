@@ -66,6 +66,10 @@ class ModuleName(str, Enum):
     VOUCHER = "voucher"
     STOCK = "stock"
     BOM = "bom"
+    GST = "gst"  # Added GST as a module
+    
+    # New module for user management
+    USER = "user"
 
 
 # Submodule definitions for each module (expanded to match menuConfig.tsx)
@@ -444,6 +448,10 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
     ModuleName.VOUCHER.value: [],
     ModuleName.STOCK.value: [],
     ModuleName.BOM.value: [],
+    ModuleName.GST.value: ["search", "verify"],  # Added GST module with submodules for search functionality
+    
+    # New for user management
+    ModuleName.USER.value: ["create", "read", "update", "delete"]
 }
 
 

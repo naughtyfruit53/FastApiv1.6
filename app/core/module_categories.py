@@ -40,7 +40,8 @@ CATEGORY_MODULE_MAP: Dict[str, List[str]] = {
         "order_book",
         "master_data",
         "product",
-        "vouchers"
+        "vouchers",
+        "gst"  # Added to include GST as part of ERP
     ],
     
     ProductCategory.MANUFACTURING: [
@@ -143,7 +144,7 @@ CATEGORY_DESCRIPTIONS: Dict[str, str] = {
 ALWAYS_ON_MODULES = ["email"]
 
 # RBAC-only modules (not controlled by entitlements, only by role permissions)
-RBAC_ONLY_MODULES = ["settings", "admin", "organization"]
+RBAC_ONLY_MODULES = ["settings", "admin", "organization", "user"]  # Added "user"
 
 
 def get_modules_for_category(category: str) -> List[str]:

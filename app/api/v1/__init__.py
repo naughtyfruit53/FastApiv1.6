@@ -563,4 +563,17 @@ def register_subrouters():
         logger.error(f"Failed to import/include purchase_order_router: {str(e)}\n{traceback.format_exc()}")
         raise
 
+    # GST Search API (NEW: Added to fix 404 on /gst/search/{gst_number})
+    try:
+        from .gst_search import router as gst_search_router
+        logger.debug("Imported gst_search_router")
+        api_v1_router.include_router(gst_search_router, tags=["GST Search"])
+        gst_search_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in gst_search_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered gst_search endpoints: {len(gst_search_routes)} routes")
+        for route_path in gst_search_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include gst_search_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
 register_subrouters()

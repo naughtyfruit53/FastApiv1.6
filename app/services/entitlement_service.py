@@ -21,6 +21,9 @@ from sqlalchemy import func  # Import for func.lower
 # Import modules_registry to get full list
 from app.core.modules_registry import get_all_modules
 
+# Import for RBAC-only check
+from app.core.module_categories import is_rbac_only_module
+
 logger = logging.getLogger(__name__)
 
 
@@ -459,6 +462,11 @@ class EntitlementService:
         
         logger.debug(f"Checking entitlement for org {org_id}, module: {normalized_module_key}, submodule: {normalized_submodule_key}")
         
+        # NEW: Bypass for RBAC-only modules
+        if is_rbac_only_module(normalized_module_key):
+            logger.debug(f"Bypassing entitlement check for RBAC-only module: {normalized_module_key}")
+            return True, 'enabled', None
+        
         # Get module (case-insensitive query using func.lower)
         module_result = await self.db.execute(
             select(Module).where(
@@ -550,7 +558,7 @@ class EntitlementService:
         for module_name, submodules in MODULE_SUBMODULES.items():
             normalized_module = module_name.lower()
             
-            # Check if module exists (case-insensitive)
+            # Check if module already exists (case-insensitive)
             module_result = await self.db.execute(
                 select(Module).where(func.lower(Module.module_key) == normalized_module)
             )
