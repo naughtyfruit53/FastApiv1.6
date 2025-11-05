@@ -47,6 +47,7 @@ import {
   Assignment as AssignmentIcon,
 } from "@mui/icons-material";
 import { formatCurrency } from "../../utils/currencyUtils";
+import { ProtectedPage } from "../../components/ProtectedPage";
 interface Account {
   id: number;
   name: string;
@@ -267,6 +268,7 @@ const AccountManagement: React.FC = () => {
     );
   }
   return (
+    <ProtectedPage moduleKey="sales" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Account Management
@@ -815,6 +817,7 @@ const AccountManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
 export default AccountManagement;

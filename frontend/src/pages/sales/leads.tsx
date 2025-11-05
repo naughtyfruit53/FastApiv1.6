@@ -61,6 +61,7 @@ import { crmService, Lead } from "../../services/crmService";
 import AddLeadModal from "../../components/AddLeadModal";
 import LeadsImportExportDropdown from "../../components/LeadsImportExportDropdown";
 import { formatCurrency } from "../../utils/currencyUtils";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface LeadActivity {
   id: number;
@@ -357,6 +358,7 @@ const LeadManagement: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="sales" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -886,6 +888,7 @@ const LeadManagement: React.FC = () => {
 </DialogActions>
 </Dialog>
 </Container>
+    </ProtectedPage>
   );
 };
 

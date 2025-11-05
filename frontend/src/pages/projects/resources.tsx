@@ -1,5 +1,6 @@
 // frontend/src/pages/projects/resources.tsx
 import React, { useState, useEffect } from "react";
+import { ProtectedPage } from "../../components/ProtectedPage";
 import {
   Box,
   Grid,
@@ -384,6 +385,7 @@ const ResourceManagementPage: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="projects" action="read">
     <Box sx={{ flexGrow: 1, p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom>
@@ -824,6 +826,8 @@ const ResourceManagementPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+  );
+    </ProtectedPage>
   );
 };
 

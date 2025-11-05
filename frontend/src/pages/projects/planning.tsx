@@ -39,6 +39,7 @@ import {
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useRouter } from "next/navigation";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 // Types
 interface ProjectPlan {
@@ -296,6 +297,7 @@ const ProjectPlanningPage: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="projects" action="read">
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ flexGrow: 1, p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -607,6 +609,7 @@ const ProjectPlanningPage: React.FC = () => {
         </Paper>
       </Box>
     </LocalizationProvider>
+    </ProtectedPage>
   );
 };
 

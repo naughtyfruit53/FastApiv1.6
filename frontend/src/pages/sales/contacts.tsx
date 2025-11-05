@@ -43,6 +43,7 @@ import {
   Phone as PhoneIcon,
 } from "@mui/icons-material";
 import AddContactModal from "@/components/AddContactModal";
+import { ProtectedPage } from "../../components/ProtectedPage";
 interface Contact {
   id: number;
   firstName: string;
@@ -182,6 +183,7 @@ const ContactManagement: React.FC = () => {
     );
   }
   return (
+    <ProtectedPage moduleKey="sales" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Contact Management
@@ -630,6 +632,7 @@ const ContactManagement: React.FC = () => {
         onSuccess={handleContactAdded}
       />
     </Container>
+    </ProtectedPage>
   );
 };
 export default ContactManagement;

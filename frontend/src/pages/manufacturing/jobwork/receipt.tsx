@@ -4,6 +4,7 @@ import { Inventory, CheckCircle, LocalShipping, Add, Visibility, Edit } from '@m
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/router';
 import api from '../../../lib/api';
+import { ProtectedPage } from '../../../components/ProtectedPage';
 
 const JobworkReceiptPage: React.FC = () => {
   const router = useRouter();
@@ -33,6 +34,7 @@ const JobworkReceiptPage: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="manufacturing" action="read">
     <Container maxWidth="xl">
       <Box sx={{ mt: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -196,6 +198,8 @@ const JobworkReceiptPage: React.FC = () => {
         </Card>
       </Box>
     </Container>
+  );
+    </ProtectedPage>
   );
 };
 
