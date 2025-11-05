@@ -32,6 +32,7 @@ import {
   Analytics as AnalyticsIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
+import { ProtectedPage } from "../../components/ProtectedPage";
 import {
   marketingService,
   Campaign,
@@ -363,6 +364,7 @@ export default function MarketingDashboard() {
     </TableContainer>
   );
   return (
+    <ProtectedPage moduleKey="marketing" action="read">
     <Box sx={{ p: 3 }}>
       <Box
         sx={{
@@ -562,5 +564,6 @@ export default function MarketingDashboard() {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 }

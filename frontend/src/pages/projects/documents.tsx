@@ -50,6 +50,7 @@ import {
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface ProjectDocument {
   id: number;
@@ -403,6 +404,7 @@ const ProjectDocumentsPage: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="projects" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -866,6 +868,7 @@ const ProjectDocumentsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
 

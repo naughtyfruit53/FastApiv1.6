@@ -35,6 +35,7 @@ import {
   Refresh,
 } from "@mui/icons-material";
 import { Bar, Line, Doughnut } from "react-chartjs-2";
+import { ProtectedPage } from "../../components/ProtectedPage";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -350,6 +351,7 @@ const ProjectAnalyticsPage: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="projects" action="read">
     <Box sx={{ flexGrow: 1, p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom>
@@ -694,6 +696,8 @@ const ProjectAnalyticsPage: React.FC = () => {
         </TabPanel>
       </Paper>
     </Box>
+  );
+  </ProtectedPage>
   );
 };
 

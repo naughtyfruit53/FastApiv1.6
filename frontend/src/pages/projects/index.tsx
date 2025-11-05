@@ -49,6 +49,7 @@ import {
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 // Types
 interface Project {
@@ -239,6 +240,7 @@ const ProjectsPage: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="projects" action="read">
     <Box sx={{ flexGrow: 1, p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom>
@@ -517,6 +519,8 @@ const ProjectsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+  );
+    </ProtectedPage>
   );
 };
 
