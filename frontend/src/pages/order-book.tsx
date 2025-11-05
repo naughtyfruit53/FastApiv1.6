@@ -27,6 +27,7 @@ import {
 import { Refresh, Download, Add, Edit, CheckCircle } from "@mui/icons-material";
 import axios from "axios";
 import { formatCurrency } from "../utils/currencyUtils";
+import { ProtectedPage } from "../components/ProtectedPage";
 
 interface Order {
   id: number;
@@ -141,7 +142,8 @@ const OrderBookPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <ProtectedPage moduleKey="sales" action="read">
+      <Box sx={{ p: 3 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
           Order Book Management
@@ -333,6 +335,7 @@ const OrderBookPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 };
 

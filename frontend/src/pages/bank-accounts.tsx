@@ -33,6 +33,7 @@ import {
 } from "@mui/icons-material";
 import axios from "axios";
 import BankAccountModal from "../components/BankAccountModal"; // Import BankAccountModal
+import { ProtectedPage } from "../components/ProtectedPage";
 
 interface ChartAccount {
   id: number;
@@ -123,7 +124,8 @@ const BankAccounts: React.FC = () => {
   const activeAccounts = bankAccounts.filter((acc) => acc.is_active).length;
   const defaultAccount = bankAccounts.find((acc) => acc.is_default);
   return (
-    <Box sx={{ p: 3 }}>
+    <ProtectedPage moduleKey="finance" action="read">
+      <Box sx={{ p: 3 }}>
       {/* Header */}
       <Box
         display="flex"
@@ -385,6 +387,7 @@ const BankAccounts: React.FC = () => {
         mode="view"
       />
     </Box>
+    </ProtectedPage>
   );
 };
 export default BankAccounts;

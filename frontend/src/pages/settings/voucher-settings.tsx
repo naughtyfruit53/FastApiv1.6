@@ -33,6 +33,7 @@ import {
 import DashboardLayout from '../../components/DashboardLayout';
 import api from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface VoucherSettings {
   voucher_prefix: string;
@@ -183,10 +184,11 @@ const VoucherSettingsPage: React.FC = () => {
   }
 
   return (
-    <DashboardLayout 
-      title="Voucher Settings" 
-      subtitle="Configure voucher numbering and formatting"
-    >
+    <ProtectedPage moduleKey="settings" action="write">
+      <DashboardLayout 
+        title="Voucher Settings" 
+        subtitle="Configure voucher numbering and formatting"
+      >
       <Box sx={{ p: 3 }}>
         <Grid container spacing={3}>
           {/* Voucher Prefix Settings - org_admin only */}
@@ -589,6 +591,7 @@ const VoucherSettingsPage: React.FC = () => {
         </Snackbar>
       </Box>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
 
