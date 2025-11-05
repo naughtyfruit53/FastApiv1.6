@@ -14,6 +14,7 @@ import adminService from "../../services/adminService";
 import MetricCard from "../../components/MetricCard";
 import DashboardLayout from "../../components/DashboardLayout";
 import ModernLoading from "../../components/ModernLoading";
+import { ProtectedPage } from "../../components/ProtectedPage";
 interface AppStatistics {
   total_licenses_issued: number;
   active_organizations: number;
@@ -204,10 +205,14 @@ const AppSuperAdminDashboard: React.FC = () => {
         )
       : 0;
   return (
-    <DashboardLayout
-      title="Super Admin Dashboard"
-      subtitle="Monitor platform-wide metrics and system health"
+    <ProtectedPage
+      customCheck={(pc) => pc.isSuperAdmin()}
+      accessDeniedMessage="This dashboard is only accessible to super administrators."
     >
+      <DashboardLayout
+        title="Super Admin Dashboard"
+        subtitle="Monitor platform-wide metrics and system health"
+      >
       <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
         {statsCards.map((stat, index) => (
           <MetricCard
@@ -342,6 +347,7 @@ const AppSuperAdminDashboard: React.FC = () => {
         </Box>
       </Paper>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
 export default AppSuperAdminDashboard;

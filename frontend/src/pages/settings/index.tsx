@@ -3,12 +3,14 @@
 import React from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const SettingsPage = () => {
   const router = useRouter();
 
   return (
-    <Box sx={{ p: 4 }}>
+    <ProtectedPage moduleKey="settings" action="read">
+      <Box sx={{ p: 4 }}>
       <Typography variant="h4" sx={{ mb: 4 }}>
         Settings Dashboard
       </Typography>
@@ -98,6 +100,7 @@ const SettingsPage = () => {
         </Box>
       </Box>
     </Box>
+    </ProtectedPage>
   );
 };
 
