@@ -43,6 +43,7 @@ import streamingAnalyticsService, {
   AlertStatus,
   DashboardData,
 } from '../../services/streamingAnalyticsService';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const StreamingDashboard: React.FC = () => {
   const router = useRouter();
@@ -191,6 +192,7 @@ const StreamingDashboard: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="analytics" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Box>
@@ -465,6 +467,7 @@ const StreamingDashboard: React.FC = () => {
         </Grid>
       </Grid>
     </Container>
+    </ProtectedPage>
   );
 };
 

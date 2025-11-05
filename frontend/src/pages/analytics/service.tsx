@@ -9,6 +9,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import ServiceAnalyticsDashboard from "../../components/ServiceAnalytics/ServiceAnalyticsDashboard";
 import { rbacService, SERVICE_PERMISSIONS } from "../../services/rbacService";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 const ServiceAnalyticsPage: NextPage = () => {
   const { user } = useAuth();
@@ -26,19 +27,13 @@ const ServiceAnalyticsPage: NextPage = () => {
     SERVICE_PERMISSIONS.SERVICE_REPORTS_READ,
   );
 
-  if (!user || !hasServiceReportsPermission) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          Access Denied: You don&apos;t have permission to view service
-          analytics. Contact your administrator to request the &quot;Service
-          Reports Read&quot; permission.
-        </Alert>
-      </Container>
-    );
-  }
-
   return (
+    <ProtectedPage 
+      moduleKey="analytics" 
+      action="read"
+      customCheck={(pc) => hasServiceReportsPermission}
+      accessDeniedMessage="You don't have permission to view service analytics. Contact your administrator to request the 'Service Reports Read' permission."
+    >
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -58,6 +53,7 @@ const ServiceAnalyticsPage: NextPage = () => {
 
       <ServiceAnalyticsDashboard />
     </Container>
+    </ProtectedPage>
   );
 };
 
