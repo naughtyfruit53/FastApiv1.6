@@ -43,6 +43,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../lib/api';
 import { getProducts, getCustomers } from '../../../services/masterService';
+import { ProtectedPage } from '../../../components/ProtectedPage';
 
 const OutwardJobworkPage: React.FC = () => {
   const [addDialog, setAddDialog] = useState(false);
@@ -169,6 +170,7 @@ const OutwardJobworkPage: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="manufacturing" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Box
@@ -664,6 +666,8 @@ const OutwardJobworkPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+  );
+    </ProtectedPage>
   );
 };
 
