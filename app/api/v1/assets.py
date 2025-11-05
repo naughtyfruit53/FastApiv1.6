@@ -189,9 +189,11 @@ async def get_assets(
     status: Optional[AssetStatus] = None,
     location: Optional[str] = None,
     department: Optional[str] = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "read")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     query = db.query(Asset).filter(
         Asset.organization_id == org_id
     )
@@ -211,9 +213,11 @@ async def get_assets(
 @router.post("/assets/", response_model=AssetResponse)
 async def create_asset(
     asset_data: AssetCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "create")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     # Check if asset code already exists
     existing_asset = db.query(Asset).filter(
         Asset.organization_id == org_id,
@@ -241,9 +245,11 @@ async def create_asset(
 @router.get("/assets/{asset_id}", response_model=AssetResponse)
 async def get_asset(
     asset_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "read")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     asset = db.query(Asset).filter(
         Asset.id == asset_id,
         Asset.organization_id == org_id
@@ -258,9 +264,11 @@ async def get_asset(
 async def update_asset(
     asset_id: int,
     asset_data: AssetUpdate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "update")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     asset = db.query(Asset).filter(
         Asset.id == asset_id,
         Asset.organization_id == org_id
@@ -280,9 +288,11 @@ async def update_asset(
 @router.delete("/assets/{asset_id}")
 async def delete_asset(
     asset_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "delete")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     asset = db.query(Asset).filter(
         Asset.id == asset_id,
         Asset.organization_id == org_id
@@ -299,9 +309,11 @@ async def delete_asset(
 # Asset Categories
 @router.get("/assets/categories/")
 async def get_asset_categories(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "read")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     categories = db.query(Asset.category).filter(
         Asset.organization_id == org_id
     ).distinct().all()
@@ -316,9 +328,11 @@ async def get_maintenance_schedules(
     asset_id: Optional[int] = None,
     maintenance_type: Optional[MaintenanceType] = None,
     is_active: Optional[bool] = True,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "read")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     query = db.query(MaintenanceSchedule).filter(
         MaintenanceSchedule.organization_id == org_id
     )
@@ -336,9 +350,11 @@ async def get_maintenance_schedules(
 @router.post("/maintenance-schedules/", response_model=MaintenanceScheduleResponse)
 async def create_maintenance_schedule(
     schedule_data: MaintenanceScheduleCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "create")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     # Verify asset exists
     asset = db.query(Asset).filter(
         Asset.id == schedule_data.asset_id,
@@ -380,9 +396,11 @@ async def create_maintenance_schedule(
 @router.get("/maintenance-schedules/due/", response_model=List[MaintenanceScheduleResponse])
 async def get_due_maintenance(
     days_ahead: int = 30,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "read")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     due_date = datetime.now() + timedelta(days=days_ahead)
     
     schedules = db.query(MaintenanceSchedule).filter(
@@ -401,9 +419,11 @@ async def get_maintenance_records(
     asset_id: Optional[int] = None,
     maintenance_type: Optional[MaintenanceType] = None,
     status: Optional[MaintenanceStatus] = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "read")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     query = db.query(MaintenanceRecord).filter(
         MaintenanceRecord.organization_id == org_id
     )
@@ -421,9 +441,11 @@ async def get_maintenance_records(
 @router.post("/maintenance-records/", response_model=MaintenanceRecordResponse)
 async def create_maintenance_record(
     record_data: MaintenanceRecordCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "create")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     # Verify asset exists
     asset = db.query(Asset).filter(
         Asset.id == record_data.asset_id,
@@ -476,9 +498,11 @@ async def complete_maintenance_record(
     actual_end_date: Optional[datetime] = None,
     work_performed: Optional[str] = None,
     findings: Optional[str] = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "update")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     record = db.query(MaintenanceRecord).filter(
         MaintenanceRecord.id == record_id,
         MaintenanceRecord.organization_id == org_id
@@ -525,9 +549,11 @@ async def complete_maintenance_record(
 async def get_asset_depreciation(
     asset_id: int,
     year: Optional[int] = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "read")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     asset = db.query(Asset).filter(
         Asset.id == asset_id,
         Asset.organization_id == org_id
@@ -551,9 +577,11 @@ async def get_asset_depreciation(
 async def calculate_depreciation(
     asset_id: int,
     year: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "create")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     asset = db.query(Asset).filter(
         Asset.id == asset_id,
         Asset.organization_id == org_id
@@ -620,9 +648,11 @@ async def calculate_depreciation(
 # Asset Dashboard
 @router.get("/assets/dashboard/summary")
 async def get_asset_dashboard_summary(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("asset", "read")),
+    db: Session = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     # Total assets by status
     total_assets = db.query(Asset).filter(
         Asset.organization_id == org_id

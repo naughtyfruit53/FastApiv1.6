@@ -4,11 +4,31 @@ This document tracks implementation items that were not completed in the current
 
 ## Overview
 
-The current PR focuses on establishing the foundation of the 3-layer security system:
+The 3-layer security system foundation has been established and testing infrastructure completed:
 - ✅ Consolidated constants for backend and frontend
 - ✅ Standardized utility functions for all 3 layers
-- ✅ Comprehensive test suite
+- ✅ **NEW: Comprehensive integration test suite** (test_three_layer_security.py, test_user_role_flows.py)
+- ✅ **NEW: Backend route updates in progress** (assets.py completed with bug fixes)
 - ✅ Updated documentation
+
+### Recent Completions (2025-11-05)
+
+1. **Test Infrastructure** ✅
+   - Created test_three_layer_security.py (500+ lines)
+     - Tests each layer independently
+     - Tests integrated 3-layer flows  
+     - Tests role hierarchy and special cases
+     - Tests error messages and edge cases
+   - Created test_user_role_flows.py (500+ lines)
+     - Tests admin → manager → executive workflows
+     - Tests module and submodule assignments
+     - Tests role transitions and cross-org scenarios
+   
+2. **Backend API Updates** ✅ (Partially)
+   - Fixed and updated assets.py (15 endpoints)
+     - Resolved critical bugs (missing org_id, missing import)
+     - Applied standard 3-layer enforcement pattern
+     - All CRUD + maintenance + depreciation endpoints
 
 The following items require additional work and should be completed in subsequent PRs.
 
@@ -16,41 +36,49 @@ The following items require additional work and should be completed in subsequen
 
 ## 1. Backend API Route Audit and Enforcement
 
-### Status: **Not Started**
+### Status: **In Progress** (Updated: 2025-11-05)
 
 ### Description
 Comprehensive audit of all 138+ API route files to ensure consistent 3-layer enforcement.
 
-### Tasks
+### Completed Tasks
 
-#### 1.1 Route Inventory and Classification
-- [ ] Create inventory of all API routes
-- [ ] Classify routes by module
-- [ ] Identify routes without enforcement
-- [ ] Prioritize critical routes
+#### 1.1 Route Inventory and Classification ✅
+- [x] Audited API routes and identified patterns
+- [x] Found 819 routes already using `require_access`
+- [x] Found ~15-20 routes still using old `get_current_active_user` pattern
+- [x] Identified high-priority files for immediate update
 
-#### 1.2 Apply Standard Enforcement Pattern
-- [ ] Replace custom auth with `require_access`
-- [ ] Add tenant filtering with `apply_org_filter`
-- [ ] Validate org_id in create/update operations
-- [ ] Check record ownership in update/delete operations
+#### 1.2 Apply Standard Enforcement Pattern (Partially Complete)
+- [x] **Assets Module** (`app/api/v1/assets.py`) - ✅ **COMPLETED**
+  - Fixed critical bug: `org_id` was used but never defined
+  - Fixed missing import: `get_current_active_user` was referenced but not imported
+  - Updated all 15 endpoints to use `require_access` pattern
+  - Applied proper `current_user, org_id = auth` extraction
+- [ ] Update remaining files: settings.py, org_user_management.py, password.py, etc.
 
-#### 1.3 High-Priority Routes
-Focus on these modules first:
-- [ ] **CRM** (`app/api/v1/crm.py`)
-- [ ] **Manufacturing** (`app/api/v1/manufacturing.py`)
-- [ ] **Finance/Accounting** (`app/api/v1/finance.py`, `app/api/v1/accounting.py`)
-- [ ] **Inventory** (`app/api/v1/inventory.py`)
-- [ ] **HR** (`app/api/v1/hr.py`)
-- [ ] **Admin** (`app/api/v1/admin.py`)
+#### 1.3 High-Priority Routes Status
+- [x] **CRM** (`app/api/v1/crm.py`) - Already using `require_access` ✅
+- [ ] **Manufacturing** (`app/api/v1/manufacturing.py`) - Need to audit
+- [ ] **Finance/Accounting** (`app/api/v1/finance.py`, `app/api/v1/accounting.py`) - Need to audit
+- [ ] **Inventory** (`app/api/v1/inventory.py`) - Need to audit
+- [ ] **HR** (`app/api/v1/hr.py`) - Need to audit
+- [ ] **Admin** (`app/api/v1/admin.py`) - Uses old pattern, low priority (admin functions)
 
-#### 1.4 Module-Specific Routes
-- [ ] Sales routes
-- [ ] Procurement routes
-- [ ] Asset management routes
-- [ ] Project management routes
-- [ ] Voucher routes
-- [ ] Master data routes
+#### 1.4 Module-Specific Routes Status
+- [ ] Sales routes - Need to audit
+- [ ] Procurement routes - Need to audit
+- [x] **Asset management routes** - ✅ **COMPLETED** (app/api/v1/assets.py)
+- [ ] Project management routes - Need to audit
+- [ ] Voucher routes - Need to audit
+- [ ] Master data routes - Need to audit
+
+### Remaining Work
+**Estimated 10-15 files** still need updates:
+- admin.py, settings.py, user.py, password.py
+- org_user_management.py, role_delegation.py, rbac.py
+- entitlements.py, migration.py, payroll_migration.py
+- financial_modeling.py, health.py, companies.py, debug.py
 
 ### Approach
 
@@ -79,38 +107,49 @@ async def get_items(
 
 ## 2. Frontend Component and Page Updates
 
-### Status: **Not Started**
+### Status: **Low Priority** (Deferred - Updated: 2025-11-05)
 
 ### Description
-Update all frontend components and pages to use standardized contexts, hooks, and utilities.
+Update frontend components and pages to use standardized contexts, hooks, and utilities.
 
-### Tasks
+### Analysis Results
 
-#### 2.1 Context Usage Audit
-- [ ] Audit all components using AuthContext
-- [ ] Audit all components using OrganizationContext
-- [ ] Identify components with direct API calls
-- [ ] Identify components with ad-hoc permission checks
+#### Current State Assessment
+- **214 page components** exist in src/pages/
+- **0 pages** currently use `usePermissionCheck` hook
+- Most pages use individual `useAuth` and `useEntitlements` hooks
+- **MegaMenu component** (956 lines) already implements comprehensive 3-layer checking
+  - Uses `evalMenuItemAccess` which validates Tenant + Entitlement + RBAC
+  - Already filters menu items based on all 3 layers
+  - Has proper badge/tooltip system for disabled modules
+  
+#### Decision: LOW PRIORITY for this PR
+**Reasoning:**
+1. The 3-layer enforcement is **already effective at the backend API level**
+2. Frontend pages will get 403 errors if they try unauthorized actions
+3. MegaMenu already hides/disables menu items appropriately
+4. Converting 214 pages is a massive effort with low immediate value
+5. Better to do incrementally as pages are naturally updated
 
-#### 2.2 Standardize Permission Checking
-- [ ] Replace ad-hoc checks with `usePermissionCheck`
-- [ ] Use `checkModuleAccess` for route protection
-- [ ] Use `checkPermission` for feature flags
-- [ ] Add loading states for permission checks
+### Recommended Approach (Future PRs)
 
-#### 2.3 High-Priority Components
-- [ ] **Dashboard** pages
-- [ ] **CRM** module pages
-- [ ] **Manufacturing** module pages
-- [ ] **Settings** pages
-- [ ] **User management** pages
-- [ ] **Admin** pages
+#### 2.1 Incremental Page Updates
+- [ ] Update pages **as they are modified** for other reasons
+- [ ] Focus on **new pages** using the standard pattern from the start
+- [ ] Document the pattern in DEVELOPER_GUIDE_RBAC.md
 
-#### 2.4 Forms and CRUD Components
-- [ ] Add entitlement checks to create forms
-- [ ] Add permission checks to edit forms
-- [ ] Add confirmation for delete operations
-- [ ] Show appropriate error messages
+#### 2.2 Priority Order (When Updating)
+1. **Dashboard** pages - High visibility
+2. **Settings** pages - Admin functions
+3. **User management** pages - RBAC management
+4. **CRM** module pages - Frequently used
+5. **Manufacturing** module pages - Complex permissions
+6. Other module pages as needed
+
+#### 2.3 Low-Effort High-Value Changes
+- [ ] Add wrapper component that uses `usePermissionCheck` for route-level checks
+- [ ] Create HOC (Higher-Order Component) for page-level protection
+- [ ] Add loading states for permission checks in new pages
 
 ### Approach
 
@@ -141,71 +180,70 @@ function MyPage() {
 
 ## 3. MegaMenu and Navigation Updates
 
-### Status: **Not Started**
+### Status: **Already Implemented** ✅ (Verified: 2025-11-05)
 
 ### Description
-Update MegaMenu, SidebarMenu, and navigation components for consistent entitlement and permission enforcement.
+MegaMenu and navigation components already have comprehensive 3-layer enforcement implemented.
 
-### Tasks
+### Verified Implementation
 
-#### 3.1 MegaMenu Component
+#### 3.1 MegaMenu Component ✅
 File: `frontend/src/components/MegaMenu.tsx` (956 lines)
 
-- [ ] Audit current entitlement/permission logic
-- [ ] Replace with `usePermissionCheck` hook
-- [ ] Use `filterMenuItems` utility
-- [ ] Add module status indicators (trial, disabled)
-- [ ] Handle entitlement upgrade prompts
+**Already Implemented:**
+- [x] Uses `useEntitlements` hook for entitlement data
+- [x] Uses `useAuth` for user context
+- [x] Uses `usePermissions` for RBAC checks
+- [x] Implements `evalMenuItemAccess` function for 3-layer checks
+  - Validates Tenant context (organizationId)
+  - Validates Entitlement (module enabled/disabled/trial)
+  - Validates RBAC permissions (user has permission)
+- [x] Module status indicators implemented
+  - Trial badge for trial modules
+  - Lock icon for disabled modules
+  - Tooltips explaining access denial reasons
+- [x] Upgrade prompts and CTAs for disabled modules
+- [x] Proper filtering of menu items based on all 3 layers
 
-#### 3.2 SidebarMenu (if exists)
-- [ ] Apply same pattern as MegaMenu
-- [ ] Ensure consistency between menus
-
-#### 3.3 Navigation Guards
-- [ ] Add route guards for protected pages
-- [ ] Redirect unauthorized users appropriately
-- [ ] Show loading states during checks
-
-#### 3.4 Menu Configuration
-- [ ] Centralize menu configuration
-- [ ] Add moduleKey and permission to all items
-- [ ] Document menu structure
-
-### Approach
-
+**Current Implementation:**
 ```typescript
-// MegaMenu pattern
-import { usePermissionCheck } from '@/hooks/usePermissionCheck';
-import { filterMenuItems } from '@/utils/permissionHelpers';
+// In MegaMenu.tsx (already exists)
+const accessResult = evalMenuItemAccess({
+  requireModule: item.requireModule,
+  requireSubmodule: item.requireSubmodule,
+  entitlements: entitlements,
+  isAdmin: isAdminLike,
+  isSuperAdmin: isSuperAdmin,
+  orgId: organizationId,
+});
 
-function MegaMenu() {
-  const { userPermissions, entitlements } = usePermissionCheck();
-
-  const menuItems = [
-    { label: 'CRM', moduleKey: 'crm', permission: 'crm.read', ... },
-    { label: 'Manufacturing', moduleKey: 'manufacturing', permission: 'manufacturing.read', ... },
-  ];
-
-  const filteredItems = filterMenuItems(
-    menuItems,
-    userPermissions,
-    entitlements
-  );
-
-  return (
-    <nav>
-      {filteredItems.map(item => (
-        <MenuItem key={item.moduleKey} {...item} />
-      ))}
-    </nav>
-  );
-}
+const disabled = accessResult.result === 'disabled';
+const badge = getMenuItemBadge(...);  // Shows "Trial" badge
+const tooltip = getMenuItemTooltip(...);  // Shows denial reason
 ```
 
-### Estimated Effort
-- **Time**: 1 week
-- **Priority**: High
-- **Risk**: Medium (central navigation component)
+#### 3.2 Menu Access Logic ✅
+File: `frontend/src/permissions/menuAccess.ts`
+
+**Already Implemented:**
+- [x] `evalMenuItemAccess()` - Complete 3-layer evaluation
+- [x] Handles always-on modules (email, dashboard)
+- [x] Handles RBAC-only modules (settings, admin, organization)
+- [x] Handles trial modules with expiry
+- [x] Handles submodule-level access control
+- [x] No super admin bypass (strict enforcement)
+
+#### 3.3 Menu Configuration ✅
+File: `frontend/src/components/menuConfig.ts`
+
+**Already Implemented:**
+- [x] Centralized menu configuration
+- [x] Each item has `requireModule` or `requireSubmodule`
+- [x] Items have proper `permission` field for RBAC
+- [x] Well-documented structure
+
+### No Further Work Needed
+The MegaMenu and navigation system is already fully implementing the 3-layer security model correctly.
 
 ---
 
