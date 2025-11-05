@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../lib/api";
 import { getProducts } from "../../../services/masterService";
 import { generateStandalonePDF } from "../../../utils/pdfUtils";
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface MaterialReceiptItem {
   product_id: number;
   quantity: number;
@@ -317,7 +318,8 @@ export default function MaterialReceiptVoucher() {
 
     if (isLoading) {
     return (
-      <Container>
+      <ProtectedPage moduleKey="manufacturing" action="write">
+        <Container>
         <Box
           display="flex"
           justifyContent="center"
@@ -327,10 +329,12 @@ export default function MaterialReceiptVoucher() {
           <CircularProgress />
         </Box>
       </Container>
+      </ProtectedPage>
     );
   }
   return (
-    <Container maxWidth="xl">
+    <ProtectedPage moduleKey="manufacturing" action="write">
+       maxWidth="xl">
       <Typography variant="h4" component="h1" gutterBottom>
         Material Receipt Vouchers
       </Typography>

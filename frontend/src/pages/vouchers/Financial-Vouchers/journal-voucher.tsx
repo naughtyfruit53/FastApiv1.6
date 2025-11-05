@@ -29,6 +29,8 @@ import {
   getVoucherStyles,
   parseRateField,
 } from "../../../utils/voucherUtils";
+import { ProtectedPage } from '../../../components/ProtectedPage';
+
 const JournalVoucher: React.FC = () => {
   const config = getVoucherConfig("journal-voucher");
   const voucherStyles = getVoucherStyles();
@@ -457,20 +459,22 @@ const JournalVoucher: React.FC = () => {
 
     if (isLoading) {
     return (
-      <Container>
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="400px"
-        >
-          <CircularProgress />
-        </Box>
-      </Container>
+      <ProtectedPage moduleKey="finance" action="write">
+        <Container>
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            minHeight="400px"
+          >
+            <CircularProgress />
+          </Box>
+        </Container>
+      </ProtectedPage>
     );
   }
   return (
-    <>
+    <ProtectedPage moduleKey="finance" action="write">
       <VoucherLayout
         voucherType="Journal Vouchers"
         voucherTitle="Journal Voucher"
@@ -521,7 +525,7 @@ const JournalVoucher: React.FC = () => {
         onProceedAnyway={handleProceedAnyway}
         voucherType="Journal Voucher"
       />
-    </>
+    </ProtectedPage>
   );
 };
 export default JournalVoucher;

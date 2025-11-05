@@ -40,6 +40,7 @@ import LocationOn from "@mui/icons-material/LocationOn";
 import { useQuery } from "@tanstack/react-query";
 import VoucherLayout from "../../../components/VoucherLayout";
 import { dispatchService } from "../../../services/dispatchService";
+import { ProtectedPage } from '../../../components/ProtectedPage';
 const DispatchDetailsPage: React.FC = () => {
   const [selectedDispatch, setSelectedDispatch] = useState<any>(null);
   
@@ -98,7 +99,8 @@ const DispatchDetailsPage: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
   return (
-    <VoucherLayout
+    <ProtectedPage moduleKey="finance" action="write">
+      
       title="Dispatch Details"
       description="View and track dispatch dispatch order details and delivery status"
     >

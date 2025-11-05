@@ -11,6 +11,7 @@ import {
 import { Engineering, Inventory, Assignment, Build } from "@mui/icons-material";
 import { useRouter } from "next/router";
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 const WorkOrder: React.FC = () => {
   const router = useRouter();
 
@@ -42,7 +43,8 @@ const WorkOrder: React.FC = () => {
   ];
 
   return (
-    <Container maxWidth="lg">
+    <ProtectedPage moduleKey="manufacturing" action="write">
+       maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Typography variant="h4" gutterBottom>
           Work Order Management
@@ -118,7 +120,7 @@ const WorkOrder: React.FC = () => {
         </Box>
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default WorkOrder;

@@ -51,6 +51,7 @@ import { formatCurrency } from "../../../utils/currencyUtils";
 import Link from 'next/link';
 import { organizationService } from '../../../services/organizationService';
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 const PurchaseVoucherPage: React.FC = () => {
   console.count('Render: PurchaseVoucherPage');
   const { company, isLoading: companyLoading, error: companyError, refetch: refetchCompany } = useCompany();
@@ -900,7 +901,8 @@ const PurchaseVoucherPage: React.FC = () => {
 
   if (isLoading || companyLoading || refetchLoading) {
     return (
-      <Container>
+      <ProtectedPage moduleKey="procurement" action="write">
+      >
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>

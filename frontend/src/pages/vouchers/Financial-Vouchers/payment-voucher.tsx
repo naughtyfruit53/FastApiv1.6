@@ -33,6 +33,7 @@ import { useReferenceOptions } from '../../../utils/nameRefUtils';
 import { getEntityBalance, getVoucherBalance } from '../../../services/ledgerService';
 import financialVoucherStyles from "../../../styles/financialVoucherStyles";
 import { formatCurrency } from "../../../utils/currencyUtils";
+import { ProtectedPage } from '../../../components/ProtectedPage';
 
 const PaymentVoucher: React.FC = () => {
   const config = getVoucherConfig('payment-voucher');
@@ -447,16 +448,18 @@ const PaymentVoucher: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
-        </Box>
-      </Container>
+      <ProtectedPage moduleKey="finance" action="write">
+        <Container>
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+            <CircularProgress />
+          </Box>
+        </Container>
+      </ProtectedPage>
     );
   }
 
   return (
-    <>
+    <ProtectedPage moduleKey="finance" action="write">
       <VoucherLayout
         voucherType="Payment Vouchers"
         voucherTitle="Payment Voucher"
@@ -497,7 +500,7 @@ const PaymentVoucher: React.FC = () => {
         onProceedAnyway={handleProceedAnyway}
         voucherType="Payment Voucher"
       />
-    </>
+    </ProtectedPage>
   );
 };
 
