@@ -19,6 +19,7 @@ from pydantic import BaseModel, EmailStr, Field
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.models.user_models import User
+from app.models.audit_log import AuditLog
 from app.schemas.user import UserRole, UserInDB, UserCreate
 from app.services.org_role_service import OrgRoleService
 from app.core.security import get_password_hash
@@ -210,6 +211,32 @@ async def create_org_user(
                 manager_id=user_data.reporting_manager_id,
                 assigned_by_id=current_user.id
             )
+        
+        # Log to audit log (in separate try-catch to not block user creation)
+        try:
+            audit_log = AuditLog(
+                organization_id=org_id,
+                entity_type="user",
+                entity_id=db_user.id,
+                entity_name=db_user.full_name or db_user.email,
+                action="create",
+                action_description=f"User {db_user.email} (role: {db_user.role}) created by {current_user.email}",
+                user_id=current_user.id,
+                user_email=current_user.email,
+                status="success",
+                metadata={
+                    "created_user_id": db_user.id,
+                    "created_user_email": db_user.email,
+                    "created_user_role": db_user.role,
+                    "created_by_role": current_user.role
+                }
+            )
+            db.add(audit_log)
+            await db.commit()
+        except Exception as e:
+            # Audit log failure should not block user creation
+            logger.error(f"Failed to log audit: {e}")
+            await db.rollback()  # Rollback audit log only
         
         logger.info(f"User {user_data.email} created with role {user_data.role.value}")
         return db_user
@@ -445,3 +472,139 @@ async def get_managers(
     )
     
     return result.scalars().all()
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete a user from the organization.
+    
+    Rules:
+    - org_admin can delete any user except themselves
+    - management can delete managers and executives
+    - managers can delete executives under their management
+    - Cannot delete super_admin users
+    """
+    if not current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current user must belong to an organization"
+        )
+    
+    org_id = current_user.organization_id
+    
+    # Prevent self-deletion
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own account"
+        )
+    
+    # Get user to delete
+    result = await db.execute(
+        select(User).where(
+            User.id == user_id,
+            User.organization_id == current_user.organization_id
+        )
+    )
+    user_to_delete = result.scalar_one_or_none()
+    
+    if not user_to_delete:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Prevent deletion of super_admin
+    if user_to_delete.is_super_admin or user_to_delete.role == 'super_admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot delete super admin users"
+        )
+    
+    # Check permissions based on current user role
+    requester_role = current_user.role.lower()
+    target_role = user_to_delete.role.lower()
+    
+    if requester_role == 'org_admin':
+        # org_admin can delete anyone except themselves and super_admin (already checked)
+        pass
+    elif requester_role == 'management':
+        # management can delete managers and executives
+        if target_role not in ['manager', 'executive']:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Management users cannot delete {target_role} users"
+            )
+    elif requester_role == 'manager':
+        # managers can only delete executives under their management
+        if target_role != 'executive':
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Managers can only delete executives"
+            )
+        if user_to_delete.reporting_manager_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Can only delete executives reporting to you"
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to delete users"
+        )
+    
+    # Delete user from Supabase Auth if exists
+    if user_to_delete.supabase_uuid:
+        try:
+            supabase_auth_service.delete_user(user_to_delete.supabase_uuid)
+            logger.info(f"Deleted user {user_to_delete.email} from Supabase")
+        except Exception as e:
+            logger.warning(f"Failed to delete user from Supabase: {e}")
+            # Continue with database deletion even if Supabase fails
+    
+    # Soft delete or hard delete - using soft delete by setting is_active = False
+    user_to_delete.is_active = False
+    
+    # Log to audit log (add before commit to ensure consistency)
+    audit_log = AuditLog(
+        organization_id=org_id,
+        entity_type="user",
+        entity_id=user_id,
+        entity_name=user_to_delete.full_name or user_to_delete.email,
+        action="delete",
+        action_description=f"User {user_to_delete.email} (role: {user_to_delete.role}) deleted by {current_user.email}",
+        user_id=current_user.id,
+        user_email=current_user.email,
+        status="success",
+        metadata={
+            "deleted_user_id": user_id,
+            "deleted_user_email": user_to_delete.email,
+            "deleted_user_role": user_to_delete.role,
+            "deleted_by_role": current_user.role
+        }
+    )
+    db.add(audit_log)
+    
+    # Commit both changes together in a transaction
+    try:
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Failed to delete user and log audit: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete user"
+        )
+    
+    logger.info(f"User {user_to_delete.email} (id={user_id}) deleted by {current_user.email}")
+    
+    return {
+        "message": f"User {user_to_delete.email} deleted successfully",
+        "deleted_user_id": user_id,
+        "deleted_user_email": user_to_delete.email
+    }

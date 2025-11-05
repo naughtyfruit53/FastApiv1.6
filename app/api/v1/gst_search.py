@@ -11,7 +11,9 @@ import httpx
 import time  # For delay between retries
 from app.core.config import settings
 from app.core.enforcement import require_access
-from app.core.database import Base
+from app.core.database import Base, get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.audit_log import AuditLog
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/gst", tags=["GST Search"])
@@ -88,7 +90,8 @@ def create_mock_gst_result(gstin: str, reason: str = "Format valid - Not found i
 @router.get("/search/{gst_number}", response_model=GSTDetails)
 async def search_gst_number(
     gst_number: str,
-    auth: tuple = Depends(require_access("gst", "read"))
+    auth: tuple = Depends(require_access("gst", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Search for GST details by GST number.
@@ -118,9 +121,35 @@ async def search_gst_number(
     
     logger.info(f"Searching GST details for: {gst_number}")
     
+    # Helper function to log audit
+    async def log_gst_search(success: bool, details: str = ""):
+        """Log GST search to audit log"""
+        try:
+            audit_log = AuditLog(
+                organization_id=org_id,
+                entity_type="gst_lookup",
+                entity_id=None,
+                entity_name=gst_number,
+                action="read",
+                action_description=f"GST number lookup: {gst_number} - {details}",
+                user_id=current_user.id,
+                user_email=current_user.email,
+                status="success" if success else "failed",
+                metadata={
+                    "gst_number": gst_number,
+                    "user_role": current_user.role,
+                    "details": details
+                }
+            )
+            db.add(audit_log)
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to log audit: {e}")
+    
     # Check cache first
     if gst_number in gst_cache:
         logger.info(f"Cache hit for GSTIN: {gst_number}")
+        await log_gst_search(True, "Retrieved from cache")
         return gst_cache[gst_number]
     
     if not settings.RAPIDAPI_KEY:
@@ -195,6 +224,7 @@ async def search_gst_number(
                         state_code=result.get('stjCd', gst_number[:2])
                     )
                     gst_cache[gst_number] = gst_result  # Cache successful result
+                    await log_gst_search(True, f"Retrieved from API: {name}")
                     return gst_result
                 elif response.status_code == 400:
                     logger.warning(f"RapidAPI returned 400 for GSTIN {gst_number}: {response.text}")
@@ -218,14 +248,17 @@ async def search_gst_number(
         logger.warning("Failed after 3 attempts - falling back to mock")
         mock_result = create_mock_gst_result(gst_number, "API failed after retries")
         gst_cache[gst_number] = mock_result
+        await log_gst_search(False, "API failed after retries, using fallback")
         return mock_result
     
     except HTTPException as he:
+        await log_gst_search(False, f"Validation error: {he.detail}")
         raise he  # Re-raise if already handled
     except Exception as e:
         logger.error(f"Error searching GST details: {str(e)} - falling back to mock")
         mock_result = create_mock_gst_result(gst_number, "API error")
         gst_cache[gst_number] = mock_result
+        await log_gst_search(False, f"Exception: {str(e)}")
         return mock_result
 
 

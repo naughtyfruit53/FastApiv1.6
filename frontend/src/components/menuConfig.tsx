@@ -684,7 +684,7 @@ export const menuItems = {
       {
         title: 'Organization Settings',
         items: [
-          { name: 'General Settings', path: '/settings/general-settings', icon: <Settings />, permission: 'settings.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'general_settings' } },
+          { name: 'General Settings', path: '/settings/general-settings', icon: <Settings />, orgAdminOnly: true, permission: 'settings.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'general_settings' } },
           { name: 'Company Profile', path: '/settings/company', icon: <Business />, permission: 'settings.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'company_profile' } },
           { name: 'Voucher Settings', path: '/settings/voucher-settings', icon: <ReceiptLong />, permission: 'settings.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'voucher_settings' } },
           { name: 'Data Management', path: '/settings/DataManagement', icon: <Storage />, godSuperAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'data_management' } },
