@@ -29,6 +29,7 @@ import {
 } from '@mui/icons-material';
 import api from '../../lib/api';
 import TrackingDetailsDialog from '../../components/DispatchManagement/TrackingDetailsDialog';
+import { ProtectedPage } from '@/components/ProtectedPage';
 
 interface PendingOrder {
   id: number;
@@ -157,6 +158,9 @@ const PendingOrdersPage: React.FC = () => {
   }
 
   return (
+
+
+    <ProtectedPage moduleKey="inventory" action="read">
     <Box p={3}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
@@ -369,6 +373,12 @@ const PendingOrdersPage: React.FC = () => {
         />
       )}
     </Box>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

@@ -34,6 +34,7 @@ import adminService from '../../services/adminService';
 import CreateOrganizationLicenseModal from '../../components/CreateOrganizationLicenseModal';
 import { useAuth } from '../../context/AuthContext';
 
+import { ProtectedPage } from '@/components/ProtectedPage';
 interface Organization {
   id: number;
   name: string;
@@ -137,6 +138,9 @@ const LicenseManagement: React.FC = () => {
   ) || [];
 
   return (
+
+
+    <ProtectedPage moduleKey="admin" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
@@ -332,6 +336,12 @@ const LicenseManagement: React.FC = () => {
         onSuccess={handleCreateLicense}
       />
     </Container>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

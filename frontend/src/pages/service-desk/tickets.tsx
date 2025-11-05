@@ -31,6 +31,7 @@ import {
 import DashboardLayout from '../../components/DashboardLayout';
 import CreateTicketModal from '../../components/CreateTicketModal';
 import { serviceDeskService } from '../../services/serviceDeskService';
+import { ProtectedPage } from '@/components/ProtectedPage';
 
 const ServiceDeskTicketsPage: React.FC = () => {
   const [ticketStats, setTicketStats] = useState({
@@ -135,6 +136,9 @@ const ServiceDeskTicketsPage: React.FC = () => {
   };
 
   return (
+
+
+    <ProtectedPage moduleKey="service" action="read">
     <DashboardLayout
       title="Support Tickets"
       subtitle="Manage customer support requests and tickets"
@@ -319,6 +323,12 @@ const ServiceDeskTicketsPage: React.FC = () => {
         onSuccess={handleEditSuccess}
       />
     </DashboardLayout>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

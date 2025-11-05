@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 import { Search } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
+import { ProtectedPage } from '@/components/ProtectedPage';
 const StockMovements: React.FC = () => {
   const { isOrgContextReady } = useAuth();
   const [searchText, setSearchText] = useState("");
@@ -35,6 +36,8 @@ const StockMovements: React.FC = () => {
     return <Typography>Loading stock movements...</Typography>;
   }
   return (
+
+    <ProtectedPage moduleKey="inventory" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Stock Movements
@@ -101,6 +104,10 @@ const StockMovements: React.FC = () => {
         </Table>
       </TableContainer>
     </Container>
+
+    </ProtectedPage>
+
+  
   );
 };
 export default StockMovements;

@@ -11,6 +11,7 @@ import {
 import { useForm } from "react-hook-form";
 import adminService from "../../../services/adminService";
 
+import { ProtectedPage } from '../../components/ProtectedPage';
 interface ResetFormData {
   target_email: string;
 }
@@ -39,6 +40,7 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="admin" action="read">
     <Box sx={{ p: 4 }}>
       <Typography variant="h4">Reset User Password</Typography>
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -73,6 +75,8 @@ const ResetPassword: React.FC = () => {
         </DialogContent>
       </Dialog>
     </Box>
+    </ProtectedPage>
+
   );
 };
 

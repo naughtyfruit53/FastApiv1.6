@@ -19,6 +19,7 @@ import {
   Schedule
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '@/components/ProtectedPage';
 
 const CalendarPage: React.FC = () => {
   const [view, setView] = React.useState('month');
@@ -30,6 +31,9 @@ const CalendarPage: React.FC = () => {
   ];
 
   return (
+
+
+    <ProtectedPage moduleKey="calendar" action="read">
     <DashboardLayout
       title="Calendar"
       subtitle="Manage your schedule and events"
@@ -171,6 +175,12 @@ const CalendarPage: React.FC = () => {
         <Add />
       </Fab>
     </DashboardLayout>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

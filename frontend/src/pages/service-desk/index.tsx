@@ -47,6 +47,7 @@ import { useAuth } from "@/context/AuthContext";
 import { serviceDeskService } from '@/services/serviceDeskService';
 import { Ticket, ChatbotConversation, ServiceDeskAnalytics } from '@/services/serviceDeskService';
 import CreateTicketModal from '@/components/CreateTicketModal';
+import { ProtectedPage } from '@/components/ProtectedPage';
 
 const ticketStatusColors: Record<string, string> = {
   open: "error",
@@ -351,6 +352,7 @@ export default function ServiceDeskDashboard() {
     return <Box sx={{ p: 3 }}><Typography>Loading...</Typography></Box>;
   }
   return (
+    <ProtectedPage moduleKey="service" action="read">
     <Box sx={{ p: 3 }}>
       <Box
         sx={{
@@ -444,5 +446,6 @@ export default function ServiceDeskDashboard() {
         organizationId={_user?.organization_id || 0}
       />
     </Box>
+    </ProtectedPage>
   );
 }

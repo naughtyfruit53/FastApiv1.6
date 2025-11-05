@@ -23,6 +23,7 @@ import {
   Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
+import { ProtectedPage } from '../../components/ProtectedPage';
 import api from "../../../utils/api";  // Import the axios api instance
 interface Organization {
   id: number;
@@ -229,6 +230,7 @@ const OrganizationDetailPage: React.FC = () => {
   }
   const currentOrg = editing ? editedOrg! : organization;
   return (
+    <ProtectedPage moduleKey="admin" action="read">
     <Box p={3}>
       <Box
         display="flex"
@@ -635,6 +637,8 @@ const OrganizationDetailPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
+
   );
 };
 export default OrganizationDetailPage;
