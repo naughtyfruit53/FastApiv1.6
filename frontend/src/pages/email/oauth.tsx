@@ -13,9 +13,11 @@ import {
   Alert,
 } from '@mui/material';
 import OAuthLoginButton from '../../components/OAuthLoginButton';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const OAuthConnections: React.FC = () => {
   return (
+    <ProtectedPage moduleKey="email" action="read">
     <Box sx={{ p: 4 }}>
       <Typography variant="h4" gutterBottom>
         OAuth Connections
@@ -63,6 +65,7 @@ const OAuthConnections: React.FC = () => {
         </ul>
       </Paper>
     </Box>
+    </ProtectedPage>
   );
 };
 

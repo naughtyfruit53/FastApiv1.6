@@ -38,6 +38,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as emailService from '../../services/emailService';
 import { apiClient as api } from '../../services/api/client';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface ThreadViewProps {
   threadId?: number;
@@ -435,6 +436,7 @@ const ThreadView: React.FC<ThreadViewProps> = ({
   }
 
   return (
+    <ProtectedPage moduleKey="email" action="read">
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
@@ -505,6 +507,7 @@ const ThreadView: React.FC<ThreadViewProps> = ({
         </Alert>
       </Snackbar>
     </Box>
+    </ProtectedPage>
   );
 };
 
