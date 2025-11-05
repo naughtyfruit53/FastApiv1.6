@@ -38,6 +38,7 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { assetService } from "../services/assetService";
+import { ProtectedPage } from "../components/ProtectedPage";
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -127,7 +128,8 @@ const AssetManagementPage: NextPage = () => {
     );
   }
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <ProtectedPage moduleKey="assets" action="read">
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -612,6 +614,7 @@ const AssetManagementPage: NextPage = () => {
         </Grid>
       </TabPanel>
     </Container>
+    </ProtectedPage>
   );
 };
 export default AssetManagementPage;
