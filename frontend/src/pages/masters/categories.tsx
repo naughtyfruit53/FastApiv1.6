@@ -35,6 +35,8 @@ import {
   Category,
   Inventory,
 } from "@mui/icons-material";
+import { ProtectedPage } from "../../components/ProtectedPage";
+
 const CategoriesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [addDialog, setAddDialog] = useState(false);
@@ -93,6 +95,7 @@ const CategoriesPage: React.FC = () => {
   // Get parent categories for dropdown
   const parentCategories = categories.filter((cat) => !cat.parent_category_id);
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Box
@@ -401,6 +404,7 @@ const CategoriesPage: React.FC = () => {
         </Dialog>
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default CategoriesPage;

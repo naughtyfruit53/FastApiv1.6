@@ -48,6 +48,7 @@ import {
   bulkImportProducts,
 } from "../../services/masterService";
 import ProductFileUpload from "../../components/ProductFileUpload";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -831,6 +832,7 @@ const MasterDataManagement: React.FC = () => {
     );
   };
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Box sx={{ flexGrow: 1 }}>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
@@ -1396,6 +1398,7 @@ const MasterDataManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 };
 

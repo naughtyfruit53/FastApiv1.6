@@ -37,6 +37,8 @@ import {
   Payment,
   AccessTime,
 } from "@mui/icons-material";
+import { ProtectedPage } from "../../components/ProtectedPage";
+
 const PaymentTermsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [addDialog, setAddDialog] = useState(false);
@@ -221,6 +223,7 @@ const PaymentTermsPage: React.FC = () => {
     return `Net ${term.due_days} days`;
   };
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Box
@@ -633,6 +636,7 @@ const PaymentTermsPage: React.FC = () => {
         </Dialog>
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default PaymentTermsPage;

@@ -35,6 +35,7 @@ import { bulkImportCustomers } from "../../services/masterService";
 import { useAuth } from "../../context/AuthContext";
 import AddCustomerModal from "../../components/AddCustomerModal";
 import CustomerAnalyticsModal from "../../components/CustomerAnalyticsModal";
+import { ProtectedPage } from "../../components/ProtectedPage";
 const CustomersPage: React.FC = () => {
   const router = useRouter();
   const { action } = router.query;
@@ -140,6 +141,7 @@ const CustomersPage: React.FC = () => {
     return <div>Loading...</div>;
   }
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="xl">
       <Box sx={{ mt: 4, mb: 4 }}>
         {/* Header */}
@@ -311,6 +313,7 @@ const CustomersPage: React.FC = () => {
         )}
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default CustomersPage;

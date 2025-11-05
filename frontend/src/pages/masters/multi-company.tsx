@@ -33,6 +33,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { companyService } from "../../services/authService";
 import CompanyDetailsModal from "../../components/CompanyDetailsModal";
+import { ProtectedPage } from "../../components/ProtectedPage";
 interface Company {
   id: number;
   name: string;
@@ -192,6 +193,7 @@ const MultiCompanyManagement: React.FC = () => {
     return <Alert severity="error">Failed to load companies</Alert>;
   }
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Box>
       <Box
         display="flex"
@@ -373,6 +375,7 @@ const MultiCompanyManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 };
 export default MultiCompanyManagement;
