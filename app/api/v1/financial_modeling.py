@@ -46,6 +46,8 @@ async def create_financial_model(
     request: Request = None
 ):
     """Create a new financial model"""
+    current_user, org_id = auth
+    
     try:
         service = FinancialModelingService(db)
         

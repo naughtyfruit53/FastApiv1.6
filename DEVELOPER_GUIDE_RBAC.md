@@ -716,6 +716,50 @@ async def get_leads(
 
 ## Migration Guide
 
+### Recent Updates (2025-11-05)
+
+The following files were recently updated to use the standard `require_access` pattern:
+
+#### Updated Files
+
+1. **health.py** - Health check endpoints
+   ```python
+   # Before
+   current_user: User = Depends(get_current_active_user)
+   organization_id = current_user.organization_id
+   
+   # After
+   auth: tuple = Depends(require_access("email", "read"))
+   current_user, organization_id = auth
+   ```
+
+2. **debug.py** - Debug endpoints
+   ```python
+   # After
+   auth: tuple = Depends(require_access("admin", "read"))
+   current_user, org_id = auth
+   ```
+
+3. **org_user_management.py** - User management (7 endpoints)
+   ```python
+   # After
+   auth: tuple = Depends(require_access("user", "create"))
+   current_user, org_id = auth
+   ```
+
+4. **role_delegation.py** - Role delegation (3 endpoints)
+   ```python
+   # After
+   auth: tuple = Depends(require_access("admin", "create"))
+   current_user, organization_id = auth
+   ```
+
+5. **financial_modeling.py** - Fixed auth extraction
+   ```python
+   # Added missing line
+   current_user, org_id = auth
+   ```
+
 ### Migrating Old Code
 
 1. **Identify unprotected endpoints**
@@ -730,10 +774,11 @@ async def get_leads(
    Replace old auth with `require_access`:
    ```python
    # Old
-   current_user: User = Depends(get_current_user)
+   current_user: User = Depends(get_current_active_user)
    
    # New
    auth: tuple = Depends(require_access("module", "action"))
+   current_user, org_id = auth  # Don't forget to extract!
    ```
 
 3. **Add tenant filtering**
@@ -746,6 +791,35 @@ async def get_leads(
 4. **Test thoroughly**
    
    Test with different roles and organizations.
+
+### Common Migration Mistakes
+
+❌ **Forgetting to extract auth tuple**
+```python
+auth: tuple = Depends(require_access("module", "read"))
+# Missing: current_user, org_id = auth
+# This will cause errors when accessing current_user or org_id
+```
+
+✅ **Correct pattern**
+```python
+auth: tuple = Depends(require_access("module", "read"))
+current_user, org_id = auth  # Always extract!
+```
+
+❌ **Using organization_id from user instead of auth**
+```python
+auth: tuple = Depends(require_access("module", "read"))
+current_user, org_id = auth
+organization_id = current_user.organization_id  # Don't do this!
+```
+
+✅ **Use org_id from auth**
+```python
+auth: tuple = Depends(require_access("module", "read"))
+current_user, org_id = auth
+# Use org_id directly - it's already validated
+```
 
 ---
 

@@ -17,7 +17,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, EmailStr, Field
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.audit_log import AuditLog
 from app.schemas.user import UserRole, UserInDB, UserCreate
@@ -66,7 +66,7 @@ class UserPermissionsResponse(BaseModel):
 @router.post("/users", response_model=UserInDB)
 async def create_org_user(
     user_data: OrgUserCreateRequest,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("user", "create")),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -77,13 +77,7 @@ async def create_org_user(
     - Management can create Managers and Executives
     - Managers can create Executives under their management
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current user must belong to an organization"
-        )
-    
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     role_service = OrgRoleService(db)
     
     # Validate role transition
@@ -261,7 +255,7 @@ async def create_org_user(
 async def get_available_modules(
     role: UserRole,
     manager_id: Optional[int] = None,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("user", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -269,17 +263,13 @@ async def get_available_modules(
     
     For Executive role, manager_id must be provided to get manager's modules.
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current user must belong to an organization"
-        )
+    current_user, org_id = auth
     
     role_service = OrgRoleService(db)
     
     modules = await role_service.get_available_modules_for_role(
         role=role.value,
-        org_id=current_user.organization_id,
+        org_id=org_id,
         manager_id=manager_id
     )
     
@@ -289,23 +279,19 @@ async def get_available_modules(
 @router.get("/users/{user_id}/permissions", response_model=UserPermissionsResponse)
 async def get_user_permissions(
     user_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("user", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get effective permissions for a user based on their role.
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current user must belong to an organization"
-        )
+    current_user, org_id = auth
     
     # Verify user belongs to same organization
     result = await db.execute(
         select(User).where(
             User.id == user_id,
-            User.organization_id == current_user.organization_id
+            User.organization_id == org_id
         )
     )
     user = result.scalars().first()
@@ -318,7 +304,7 @@ async def get_user_permissions(
     role_service = OrgRoleService(db)
     permissions = await role_service.get_user_effective_permissions(
         user_id=user_id,
-        org_id=current_user.organization_id
+        org_id=org_id
     )
     
     return permissions
@@ -328,7 +314,7 @@ async def get_user_permissions(
 async def update_user_modules(
     user_id: int,
     modules: Dict[str, bool] = Body(...),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("user", "update")),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -336,11 +322,7 @@ async def update_user_modules(
     
     Only Org Admin and Management can update module assignments.
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current user must belong to an organization"
-        )
+    current_user, org_id = auth
     
     # Check permission
     if current_user.role not in [UserRole.ORG_ADMIN.value, UserRole.MANAGEMENT.value]:
@@ -384,7 +366,7 @@ async def update_user_modules(
 async def update_executive_submodules(
     user_id: int,
     submodules: Dict[str, List[str]] = Body(...),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("user", "update")),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -392,17 +374,13 @@ async def update_executive_submodules(
     
     Can be done by Org Admin, Management, or the Executive's reporting Manager.
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current user must belong to an organization"
-        )
+    current_user, org_id = auth
     
     # Verify user exists and is an Executive
     result = await db.execute(
         select(User).where(
             User.id == user_id,
-            User.organization_id == current_user.organization_id
+            User.organization_id == org_id
         )
     )
     user = result.scalars().first()
@@ -450,22 +428,18 @@ async def update_executive_submodules(
 
 @router.get("/managers", response_model=List[UserInDB])
 async def get_managers(
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("user", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get all managers in the organization.
     Used for selecting reporting manager when creating Executives.
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current user must belong to an organization"
-        )
+    current_user, org_id = auth
     
     result = await db.execute(
         select(User).where(
-            User.organization_id == current_user.organization_id,
+            User.organization_id == org_id,
             User.role == UserRole.MANAGER.value,
             User.is_active == True
         )
@@ -477,7 +451,7 @@ async def get_managers(
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("user", "delete")),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -489,11 +463,7 @@ async def delete_user(
     - managers can delete executives under their management
     - Cannot delete super_admin users
     """
-    if not current_user.organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current user must belong to an organization"
-        )
+    current_user, org_id = auth
     
     org_id = current_user.organization_id
     

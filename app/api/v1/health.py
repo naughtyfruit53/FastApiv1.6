@@ -8,9 +8,10 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.models.email import MailAccount, EmailSyncLog, EmailSyncStatus
 from app.models.oauth_models import UserEmailToken, TokenStatus
-from app.api.v1.auth import get_current_active_user, get_current_super_admin
+from app.api.v1.auth import get_current_super_admin
 from app.models.user_models import User
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -19,15 +20,15 @@ router = APIRouter(prefix="/health", tags=["health"])
 @router.get("/email-sync")
 async def email_sync_health(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("email", "read"))
 ) -> Dict[str, Any]:
     """
     Health check for email sync service
     Returns status of email accounts and recent sync activity
     """
+    current_user, organization_id = auth
+    
     try:
-        # Get user's organization
-        organization_id = current_user.organization_id
         
         # Count total mail accounts
         stmt = select(func.count(MailAccount.id)).where(
@@ -125,15 +126,15 @@ async def email_sync_health(
 @router.get("/oauth-tokens")
 async def oauth_tokens_health(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("email", "read"))
 ) -> Dict[str, Any]:
     """
     Health check for OAuth tokens
     Returns status of OAuth tokens and expiry information
     """
+    current_user, organization_id = auth
+    
     try:
-        # Get user's organization
-        organization_id = current_user.organization_id
         
         # Count total tokens
         stmt = select(func.count(UserEmailToken.id)).where(
