@@ -3,7 +3,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Dict, List
 from datetime import datetime
-from enum import Enum
+import enum
 
 
 class OrganizationBase(BaseModel):
@@ -105,7 +105,7 @@ class OrganizationLicenseResponse(BaseModel):
     license_expiry_date: Optional[datetime] = None
 
 
-class VoucherCounterResetPeriod(str, Enum):
+class VoucherCounterResetPeriod(str, enum.Enum):
     """Voucher counter reset period options"""
     NEVER = "never"
     MONTHLY = "monthly"
@@ -255,7 +255,7 @@ class RecentActivity(BaseModel):
     id: int
     action: str
     entity_type: str
-    entity_id: int
+    entity_id: Optional[int] = None  # Changed to Optional to allow None
     user_id: int
     organization_id: int
     description: Optional[str] = None

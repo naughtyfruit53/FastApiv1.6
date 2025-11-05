@@ -82,16 +82,12 @@ const OrgDashboard: React.FC = () => {
       const data = await adminService.getOrgStatistics();
       console.log("Org statistics response:", data); // Debug API response
       let inventoryValue = 0;
-      // Added permission check before fetching inventory value
-      if (hasPermission('inventory', 'read')) {
-        try {
-          inventoryValue = await adminService.getInventoryValue();
-        } catch (invError) {
-          console.error("Inventory value fetch failed:", invError);
-          // Set to 0 on error, continue loading
-        }
-      } else {
-        console.log("No permission for inventory read - skipping fetch and setting value to 0");
+      // Removed permission check to always fetch inventory value
+      try {
+        inventoryValue = await adminService.getInventoryValue();
+      } catch (invError) {
+        console.error("Inventory value fetch failed:", invError);
+        // Set to 0 on error, continue loading
       }
       setStatistics({
         ...data,

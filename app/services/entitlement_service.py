@@ -379,7 +379,8 @@ class EntitlementService:
             'STOCK': 'ERP',
             'BOM': 'MANUFACTURING',
             'SETTINGS': 'ERP',  # NEW: Auto-enable settings if ERP enabled
-            'LEDGER': 'FINANCE'  # NEW: Auto-enable ledger if FINANCE enabled
+            'LEDGER': 'FINANCE',  # NEW: Auto-enable ledger if FINANCE enabled
+            'INVENTORY': 'ERP'  # NEW: Auto-enable inventory if ERP enabled
         }
 
         migrated = False

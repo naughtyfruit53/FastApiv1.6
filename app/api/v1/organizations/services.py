@@ -171,20 +171,24 @@ class OrganizationService:
         )
         logs = result.scalars().all()
         
-        activities = [
-            RecentActivity(
-                id=log.id,
-                action=log.action,
-                entity_type=log.entity_type,
-                entity_id=log.record_id,
-                user_id=log.user_id,
-                organization_id=log.organization_id,
-                description=log.changes.get('description') if log.changes else None,
-                created_at=log.timestamp,
-                user_name=log.user.full_name if log.user else None
-            )
-            for log in logs
-        ]
+        activities = []
+        for log in logs:
+            try:
+                activity = RecentActivity(
+                    id=log.id,
+                    action=log.action,
+                    entity_type=log.entity_type,
+                    entity_id=log.entity_id,  # Use entity_id from model
+                    user_id=log.user_id,
+                    organization_id=log.organization_id,
+                    description=log.changes.get('description') if log.changes else None,
+                    created_at=log.timestamp,
+                    user_name=log.user.full_name if log.user else None
+                )
+                activities.append(activity)
+            except Exception as e:
+                logger.warning(f"Skipping invalid audit log entry {log.id}: {str(e)}")
+                continue  # Skip invalid entries instead of failing
         
         return RecentActivityResponse(activities=activities)
 
