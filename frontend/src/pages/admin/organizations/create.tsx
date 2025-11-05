@@ -6,6 +6,7 @@ import api from "../../../utils/api";
 import RoleGate from "../../../components/RoleGate";
 import { Alert, Snackbar, CircularProgress } from "@mui/material";
 import { useAuth } from "../../../context/AuthContext";
+import { ProtectedPage } from '../../components/ProtectedPage';
 const CreateOrganizationPage: React.FC = () => {
   const { loading } = useAuth();
   const [tempPassword, setTempPassword] = useState<string | null>(null);
@@ -27,6 +28,7 @@ const CreateOrganizationPage: React.FC = () => {
     setSnackbarOpen(false);
   };
   return (
+    <ProtectedPage moduleKey="admin" action="read">
     <RoleGate allowedRoles={["super_admin"]}>
       <div>
         <h1>Create New Organization</h1>
@@ -44,6 +46,8 @@ const CreateOrganizationPage: React.FC = () => {
         </Snackbar>
       </div>
     </RoleGate>
+    </ProtectedPage>
+
   );
 };
 export default CreateOrganizationPage;

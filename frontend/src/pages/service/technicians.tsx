@@ -17,6 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import AddEmployeeModal from '@/components/AddEmployeeModal';
 
+import { ProtectedPage } from '../components/ProtectedPage';
 interface Technician {
   id: number;
   name: string;
@@ -84,6 +85,7 @@ export default function TechniciansManagement() {
   }
 
   return (
+    <ProtectedPage moduleKey="service" action="read">
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
         Technicians Management
@@ -138,5 +140,7 @@ export default function TechniciansManagement() {
         mode={editingTech ? 'edit' : 'create'}
       />
     </Box>
+    </ProtectedPage>
+
   );
 }

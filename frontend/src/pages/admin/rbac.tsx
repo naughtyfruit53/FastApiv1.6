@@ -12,6 +12,7 @@ import { rbacService, PERMISSIONS } from "../../services/rbacService";
 import { isOrgSuperAdmin, isAppSuperAdmin } from "../../types/user.types";
 import { organizationService } from "../../services/organizationService";
 
+import { ProtectedPage } from '@/components/ProtectedPage';
 const RBACManagementPage: NextPage = () => {
   const { user } = useAuth();
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
@@ -61,6 +62,9 @@ const RBACManagementPage: NextPage = () => {
   }
 
   return (
+
+
+    <ProtectedPage moduleKey="admin" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -98,6 +102,12 @@ const RBACManagementPage: NextPage = () => {
 
       <RoleManagement organizationId={organizationId} />
     </Container>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

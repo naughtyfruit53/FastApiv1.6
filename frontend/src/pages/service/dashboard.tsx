@@ -24,6 +24,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { rbacService, SERVICE_PERMISSIONS } from "../../services/rbacService";
 
+import { ProtectedPage } from '@/components/ProtectedPage';
 const ServiceDashboardPage: NextPage = () => {
   const { user } = useAuth();
 
@@ -51,6 +52,9 @@ const ServiceDashboardPage: NextPage = () => {
   }
 
   return (
+
+
+    <ProtectedPage moduleKey="service" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -168,6 +172,12 @@ const ServiceDashboardPage: NextPage = () => {
         </Grid>
       </Grid>
     </Container>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

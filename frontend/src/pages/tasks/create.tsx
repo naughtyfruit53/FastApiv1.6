@@ -13,9 +13,12 @@ import {
   NoteAdd
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '@/components/ProtectedPage';
 
 const TasksCreatePage: React.FC = () => {
   return (
+
+    <ProtectedPage moduleKey="tasks" action="read">
     <DashboardLayout
       title="Create"
       subtitle="Create new tasks"
@@ -54,6 +57,10 @@ const TasksCreatePage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+
+    </ProtectedPage>
+
+  
   );
 };
 

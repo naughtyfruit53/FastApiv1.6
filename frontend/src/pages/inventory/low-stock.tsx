@@ -35,6 +35,7 @@ import {
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import { useAuth } from "../../context/AuthContext";
+import { ProtectedPage } from '@/components/ProtectedPage';
 const LowStockReport: React.FC = () => {
   const router = useRouter();
   const { isOrgContextReady } = useAuth();
@@ -79,6 +80,8 @@ const LowStockReport: React.FC = () => {
     handleMenuClose();
   };
   return (
+
+    <ProtectedPage moduleKey="inventory" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Low Stock Report
@@ -197,6 +200,10 @@ const LowStockReport: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+
+    </ProtectedPage>
+
+  
   );
 };
 export default LowStockReport;

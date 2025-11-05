@@ -9,6 +9,7 @@ import { useAuth } from "../../hooks/useAuth";
 import NotificationTemplates from "../../components/NotificationTemplates";
 import { canManageUsers } from "../../types/user.types";
 
+import { ProtectedPage } from '@/components/ProtectedPage';
 const NotificationManagementPage: NextPage = () => {
   const { user } = useAuth();
 
@@ -26,6 +27,9 @@ const NotificationManagementPage: NextPage = () => {
   }
 
   return (
+
+
+    <ProtectedPage moduleKey="admin" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -45,6 +49,12 @@ const NotificationManagementPage: NextPage = () => {
 
       <NotificationTemplates />
     </Container>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

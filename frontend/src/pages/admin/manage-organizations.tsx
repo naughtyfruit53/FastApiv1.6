@@ -44,6 +44,7 @@ import { organizationService } from "../../services/organizationService";
 import { useAuth } from "../../context/AuthContext";
 import ModuleSelectionModal from '../../components/ModuleSelectionModal';
 
+import { ProtectedPage } from '@/components/ProtectedPage';
 interface Organization {
   id: number;
   name: string;
@@ -187,6 +188,8 @@ const ManageOrganizations: React.FC = () => {
     return <Chip label={config.label} color={config.color} size="small" />;
   };
   return (
+
+    <ProtectedPage moduleKey="admin" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box
         sx={{
@@ -501,6 +504,10 @@ const ManageOrganizations: React.FC = () => {
         isSuperAdmin={isSuperAdmin}
       />
     </Container>
+
+    </ProtectedPage>
+
+  
   );
 };
 export default ManageOrganizations;

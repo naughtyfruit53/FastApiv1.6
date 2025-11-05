@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
 import { serviceDeskService } from '../../services/serviceDeskService';
+import { ProtectedPage } from '@/components/ProtectedPage';
 
 const ServiceDeskSlaPage: React.FC = () => {
   const [slaPolicies, setSlaPolicies] = useState([]);
@@ -129,6 +130,9 @@ const ServiceDeskSlaPage: React.FC = () => {
   };
 
   return (
+
+
+    <ProtectedPage moduleKey="service" action="read">
     <DashboardLayout
       title="SLA Management"
       subtitle="Manage service level agreements"
@@ -293,6 +297,12 @@ const ServiceDeskSlaPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </DashboardLayout>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

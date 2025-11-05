@@ -18,6 +18,8 @@ import {
   Dashboard,
 } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
+import { ProtectedPage } from "../../components/ProtectedPage";
+
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const isGodAccount = user?.email === "naughtyfruit53@gmail.com";
@@ -25,6 +27,11 @@ const AdminDashboard: React.FC = () => {
   const isAppLevelAdmin = isSuperAdmin && !user?.organization_id; // App-level accounts have no organization
   
   return (
+    <ProtectedPage 
+      moduleKey="admin" 
+      action="read"
+      accessDeniedMessage="You do not have permission to access the admin dashboard."
+    >
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Admin Dashboard
@@ -161,6 +168,7 @@ const AdminDashboard: React.FC = () => {
         </Typography>
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default AdminDashboard;

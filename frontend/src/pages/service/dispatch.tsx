@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import DispatchManagement from "../../components/DispatchManagement/DispatchManagement";
 import { rbacService, SERVICE_PERMISSIONS } from "../../services/rbacService";
 
+import { ProtectedPage } from '@/components/ProtectedPage';
 const DispatchManagementPage: NextPage = () => {
   const { user } = useAuth();
 
@@ -37,6 +38,9 @@ const DispatchManagementPage: NextPage = () => {
   }
 
   return (
+
+
+    <ProtectedPage moduleKey="service" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -56,6 +60,12 @@ const DispatchManagementPage: NextPage = () => {
 
       <DispatchManagement />
     </Container>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 
