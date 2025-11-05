@@ -21,6 +21,7 @@ import {
   isAppSuperAdmin,
   isOrgSuperAdmin,
 } from "../../types/user.types";
+import { ProtectedPage } from "../../components/ProtectedPage";
 const FactoryReset: React.FC = () => {
   const { user } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -69,7 +70,11 @@ const FactoryReset: React.FC = () => {
     setLoading(false);
   };
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+    <ProtectedPage
+      customCheck={(pc) => pc.isAdmin() || pc.isSuperAdmin()}
+      accessDeniedMessage="Factory reset is only accessible to administrators."
+    >
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Reset & Recovery Options
       </Typography>
@@ -178,6 +183,7 @@ const FactoryReset: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
 export default FactoryReset;

@@ -29,6 +29,7 @@ import MegaMenu from '../../components/MegaMenu';
 import VoucherContextMenu from '../../components/VoucherContextMenu';
 import VoucherListModal from '../../components/VoucherListModal';
 import { useCompany } from '../../context/CompanyContext'; // Added import
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -415,7 +416,8 @@ const VoucherManagement: React.FC = () => {
   }
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <ProtectedPage moduleKey="finance" action="read">
+      <Box sx={{ flexGrow: 1 }}>
       <MegaMenu user={user} onLogout={handleLogout} />
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
@@ -540,6 +542,7 @@ const VoucherManagement: React.FC = () => {
         />
       )}
     </Box>
+    </ProtectedPage>
   );
 };
 

@@ -19,6 +19,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { companyService } from "../../services/authService";
 import { toast } from "react-toastify";
 import DashboardLayout from "../../components/DashboardLayout";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
@@ -152,10 +153,11 @@ const CompanyProfilePage: React.FC = () => {
   }
 
   return (
-    <DashboardLayout
-      title="Company Profile"
-      subtitle="Manage your organization's information and settings"
-    >
+    <ProtectedPage moduleKey="settings" action="write">
+      <DashboardLayout
+        title="Company Profile"
+        subtitle="Manage your organization's information and settings"
+      >
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Alert severity="info" sx={{ mb: 3 }}>
@@ -495,6 +497,7 @@ const CompanyProfilePage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
 
