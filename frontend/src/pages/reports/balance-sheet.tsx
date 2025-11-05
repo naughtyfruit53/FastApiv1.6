@@ -20,6 +20,7 @@ import {
   Print
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const BalanceSheetPage: React.FC = () => {
   const assets = {
@@ -64,6 +65,7 @@ const BalanceSheetPage: React.FC = () => {
   const totalLiabilitiesAndEquity = totalLiabilities + totalEquity;
 
   return (
+    <ProtectedPage moduleKey="reports" action="read">
     <DashboardLayout
       title="Balance Sheet"
       subtitle="Statement of financial position"
@@ -273,6 +275,7 @@ const BalanceSheetPage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
 

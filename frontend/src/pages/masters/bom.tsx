@@ -32,6 +32,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import AddBOMModal from '../../components/AddBOMModal';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const BOMManagement: React.FC = () => {
   const [mode, setMode] = useState<'list' | 'view'>('list');
@@ -181,10 +182,15 @@ const BOMManagement: React.FC = () => {
   };
 
   if (isLoadingBOMs) {
-    return <CircularProgress />;
+    return (
+      <ProtectedPage moduleKey="masters" action="read">
+      <CircularProgress />
+      </ProtectedPage>
+    );
   }
 
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -305,6 +311,7 @@ const BOMManagement: React.FC = () => {
         mode={editMode}
       />
     </Container>
+    </ProtectedPage>
   );
 };
 

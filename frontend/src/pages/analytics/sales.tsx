@@ -20,19 +20,13 @@ import {
   ShoppingCart,
 } from "@mui/icons-material";
 import { useAuth } from "../../hooks/useAuth";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 const SalesAnalyticsPage: NextPage = () => {
   const { user } = useAuth();
 
-  if (!user) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">Please log in to access sales analytics.</Alert>
-      </Container>
-    );
-  }
-
   return (
+    <ProtectedPage moduleKey="analytics" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -122,6 +116,7 @@ const SalesAnalyticsPage: NextPage = () => {
         </Grid>
       </Grid>
     </Container>
+    </ProtectedPage>
   );
 };
 
