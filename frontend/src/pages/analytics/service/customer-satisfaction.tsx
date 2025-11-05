@@ -15,6 +15,7 @@ import { Feedback } from "@mui/icons-material";
 import { useAuth } from "../../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import CustomerSatisfactionChart from "../../../components/ServiceAnalytics/CustomerSatisfactionChart";
+import { ProtectedPage } from '../../components/ProtectedPage';
 import {
   rbacService,
   SERVICE_PERMISSIONS,
@@ -36,7 +37,8 @@ const CustomerSatisfactionAnalyticsPage: NextPage = () => {
 
   if (!user || !hasPermission) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <ProtectedPage moduleKey="service" action="read">
+      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
           Access Denied: Service Reports Read permission required.
         </Alert>
@@ -68,7 +70,7 @@ const CustomerSatisfactionAnalyticsPage: NextPage = () => {
         </CardContent>
       </Card>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default CustomerSatisfactionAnalyticsPage;

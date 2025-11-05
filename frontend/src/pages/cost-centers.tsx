@@ -44,6 +44,7 @@ import { SimpleTreeView } from "@mui/x-tree-view/SimpleTreeView";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
 import axios from "axios";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 interface CostCenter {
   id: number;
   cost_center_code: string;
@@ -274,7 +275,8 @@ const CostCenters: React.FC = () => {
   const costCenterTree = buildCostCenterTree(costCenters);
 
   return (
-    <Box sx={{ p: 3 }}>
+    <ProtectedPage moduleKey="finance" action="read">
+      ox sx={{ p: 3 }}>
       {/* Header */}
       <Box
         display="flex"
@@ -705,7 +707,7 @@ const CostCenters: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 };
-
 export default CostCenters;

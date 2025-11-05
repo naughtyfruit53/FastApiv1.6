@@ -15,6 +15,7 @@ import { Assignment } from "@mui/icons-material";
 import { useAuth } from "../../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import JobCompletionChart from "../../../components/ServiceAnalytics/JobCompletionChart";
+import { ProtectedPage } from '../../components/ProtectedPage';
 import {
   rbacService,
   SERVICE_PERMISSIONS,
@@ -36,7 +37,8 @@ const JobCompletionAnalyticsPage: NextPage = () => {
 
   if (!user || !hasPermission) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <ProtectedPage moduleKey="service" action="read">
+      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
           Access Denied: Service Reports Read permission required.
         </Alert>
@@ -68,7 +70,7 @@ const JobCompletionAnalyticsPage: NextPage = () => {
         </CardContent>
       </Card>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default JobCompletionAnalyticsPage;
