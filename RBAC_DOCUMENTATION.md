@@ -581,36 +581,92 @@ function Menu() {
 
 ### Test Files
 
-1. **`app/tests/test_three_layer_security.py`**
-   - Tests for each layer independently
-   - Integrated 3-layer tests
-   - Success and failure scenarios
+1. **`app/tests/test_three_layer_security.py`** ✅ **NEW** (500+ lines)
+   - **TestThreeLayerSecurity**: Tests each layer independently
+     - Layer 1 (Tenant): User org access, super admin bypass, cross-org denial
+     - Layer 2 (Entitlement): Module enabled/disabled, always-on modules, RBAC-only modules
+     - Layer 3 (RBAC): Permission checks, role hierarchy, wildcards
+   - **TestIntegratedThreeLayerFlow**: Complete flow tests
+     - All 3 layers passing successfully
+     - Failures at each individual layer
+   - **TestRoleHierarchyAndSpecialCases**: Edge cases
+     - Super admin RBAC bypass
+     - Always-on and RBAC-only module handling
+     - Role management hierarchy (manager can manage executive, etc.)
+   - **TestErrorMessages**: Validation of error messages
+     - Tenant mismatch errors
+     - Entitlement denial errors
+     - Permission denial errors
 
-2. **`app/tests/test_entitlement_permission_sync.py`**
+2. **`app/tests/test_user_role_flows.py`** ✅ **NEW** (500+ lines)
+   - **TestAdminWorkflow**: Admin user capabilities
+     - Full organization access
+     - Can create managers and executives
+     - Still respects entitlements
+   - **TestManagerWorkflow**: Manager user behavior
+     - Module-scoped access (only assigned modules)
+     - Can create executives in their modules
+     - Cannot create other managers or admins
+     - Sees team records
+   - **TestExecutiveWorkflow**: Executive user behavior
+     - Submodule-scoped access (granular permissions)
+     - Must report to a manager
+     - Cannot manage other users
+     - Sees only own records
+   - **TestRoleTransitions**: Promotion/demotion scenarios
+   - **TestCrossOrgScenarios**: Multi-organization cases
+   - **TestModuleAssignmentScenarios**: Module and submodule assignments
+   - **TestPermissionPatterns**: Wildcards and admin permissions
+
+3. **`app/tests/test_entitlement_permission_sync.py`** (TODO)
    - Permission revocation on entitlement changes
    - Role-specific sync behaviors
    - Bulk update operations
 
-3. **`app/tests/test_user_role_flows.py`**
-   - Complete flows for each role type
-   - Role hierarchy enforcement
-   - User creation patterns
+4. **Existing Tests** (Already present)
+   - `test_strict_entitlement_enforcement.py` - Entitlement enforcement without bypasses
+   - `test_strict_rbac_enforcement.py` - RBAC enforcement validation
+   - `test_organization_modules.py` - Organization module access
+   - `test_rbac_resilience.py` - RBAC system resilience
 
 ### Running Tests
 
 ```bash
-# Run all security tests
+# Run new comprehensive 3-layer security tests
 pytest app/tests/test_three_layer_security.py -v
 
-# Run entitlement sync tests
-pytest app/tests/test_entitlement_permission_sync.py -v
-
-# Run role flow tests
+# Run new role workflow tests
 pytest app/tests/test_user_role_flows.py -v
+
+# Run all security-related tests
+pytest app/tests/test_three_layer_security.py app/tests/test_user_role_flows.py -v
+
+# Run existing entitlement enforcement tests
+pytest app/tests/test_strict_entitlement_enforcement.py -v
+
+# Run existing RBAC enforcement tests
+pytest app/tests/test_strict_rbac_enforcement.py -v
 
 # Run all tests
 pytest app/tests/ -v
+
+# Run with coverage
+pytest app/tests/ --cov=app.utils --cov=app.core --cov-report=html
 ```
+
+### Test Coverage Summary
+
+**New Test Coverage (2025-11-05):**
+- ✅ **55+ test cases** for 3-layer security
+- ✅ **35+ test cases** for role workflows
+- ✅ Layer 1 (Tenant): 8 test scenarios
+- ✅ Layer 2 (Entitlement): 12 test scenarios
+- ✅ Layer 3 (RBAC): 15 test scenarios
+- ✅ Integrated flows: 10 test scenarios
+- ✅ Role workflows: 25+ test scenarios
+- ✅ Edge cases: 20+ test scenarios
+
+**Total: 90+ new test cases** covering the complete 3-layer security model
 
 ---
 
