@@ -32,6 +32,7 @@ import * as masterDataService from "../../services/masterService";
 import ExcelImportExport from "../../components/ExcelImportExport";
 import { useCompany } from "../../context/CompanyContext";
 import AddVendorModal from "../../components/AddVendorModal";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 const VendorsPage: React.FC = () => {
   const router = useRouter();
@@ -233,6 +234,7 @@ const VendorsPage: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="xl">
       <Box sx={{ mt: 4, mb: 4 }}>
         <Box
@@ -393,6 +395,7 @@ const VendorsPage: React.FC = () => {
         />
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 

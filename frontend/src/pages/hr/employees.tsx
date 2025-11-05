@@ -46,6 +46,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../../hooks/useAuth';
 import { hrService, Employee } from '../../services';
 import AddEmployeeModal from '../../components/AddEmployeeModal';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -218,6 +219,7 @@ const EmployeesManagement: NextPage = () => {
   const departments = [...new Set(employees.map(emp => emp.department || emp.user?.department).filter(Boolean))];
 
   return (
+    <ProtectedPage moduleKey="hr" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
@@ -513,6 +515,7 @@ const EmployeesManagement: NextPage = () => {
         mode={dialogMode}
       />
     </Container>
+    </ProtectedPage>
   );
 };
 

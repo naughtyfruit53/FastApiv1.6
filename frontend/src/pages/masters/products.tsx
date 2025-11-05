@@ -27,6 +27,7 @@ import ExcelImportExport from "../../components/ExcelImportExport";
 import { bulkImportProducts } from "../../services/masterService";
 import { useAuth } from "../../context/AuthContext";
 import AddProductModal from "../../components/AddProductModal"; // Added import for unified modal
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 // Utility function to get product display name
 const getProductDisplayName = (product: any): string => {
@@ -173,6 +174,7 @@ const ProductsPage: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="xl">
       <Box sx={{ mt: 4, mb: 4 }}>
         {/* Header */}
@@ -321,6 +323,7 @@ const ProductsPage: React.FC = () => {
         />
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default ProductsPage;

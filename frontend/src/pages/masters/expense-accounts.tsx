@@ -49,6 +49,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/api";
 import { useSnackbar } from "notistack";
 import BulkImportExportProgressBar from "../../components/BulkImportExportProgressBar";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface ExpenseAccount {
   id?: number;
@@ -372,6 +373,7 @@ const ExpenseAccountsPage: React.FC = () => {
   const parentAccounts = accounts.filter((a: ExpenseAccount) => a.is_group);
 
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="xl">
       <Box sx={{ mt: 3 }}>
         <Box
@@ -835,6 +837,7 @@ const ExpenseAccountsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
 

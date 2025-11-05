@@ -33,6 +33,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getEmployees, createEmployee } from "../../services/masterService";
 import AddEmployeeModal from "../../components/AddEmployeeModal";
+import { ProtectedPage } from "../../components/ProtectedPage";
 const EmployeesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -130,6 +131,7 @@ const EmployeesPage: React.FC = () => {
         employee.department?.toLowerCase().includes(searchTerm.toLowerCase()),
     ) || [];
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Box
@@ -406,6 +408,7 @@ const EmployeesPage: React.FC = () => {
         </Dialog>
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default EmployeesPage;

@@ -40,6 +40,7 @@ import {
 } from "@mui/icons-material";
 import { getTaxCodes, toggleTaxCodeStatus, TaxCode } from "../../services/masterService";
 import { toast } from "react-toastify";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 const TaxCodesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -489,6 +490,7 @@ const TaxCodesPage: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Box
@@ -868,6 +870,7 @@ const TaxCodesPage: React.FC = () => {
         </Dialog>
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default TaxCodesPage;
