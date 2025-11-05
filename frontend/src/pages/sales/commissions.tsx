@@ -34,6 +34,7 @@ import {
 import AddCommissionModal from "../../components/AddCommissionModal";
 import { formatCurrency } from "../../utils/currencyUtils";
 import commissionService, { Commission } from "../../services/commissionService";
+import { ProtectedPage } from "../../components/ProtectedPage";
 const CommissionTracking: React.FC = () => {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,6 +141,7 @@ const CommissionTracking: React.FC = () => {
     );
   }
   return (
+    <ProtectedPage moduleKey="sales" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Commission Tracking
@@ -352,6 +354,8 @@ const CommissionTracking: React.FC = () => {
         loading={addLoading}
       />
     </Container>
+    </ProtectedPage>
   );
 };
+
 export default CommissionTracking;

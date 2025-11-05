@@ -44,6 +44,7 @@ import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { formatCurrency } from "../../utils/currencyUtils";
+import { ProtectedPage } from "../../components/ProtectedPage";
 interface SalesData {
   period: string;
   revenue: number;
@@ -296,6 +297,7 @@ const SalesReports: React.FC = () => {
     );
   }
   return (
+    <ProtectedPage moduleKey="sales" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box
         sx={{
@@ -807,6 +809,7 @@ const SalesReports: React.FC = () => {
         </Grid>
       )}
     </Container>
+    </ProtectedPage>
   );
 };
 export default SalesReports;

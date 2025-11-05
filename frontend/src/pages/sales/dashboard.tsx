@@ -27,6 +27,7 @@ import {
 } from "recharts";
 import { useRouter } from "next/router";
 import { crmService } from "@services/crmService";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface DashboardStats {
   totalLeads: number;
@@ -139,16 +140,19 @@ const SalesDashboard: React.FC = () => {
 
   if (loading) {
     return (
+      <ProtectedPage moduleKey="sales" action="read">
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
       </Container>
+      </ProtectedPage>
     );
   }
 
   if (error) {
     return (
+      <ProtectedPage moduleKey="sales" action="read">
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
           {error}
@@ -162,10 +166,12 @@ const SalesDashboard: React.FC = () => {
           </Button>
         </Alert>
       </Container>
+      </ProtectedPage>
     );
   }
 
   return (
+    <ProtectedPage moduleKey="sales" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Sales Dashboard
@@ -264,6 +270,7 @@ const SalesDashboard: React.FC = () => {
         </Button>
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 

@@ -34,6 +34,7 @@ import {
 } from "@mui/icons-material";
 import { useRouter } from "next/router";
 import AddCustomerModal from "../../components/AddCustomerModal";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface Customer {
   id: number;
@@ -230,6 +231,7 @@ const SalesCustomerDatabase: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="sales" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Customer Database
@@ -428,6 +430,7 @@ const SalesCustomerDatabase: React.FC = () => {
         loading={addCustomerLoading}
       />
     </Container>
+    </ProtectedPage>
   );
 };
 
