@@ -32,6 +32,7 @@ import {
   TipsAndUpdates as TipIcon,
 } from '@mui/icons-material';
 import { AIChatbot } from '@/ai/AIChatbot';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const AIHelpPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -121,6 +122,7 @@ const AIHelpPage: React.FC = () => {
   ];
 
   return (
+    <ProtectedPage moduleKey="ai" action="read">
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
@@ -269,6 +271,7 @@ const AIHelpPage: React.FC = () => {
         context={{ page: 'ai-help', module: 'help' }}
       />
     </Container>
+    </ProtectedPage>
   );
 };
 
