@@ -89,7 +89,7 @@ async def check_delegation_permission(
 @router.post("/delegate", response_model=DelegatePermissionsResponse)
 async def delegate_permissions(
     request: DelegatePermissionsRequest,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("admin", "create")),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -98,8 +98,7 @@ async def delegate_permissions(
     Only org_admin and management can delegate permissions.
     Can only delegate to 'manager' or 'executive' roles.
     """
-    # Get organization_id from current user
-    organization_id = current_user.organization_id
+    current_user, organization_id = auth
     
     # Check if user can delegate
     can_delegate = await check_delegation_permission(current_user, organization_id, db)
@@ -193,7 +192,7 @@ async def delegate_permissions(
 @router.post("/revoke", response_model=RevokePermissionsResponse)
 async def revoke_permissions(
     request: RevokePermissionsRequest,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("admin", "delete")),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -202,8 +201,7 @@ async def revoke_permissions(
     Only org_admin and management can revoke permissions.
     Can only revoke from 'manager' or 'executive' roles.
     """
-    # Get organization_id from current user
-    organization_id = current_user.organization_id
+    current_user, organization_id = auth
     
     # Check if user can revoke
     can_delegate = await check_delegation_permission(current_user, organization_id, db)
@@ -293,7 +291,7 @@ async def revoke_permissions(
 @router.get("/role/{role_name}/permissions", response_model=RolePermissionsResponse)
 async def get_role_permissions(
     role_name: str,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("admin", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -301,8 +299,7 @@ async def get_role_permissions(
     
     Returns the list of permissions for manager or executive roles.
     """
-    # Get organization_id from current user
-    organization_id = current_user.organization_id
+    current_user, organization_id = auth
     
     # Check if user can view role permissions
     can_view = await check_delegation_permission(current_user, organization_id, db)

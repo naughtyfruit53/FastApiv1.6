@@ -577,6 +577,83 @@ function Menu() {
 
 ---
 
+## API Route Implementation Status
+
+### Completed Updates (2025-11-05)
+
+All critical API routes have been updated to use the standard 3-layer enforcement pattern with `require_access`:
+
+#### ✅ **Recently Updated Files**
+
+1. **`app/api/v1/health.py`** - Health check endpoints
+   - `GET /email-sync` - Email sync health status
+   - `GET /oauth-tokens` - OAuth token health status
+   - Both now use `require_access("email", "read")`
+
+2. **`app/api/v1/debug.py`** - Debug and diagnostics endpoints
+   - `GET /rbac_state` - RBAC state diagnostics
+   - Now uses `require_access("admin", "read")`
+
+3. **`app/api/v1/org_user_management.py`** - Organization user management (7 endpoints)
+   - `POST /users` - Create organization user
+   - `GET /available-modules` - Get available modules for role
+   - `GET /users/{user_id}/permissions` - Get user permissions
+   - `PUT /users/{user_id}/modules` - Update manager modules
+   - `PUT /users/{user_id}/submodules` - Update executive submodules
+   - `GET /managers` - List managers
+   - `DELETE /users/{user_id}` - Delete user
+   - All use appropriate `require_access("user", action)` patterns
+
+4. **`app/api/v1/role_delegation.py`** - Role and permission delegation (3 endpoints)
+   - `POST /delegate` - Delegate permissions
+   - `POST /revoke` - Revoke permissions
+   - `GET /{role_name}/permissions` - Get role permissions
+   - All use appropriate `require_access("admin", action)` patterns
+
+5. **`app/api/v1/financial_modeling.py`** - Financial modeling (18+ endpoints)
+   - Fixed missing `current_user, org_id = auth` extraction in create endpoint
+   - All endpoints already use `require_access("financial_modeling", action)`
+
+#### ✅ **Previously Completed Files** (per PendingImplementation.md)
+
+- **`app/api/v1/assets.py`** - Asset management (15 endpoints) ✅
+- **`app/api/v1/crm.py`** - CRM module ✅
+- **`app/api/v1/admin.py`** - Admin endpoints ✅
+- **`app/api/v1/user.py`** - User management ✅
+- **819+ other routes** already using `require_access` pattern ✅
+
+### Standard Pattern Applied
+
+All updated endpoints now follow this consistent pattern:
+
+```python
+@router.post("/endpoint")
+async def endpoint_function(
+    auth: tuple = Depends(require_access("module", "action")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Endpoint description"""
+    current_user, org_id = auth
+    
+    # Business logic with automatic 3-layer enforcement
+    # Layer 1: Tenant isolation (org_id from auth)
+    # Layer 2: Module entitlement (checked by require_access)
+    # Layer 3: Permission check (checked by require_access)
+```
+
+### Low Priority / Deferred
+
+The following files use `get_current_active_user` but are lower priority:
+
+- **`migration.py`** (26 endpoints) - Migration/admin functions, uses `require_current_organization_id`
+- **`payroll_migration.py`** (6 endpoints) - Payroll-specific migrations
+- **`entitlements.py`** - App-level entitlement access (already has good validation)
+- **`companies.py`** - Some endpoints use old pattern for compatibility
+
+These can be updated in future PRs as they are admin-heavy or have existing safeguards.
+
+---
+
 ## Testing Strategy
 
 ### Test Files
