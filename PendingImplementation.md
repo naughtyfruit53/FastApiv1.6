@@ -147,74 +147,126 @@ async def get_items(
 
 ## 2. Frontend Component and Page Updates
 
-### Status: **Low Priority** (Deferred - Updated: 2025-11-05)
+### Status: **Significantly Progressed** ✅ (Updated: 2025-11-05)
 
 ### Description
 Update frontend components and pages to use standardized contexts, hooks, and utilities.
 
-### Analysis Results
+### Recent Completions (2025-11-05)
+
+#### Infrastructure Created ✅
+- [x] **ProtectedPage Component** (`frontend/src/components/ProtectedPage.tsx`)
+  - Reusable wrapper for 3-layer page protection
+  - Configurable access denied UI with upgrade prompts
+  - HOC variant (`withProtection`) for cleaner integration
+  - Comprehensive prop options for customization
+  - 200+ lines with full TypeScript support
+  
+- [x] **usePermissionCheck Tests** (`frontend/src/hooks/__tests__/usePermissionCheck.test.tsx`)
+  - 400+ lines of comprehensive tests
+  - 20+ test cases covering all 3 layers
+  - Tests for loading states, combined checks, helper hooks
+  
+- [x] **ProtectedPage Tests** (`frontend/src/components/__tests__/ProtectedPage.test.tsx`)
+  - 350+ lines of component tests
+  - 15+ test cases for access patterns
+  - Navigation, HOC, and callback testing
+  
+- [x] **Frontend Protection Guide** (`FRONTEND_PROTECTION_GUIDE.md`)
+  - 700+ lines comprehensive developer documentation
+  - Quick start examples and migration guide
+  - Common patterns and best practices
+  - Testing strategies and API reference
+
+#### Pages Updated ✅
+- [x] **CRM Index** (`frontend/src/pages/crm/index.tsx`)
+  - Protected with: moduleKey='crm', action='read'
+  
+- [x] **User Management** (`frontend/src/pages/settings/user-management.tsx`)
+  - Protected with: custom role management check
+  
+- [x] **General Settings** (`frontend/src/pages/settings/general-settings.tsx`)
+  - Protected with: moduleKey='settings', action='read'
+  
+- [x] **Inventory Index** (`frontend/src/pages/inventory/index.tsx`)
+  - Protected with: moduleKey='inventory', action='read'
+  
+- [x] **HR Dashboard** (`frontend/src/pages/hr/dashboard.tsx`)
+  - Protected with: moduleKey='hr', action='read'
 
 #### Current State Assessment
 - **214 page components** exist in src/pages/
-- **0 pages** currently use `usePermissionCheck` hook
-- Most pages use individual `useAuth` and `useEntitlements` hooks
+- **5 pages** now use `ProtectedPage` wrapper (2.3% complete)
+- **ProtectedPage component** provides easy integration path
+- Most pages still use individual `useAuth` and `useEntitlements` hooks
 - **MegaMenu component** (956 lines) already implements comprehensive 3-layer checking
   - Uses `evalMenuItemAccess` which validates Tenant + Entitlement + RBAC
   - Already filters menu items based on all 3 layers
   - Has proper badge/tooltip system for disabled modules
-  
-#### Decision: LOW PRIORITY for this PR
-**Reasoning:**
-1. The 3-layer enforcement is **already effective at the backend API level**
-2. Frontend pages will get 403 errors if they try unauthorized actions
-3. MegaMenu already hides/disables menu items appropriately
-4. Converting 214 pages is a massive effort with low immediate value
-5. Better to do incrementally as pages are naturally updated
 
-### Recommended Approach (Future PRs)
+### Remaining Work
 
-#### 2.1 Incremental Page Updates
-- [ ] Update pages **as they are modified** for other reasons
+#### 2.1 Additional High-Priority Pages
+- [ ] Dashboard pages (OrgDashboard, AppSuperAdminDashboard)
+- [ ] Additional Settings pages (DataManagement, FactoryReset, etc.)
+- [ ] Manufacturing module pages
+- [ ] Finance/Accounting module pages
+- [ ] Reports module pages
+- [ ] Additional CRM pages (leads, opportunities, etc.)
+- [ ] Additional Inventory pages (movements, cycle-count, etc.)
+- [ ] Additional HR pages (employees, employees-directory)
+
+#### 2.2 Incremental Rollout Strategy ✅ **NOW AVAILABLE**
+- [x] Infrastructure in place - `ProtectedPage` component ready
+- [x] Documentation complete - See `FRONTEND_PROTECTION_GUIDE.md`
+- [x] Examples available - 5 pages updated with different patterns
+- [ ] Continue updating pages as they are modified
 - [ ] Focus on **new pages** using the standard pattern from the start
-- [ ] Document the pattern in DEVELOPER_GUIDE_RBAC.md
 
-#### 2.2 Priority Order (When Updating)
-1. **Dashboard** pages - High visibility
-2. **Settings** pages - Admin functions
-3. **User management** pages - RBAC management
-4. **CRM** module pages - Frequently used
-5. **Manufacturing** module pages - Complex permissions
-6. Other module pages as needed
-
-#### 2.3 Low-Effort High-Value Changes
-- [ ] Add wrapper component that uses `usePermissionCheck` for route-level checks
-- [ ] Create HOC (Higher-Order Component) for page-level protection
-- [ ] Add loading states for permission checks in new pages
-
-### Approach
+### Implementation Pattern
 
 ```typescript
-// Standard pattern to apply
-import { usePermissionCheck } from '@/hooks/usePermissionCheck';
+// Simple module protection
+import { ProtectedPage } from '../../components/ProtectedPage';
 
-function MyPage() {
-  const { isReady, checkModuleAccess } = usePermissionCheck();
-
-  if (!isReady) return <Loading />;
-
-  const access = checkModuleAccess('module', 'read');
-  if (!access.hasPermission) {
-    return <AccessDenied reason={access.reason} />;
-  }
-
-  return <PageContent />;
+export default function MyPage() {
+  return (
+    <ProtectedPage moduleKey="module_name" action="read">
+      {/* Page content */}
+    </ProtectedPage>
+  );
 }
+
+// Custom permission check
+<ProtectedPage
+  customCheck={(pc) => pc.checkCanManageRole('executive')}
+  accessDeniedMessage="Custom message"
+>
+  {/* Content */}
+</ProtectedPage>
 ```
 
-### Estimated Effort
-- **Time**: 2-3 weeks
-- **Priority**: High
-- **Risk**: Low (isolated changes)
+### Documentation
+- **FRONTEND_PROTECTION_GUIDE.md** - Comprehensive guide with:
+  - Quick start examples
+  - API reference for ProtectedPage and usePermissionCheck
+  - Common patterns (page-level, component-level, HOC)
+  - Migration guide from old patterns
+  - Testing strategies
+  - Best practices
+
+### Benefits Delivered
+- ✅ Proactive permission checking (better UX than backend 403 errors)
+- ✅ Consistent access control pattern across pages
+- ✅ Automatic loading states during permission checks
+- ✅ Clear access denied messages with upgrade prompts
+- ✅ Easy to test and maintain
+- ✅ Minimal code changes required for integration
+
+### Estimated Remaining Effort
+- **Time**: 1-2 weeks for high-priority pages (20-30 pages)
+- **Priority**: Medium (infrastructure complete, incremental rollout)
+- **Risk**: Low (isolated changes, well-tested pattern)
 
 ---
 

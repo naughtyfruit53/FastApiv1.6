@@ -33,6 +33,8 @@ import {
 import { useRouter } from "next/router";
 import { useAuth } from "../../hooks/useAuth";
 import { hrService, HRDashboardData, HRActivity, HRTask } from "../../services";
+import { ProtectedPage } from "../../components/ProtectedPage";
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -133,19 +135,20 @@ const HRDashboard: NextPage = () => {
     }
   };
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 4,
-        }}
-      >
-        <Typography variant="h4" component="h1">
-          HR Dashboard
-        </Typography>
+    <ProtectedPage moduleKey="hr" action="read">
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        {/* Header */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 4,
+          }}
+        >
+          <Typography variant="h4" component="h1">
+            HR Dashboard
+          </Typography>
         <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="outlined"
@@ -502,6 +505,7 @@ const HRDashboard: NextPage = () => {
         )}
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default HRDashboard;
