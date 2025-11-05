@@ -1,7 +1,7 @@
 """Fix GST and Settings Permissions for org_admin and management roles
 
 Revision ID: 20251104_01_fix_perms
-Revises: 20251103_02_make_org_state_code_required
+Revises: 20251103_02
 Create Date: 2025-11-04
 
 This migration:
@@ -19,7 +19,7 @@ from datetime import datetime
 
 # Revision identifiers, used by Alembic.
 revision = '20251104_01_fix_perms'
-down_revision = '20251103_02_make_org_state_code_required'
+down_revision = '20251103_02'
 branch_labels = None
 depends_on = None
 
@@ -103,7 +103,7 @@ def upgrade():
     for perm_def in REQUIRED_PERMISSIONS:
         name, display_name, description, module, action = perm_def
         
-        # Check if permission exists
+        # Check if permission exists by name
         existing = connection.execute(text(
             "SELECT id FROM service_permissions WHERE name = :name"
         ), {"name": name}).fetchone()
@@ -130,60 +130,88 @@ def upgrade():
                 })
                 permissions_updated += 1
                 print(f"Updated permission '{name}' (id={existing[0]})")
-        else:
-            # Create new permission
-            if has_module and has_action and has_created_at and has_updated_at:
-                result = connection.execute(text("""
-                    INSERT INTO service_permissions (name, display_name, description, module, action, is_active, created_at, updated_at)
-                    VALUES (:name, :display_name, :description, :module, :action, TRUE, NOW(), NOW())
-                    RETURNING id
+            continue  # Proceed to next permission
+        
+        # If not found by name, and module/action columns exist, check by module and action
+        if not existing and has_module and has_action:
+            existing_by_ma = connection.execute(text(
+                "SELECT id FROM service_permissions WHERE module = :module AND action = :action"
+            ), {"module": module, "action": action}).fetchone()
+            
+            if existing_by_ma:
+                # Update this existing permission to match our name/display/desc
+                connection.execute(text("""
+                    UPDATE service_permissions 
+                    SET name = :name,
+                        display_name = :display_name,
+                        description = :description,
+                        is_active = TRUE,
+                        updated_at = NOW()
+                    WHERE id = :id
                 """), {
-                    "name": name,
-                    "display_name": display_name,
-                    "description": description,
-                    "module": module,
-                    "action": action
-                })
-            elif has_module and has_action and has_created_at:
-                result = connection.execute(text("""
-                    INSERT INTO service_permissions (name, display_name, description, module, action, is_active, created_at)
-                    VALUES (:name, :display_name, :description, :module, :action, TRUE, NOW())
-                    RETURNING id
-                """), {
-                    "name": name,
-                    "display_name": display_name,
-                    "description": description,
-                    "module": module,
-                    "action": action
-                })
-            elif has_module and has_action:
-                result = connection.execute(text("""
-                    INSERT INTO service_permissions (name, display_name, description, module, action, is_active)
-                    VALUES (:name, :display_name, :description, :module, :action, TRUE)
-                    RETURNING id
-                """), {
-                    "name": name,
-                    "display_name": display_name,
-                    "description": description,
-                    "module": module,
-                    "action": action
-                })
-            else:
-                # Fallback without module/action columns
-                result = connection.execute(text("""
-                    INSERT INTO service_permissions (name, display_name, description, is_active)
-                    VALUES (:name, :display_name, :description, TRUE)
-                    RETURNING id
-                """), {
+                    "id": existing_by_ma[0],
                     "name": name,
                     "display_name": display_name,
                     "description": description
                 })
-            
-            perm_id = result.fetchone()[0]
-            permission_ids[name] = perm_id
-            permissions_created += 1
-            print(f"Created permission '{name}' (id={perm_id})")
+                permission_ids[name] = existing_by_ma[0]
+                permissions_updated += 1
+                print(f"Updated existing permission by module/action to '{name}' (id={existing_by_ma[0]})")
+                continue  # Skip insert
+        
+        # If still not found, create new permission
+        if has_module and has_action and has_created_at and has_updated_at:
+            result = connection.execute(text("""
+                INSERT INTO service_permissions (name, display_name, description, module, action, is_active, created_at, updated_at)
+                VALUES (:name, :display_name, :description, :module, :action, TRUE, NOW(), NOW())
+                RETURNING id
+            """), {
+                "name": name,
+                "display_name": display_name,
+                "description": description,
+                "module": module,
+                "action": action
+            })
+        elif has_module and has_action and has_created_at:
+            result = connection.execute(text("""
+                INSERT INTO service_permissions (name, display_name, description, module, action, is_active, created_at)
+                VALUES (:name, :display_name, :description, :module, :action, TRUE, NOW())
+                RETURNING id
+            """), {
+                "name": name,
+                "display_name": display_name,
+                "description": description,
+                "module": module,
+                "action": action
+            })
+        elif has_module and has_action:
+            result = connection.execute(text("""
+                INSERT INTO service_permissions (name, display_name, description, module, action, is_active)
+                VALUES (:name, :display_name, :description, :module, :action, TRUE)
+                RETURNING id
+            """), {
+                "name": name,
+                "display_name": display_name,
+                "description": description,
+                "module": module,
+                "action": action
+            })
+        else:
+            # Fallback without module/action columns
+            result = connection.execute(text("""
+                INSERT INTO service_permissions (name, display_name, description, is_active)
+                VALUES (:name, :display_name, :description, TRUE)
+                RETURNING id
+            """), {
+                "name": name,
+                "display_name": display_name,
+                "description": description
+            })
+        
+        perm_id = result.fetchone()[0]
+        permission_ids[name] = perm_id
+        permissions_created += 1
+        print(f"Created permission '{name}' (id={perm_id})")
     
     print(f"\nPermission summary: {permissions_created} created, {permissions_updated} updated")
     

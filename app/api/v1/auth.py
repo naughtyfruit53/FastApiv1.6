@@ -84,8 +84,8 @@ async def login(
         logger.info(f"[LOGIN:FAILED] Email: {email}")
         await create_audit_log(
             db=db,
-            table_name="security_events",
-            record_id=user.id if user else None,
+            entity_type="security_events",
+            entity_id=user.id if user else None,
             action="LOGIN:FAILED",
             user_id=user.id if user else None,
             changes={
@@ -143,8 +143,8 @@ async def login(
 
     await create_audit_log(
         db=db,
-        table_name="security_events",
-        record_id=user.id,
+        entity_type="security_events",
+        entity_id=user.id,
         action="LOGIN:SUCCESS",
         user_id=user.id,
         changes={
@@ -161,9 +161,41 @@ async def login(
     )
 
     if isinstance(user, PlatformUser):
-        user_out = PlatformUserInDB.model_validate(user)
+        user_out = PlatformUserInDB(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            role=user.role,
+            is_active=user.is_active,
+            force_password_reset=user.force_password_reset,
+            failed_login_attempts=user.failed_login_attempts,
+            locked_until=user.locked_until,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            last_login=user.last_login
+        )
     else:
-        user_out = UserResponse.model_validate(user)
+        user_out = UserResponse(
+            id=user.id,
+            organization_id=user.organization_id,
+            email=user.email,
+            full_name=user.full_name,
+            role=user.role,
+            department=user.department,
+            designation=user.designation,
+            employee_id=user.employee_id,
+            is_active=user.is_active,
+            is_super_admin=user.is_super_admin,
+            phone=user.phone,
+            avatar_path=user.avatar_path,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            last_login=user.last_login,
+            has_stock_access=user.has_stock_access,
+            assigned_modules=user.assigned_modules,
+            reporting_manager_id=user.reporting_manager_id,
+            sub_module_permissions=user.sub_module_permissions
+        )
 
     # Optional: Set cookies in development mode if AUTH_COOKIE_DEV is enabled
     # Production always prefers JSON response with Authorization: Bearer
@@ -271,8 +303,8 @@ async def logout(
     if user:
         await create_audit_log(
             db=db,
-            table_name="security_events",
-            record_id=user.id,
+            entity_type="security_events",
+            entity_id=user.id,
             action="LOGOUT",
             user_id=user.id,
             changes={

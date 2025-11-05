@@ -172,6 +172,14 @@ from .master_data_models import (
 )
 # Import organization settings models
 from .organization_settings import OrganizationSettings, VoucherFormatTemplate
+# Import AI agents models
+from .ai_agents import (
+    AIAgent, AIAgentInteraction, AIAgentCapability, AgentType, AgentStatus, AgentCapability
+)
+# Import audit log models
+from .audit_log import (
+    AuditLog, AuditLogView, AuditLogExport, AuditActionType, AuditEntityType
+)
 
 # No imports from .base as all models have been moved
 
@@ -309,6 +317,12 @@ __all__ = [
 
     # Organization settings models
     "VoucherFormatTemplate",
+
+    # AI agents models
+    "AIAgent", "AIAgentInteraction", "AIAgentCapability", "AgentType", "AgentStatus", "AgentCapability",
+
+    # Audit log models
+    "AuditLog", "AuditLogView", "AuditLogExport", "AuditActionType", "AuditEntityType",
 ]
 
 # No imports from .base as all models have been moved

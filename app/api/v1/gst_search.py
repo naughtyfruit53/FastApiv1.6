@@ -76,7 +76,7 @@ def create_mock_gst_result(gstin: str, reason: str = "Format valid - Not found i
     }
     state_name = state_map.get(state_code, "Unknown State")
     return GSTDetails(
-        name=f"Fetched from GST Database (Mock - {reason})",
+        name=f"Company Name Not Found ({reason})",
         gst_number=gstin,
         state=state_name,
         state_code=state_code,
@@ -133,13 +133,12 @@ async def search_gst_number(
                 action="read",
                 action_description=f"GST number lookup: {gst_number} - {details}",
                 user_id=current_user.id,
-                user_email=current_user.email,
-                status="success" if success else "failed",
-                metadata={
+                changes={
                     "gst_number": gst_number,
                     "user_role": current_user.role,
                     "details": details
-                }
+                },
+                success=success
             )
             db.add(audit_log)
             await db.commit()
@@ -159,10 +158,10 @@ async def search_gst_number(
         return mock_result
     
     try:
-        url = f"https://gst-insights-api.p.rapidapi.com/getGSTDetailsUsingGST/{gst_number}"
+        url = f"https://powerful-gstin-tool.p.rapidapi.com/v1/gstin/{gst_number}/details"
         headers = {
             "X-RapidAPI-Key": settings.RAPIDAPI_KEY,
-            "X-RapidAPI-Host": "gst-insights-api.p.rapidapi.com"
+            "X-RapidAPI-Host": "powerful-gstin-tool.p.rapidapi.com"
         }
         
         async with httpx.AsyncClient() as client:
@@ -188,11 +187,6 @@ async def search_gst_number(
                         mock_result = create_mock_gst_result(gst_number)
                         gst_cache[gst_number] = mock_result
                         return mock_result
-                    if not data.get('success', False):
-                        logger.warning(f"API success false: {data.get('message', 'No message')} - falling back to mock")
-                        mock_result = create_mock_gst_result(gst_number)
-                        gst_cache[gst_number] = mock_result
-                        return mock_result
                     result = data.get('data', {})
                     # Handle if result ('data' field) is a list
                     if isinstance(result, list):
@@ -211,17 +205,17 @@ async def search_gst_number(
                         gst_cache[gst_number] = mock_result
                         return mock_result
                     # Removed the !result.get('gstin') raise - return even if partial
-                    address = result.get('pradr', {})  # Assuming 'pradr' for principal address
-                    name = result.get('lgnm', result.get('tradeNam', 'Unknown'))  # Use 'lgnm' for legal name, fallback to 'tradeNam'
+                    address = result.get('place_of_business_principal', {}).get('address', {})  # Updated path based on test result
+                    name = result.get('legal_name', result.get('trade_name', 'Company Name Not Found in Database'))
                     gst_result = GSTDetails(
                         name=name,
                         gst_number=result.get('gstin', gst_number),
-                        address1=address.get('addr', {}).get('bno', "") + " " + address.get('addr', {}).get('st', ""),  # Combine building no and street
-                        city=address.get('addr', {}).get('city', ""),
-                        state=address.get('addr', {}).get('stcd', ""),
-                        pin_code=address.get('addr', {}).get('pncd', ""),
-                        pan_number=result.get('pan', ""),
-                        state_code=result.get('stjCd', gst_number[:2])
+                        address1=address.get('building_name', "") + " " + address.get('street', ""),  # Combine building_name and street
+                        city=address.get('city', ""),
+                        state=address.get('state', ""),
+                        pin_code=address.get('pin_code', ""),
+                        pan_number=result.get('pan_number', ""),
+                        state_code=result.get('state_code', gst_number[:2])
                     )
                     gst_cache[gst_number] = gst_result  # Cache successful result
                     await log_gst_search(True, f"Retrieved from API: {name}")
@@ -290,7 +284,7 @@ async def verify_gst_number(
     if not is_valid_checksum:
         return {
             "valid": False,
-            "message": "Invalid GSTIN checksum"
+            "message": "Invalid GSTIN checksum. Please verify the number."
         }
     
     # TODO: Integrate with GST verification API
