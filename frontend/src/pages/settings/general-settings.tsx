@@ -57,6 +57,7 @@ import {
   canShowOrgDataResetOnly,
 } from "../../types/user.types";
 import OrganizationSettings from "../../components/OrganizationSettings";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 export default function GeneralSettings() {
   const router = useRouter();
@@ -150,10 +151,11 @@ export default function GeneralSettings() {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        General Settings
-      </Typography>
+    <ProtectedPage moduleKey="settings" action="read">
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          General Settings
+        </Typography>
       {/* User Role Information */}
       <Paper
         sx={{ p: 2, mb: 3, bgcolor: "info.main", color: "info.contrastText" }}
@@ -526,5 +528,6 @@ export default function GeneralSettings() {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 }

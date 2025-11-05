@@ -50,6 +50,7 @@ import { useAuth } from "../../context/AuthContext";
 import { getDisplayRole, canManageUsers, canResetPasswords } from "../../types/user.types";
 import AddUserDialog from "../../components/AddUserDialog";
 import { useRouter } from "next/navigation";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface User {
   id: number;
@@ -317,19 +318,25 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Box>
-          <Typography variant="h4" component="h1">
-            User Management
-          </Typography>
+    <ProtectedPage
+      moduleKey="settings"
+      action="read"
+      customCheck={(pc) => pc.checkCanManageRole('executive')}
+      accessDeniedMessage="You do not have permission to manage users"
+    >
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Box>
+            <Typography variant="h4" component="h1">
+              User Management
+            </Typography>
           <Typography variant="subtitle1" color="text.secondary">
             Managing users for{" "}
             {user?.is_super_admin
@@ -754,6 +761,7 @@ const UserManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
 
