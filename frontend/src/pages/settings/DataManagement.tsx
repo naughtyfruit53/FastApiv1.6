@@ -57,6 +57,8 @@ const DataManagement: React.FC = () => {
 
   return (
     <ProtectedPage
+      moduleKey="admin"
+      action="write"
       customCheck={(pc) => pc.checkIsSuperAdmin()}
       accessDeniedMessage="Only super admins can access data management"
     >
@@ -65,8 +67,8 @@ const DataManagement: React.FC = () => {
           Data Management
         </Typography>
         <Alert severity="warning" sx={{ mb: 2 }}>
-          As god superadmin (naughtyfruit53@gmail.com), you can perform a factory default reset which erases all
-          app data.
+          As super admin, you can perform a factory default reset which erases all app data.
+          This operation requires special permissions and cannot be undone.
         </Alert>
         <Button variant="contained" color="error" onClick={handleFactoryDefault}>
           Factory Default - Reset Entire App

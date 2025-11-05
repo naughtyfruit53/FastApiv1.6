@@ -319,10 +319,13 @@ const UserManagement: React.FC = () => {
 
   return (
     <ProtectedPage
-      moduleKey="settings"
-      action="read"
-      customCheck={(pc) => pc.checkCanManageRole('executive')}
-      accessDeniedMessage="You do not have permission to manage users"
+      customCheck={(pc) => {
+        // User management requires both settings access and role management capability
+        const hasSettings = pc.checkModuleAccess('settings', 'read').hasPermission;
+        const canManage = pc.checkCanManageRole('executive');
+        return hasSettings && canManage;
+      }}
+      accessDeniedMessage="You do not have permission to manage users. This requires settings access and role management capability."
     >
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Box
