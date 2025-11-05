@@ -53,7 +53,8 @@ CATEGORY_MODULE_MAP: Dict[str, List[str]] = {
         "finance",
         "accounting",
         "reports_analytics",
-        "payroll"
+        "payroll",
+        "ledger"  # NEW: Added ledger to finance_suite
     ],
     
     ProductCategory.SERVICE: [

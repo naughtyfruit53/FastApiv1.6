@@ -70,6 +70,9 @@ class ModuleName(str, Enum):
     
     # New module for user management
     USER = "user"
+    
+    # NEW: Added ledger module to fix "Module not found" error
+    LEDGER = "ledger"
 
 
 # Submodule definitions for each module (expanded to match menuConfig.tsx)
@@ -451,7 +454,15 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
     ModuleName.GST.value: ["search", "verify"],  # Added GST module with submodules for search functionality
     
     # New for user management
-    ModuleName.USER.value: ["create", "read", "update", "delete"]
+    ModuleName.USER.value: ["create", "read", "update", "delete"],
+    
+    # NEW: Added submodules for ledger module
+    ModuleName.LEDGER.value: [
+        "complete",
+        "outstanding",
+        "balances",
+        "chart_of_accounts"
+    ]
 }
 
 
@@ -520,6 +531,8 @@ def get_default_enabled_modules() -> Dict[str, bool]:
     defaults = {module.upper(): True for module in get_all_modules()}
     # Explicitly enable SETTINGS by default
     defaults['SETTINGS'] = True
+    # NEW: Explicitly enable LEDGER by default
+    defaults['LEDGER'] = True
     return defaults
 
 

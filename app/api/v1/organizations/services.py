@@ -149,8 +149,11 @@ class OrganizationService:
             "total_products": total_products,
             "total_stock_items": total_stock_items,
             "plan_type": org.license_type if org else "N/A",
-            "plan_status": org.status if org else "N/A",
-            "plan_expiry": plan_expiry,
+            "total_org_users": total_users,
+            "inactive_users": 0,  # Placeholder; add proper calculation if needed
+            "license_status": org.status if org else "N/A",
+            "license_issued_date": org.license_issued_date.isoformat() if org and org.license_issued_date else None,
+            "license_expiry_date": org.license_expiry_date.isoformat() if org and org.license_expiry_date else None,
             "subscription_validity_days": subscription_validity_days,
             "subscription_start": org.license_issued_date.isoformat() if org and org.license_issued_date else None,
             "generated_at": datetime.utcnow().isoformat()
@@ -172,7 +175,7 @@ class OrganizationService:
             RecentActivity(
                 id=log.id,
                 action=log.action,
-                entity_type=log.table_name,
+                entity_type=log.entity_type,
                 entity_id=log.record_id,
                 user_id=log.user_id,
                 organization_id=log.organization_id,

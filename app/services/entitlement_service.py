@@ -173,17 +173,17 @@ class EntitlementService:
             raise ValueError(f"Organization with id {org_id} not found")
 
         # Get all modules by key
-        modules_result = await self.db.execute(
+        result = await self.db.execute(
             select(Module).where(Module.is_active == True)
         )
-        modules_by_key = {m.module_key.lower(): m for m in modules_result.scalars().all()}  # Normalize to lower
+        modules_by_key = {m.module_key.lower(): m for m in result.scalars().all()}  # Normalize to lower
 
         # Get all submodules by (module_id, submodule_key)
-        submodules_result = await self.db.execute(
+        result = await self.db.execute(
             select(Submodule).where(Submodule.is_active == True)
         )
         submodules_map = {}
-        for sub in submodules_result.scalars().all():
+        for sub in result.scalars().all():
             submodules_map[(sub.module_id, sub.submodule_key.lower())] = sub  # Normalize to lower
 
         diff_data = {"modules": [], "submodules": []}
@@ -378,7 +378,8 @@ class EntitlementService:
             'VOUCHER': 'ERP',
             'STOCK': 'ERP',
             'BOM': 'MANUFACTURING',
-            'SETTINGS': 'ERP'  # NEW: Auto-enable settings if ERP enabled
+            'SETTINGS': 'ERP',  # NEW: Auto-enable settings if ERP enabled
+            'LEDGER': 'FINANCE'  # NEW: Auto-enable ledger if FINANCE enabled
         }
 
         migrated = False
@@ -479,7 +480,32 @@ class EntitlementService:
         module = module_result.scalar_one_or_none()
         if not module:
             logger.warning(f"Module not found in database for key: {normalized_module_key}")
-            return False, 'disabled', f"Module '{module_key}' not found"
+            # NEW: Auto-create missing module if not found
+            module = Module(
+                module_key=normalized_module_key,
+                display_name=module_key.capitalize(),
+                description=f"Auto-created module: {module_key}",
+                icon="default",
+                sort_order=999,  # High sort_order for auto-created
+                is_active=True
+            )
+            self.db.add(module)
+            await self.db.flush()
+            await self.db.refresh(module)
+            logger.info(f"Auto-created missing module: {normalized_module_key} with ID {module.id}")
+            
+            # Auto-create entitlement as enabled for this org
+            ent = OrgEntitlement(
+                org_id=org_id,
+                module_id=module.id,
+                status='enabled',
+                source='auto_creation'
+            )
+            self.db.add(ent)
+            await self.db.commit()
+            logger.info(f"Auto-enabled module {normalized_module_key} for org {org_id}")
+            
+            return True, 'enabled', 'Auto-created and enabled'
 
         logger.debug(f"Found module ID {module.id} for key {normalized_module_key}")
         

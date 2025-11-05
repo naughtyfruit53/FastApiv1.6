@@ -1,3 +1,5 @@
+# app/core/enforcement.py
+
 """
 Centralized RBAC and tenant isolation enforcement utilities.
 This module provides unified enforcement of organization scoping and permission checks.
@@ -117,6 +119,10 @@ class RBACEnforcement:
         ('organization', 'create'): 'admin_organizations_create',
         ('organization', 'update'): 'admin_organizations_update',
         ('organization', 'delete'): 'admin_organizations_delete',
+        
+        # NEW: Ledger-specific mappings (aligned with ledger.py endpoints)
+        ('ledger', 'read'): 'ledger_read',
+        ('ledger', 'create'): 'ledger_create'
     }
     
     @staticmethod
@@ -292,6 +298,11 @@ class CombinedEnforcement:
         
         # Get the canonical permission name for error reporting
         required_permission = RBACEnforcement.get_permission_name(self.module, self.action)
+        
+        # NEW: Bypass all checks for org_admin
+        if current_user.role.lower() == 'org_admin':
+            logger.debug(f"Granting full access to org_admin {current_user.email} for module {self.module}")
+            return current_user, org_id
         
         # Step 1: Check entitlement (org-level access)
         if check_entitlement_access is None or EntitlementDeniedError is None:

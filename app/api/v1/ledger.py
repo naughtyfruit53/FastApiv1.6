@@ -14,7 +14,6 @@ from app.core.enforcement import require_access
 from app.models.user_models import User
 
 router = APIRouter(
-    prefix="/ledger",
     tags=["Ledger"]
 )
 
