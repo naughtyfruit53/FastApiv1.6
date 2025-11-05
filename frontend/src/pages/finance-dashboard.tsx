@@ -44,6 +44,8 @@ import {
 } from "chart.js";
 import axios from "axios";
 import { formatCurrency } from "../utils/currencyUtils";
+import { ProtectedPage } from "../components/ProtectedPage";
+
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -205,12 +207,13 @@ const FinanceDashboard: React.FC = () => {
     ],
   };
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box display="flex" justifyContent="between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Finance Dashboard
-        </Typography>
+    <ProtectedPage moduleKey="finance" action="read">
+      <Box sx={{ p: 3 }}>
+        {/* Header */}
+        <Box display="flex" justifyContent="between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
+            Finance Dashboard
+          </Typography>
         <Box>
           <IconButton onClick={fetchDashboardData} color="primary">
             <Refresh />
@@ -512,6 +515,7 @@ const FinanceDashboard: React.FC = () => {
         </TabPanel>
       </Paper>
     </Box>
+    </ProtectedPage>
   );
 };
 export default FinanceDashboard;

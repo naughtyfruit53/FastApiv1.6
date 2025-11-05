@@ -17,6 +17,7 @@ import { useAuth } from "../../context/AuthContext";
 import { isAppSuperAdmin, isOrgSuperAdmin } from "../../types/user.types";
 import CompanyDetailsModal from "../../components/CompanyDetailsModal";
 import { usePermissions } from "../../context/PermissionContext";  // Added import for permissions
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface OrgStatistics {
   total_products: number;
@@ -254,20 +255,21 @@ const OrgDashboard: React.FC = () => {
   const validityDays = calculateValidityDays(statistics.license_expiry_date);
 
   return (
-    <DashboardLayout title="Organization Dashboard">
-      <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
-        {statsCards.map((stat, index) => (
-          <MetricCard
-            key={index}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            color={stat.color}
-            description={stat.description}
-            trend={stat.trend}
-            href={stat.href}
-          />
-        ))}
+    <ProtectedPage moduleKey="dashboard" action="read">
+      <DashboardLayout title="Organization Dashboard">
+        <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
+          {statsCards.map((stat, index) => (
+            <MetricCard
+              key={index}
+              title={stat.title}
+              value={stat.value}
+              icon={stat.icon}
+              color={stat.color}
+              description={stat.description}
+              trend={stat.trend}
+              href={stat.href}
+            />
+          ))}
       </Box>
       <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
         <Paper className="modern-card" sx={{ p: 3 }}>
@@ -509,6 +511,7 @@ const OrgDashboard: React.FC = () => {
         mode="create"
       />
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
 
