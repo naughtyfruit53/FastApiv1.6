@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models import User, Organization
 from app.services.rbac import RBACService
 from app.core.rbac_dependencies import get_rbac_service
@@ -24,7 +24,7 @@ router = APIRouter()
 
 @router.get("/rbac_state")
 async def get_rbac_state(
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("admin", "read")),
     rbac_service: RBACService = Depends(get_rbac_service),
     db: AsyncSession = Depends(get_db)
 ) -> Dict[str, Any]:
@@ -39,6 +39,8 @@ async def get_rbac_state(
         - Effective permissions
         - Organization modules (if applicable)
     """
+    current_user, org_id = auth
+    
     try:
         # Get user basic info
         user_info = {
