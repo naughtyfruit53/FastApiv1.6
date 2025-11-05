@@ -22,6 +22,7 @@ import {
   AccountBalance
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const TrialBalancePage: React.FC = () => {
   const trialBalanceData = [
@@ -42,6 +43,7 @@ const TrialBalancePage: React.FC = () => {
   const totalCredit = trialBalanceData.reduce((sum, item) => sum + item.credit, 0);
 
   return (
+    <ProtectedPage moduleKey="reports" action="read">
     <DashboardLayout
       title="Trial Balance"
       subtitle="Verify that total debits equal total credits"
@@ -168,6 +170,7 @@ const TrialBalancePage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
 
