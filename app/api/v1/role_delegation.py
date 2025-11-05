@@ -15,7 +15,6 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.enforcement import require_access
 from app.models import User, ServiceRole, ServicePermission, ServiceRolePermission, UserServiceRole
-from app.api.v1.user import get_current_active_user
 import logging
 
 logger = logging.getLogger(__name__)
