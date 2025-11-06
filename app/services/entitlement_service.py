@@ -804,3 +804,101 @@ class EntitlementService:
                 activated_categories.append(category)
         
         return activated_categories
+
+    async def initialize_org_entitlements(
+        self,
+        org_id: int,
+        enabled_modules: Optional[Dict[str, bool]] = None,
+        license_tier: str = "basic"
+    ) -> Dict[str, str]:
+        """
+        Initialize entitlements for a newly created organization.
+        
+        This method should be called during organization creation to set up
+        initial entitlement records based on:
+        1. The organization's enabled_modules configuration
+        2. The organization's license tier
+        3. Always-on modules (email, dashboard)
+        
+        Args:
+            org_id: Organization ID
+            enabled_modules: Dictionary of module keys and their enabled status
+            license_tier: License tier (basic, professional, enterprise, etc.)
+        
+        Returns:
+            Dictionary mapping module keys to their initial status
+        """
+        from app.core.constants import ALWAYS_ON_MODULES
+        
+        # Get all modules
+        result = await self.db.execute(
+            select(Module).where(Module.is_active == True)
+        )
+        modules = result.scalars().all()
+        
+        if not modules:
+            logger.warning("No modules found in database. Run seed_entitlements.py first.")
+            return {}
+        
+        # Normalize enabled_modules keys (case-insensitive)
+        enabled_map = {}
+        if enabled_modules:
+            for key, value in enabled_modules.items():
+                enabled_map[key.lower()] = value
+        
+        # Track created entitlements
+        created_entitlements = {}
+        
+        for module in modules:
+            module_key_lower = module.module_key.lower()
+            
+            # Check if entitlement already exists
+            result = await self.db.execute(
+                select(OrgEntitlement).where(
+                    and_(
+                        OrgEntitlement.org_id == org_id,
+                        OrgEntitlement.module_id == module.id
+                    )
+                )
+            )
+            existing = result.scalar_one_or_none()
+            
+            if existing:
+                logger.debug(f"Entitlement for {module.module_key} already exists for org {org_id}")
+                created_entitlements[module.module_key] = existing.status
+                continue
+            
+            # Determine initial status
+            if module_key_lower in ALWAYS_ON_MODULES:
+                # Always-on modules are always enabled
+                status = ModuleStatusEnum.ENABLED
+                logger.info(f"  ✓ {module.module_key}: Enabled (always-on)")
+            elif enabled_map.get(module_key_lower, False):
+                # Module is enabled in organization settings
+                status = ModuleStatusEnum.ENABLED
+                logger.info(f"  ✓ {module.module_key}: Enabled (org config)")
+            elif license_tier in ['professional', 'enterprise']:
+                # Professional/Enterprise tiers get trial for disabled modules
+                status = ModuleStatusEnum.TRIAL
+                logger.info(f"  ⌛ {module.module_key}: Trial (license tier: {license_tier})")
+            else:
+                # Basic tier and module not explicitly enabled
+                status = ModuleStatusEnum.DISABLED
+                logger.info(f"  ✗ {module.module_key}: Disabled (not in plan)")
+            
+            # Create entitlement record
+            entitlement = OrgEntitlement(
+                org_id=org_id,
+                module_id=module.id,
+                status=status.value,
+                source='org_creation',
+                trial_expires_at=None  # Can be set later for trial modules
+            )
+            self.db.add(entitlement)
+            created_entitlements[module.module_key] = status.value
+        
+        # Commit all entitlements
+        await self.db.commit()
+        
+        logger.info(f"✅ Initialized {len(created_entitlements)} entitlements for org {org_id}")
+        return created_entitlements
