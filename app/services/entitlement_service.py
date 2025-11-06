@@ -3,7 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload, joinedload
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Any
 from datetime import datetime
 import logging
 
@@ -820,7 +820,7 @@ class EntitlementService:
     async def sync_permissions_with_entitlements(
         self,
         org_id: int,
-        module_changes: List[Dict[str, any]] = None
+        module_changes: List[Dict[str, Any]] = None
     ) -> Dict[str, int]:
         """
         Synchronize user permissions with entitlement changes.
@@ -916,6 +916,9 @@ class EntitlementService:
                 )
                 users = result.scalars().all()
                 
+                # Track restoration count for this module
+                module_restored = 0
+                
                 # For each user, restore permissions based on their role
                 for user in users:
                     # Admin roles get full access
@@ -938,9 +941,10 @@ class EntitlementService:
                                 has_access=True
                             )
                             self.db.add(perm)
+                            module_restored += 1
                             restored_count += 1
                 
-                logger.info(f"Restored {restored_count} permissions for module {module_key}")
+                logger.info(f"Restored {module_restored} permissions for module {module_key}")
                 
                 # Log event
                 event = EntitlementEvent(
@@ -950,7 +954,7 @@ class EntitlementService:
                     reason=f"Module {module_key} enabled",
                     payload={
                         "module_key": module_key,
-                        "permissions_restored": restored_count
+                        "permissions_restored": module_restored
                     }
                 )
                 self.db.add(event)
