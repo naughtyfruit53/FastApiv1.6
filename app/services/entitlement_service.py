@@ -296,6 +296,18 @@ class EntitlementService:
 
         await self.db.commit()
         await self.db.refresh(event)
+        
+        # Sync permissions with entitlement changes
+        try:
+            logger.info(f"Syncing permissions with entitlement changes for org {org_id}")
+            sync_result = await self.sync_permissions_with_entitlements(
+                org_id=org_id,
+                module_changes=diff_data["modules"]
+            )
+            logger.info(f"Permission sync result: {sync_result}")
+        except Exception as sync_error:
+            logger.error(f"Error syncing permissions: {sync_error}", exc_info=True)
+            # Don't fail the entire update if permission sync fails
 
         # NEW: Sync enabled_modules in organization
         logger.info(f"Syncing enabled_modules for org {org_id} after entitlement update")
@@ -804,6 +816,149 @@ class EntitlementService:
                 activated_categories.append(category)
         
         return activated_categories
+
+    async def sync_permissions_with_entitlements(
+        self,
+        org_id: int,
+        module_changes: List[Dict[str, any]] = None
+    ) -> Dict[str, int]:
+        """
+        Synchronize user permissions with entitlement changes.
+        
+        When a module is disabled:
+        - Revoke all user permissions for that module
+        - Log the revocation for audit trail
+        
+        When a module is enabled:
+        - Restore default permissions based on user role
+        - Log the restoration
+        
+        Args:
+            org_id: Organization ID
+            module_changes: List of module changes with old_status and new_status
+        
+        Returns:
+            Dictionary with counts of permissions revoked and restored
+        """
+        from app.models.rbac_models import UserModulePermission
+        from app.models.user_models import User
+        
+        revoked_count = 0
+        restored_count = 0
+        
+        if not module_changes:
+            return {"revoked": 0, "restored": 0}
+        
+        # Get all modules by key for lookup
+        result = await self.db.execute(
+            select(Module).where(Module.is_active == True)
+        )
+        modules_by_key = {m.module_key.lower(): m for m in result.scalars().all()}
+        
+        for change in module_changes:
+            module_key = change.get("module_key", "").lower()
+            old_status = change.get("old_status", "")
+            new_status = change.get("new_status", "")
+            
+            module = modules_by_key.get(module_key)
+            if not module:
+                continue
+            
+            # Module was disabled
+            if old_status in ["enabled", "trial"] and new_status == "disabled":
+                logger.info(f"Module {module_key} disabled - revoking permissions for org {org_id}")
+                
+                # Get all users in organization with permissions for this module
+                result = await self.db.execute(
+                    select(UserModulePermission)
+                    .join(User, UserModulePermission.user_id == User.id)
+                    .where(
+                        and_(
+                            User.organization_id == org_id,
+                            UserModulePermission.module_id == module.id
+                        )
+                    )
+                )
+                permissions = result.scalars().all()
+                
+                # Delete permissions
+                for perm in permissions:
+                    await self.db.delete(perm)
+                    revoked_count += 1
+                
+                logger.info(f"Revoked {len(permissions)} permissions for module {module_key}")
+                
+                # Log event
+                event = EntitlementEvent(
+                    org_id=org_id,
+                    event_type='permissions_revoked',
+                    actor_user_id=None,
+                    reason=f"Module {module_key} disabled",
+                    payload={
+                        "module_key": module_key,
+                        "permissions_revoked": len(permissions)
+                    }
+                )
+                self.db.add(event)
+            
+            # Module was enabled
+            elif old_status == "disabled" and new_status in ["enabled", "trial"]:
+                logger.info(f"Module {module_key} enabled - restoring default permissions for org {org_id}")
+                
+                # Get all users in organization
+                result = await self.db.execute(
+                    select(User).where(
+                        and_(
+                            User.organization_id == org_id,
+                            User.is_active == True
+                        )
+                    )
+                )
+                users = result.scalars().all()
+                
+                # For each user, restore permissions based on their role
+                for user in users:
+                    # Admin roles get full access
+                    if user.role in ["org_admin", "management"]:
+                        # Check if permission already exists
+                        result = await self.db.execute(
+                            select(UserModulePermission).where(
+                                and_(
+                                    UserModulePermission.user_id == user.id,
+                                    UserModulePermission.module_id == module.id
+                                )
+                            )
+                        )
+                        existing = result.scalar_one_or_none()
+                        
+                        if not existing:
+                            perm = UserModulePermission(
+                                user_id=user.id,
+                                module_id=module.id,
+                                has_access=True
+                            )
+                            self.db.add(perm)
+                            restored_count += 1
+                
+                logger.info(f"Restored {restored_count} permissions for module {module_key}")
+                
+                # Log event
+                event = EntitlementEvent(
+                    org_id=org_id,
+                    event_type='permissions_restored',
+                    actor_user_id=None,
+                    reason=f"Module {module_key} enabled",
+                    payload={
+                        "module_key": module_key,
+                        "permissions_restored": restored_count
+                    }
+                )
+                self.db.add(event)
+        
+        await self.db.commit()
+        
+        logger.info(f"Permission sync complete - Revoked: {revoked_count}, Restored: {restored_count}")
+        return {"revoked": revoked_count, "restored": restored_count}
 
     async def initialize_org_entitlements(
         self,
