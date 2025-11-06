@@ -303,6 +303,20 @@ class OrganizationService:
             except Exception as rbac_error:
                 logger.warning(f"RBAC setup warning for org_admin {super_admin_user.id}: {rbac_error}")
             
+            # Initialize entitlements for the new organization
+            try:
+                from app.services.entitlement_service import EntitlementService
+                entitlement_service = EntitlementService(db)
+                logger.info(f"Initializing entitlements for organization {organization.id}")
+                created_entitlements = await entitlement_service.initialize_org_entitlements(
+                    org_id=organization.id,
+                    enabled_modules=organization.enabled_modules,
+                    license_tier=organization.plan_type
+                )
+                logger.info(f"Initialized {len(created_entitlements)} entitlements for organization {organization.id}")
+            except Exception as ent_error:
+                logger.warning(f"Entitlement setup warning for org {organization.id}: {ent_error}")
+            
             await db.commit()
             
             log_license_creation(organization.name, license_data.superadmin_email, current_user.email)
