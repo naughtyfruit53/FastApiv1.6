@@ -176,6 +176,77 @@ async def seed_and_sync_entitlements(background_tasks: BackgroundTasks):
             logger.error(f"Error during startup seeding/sync: {str(e)}")
             await db.rollback()
 
+# Auto-seed baseline data on first boot (idempotent)
+async def auto_seed_baseline_data(background_tasks: BackgroundTasks):
+    """
+    Automatically seed baseline data if database is empty.
+    This runs on application startup and is idempotent.
+    """
+    from app.models.entitlement_models import Module
+    from app.models.rbac_models import ServicePermission
+    from app.models.organization_settings import VoucherFormatTemplate
+    
+    async with AsyncSessionLocal() as db:
+        try:
+            # Check if baseline data exists
+            needs_seeding = False
+            
+            # Check for super admin
+            result = await db.execute(select(User).where(User.is_super_admin == True).limit(1))
+            if not result.scalar_one_or_none():
+                needs_seeding = True
+            
+            # Check for modules
+            if not needs_seeding:
+                result = await db.execute(select(Module).limit(1))
+                if not result.scalar_one_or_none():
+                    needs_seeding = True
+            
+            # Check for RBAC permissions
+            if not needs_seeding:
+                result = await db.execute(select(ServicePermission).limit(1))
+                if not result.scalar_one_or_none():
+                    needs_seeding = True
+            
+            # Check for voucher templates
+            if not needs_seeding:
+                result = await db.execute(
+                    select(VoucherFormatTemplate).where(
+                        VoucherFormatTemplate.is_system_template == True
+                    ).limit(1)
+                )
+                if not result.scalar_one_or_none():
+                    needs_seeding = True
+            
+            if needs_seeding:
+                logger.info("=" * 60)
+                logger.info("Baseline data not found - starting auto-seed")
+                logger.info("=" * 60)
+                
+                # Import and run the unified seeding script
+                import sys
+                from pathlib import Path
+                
+                # Add scripts directory to path
+                scripts_dir = Path(__file__).parent.parent / "scripts"
+                sys.path.insert(0, str(scripts_dir))
+                
+                try:
+                    from scripts.seed_all import run_seed_all
+                    await run_seed_all(skip_check=True)
+                    logger.info("✓ Auto-seed completed successfully")
+                except ImportError:
+                    logger.warning("Could not import seed_all script - skipping auto-seed")
+                except Exception as seed_error:
+                    logger.error(f"Error during auto-seed: {seed_error}")
+                    # Don't raise - allow app to start even if seeding fails
+            else:
+                logger.info("Baseline data exists - skipping auto-seed")
+                
+        except Exception as e:
+            logger.error(f"Error checking for baseline data: {str(e)}")
+            # Don't raise - allow app to start even if check fails
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -205,6 +276,7 @@ async def lifespan(app: FastAPI):
     
     # Schedule non-essential inits as background tasks to speed up startup
     background_tasks = BackgroundTasks()
+    background_tasks.add_task(auto_seed_baseline_data, background_tasks)  # Auto-seed baseline data if needed
     background_tasks.add_task(init_default_permissions, background_tasks)
     background_tasks.add_task(init_org_roles, background_tasks)
     background_tasks.add_task(init_org_modules, background_tasks)
