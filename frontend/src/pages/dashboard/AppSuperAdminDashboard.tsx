@@ -206,7 +206,7 @@ const AppSuperAdminDashboard: React.FC = () => {
       : 0;
   return (
     <ProtectedPage
-      customCheck={(pc) => pc.isSuperAdmin()}
+      customCheck={(pc) => pc.checkIsSuperAdmin()}  // NEW: Simplified check to use checkIsSuperAdmin directly, bypassing tenant/entitlement layers for super admin
       accessDeniedMessage="This dashboard is only accessible to super administrators."
     >
       <DashboardLayout

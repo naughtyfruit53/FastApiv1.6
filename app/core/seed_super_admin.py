@@ -12,7 +12,7 @@ This module seeds the default platform super admin user.
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import OperationalError
-from sqlalchemy import select, text
+from sqlalchemy import select, text, and_  # NEW: Added and_ import to fix "name 'and_' is not defined" error
 from app.core.database import AsyncSessionLocal, Base
 from app.models.user_models import User
 from app.schemas.user import UserRole
@@ -29,7 +29,7 @@ async def seed_super_admin(db: AsyncSession = None) -> None:
     Only runs if no super admin exists in the database.
 
     - Email: naughtyfruit53@gmail.com
-    - Password: 123456 (must be changed after login)
+    - Password: Admin123! (must be changed after login)
     - organization_id: NULL (platform level)
     - role: super_admin
     - is_super_admin: True
@@ -39,7 +39,7 @@ async def seed_super_admin(db: AsyncSession = None) -> None:
         db_session = AsyncSessionLocal()
 
     super_admin_email = "naughtyfruit53@gmail.com"
-    super_admin_password = "123456"  # This should be changed after first login
+    super_admin_password = "Admin123!"  # NEW: Changed to non-6-digit-all-numeric password to avoid OTP trigger
 
     try:
         # Check for existing super admin
@@ -112,7 +112,7 @@ async def seed_super_admin(db: AsyncSession = None) -> None:
             await db_session.commit()
             await db_session.refresh(super_admin)
             logger.info(f"Successfully created platform super admin in local DB (email: {super_admin_email})")
-            logger.warning("SECURITY: Default super admin created with password '123456'. Please change this password immediately after first login!")
+            logger.warning("SECURITY: Default super admin created with password 'Admin123!'. Please change this password immediately after first login!")
 
         except Exception as e:
             # If DB creation fails, cleanup Supabase Auth user

@@ -1,17 +1,17 @@
-"""initial migration
+"""Initial migration
 
-Revision ID: f178178734f5
+Revision ID: f7874205d710
 Revises: 
-Create Date: 2025-10-10 21:54:37.865719
+Create Date: 2025-11-06 14:40:44.006266
 
 """
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-import app
+from app.models.encrypted_fields import EncryptedPII, EncryptedCustomerData, EncryptedFinancial
 
 # revision identifiers, used by Alembic.
-revision = 'f178178734f5'
+revision = 'f7874205d710'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -41,6 +41,22 @@ def upgrade() -> None:
     op.create_index('idx_migration_template_active', 'migration_templates', ['is_active'], unique=False)
     op.create_index('idx_migration_template_source_data', 'migration_templates', ['source_type', 'data_type'], unique=False)
     op.create_index(op.f('ix_migration_templates_id'), 'migration_templates', ['id'], unique=False)
+    op.create_table('modules',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('module_key', sa.String(length=100), nullable=False),
+    sa.Column('display_name', sa.String(length=200), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('icon', sa.String(length=100), nullable=True),
+    sa.Column('sort_order', sa.Integer(), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_modules_active', 'modules', ['is_active'], unique=False)
+    op.create_index('idx_modules_key', 'modules', ['module_key'], unique=False)
+    op.create_index(op.f('ix_modules_id'), 'modules', ['id'], unique=False)
+    op.create_index(op.f('ix_modules_module_key'), 'modules', ['module_key'], unique=True)
     op.create_table('organizations',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
@@ -58,7 +74,7 @@ def upgrade() -> None:
     sa.Column('state', sa.String(), nullable=False),
     sa.Column('pin_code', sa.String(), nullable=False),
     sa.Column('country', sa.String(), nullable=False),
-    sa.Column('state_code', sa.String(), nullable=True),
+    sa.Column('state_code', sa.String(), nullable=False),
     sa.Column('gst_number', sa.String(), nullable=True),
     sa.Column('pan_number', sa.String(), nullable=True),
     sa.Column('cin_number', sa.String(), nullable=True),
@@ -87,6 +103,23 @@ def upgrade() -> None:
     op.create_index(op.f('ix_organizations_name'), 'organizations', ['name'], unique=True)
     op.create_index(op.f('ix_organizations_org_code'), 'organizations', ['org_code'], unique=True)
     op.create_index(op.f('ix_organizations_subdomain'), 'organizations', ['subdomain'], unique=True)
+    op.create_table('plans',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('plan_key', sa.String(length=100), nullable=False),
+    sa.Column('display_name', sa.String(length=200), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('price_monthly', sa.Numeric(precision=10, scale=2), nullable=True),
+    sa.Column('price_annual', sa.Numeric(precision=10, scale=2), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('sort_order', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_plans_active', 'plans', ['is_active'], unique=False)
+    op.create_index('idx_plans_key', 'plans', ['plan_key'], unique=False)
+    op.create_index(op.f('ix_plans_id'), 'plans', ['id'], unique=False)
+    op.create_index(op.f('ix_plans_plan_key'), 'plans', ['plan_key'], unique=True)
     op.create_table('platform_users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(), nullable=False),
@@ -108,19 +141,47 @@ def upgrade() -> None:
     op.create_index('idx_platform_user_email', 'platform_users', ['email'], unique=False)
     op.create_index(op.f('ix_platform_users_email'), 'platform_users', ['email'], unique=True)
     op.create_index(op.f('ix_platform_users_id'), 'platform_users', ['id'], unique=False)
-    op.create_table('service_permissions',
+    op.create_table('plugin_registry',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(), nullable=False),
-    sa.Column('display_name', sa.String(), nullable=False),
+    sa.Column('slug', sa.String(length=255), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('module', sa.String(), nullable=False),
-    sa.Column('action', sa.String(), nullable=False),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('category', sa.String(length=100), nullable=False),
+    sa.Column('tags', sa.JSON(), nullable=True),
+    sa.Column('latest_version', sa.String(length=50), nullable=False),
+    sa.Column('available_versions', sa.JSON(), nullable=True),
+    sa.Column('download_url', sa.String(length=1000), nullable=True),
+    sa.Column('repository_url', sa.String(length=1000), nullable=True),
+    sa.Column('author', sa.String(length=255), nullable=True),
+    sa.Column('license', sa.String(length=100), nullable=True),
+    sa.Column('homepage_url', sa.String(length=1000), nullable=True),
+    sa.Column('rating', sa.JSON(), nullable=True),
+    sa.Column('download_count', sa.Integer(), nullable=False),
+    sa.Column('verified', sa.Boolean(), nullable=False),
+    sa.Column('active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_service_permission_module_action', 'service_permissions', ['module', 'action'], unique=False)
+    op.create_index('idx_registry_category', 'plugin_registry', ['category'], unique=False)
+    op.create_index('idx_registry_verified', 'plugin_registry', ['verified'], unique=False)
+    op.create_index(op.f('ix_plugin_registry_category'), 'plugin_registry', ['category'], unique=False)
+    op.create_index(op.f('ix_plugin_registry_id'), 'plugin_registry', ['id'], unique=False)
+    op.create_index(op.f('ix_plugin_registry_slug'), 'plugin_registry', ['slug'], unique=True)
+    op.create_table('service_permissions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=100), nullable=False),
+    sa.Column('display_name', sa.String(length=100), nullable=False),
+    sa.Column('description', sa.String(length=200), nullable=True),
+    sa.Column('module', sa.String(length=50), nullable=False),
+    sa.Column('action', sa.String(length=50), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('module', 'action', name='uq_service_permission_module_action')
+    )
+    op.create_index('idx_service_permission_module', 'service_permissions', ['module'], unique=False)
     op.create_index(op.f('ix_service_permissions_action'), 'service_permissions', ['action'], unique=False)
     op.create_index(op.f('ix_service_permissions_id'), 'service_permissions', ['id'], unique=False)
     op.create_index(op.f('ix_service_permissions_module'), 'service_permissions', ['module'], unique=False)
@@ -140,6 +201,34 @@ def upgrade() -> None:
     op.create_index('idx_voucher_format_template_active', 'voucher_format_templates', ['is_active'], unique=False)
     op.create_index('idx_voucher_format_template_system', 'voucher_format_templates', ['is_system_template'], unique=False)
     op.create_index(op.f('ix_voucher_format_templates_id'), 'voucher_format_templates', ['id'], unique=False)
+    op.create_table('ai_agents',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('agent_type', sa.String(length=50), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('version', sa.String(length=50), nullable=False),
+    sa.Column('capabilities', sa.JSON(), nullable=True),
+    sa.Column('endpoint_url', sa.String(length=1000), nullable=True),
+    sa.Column('api_key', sa.String(length=255), nullable=True),
+    sa.Column('config', sa.JSON(), nullable=True),
+    sa.Column('parameters', sa.JSON(), nullable=True),
+    sa.Column('total_requests', sa.Integer(), nullable=False),
+    sa.Column('successful_requests', sa.Integer(), nullable=False),
+    sa.Column('failed_requests', sa.Integer(), nullable=False),
+    sa.Column('average_response_time', sa.Float(), nullable=True),
+    sa.Column('last_used_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ai_agent_organization_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_ai_agent_org_type', 'ai_agents', ['organization_id', 'agent_type'], unique=False)
+    op.create_index('idx_ai_agent_status', 'ai_agents', ['status'], unique=False)
+    op.create_index(op.f('ix_ai_agents_id'), 'ai_agents', ['id'], unique=False)
+    op.create_index(op.f('ix_ai_agents_name'), 'ai_agents', ['name'], unique=False)
+    op.create_index(op.f('ix_ai_agents_organization_id'), 'ai_agents', ['organization_id'], unique=False)
     op.create_table('api_endpoints',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -217,18 +306,18 @@ def upgrade() -> None:
     sa.Column('customer_id', sa.String(), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('customer_type', sa.String(), nullable=False),
-    sa.Column('name_encrypted', app.models.encrypted_fields.EncryptedPII(), nullable=False),
-    sa.Column('email_encrypted', app.models.encrypted_fields.EncryptedPII(), nullable=True),
-    sa.Column('phone_encrypted', app.models.encrypted_fields.EncryptedPII(), nullable=False),
-    sa.Column('address_line1_encrypted', app.models.encrypted_fields.EncryptedCustomerData(), nullable=False),
-    sa.Column('address_line2_encrypted', app.models.encrypted_fields.EncryptedCustomerData(), nullable=True),
-    sa.Column('city_encrypted', app.models.encrypted_fields.EncryptedCustomerData(), nullable=False),
-    sa.Column('state_encrypted', app.models.encrypted_fields.EncryptedCustomerData(), nullable=False),
-    sa.Column('zip_code_encrypted', app.models.encrypted_fields.EncryptedCustomerData(), nullable=False),
-    sa.Column('payment_terms_encrypted', app.models.encrypted_fields.EncryptedFinancial(), nullable=True),
-    sa.Column('credit_limit_encrypted', app.models.encrypted_fields.EncryptedFinancial(), nullable=True),
-    sa.Column('tax_id_encrypted', app.models.encrypted_fields.EncryptedFinancial(), nullable=True),
-    sa.Column('bank_details_encrypted', app.models.encrypted_fields.EncryptedFinancial(), nullable=True),
+    sa.Column('name_encrypted', EncryptedPII(), nullable=False),
+    sa.Column('email_encrypted', EncryptedPII(), nullable=True),
+    sa.Column('phone_encrypted', EncryptedPII(), nullable=False),
+    sa.Column('address_line1_encrypted', EncryptedCustomerData(), nullable=False),
+    sa.Column('address_line2_encrypted', EncryptedCustomerData(), nullable=True),
+    sa.Column('city_encrypted', EncryptedCustomerData(), nullable=False),
+    sa.Column('state_encrypted', EncryptedCustomerData(), nullable=False),
+    sa.Column('zip_code_encrypted', EncryptedCustomerData(), nullable=False),
+    sa.Column('payment_terms_encrypted', EncryptedFinancial(), nullable=True),
+    sa.Column('credit_limit_encrypted', EncryptedFinancial(), nullable=True),
+    sa.Column('tax_id_encrypted', EncryptedFinancial(), nullable=True),
+    sa.Column('bank_details_encrypted', EncryptedFinancial(), nullable=True),
     sa.Column('consent_date', sa.DateTime(timezone=True), nullable=True),
     sa.Column('data_retention_until', sa.DateTime(timezone=True), nullable=True),
     sa.Column('gdpr_consent', sa.Boolean(), nullable=False),
@@ -291,6 +380,24 @@ def upgrade() -> None:
     op.create_index('idx_leave_type_org_active', 'leave_types', ['organization_id', 'is_active'], unique=False)
     op.create_index(op.f('ix_leave_types_id'), 'leave_types', ['id'], unique=False)
     op.create_index(op.f('ix_leave_types_organization_id'), 'leave_types', ['organization_id'], unique=False)
+    op.create_table('ledger_summaries',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('summary_date', sa.Date(), nullable=False),
+    sa.Column('period_type', sa.String(), nullable=False),
+    sa.Column('total_debit', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('total_credit', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('net_balance', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('transaction_count', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'summary_date', 'period_type', name='uq_ledger_summary_org_date_period')
+    )
+    op.create_index(op.f('ix_ledger_summaries_id'), 'ledger_summaries', ['id'], unique=False)
+    op.create_index(op.f('ix_ledger_summaries_organization_id'), 'ledger_summaries', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_ledger_summaries_summary_date'), 'ledger_summaries', ['summary_date'], unique=False)
     op.create_table('notification_preferences',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -309,6 +416,28 @@ def upgrade() -> None:
     op.create_index('idx_notification_pref_org_subject', 'notification_preferences', ['organization_id', 'subject_type', 'subject_id'], unique=False)
     op.create_index(op.f('ix_notification_preferences_id'), 'notification_preferences', ['id'], unique=False)
     op.create_index(op.f('ix_notification_preferences_organization_id'), 'notification_preferences', ['organization_id'], unique=False)
+    op.create_table('org_entitlements',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('org_id', sa.Integer(), nullable=False),
+    sa.Column('module_id', sa.Integer(), nullable=False),
+    sa.Column('status', sa.String(length=20), nullable=False),
+    sa.Column('trial_expires_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('source', sa.String(length=100), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.CheckConstraint("status IN ('enabled', 'disabled', 'trial')", name='ck_org_entitlements_status'),
+    sa.ForeignKeyConstraint(['module_id'], ['modules.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['org_id'], ['organizations.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('org_id', 'module_id', name='uq_org_entitlements_org_module')
+    )
+    op.create_index('idx_org_entitlements_module', 'org_entitlements', ['module_id'], unique=False)
+    op.create_index('idx_org_entitlements_org', 'org_entitlements', ['org_id'], unique=False)
+    op.create_index('idx_org_entitlements_org_module', 'org_entitlements', ['org_id', 'module_id'], unique=False)
+    op.create_index('idx_org_entitlements_status', 'org_entitlements', ['status'], unique=False)
+    op.create_index(op.f('ix_org_entitlements_id'), 'org_entitlements', ['id'], unique=False)
+    op.create_index(op.f('ix_org_entitlements_module_id'), 'org_entitlements', ['module_id'], unique=False)
+    op.create_index(op.f('ix_org_entitlements_org_id'), 'org_entitlements', ['org_id'], unique=False)
     op.create_table('organization_settings',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -328,6 +457,12 @@ def upgrade() -> None:
     sa.Column('grn_terms', sa.Text(), nullable=True),
     sa.Column('manufacturing_terms', sa.Text(), nullable=True),
     sa.Column('custom_settings', sa.JSON(), nullable=True),
+    sa.Column('tally_enabled', sa.Boolean(), nullable=False),
+    sa.Column('tally_host', sa.String(length=255), nullable=True),
+    sa.Column('tally_port', sa.Integer(), nullable=True),
+    sa.Column('tally_company_name', sa.String(length=255), nullable=True),
+    sa.Column('tally_sync_frequency', sa.String(length=50), nullable=True),
+    sa.Column('tally_last_sync', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_organization_settings_organization_id'),
@@ -370,6 +505,43 @@ def upgrade() -> None:
     op.create_index('idx_payment_term_org_name', 'payment_terms', ['organization_id', 'name'], unique=False)
     op.create_index(op.f('ix_payment_terms_id'), 'payment_terms', ['id'], unique=False)
     op.create_index(op.f('ix_payment_terms_organization_id'), 'payment_terms', ['organization_id'], unique=False)
+    op.create_table('plugins',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=True),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('slug', sa.String(length=255), nullable=False),
+    sa.Column('version', sa.String(length=50), nullable=False),
+    sa.Column('plugin_type', sa.String(length=50), nullable=False),
+    sa.Column('scope', sa.String(length=50), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('author', sa.String(length=255), nullable=True),
+    sa.Column('homepage_url', sa.String(length=1000), nullable=True),
+    sa.Column('documentation_url', sa.String(length=1000), nullable=True),
+    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('enabled', sa.Boolean(), nullable=False),
+    sa.Column('entry_point', sa.String(length=500), nullable=True),
+    sa.Column('assets_path', sa.String(length=500), nullable=True),
+    sa.Column('config', sa.JSON(), nullable=True),
+    sa.Column('default_settings', sa.JSON(), nullable=True),
+    sa.Column('dependencies', sa.JSON(), nullable=True),
+    sa.Column('min_platform_version', sa.String(length=50), nullable=True),
+    sa.Column('max_platform_version', sa.String(length=50), nullable=True),
+    sa.Column('required_permissions', sa.JSON(), nullable=True),
+    sa.Column('sandboxed', sa.Boolean(), nullable=False),
+    sa.Column('install_count', sa.Integer(), nullable=False),
+    sa.Column('last_installed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_plugin_organization_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_plugin_org_type', 'plugins', ['organization_id', 'plugin_type'], unique=False)
+    op.create_index('idx_plugin_scope', 'plugins', ['scope'], unique=False)
+    op.create_index('idx_plugin_status', 'plugins', ['status'], unique=False)
+    op.create_index(op.f('ix_plugins_id'), 'plugins', ['id'], unique=False)
+    op.create_index(op.f('ix_plugins_name'), 'plugins', ['name'], unique=False)
+    op.create_index(op.f('ix_plugins_organization_id'), 'plugins', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_plugins_slug'), 'plugins', ['slug'], unique=True)
     op.create_table('purchase_analytics',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -484,18 +656,19 @@ def upgrade() -> None:
     op.create_table('service_roles',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(), nullable=False),
-    sa.Column('display_name', sa.String(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('name', sa.String(length=100), nullable=False),
+    sa.Column('display_name', sa.String(length=100), nullable=False),
+    sa.Column('description', sa.String(length=200), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_service_role_organization_id'),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('organization_id', 'name', name='uq_service_role_org_name')
     )
     op.create_index('idx_service_role_org_active', 'service_roles', ['organization_id', 'is_active'], unique=False)
     op.create_index(op.f('ix_service_roles_id'), 'service_roles', ['id'], unique=False)
+    op.create_index(op.f('ix_service_roles_name'), 'service_roles', ['name'], unique=False)
     op.create_index(op.f('ix_service_roles_organization_id'), 'service_roles', ['organization_id'], unique=False)
     op.create_table('sitemap_entries',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -560,6 +733,28 @@ def upgrade() -> None:
     op.create_index(op.f('ix_stock_adjustments_id'), 'stock_adjustments', ['id'], unique=False)
     op.create_index(op.f('ix_stock_adjustments_organization_id'), 'stock_adjustments', ['organization_id'], unique=False)
     op.create_index(op.f('ix_stock_adjustments_status'), 'stock_adjustments', ['status'], unique=False)
+    op.create_table('submodules',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('module_id', sa.Integer(), nullable=False),
+    sa.Column('submodule_key', sa.String(length=100), nullable=False),
+    sa.Column('display_name', sa.String(length=200), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('menu_path', sa.String(length=500), nullable=True),
+    sa.Column('permission_key', sa.String(length=200), nullable=True),
+    sa.Column('sort_order', sa.Integer(), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['module_id'], ['modules.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('module_id', 'submodule_key', name='uq_submodules_module_submodule')
+    )
+    op.create_index('idx_submodules_active', 'submodules', ['is_active'], unique=False)
+    op.create_index('idx_submodules_key', 'submodules', ['submodule_key'], unique=False)
+    op.create_index('idx_submodules_module', 'submodules', ['module_id'], unique=False)
+    op.create_index(op.f('ix_submodules_id'), 'submodules', ['id'], unique=False)
+    op.create_index(op.f('ix_submodules_module_id'), 'submodules', ['module_id'], unique=False)
+    op.create_index(op.f('ix_submodules_submodule_key'), 'submodules', ['submodule_key'], unique=False)
     op.create_table('tally_configuration',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -763,6 +958,71 @@ def upgrade() -> None:
     op.create_index(op.f('ix_warehouses_id'), 'warehouses', ['id'], unique=False)
     op.create_index(op.f('ix_warehouses_organization_id'), 'warehouses', ['organization_id'], unique=False)
     op.create_index(op.f('ix_warehouses_warehouse_code'), 'warehouses', ['warehouse_code'], unique=False)
+    op.create_table('ab_test_experiments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('experiment_name', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('status', sa.Enum('DRAFT', 'RUNNING', 'PAUSED', 'COMPLETED', 'ARCHIVED', name='experimentstatus'), nullable=False),
+    sa.Column('traffic_split', sa.JSON(), nullable=True),
+    sa.Column('start_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('end_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_ab_test_created_by'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ab_test_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_ab_test_dates', 'ab_test_experiments', ['start_date', 'end_date'], unique=False)
+    op.create_index('idx_ab_test_org_status', 'ab_test_experiments', ['organization_id', 'status'], unique=False)
+    op.create_index(op.f('ix_ab_test_experiments_id'), 'ab_test_experiments', ['id'], unique=False)
+    op.create_index(op.f('ix_ab_test_experiments_organization_id'), 'ab_test_experiments', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_ab_test_experiments_status'), 'ab_test_experiments', ['status'], unique=False)
+    op.create_table('ai_agent_capabilities',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('agent_id', sa.Integer(), nullable=False),
+    sa.Column('capability_name', sa.String(length=100), nullable=False),
+    sa.Column('capability_type', sa.String(length=50), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('enabled', sa.Boolean(), nullable=False),
+    sa.Column('config', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['agent_id'], ['ai_agents.id'], name='fk_ai_capability_agent_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_ai_capability_agent', 'ai_agent_capabilities', ['agent_id'], unique=False)
+    op.create_index(op.f('ix_ai_agent_capabilities_agent_id'), 'ai_agent_capabilities', ['agent_id'], unique=False)
+    op.create_index(op.f('ix_ai_agent_capabilities_id'), 'ai_agent_capabilities', ['id'], unique=False)
+    op.create_table('ai_agent_interactions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('agent_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('interaction_type', sa.String(length=100), nullable=False),
+    sa.Column('request_data', sa.JSON(), nullable=True),
+    sa.Column('response_data', sa.JSON(), nullable=True),
+    sa.Column('response_time_ms', sa.Integer(), nullable=True),
+    sa.Column('success', sa.Boolean(), nullable=False),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('session_id', sa.String(length=255), nullable=True),
+    sa.Column('ip_address', sa.String(length=100), nullable=True),
+    sa.Column('user_agent', sa.String(length=500), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['agent_id'], ['ai_agents.id'], name='fk_ai_interaction_agent_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ai_interaction_organization_id'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_ai_interaction_user_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_ai_interaction_created', 'ai_agent_interactions', ['created_at'], unique=False)
+    op.create_index('idx_ai_interaction_org_agent', 'ai_agent_interactions', ['organization_id', 'agent_id'], unique=False)
+    op.create_index('idx_ai_interaction_session', 'ai_agent_interactions', ['session_id'], unique=False)
+    op.create_index(op.f('ix_ai_agent_interactions_agent_id'), 'ai_agent_interactions', ['agent_id'], unique=False)
+    op.create_index(op.f('ix_ai_agent_interactions_id'), 'ai_agent_interactions', ['id'], unique=False)
+    op.create_index(op.f('ix_ai_agent_interactions_organization_id'), 'ai_agent_interactions', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_ai_agent_interactions_session_id'), 'ai_agent_interactions', ['session_id'], unique=False)
+    op.create_index(op.f('ix_ai_agent_interactions_user_id'), 'ai_agent_interactions', ['user_id'], unique=False)
     op.create_table('ai_models',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -823,6 +1083,36 @@ def upgrade() -> None:
     op.create_index('idx_analytics_org_provider', 'analytics_integrations', ['organization_id', 'provider'], unique=False)
     op.create_index(op.f('ix_analytics_integrations_id'), 'analytics_integrations', ['id'], unique=False)
     op.create_index(op.f('ix_analytics_integrations_organization_id'), 'analytics_integrations', ['organization_id'], unique=False)
+    op.create_table('anomaly_detection_models',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('detection_name', sa.String(), nullable=False),
+    sa.Column('anomaly_type', sa.Enum('REVENUE_ANOMALY', 'INVENTORY_ANOMALY', 'TRANSACTION_ANOMALY', 'CUSTOMER_BEHAVIOR_ANOMALY', 'OPERATIONAL_ANOMALY', 'QUALITY_ANOMALY', name='anomalytype'), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('algorithm', sa.String(), nullable=False),
+    sa.Column('detection_config', sa.JSON(), nullable=False),
+    sa.Column('threshold_config', sa.JSON(), nullable=False),
+    sa.Column('monitored_metrics', sa.JSON(), nullable=False),
+    sa.Column('detection_frequency', sa.String(), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('last_detection_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('anomalies_detected_count', sa.Integer(), nullable=False),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('updated_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_anomaly_model_created_by'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_anomaly_model_org_id'),
+    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], name='fk_anomaly_model_updated_by'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'detection_name', name='uq_anomaly_model_org_name')
+    )
+    op.create_index('idx_anomaly_model_active', 'anomaly_detection_models', ['organization_id', 'is_active'], unique=False)
+    op.create_index('idx_anomaly_model_org_type', 'anomaly_detection_models', ['organization_id', 'anomaly_type'], unique=False)
+    op.create_index(op.f('ix_anomaly_detection_models_anomaly_type'), 'anomaly_detection_models', ['anomaly_type'], unique=False)
+    op.create_index(op.f('ix_anomaly_detection_models_detection_name'), 'anomaly_detection_models', ['detection_name'], unique=False)
+    op.create_index(op.f('ix_anomaly_detection_models_id'), 'anomaly_detection_models', ['id'], unique=False)
+    op.create_index(op.f('ix_anomaly_detection_models_organization_id'), 'anomaly_detection_models', ['organization_id'], unique=False)
     op.create_table('api_keys',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -860,6 +1150,55 @@ def upgrade() -> None:
     op.create_index(op.f('ix_api_keys_key_name'), 'api_keys', ['key_name'], unique=False)
     op.create_index(op.f('ix_api_keys_key_prefix'), 'api_keys', ['key_prefix'], unique=False)
     op.create_index(op.f('ix_api_keys_organization_id'), 'api_keys', ['organization_id'], unique=False)
+    op.create_table('audit_log_exports',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('requested_by', sa.Integer(), nullable=False),
+    sa.Column('start_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('end_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('filters', sa.JSON(), nullable=True),
+    sa.Column('format', sa.String(length=50), nullable=False),
+    sa.Column('include_metadata', sa.Boolean(), nullable=False),
+    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('record_count', sa.Integer(), nullable=True),
+    sa.Column('file_path', sa.String(length=500), nullable=True),
+    sa.Column('file_size_bytes', sa.Integer(), nullable=True),
+    sa.Column('download_url', sa.String(length=1000), nullable=True),
+    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_audit_export_organization_id'),
+    sa.ForeignKeyConstraint(['requested_by'], ['users.id'], name='fk_audit_export_user_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_audit_export_org_status', 'audit_log_exports', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_audit_export_user', 'audit_log_exports', ['requested_by'], unique=False)
+    op.create_index(op.f('ix_audit_log_exports_id'), 'audit_log_exports', ['id'], unique=False)
+    op.create_index(op.f('ix_audit_log_exports_organization_id'), 'audit_log_exports', ['organization_id'], unique=False)
+    op.create_table('audit_log_views',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('entity_types', sa.JSON(), nullable=True),
+    sa.Column('action_types', sa.JSON(), nullable=True),
+    sa.Column('actor_types', sa.JSON(), nullable=True),
+    sa.Column('severity_levels', sa.JSON(), nullable=True),
+    sa.Column('columns', sa.JSON(), nullable=True),
+    sa.Column('sort_order', sa.JSON(), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.Column('shared', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], name='fk_audit_view_user_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_audit_view_organization_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_audit_view_org', 'audit_log_views', ['organization_id'], unique=False)
+    op.create_index('idx_audit_view_user', 'audit_log_views', ['created_by'], unique=False)
+    op.create_index(op.f('ix_audit_log_views_id'), 'audit_log_views', ['id'], unique=False)
+    op.create_index(op.f('ix_audit_log_views_organization_id'), 'audit_log_views', ['organization_id'], unique=False)
     op.create_table('audit_logs',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=True),
@@ -879,6 +1218,54 @@ def upgrade() -> None:
     op.create_index('idx_audit_org_timestamp', 'audit_logs', ['organization_id', 'timestamp'], unique=False)
     op.create_index(op.f('ix_audit_logs_id'), 'audit_logs', ['id'], unique=False)
     op.create_index(op.f('ix_audit_logs_organization_id'), 'audit_logs', ['organization_id'], unique=False)
+    op.create_table('audit_logs_enhanced',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=True),
+    sa.Column('entity_type', sa.String(length=100), nullable=False),
+    sa.Column('entity_id', sa.Integer(), nullable=True),
+    sa.Column('entity_name', sa.String(length=255), nullable=True),
+    sa.Column('action', sa.String(length=50), nullable=False),
+    sa.Column('action_description', sa.Text(), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('actor_type', sa.String(length=50), nullable=False),
+    sa.Column('actor_id', sa.Integer(), nullable=True),
+    sa.Column('actor_name', sa.String(length=255), nullable=True),
+    sa.Column('ai_agent_id', sa.Integer(), nullable=True),
+    sa.Column('automation_workflow_id', sa.Integer(), nullable=True),
+    sa.Column('triggered_by_automation', sa.Boolean(), nullable=False),
+    sa.Column('changes', sa.JSON(), nullable=True),
+    sa.Column('old_values', sa.JSON(), nullable=True),
+    sa.Column('new_values', sa.JSON(), nullable=True),
+    sa.Column('context', sa.JSON(), nullable=True),
+    sa.Column('log_metadata', sa.JSON(), nullable=True),
+    sa.Column('ip_address', sa.String(length=100), nullable=True),
+    sa.Column('user_agent', sa.String(length=500), nullable=True),
+    sa.Column('request_method', sa.String(length=10), nullable=True),
+    sa.Column('request_path', sa.String(length=500), nullable=True),
+    sa.Column('success', sa.Boolean(), nullable=False),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('severity', sa.String(length=50), nullable=False),
+    sa.Column('compliance_tags', sa.JSON(), nullable=True),
+    sa.Column('timestamp', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['ai_agent_id'], ['ai_agents.id'], name='fk_audit_ai_agent_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_audit_enhanced_organization_id'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_audit_enhanced_user_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.execute("CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_logs_enhanced (actor_type, actor_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_audit_ai_agent ON audit_logs_enhanced (ai_agent_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_audit_automation ON audit_logs_enhanced (triggered_by_automation)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_audit_org_action ON audit_logs_enhanced (organization_id, action)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_audit_org_entity ON audit_logs_enhanced (organization_id, entity_type, entity_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_audit_org_timestamp ON audit_logs_enhanced (organization_id, timestamp)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_audit_user_timestamp ON audit_logs_enhanced (user_id, timestamp)")
+    op.create_index(op.f('ix_audit_logs_enhanced_action'), 'audit_logs_enhanced', ['action'], unique=False)
+    op.create_index(op.f('ix_audit_logs_enhanced_entity_id'), 'audit_logs_enhanced', ['entity_id'], unique=False)
+    op.create_index(op.f('ix_audit_logs_enhanced_entity_type'), 'audit_logs_enhanced', ['entity_type'], unique=False)
+    op.create_index(op.f('ix_audit_logs_enhanced_id'), 'audit_logs_enhanced', ['id'], unique=False)
+    op.create_index(op.f('ix_audit_logs_enhanced_organization_id'), 'audit_logs_enhanced', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_audit_logs_enhanced_timestamp'), 'audit_logs_enhanced', ['timestamp'], unique=False)
+    op.create_index(op.f('ix_audit_logs_enhanced_user_id'), 'audit_logs_enhanced', ['user_id'], unique=False)
     op.create_table('automated_insights',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -948,6 +1335,47 @@ def upgrade() -> None:
     op.create_index(op.f('ix_automation_workflows_organization_id'), 'automation_workflows', ['organization_id'], unique=False)
     op.create_index(op.f('ix_automation_workflows_workflow_name'), 'automation_workflows', ['workflow_name'], unique=False)
     op.create_index(op.f('ix_automation_workflows_workflow_type'), 'automation_workflows', ['workflow_type'], unique=False)
+    op.create_table('automl_runs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('run_name', sa.String(), nullable=False),
+    sa.Column('task_type', sa.Enum('CLASSIFICATION', 'REGRESSION', 'TIME_SERIES', 'CLUSTERING', name='automltasktype'), nullable=False),
+    sa.Column('framework', sa.Enum('AUTO_SKLEARN', 'TPOT', 'H2O', 'AUTOKERAS', 'OPTUNA', name='automlframework'), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('target_column', sa.String(), nullable=False),
+    sa.Column('feature_columns', sa.JSON(), nullable=False),
+    sa.Column('metric', sa.String(), nullable=False),
+    sa.Column('time_budget', sa.Integer(), nullable=False),
+    sa.Column('max_trials', sa.Integer(), nullable=False),
+    sa.Column('dataset_path', sa.String(), nullable=True),
+    sa.Column('dataset_config', sa.JSON(), nullable=True),
+    sa.Column('train_test_split', sa.Float(), nullable=False),
+    sa.Column('cross_validation_folds', sa.Integer(), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED', name='automlstatus'), nullable=False),
+    sa.Column('progress', sa.Float(), nullable=False),
+    sa.Column('current_trial', sa.Integer(), nullable=False),
+    sa.Column('best_model_name', sa.String(), nullable=True),
+    sa.Column('best_model_params', sa.JSON(), nullable=True),
+    sa.Column('best_score', sa.Float(), nullable=True),
+    sa.Column('best_model_path', sa.String(), nullable=True),
+    sa.Column('trials_history', sa.JSON(), nullable=True),
+    sa.Column('leaderboard', sa.JSON(), nullable=True),
+    sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('run_metadata', sa.JSON(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_automl_run_created_by'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_automl_run_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_automl_runs_id'), 'automl_runs', ['id'], unique=False)
+    op.create_index(op.f('ix_automl_runs_organization_id'), 'automl_runs', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_automl_runs_run_name'), 'automl_runs', ['run_name'], unique=False)
+    op.create_index(op.f('ix_automl_runs_status'), 'automl_runs', ['status'], unique=False)
+    op.create_index(op.f('ix_automl_runs_task_type'), 'automl_runs', ['task_type'], unique=False)
     op.create_table('business_rules',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -1269,35 +1697,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_cost_centers_id'), 'cost_centers', ['id'], unique=False)
     op.create_index(op.f('ix_cost_centers_organization_id'), 'cost_centers', ['organization_id'], unique=False)
     op.create_index(op.f('ix_cost_centers_parent_cost_center_id'), 'cost_centers', ['parent_cost_center_id'], unique=False)
-    op.create_table('customers',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('company_id', sa.Integer(), nullable=True),
-    sa.Column('name', sa.String(), nullable=False),
-    sa.Column('contact_number', sa.String(), nullable=False),
-    sa.Column('email', sa.String(), nullable=True),
-    sa.Column('address1', sa.String(), nullable=False),
-    sa.Column('address2', sa.String(), nullable=True),
-    sa.Column('city', sa.String(), nullable=False),
-    sa.Column('state', sa.String(), nullable=False),
-    sa.Column('pin_code', sa.String(), nullable=False),
-    sa.Column('state_code', sa.String(), nullable=False),
-    sa.Column('gst_number', sa.String(), nullable=True),
-    sa.Column('pan_number', sa.String(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], name='fk_customer_company_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_customer_organization_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'name', name='uq_customer_org_name')
-    )
-    op.create_index('idx_customer_org_active', 'customers', ['organization_id', 'is_active'], unique=False)
-    op.create_index('idx_customer_org_name', 'customers', ['organization_id', 'name'], unique=False)
-    op.create_index(op.f('ix_customers_company_id'), 'customers', ['company_id'], unique=False)
-    op.create_index(op.f('ix_customers_id'), 'customers', ['id'], unique=False)
-    op.create_index(op.f('ix_customers_name'), 'customers', ['name'], unique=False)
-    op.create_index(op.f('ix_customers_organization_id'), 'customers', ['organization_id'], unique=False)
     op.create_table('email_sends',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('to_email', sa.String(length=255), nullable=False),
@@ -1401,6 +1800,85 @@ def upgrade() -> None:
     op.create_index(op.f('ix_employee_profiles_id'), 'employee_profiles', ['id'], unique=False)
     op.create_index(op.f('ix_employee_profiles_organization_id'), 'employee_profiles', ['organization_id'], unique=False)
     op.create_index(op.f('ix_employee_profiles_user_id'), 'employee_profiles', ['user_id'], unique=True)
+    op.create_table('entitlement_events',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('org_id', sa.Integer(), nullable=False),
+    sa.Column('event_type', sa.String(length=50), nullable=False),
+    sa.Column('actor_user_id', sa.Integer(), nullable=True),
+    sa.Column('reason', sa.Text(), nullable=True),
+    sa.Column('payload', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['actor_user_id'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['org_id'], ['organizations.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_entitlement_events_actor', 'entitlement_events', ['actor_user_id'], unique=False)
+    op.create_index('idx_entitlement_events_created', 'entitlement_events', ['created_at'], unique=False)
+    op.create_index('idx_entitlement_events_org', 'entitlement_events', ['org_id'], unique=False)
+    op.create_index('idx_entitlement_events_type', 'entitlement_events', ['event_type'], unique=False)
+    op.create_index(op.f('ix_entitlement_events_actor_user_id'), 'entitlement_events', ['actor_user_id'], unique=False)
+    op.create_index(op.f('ix_entitlement_events_created_at'), 'entitlement_events', ['created_at'], unique=False)
+    op.create_index(op.f('ix_entitlement_events_event_type'), 'entitlement_events', ['event_type'], unique=False)
+    op.create_index(op.f('ix_entitlement_events_id'), 'entitlement_events', ['id'], unique=False)
+    op.create_index(op.f('ix_entitlement_events_org_id'), 'entitlement_events', ['org_id'], unique=False)
+    op.create_table('explainability_reports',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('report_name', sa.String(), nullable=False),
+    sa.Column('report_type', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('model_ids', sa.JSON(), nullable=False),
+    sa.Column('summary', sa.JSON(), nullable=False),
+    sa.Column('feature_analysis', sa.JSON(), nullable=True),
+    sa.Column('model_comparisons', sa.JSON(), nullable=True),
+    sa.Column('visualizations', sa.JSON(), nullable=True),
+    sa.Column('key_insights', sa.JSON(), nullable=True),
+    sa.Column('recommendations', sa.JSON(), nullable=True),
+    sa.Column('generated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('report_format', sa.String(), nullable=False),
+    sa.Column('report_path', sa.String(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_explainability_report_created_by'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_explainability_report_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_explainability_reports_id'), 'explainability_reports', ['id'], unique=False)
+    op.create_index(op.f('ix_explainability_reports_organization_id'), 'explainability_reports', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_explainability_reports_report_name'), 'explainability_reports', ['report_name'], unique=False)
+    op.create_table('external_data_sources',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('source_name', sa.String(), nullable=False),
+    sa.Column('source_type', sa.Enum('DATABASE', 'API', 'FILE_UPLOAD', 'CLOUD_STORAGE', 'STREAMING', name='datasourcetype'), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('connection_config', sa.JSON(), nullable=False),
+    sa.Column('authentication_config', sa.JSON(), nullable=True),
+    sa.Column('data_schema', sa.JSON(), nullable=True),
+    sa.Column('field_mapping', sa.JSON(), nullable=True),
+    sa.Column('sync_frequency', sa.String(), nullable=False),
+    sa.Column('last_sync_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('next_sync_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('sync_status', sa.String(), nullable=False),
+    sa.Column('last_error', sa.Text(), nullable=True),
+    sa.Column('total_records_synced', sa.Integer(), nullable=False),
+    sa.Column('last_sync_duration_seconds', sa.Float(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('updated_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_external_data_source_created_by'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_external_data_source_org_id'),
+    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], name='fk_external_data_source_updated_by'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'source_name', name='uq_external_data_source_org_name')
+    )
+    op.create_index('idx_external_data_source_active', 'external_data_sources', ['organization_id', 'is_active'], unique=False)
+    op.create_index('idx_external_data_source_org_type', 'external_data_sources', ['organization_id', 'source_type'], unique=False)
+    op.create_index(op.f('ix_external_data_sources_id'), 'external_data_sources', ['id'], unique=False)
+    op.create_index(op.f('ix_external_data_sources_organization_id'), 'external_data_sources', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_external_data_sources_source_name'), 'external_data_sources', ['source_name'], unique=False)
     op.create_table('external_integrations',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -1604,6 +2082,50 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_google_calendar_integrations_id'), 'google_calendar_integrations', ['id'], unique=False)
+    op.create_table('integrations',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('provider', sa.String(length=100), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('enabled', sa.Boolean(), nullable=False),
+    sa.Column('auth_type', sa.String(length=50), nullable=False),
+    sa.Column('access_token', sa.Text(), nullable=True),
+    sa.Column('refresh_token', sa.Text(), nullable=True),
+    sa.Column('api_key', sa.String(length=500), nullable=True),
+    sa.Column('api_secret', sa.String(length=500), nullable=True),
+    sa.Column('webhook_url', sa.String(length=1000), nullable=True),
+    sa.Column('webhook_secret', sa.String(length=500), nullable=True),
+    sa.Column('token_expires_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_token_refresh', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('config', sa.JSON(), nullable=True),
+    sa.Column('settings', sa.JSON(), nullable=True),
+    sa.Column('workspace_id', sa.String(length=255), nullable=True),
+    sa.Column('workspace_name', sa.String(length=255), nullable=True),
+    sa.Column('channel_id', sa.String(length=255), nullable=True),
+    sa.Column('phone_number', sa.String(length=50), nullable=True),
+    sa.Column('total_messages_sent', sa.Integer(), nullable=False),
+    sa.Column('total_messages_received', sa.Integer(), nullable=False),
+    sa.Column('last_used_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_error', sa.Text(), nullable=True),
+    sa.Column('last_error_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('error_count', sa.Integer(), nullable=False),
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_connected_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], name='fk_integration_creator_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_integration_organization_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'provider', 'name', name='uq_integration_org_provider_name')
+    )
+    op.execute("CREATE INDEX IF NOT EXISTS idx_integration_org_provider ON integrations (organization_id, provider)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_integration_org_status ON integrations (organization_id, status)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_integrations_id ON integrations (id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_integrations_organization_id ON integrations (organization_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_integrations_provider ON integrations (provider)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_integrations_status ON integrations (status)")
     op.create_table('inter_department_vouchers',
     sa.Column('from_department', sa.String(), nullable=False),
     sa.Column('to_department', sa.String(), nullable=False),
@@ -1737,6 +2259,38 @@ def upgrade() -> None:
     op.create_index(op.f('ix_learning_paths_id'), 'learning_paths', ['id'], unique=False)
     op.create_index(op.f('ix_learning_paths_organization_id'), 'learning_paths', ['organization_id'], unique=False)
     op.create_index(op.f('ix_learning_paths_path_name'), 'learning_paths', ['path_name'], unique=False)
+    op.create_table('ledger_entries',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('date', sa.Date(), nullable=False),
+    sa.Column('voucher_type', sa.String(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('debit_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('credit_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('balance', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('account_type', sa.String(), nullable=False),
+    sa.Column('account_id', sa.Integer(), nullable=False),
+    sa.Column('account_name', sa.String(), nullable=False),
+    sa.Column('source_document_type', sa.String(), nullable=True),
+    sa.Column('source_document_id', sa.Integer(), nullable=True),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_type', 'voucher_number', name='uq_ledger_org_voucher')
+    )
+    op.create_index('idx_ledger_org_account', 'ledger_entries', ['organization_id', 'account_type', 'account_id'], unique=False)
+    op.create_index('idx_ledger_org_date', 'ledger_entries', ['organization_id', 'date'], unique=False)
+    op.create_index(op.f('ix_ledger_entries_account_id'), 'ledger_entries', ['account_id'], unique=False)
+    op.create_index(op.f('ix_ledger_entries_date'), 'ledger_entries', ['date'], unique=False)
+    op.create_index(op.f('ix_ledger_entries_id'), 'ledger_entries', ['id'], unique=False)
+    op.create_index(op.f('ix_ledger_entries_organization_id'), 'ledger_entries', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_ledger_entries_voucher_number'), 'ledger_entries', ['voucher_number'], unique=False)
+    op.create_index(op.f('ix_ledger_entries_voucher_type'), 'ledger_entries', ['voucher_type'], unique=False)
     op.create_table('marketing_lists',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -1797,6 +2351,36 @@ def upgrade() -> None:
     op.create_index(op.f('ix_migration_jobs_created_by'), 'migration_jobs', ['created_by'], unique=False)
     op.create_index(op.f('ix_migration_jobs_id'), 'migration_jobs', ['id'], unique=False)
     op.create_index(op.f('ix_migration_jobs_organization_id'), 'migration_jobs', ['organization_id'], unique=False)
+    op.create_table('ml_algorithm_configs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('config_name', sa.String(), nullable=False),
+    sa.Column('framework', sa.Enum('SCIKIT_LEARN', 'CATBOOST', 'LIGHTGBM', 'TENSORFLOW', 'PYTORCH', 'XGBOOST', name='mlframework'), nullable=False),
+    sa.Column('algorithm_name', sa.String(), nullable=False),
+    sa.Column('category', sa.Enum('CLASSIFICATION', 'REGRESSION', 'CLUSTERING', 'DIMENSIONALITY_REDUCTION', 'ENSEMBLE', 'DEEP_LEARNING', 'TIME_SERIES', name='algorithmcategory'), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('hyperparameters', sa.JSON(), nullable=False),
+    sa.Column('preprocessing_config', sa.JSON(), nullable=True),
+    sa.Column('framework_version', sa.String(), nullable=True),
+    sa.Column('gpu_enabled', sa.Boolean(), nullable=False),
+    sa.Column('device_config', sa.JSON(), nullable=True),
+    sa.Column('is_default', sa.Boolean(), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('tags', sa.JSON(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('updated_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_ml_algorithm_config_created_by'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ml_algorithm_config_org_id'),
+    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], name='fk_ml_algorithm_config_updated_by'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_ml_algorithm_configs_category'), 'ml_algorithm_configs', ['category'], unique=False)
+    op.create_index(op.f('ix_ml_algorithm_configs_config_name'), 'ml_algorithm_configs', ['config_name'], unique=False)
+    op.create_index(op.f('ix_ml_algorithm_configs_framework'), 'ml_algorithm_configs', ['framework'], unique=False)
+    op.create_index(op.f('ix_ml_algorithm_configs_id'), 'ml_algorithm_configs', ['id'], unique=False)
+    op.create_index(op.f('ix_ml_algorithm_configs_organization_id'), 'ml_algorithm_configs', ['organization_id'], unique=False)
     op.create_table('ml_forecast_models',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -1831,6 +2415,38 @@ def upgrade() -> None:
     op.create_index(op.f('ix_ml_forecast_models_id'), 'ml_forecast_models', ['id'], unique=False)
     op.create_index(op.f('ix_ml_forecast_models_model_type'), 'ml_forecast_models', ['model_type'], unique=False)
     op.create_index(op.f('ix_ml_forecast_models_organization_id'), 'ml_forecast_models', ['organization_id'], unique=False)
+    op.create_table('model_explainability',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('model_id', sa.Integer(), nullable=False),
+    sa.Column('model_type', sa.String(), nullable=False),
+    sa.Column('model_name', sa.String(), nullable=False),
+    sa.Column('method', sa.Enum('SHAP', 'LIME', 'FEATURE_IMPORTANCE', 'PARTIAL_DEPENDENCE', 'ICE_PLOT', name='explainabilitymethod'), nullable=False),
+    sa.Column('scope', sa.Enum('GLOBAL', 'LOCAL', 'COHORT', name='explainabilityscope'), nullable=False),
+    sa.Column('config', sa.JSON(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('feature_importance', sa.JSON(), nullable=True),
+    sa.Column('shap_values', sa.JSON(), nullable=True),
+    sa.Column('lime_explanation', sa.JSON(), nullable=True),
+    sa.Column('visualization_data', sa.JSON(), nullable=True),
+    sa.Column('top_features', sa.JSON(), nullable=True),
+    sa.Column('feature_correlations', sa.JSON(), nullable=True),
+    sa.Column('is_cached', sa.Boolean(), nullable=False),
+    sa.Column('cache_expires_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('computation_time', sa.Float(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_model_explainability_created_by'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_model_explainability_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_model_explainability_id'), 'model_explainability', ['id'], unique=False)
+    op.create_index(op.f('ix_model_explainability_method'), 'model_explainability', ['method'], unique=False)
+    op.create_index(op.f('ix_model_explainability_model_id'), 'model_explainability', ['model_id'], unique=False)
+    op.create_index(op.f('ix_model_explainability_model_name'), 'model_explainability', ['model_name'], unique=False)
+    op.create_index(op.f('ix_model_explainability_organization_id'), 'model_explainability', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_model_explainability_scope'), 'model_explainability', ['scope'], unique=False)
     op.create_table('notification_templates',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -1878,6 +2494,31 @@ def upgrade() -> None:
     op.create_index(op.f('ix_oauth_states_organization_id'), 'oauth_states', ['organization_id'], unique=False)
     op.create_index(op.f('ix_oauth_states_state'), 'oauth_states', ['state'], unique=True)
     op.create_index(op.f('ix_oauth_states_user_id'), 'oauth_states', ['user_id'], unique=False)
+    op.create_table('org_subentitlements',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('org_id', sa.Integer(), nullable=False),
+    sa.Column('module_id', sa.Integer(), nullable=False),
+    sa.Column('submodule_id', sa.Integer(), nullable=False),
+    sa.Column('enabled', sa.Boolean(), nullable=False),
+    sa.Column('source', sa.String(length=100), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['module_id'], ['modules.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['org_id', 'module_id'], ['org_entitlements.org_id', 'org_entitlements.module_id'], name='fk_org_subentitlements_entitlement'),
+    sa.ForeignKeyConstraint(['org_id'], ['organizations.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['submodule_id'], ['submodules.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('org_id', 'module_id', 'submodule_id', name='uq_org_subentitlements')
+    )
+    op.create_index('idx_org_subentitlements_module', 'org_subentitlements', ['module_id'], unique=False)
+    op.create_index('idx_org_subentitlements_org', 'org_subentitlements', ['org_id'], unique=False)
+    op.create_index('idx_org_subentitlements_org_module', 'org_subentitlements', ['org_id', 'module_id'], unique=False)
+    op.create_index('idx_org_subentitlements_org_module_sub', 'org_subentitlements', ['org_id', 'module_id', 'submodule_id'], unique=False)
+    op.create_index('idx_org_subentitlements_submodule', 'org_subentitlements', ['submodule_id'], unique=False)
+    op.create_index(op.f('ix_org_subentitlements_id'), 'org_subentitlements', ['id'], unique=False)
+    op.create_index(op.f('ix_org_subentitlements_module_id'), 'org_subentitlements', ['module_id'], unique=False)
+    op.create_index(op.f('ix_org_subentitlements_org_id'), 'org_subentitlements', ['org_id'], unique=False)
+    op.create_index(op.f('ix_org_subentitlements_submodule_id'), 'org_subentitlements', ['submodule_id'], unique=False)
     op.create_table('organization_approval_settings',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -1976,6 +2617,117 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_payroll_settings_id'), 'payroll_settings', ['id'], unique=False)
     op.create_index(op.f('ix_payroll_settings_organization_id'), 'payroll_settings', ['organization_id'], unique=True)
+    op.create_table('plan_entitlements',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('plan_id', sa.Integer(), nullable=False),
+    sa.Column('module_id', sa.Integer(), nullable=False),
+    sa.Column('submodule_id', sa.Integer(), nullable=True),
+    sa.Column('is_included', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['module_id'], ['modules.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['plan_id'], ['plans.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['submodule_id'], ['submodules.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('plan_id', 'module_id', 'submodule_id', name='uq_plan_entitlements')
+    )
+    op.create_index('idx_plan_entitlements_module', 'plan_entitlements', ['module_id'], unique=False)
+    op.create_index('idx_plan_entitlements_plan', 'plan_entitlements', ['plan_id'], unique=False)
+    op.create_index('idx_plan_entitlements_submodule', 'plan_entitlements', ['submodule_id'], unique=False)
+    op.create_index(op.f('ix_plan_entitlements_id'), 'plan_entitlements', ['id'], unique=False)
+    op.create_index(op.f('ix_plan_entitlements_module_id'), 'plan_entitlements', ['module_id'], unique=False)
+    op.create_index(op.f('ix_plan_entitlements_plan_id'), 'plan_entitlements', ['plan_id'], unique=False)
+    op.create_index(op.f('ix_plan_entitlements_submodule_id'), 'plan_entitlements', ['submodule_id'], unique=False)
+    op.create_table('plugin_hooks',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('plugin_id', sa.Integer(), nullable=False),
+    sa.Column('hook_name', sa.String(length=255), nullable=False),
+    sa.Column('event_type', sa.String(length=100), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('handler_function', sa.String(length=500), nullable=False),
+    sa.Column('priority', sa.Integer(), nullable=False),
+    sa.Column('enabled', sa.Boolean(), nullable=False),
+    sa.Column('execution_count', sa.Integer(), nullable=False),
+    sa.Column('last_executed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('average_execution_time_ms', sa.JSON(), nullable=True),
+    sa.Column('error_count', sa.Integer(), nullable=False),
+    sa.Column('last_error', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['plugin_id'], ['plugins.id'], name='fk_hook_plugin_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_hook_name', 'plugin_hooks', ['hook_name'], unique=False)
+    op.create_index('idx_hook_plugin_event', 'plugin_hooks', ['plugin_id', 'event_type'], unique=False)
+    op.create_index(op.f('ix_plugin_hooks_hook_name'), 'plugin_hooks', ['hook_name'], unique=False)
+    op.create_index(op.f('ix_plugin_hooks_id'), 'plugin_hooks', ['id'], unique=False)
+    op.create_index(op.f('ix_plugin_hooks_plugin_id'), 'plugin_hooks', ['plugin_id'], unique=False)
+    op.create_table('plugin_installations',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('plugin_id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('installed_by', sa.Integer(), nullable=True),
+    sa.Column('installed_version', sa.String(length=50), nullable=False),
+    sa.Column('active', sa.Boolean(), nullable=False),
+    sa.Column('settings', sa.JSON(), nullable=True),
+    sa.Column('last_used_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('usage_count', sa.Integer(), nullable=False),
+    sa.Column('error_count', sa.Integer(), nullable=False),
+    sa.Column('last_error', sa.Text(), nullable=True),
+    sa.Column('last_error_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('installed_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['installed_by'], ['users.id'], name='fk_installation_user_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_installation_organization_id'),
+    sa.ForeignKeyConstraint(['plugin_id'], ['plugins.id'], name='fk_installation_plugin_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('plugin_id', 'organization_id', name='uq_plugin_org_installation')
+    )
+    op.create_index('idx_installation_org_plugin', 'plugin_installations', ['organization_id', 'plugin_id'], unique=False)
+    op.create_index(op.f('ix_plugin_installations_id'), 'plugin_installations', ['id'], unique=False)
+    op.create_index(op.f('ix_plugin_installations_organization_id'), 'plugin_installations', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_plugin_installations_plugin_id'), 'plugin_installations', ['plugin_id'], unique=False)
+    op.create_table('predictive_models',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('model_name', sa.String(), nullable=False),
+    sa.Column('model_type', sa.Enum('SALES_FORECAST', 'DEMAND_PREDICTION', 'CHURN_PREDICTION', 'REVENUE_FORECAST', 'INVENTORY_OPTIMIZATION', 'CUSTOMER_LIFETIME_VALUE', 'PRICE_OPTIMIZATION', 'LEAD_SCORING', name='predictivemodeltype'), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('version', sa.String(), nullable=False),
+    sa.Column('algorithm', sa.String(), nullable=False),
+    sa.Column('hyperparameters', sa.JSON(), nullable=True),
+    sa.Column('feature_engineering', sa.JSON(), nullable=True),
+    sa.Column('training_config', sa.JSON(), nullable=False),
+    sa.Column('validation_split', sa.Float(), nullable=False),
+    sa.Column('test_split', sa.Float(), nullable=False),
+    sa.Column('accuracy_score', sa.Float(), nullable=True),
+    sa.Column('precision_score', sa.Float(), nullable=True),
+    sa.Column('recall_score', sa.Float(), nullable=True),
+    sa.Column('f1_score', sa.Float(), nullable=True),
+    sa.Column('mae', sa.Float(), nullable=True),
+    sa.Column('rmse', sa.Float(), nullable=True),
+    sa.Column('r2_score', sa.Float(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('deployed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('prediction_count', sa.Integer(), nullable=False),
+    sa.Column('last_prediction_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('model_path', sa.String(), nullable=True),
+    sa.Column('model_metadata', sa.JSON(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('updated_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_predictive_model_created_by'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_predictive_model_org_id'),
+    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], name='fk_predictive_model_updated_by'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'model_name', 'version', name='uq_predictive_model_org_name_version')
+    )
+    op.create_index('idx_predictive_model_active', 'predictive_models', ['organization_id', 'is_active'], unique=False)
+    op.create_index('idx_predictive_model_org_type', 'predictive_models', ['organization_id', 'model_type'], unique=False)
+    op.create_index(op.f('ix_predictive_models_id'), 'predictive_models', ['id'], unique=False)
+    op.create_index(op.f('ix_predictive_models_model_name'), 'predictive_models', ['model_name'], unique=False)
+    op.create_index(op.f('ix_predictive_models_model_type'), 'predictive_models', ['model_type'], unique=False)
+    op.create_index(op.f('ix_predictive_models_organization_id'), 'predictive_models', ['organization_id'], unique=False)
     op.create_table('products',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -2140,7 +2892,7 @@ def upgrade() -> None:
     sa.Column('body', sa.Text(), nullable=False),
     sa.Column('scheduled_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('sent_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('status', sa.Enum('pending', 'sent', 'failed', 'cancelled', name='emailschedulestatus'), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'SENT', 'FAILED', 'CANCELLED', name='email_schedule_status'), nullable=False),
     sa.Column('error_message', sa.Text(), nullable=True),
     sa.Column('retry_count', sa.Integer(), nullable=False),
     sa.Column('attachment_paths', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -2195,20 +2947,17 @@ def upgrade() -> None:
     op.create_index(op.f('ix_seo_meta_tags_page_path'), 'seo_meta_tags', ['page_path'], unique=False)
     op.create_table('service_role_permissions',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.Column('role_id', sa.Integer(), nullable=False),
     sa.Column('permission_id', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_service_role_permission_organization_id'),
-    sa.ForeignKeyConstraint(['permission_id'], ['service_permissions.id'], name='fk_service_role_permission_permission_id'),
-    sa.ForeignKeyConstraint(['role_id'], ['service_roles.id'], name='fk_service_role_permission_role_id'),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['permission_id'], ['service_permissions.id'], ),
+    sa.ForeignKeyConstraint(['role_id'], ['service_roles.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('role_id', 'permission_id', name='uq_service_role_permission')
+    sa.UniqueConstraint('role_id', 'permission_id', name='uq_role_permission')
     )
-    op.create_index('idx_service_role_permission_permission', 'service_role_permissions', ['permission_id'], unique=False)
-    op.create_index('idx_service_role_permission_role', 'service_role_permissions', ['role_id'], unique=False)
     op.create_index(op.f('ix_service_role_permissions_id'), 'service_role_permissions', ['id'], unique=False)
-    op.create_index(op.f('ix_service_role_permissions_organization_id'), 'service_role_permissions', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_service_role_permissions_permission_id'), 'service_role_permissions', ['permission_id'], unique=False)
+    op.create_index(op.f('ix_service_role_permissions_role_id'), 'service_role_permissions', ['role_id'], unique=False)
     op.create_table('skills',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -2260,26 +3009,6 @@ def upgrade() -> None:
     op.create_index('idx_sla_policy_ticket_type', 'sla_policies', ['ticket_type'], unique=False)
     op.create_index(op.f('ix_sla_policies_id'), 'sla_policies', ['id'], unique=False)
     op.create_index(op.f('ix_sla_policies_organization_id'), 'sla_policies', ['organization_id'], unique=False)
-    op.create_table('snappymail_configs',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('email', sa.String(), nullable=False),
-    sa.Column('imap_host', sa.String(), nullable=False),
-    sa.Column('imap_port', sa.Integer(), nullable=False),
-    sa.Column('smtp_host', sa.String(), nullable=False),
-    sa.Column('smtp_port', sa.Integer(), nullable=False),
-    sa.Column('use_ssl', sa.Boolean(), nullable=False),
-    sa.Column('password', sa.String(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_snappymail_config_user_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', name='uq_snappymail_config_user')
-    )
-    op.create_index('idx_snappymail_config_email', 'snappymail_configs', ['email'], unique=False)
-    op.create_index(op.f('ix_snappymail_configs_email'), 'snappymail_configs', ['email'], unique=False)
-    op.create_index(op.f('ix_snappymail_configs_id'), 'snappymail_configs', ['id'], unique=False)
-    op.create_index(op.f('ix_snappymail_configs_user_id'), 'snappymail_configs', ['user_id'], unique=False)
     op.create_table('stock_locations',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('warehouse_id', sa.Integer(), nullable=False),
@@ -2306,6 +3035,29 @@ def upgrade() -> None:
     op.create_index(op.f('ix_stock_locations_location_code'), 'stock_locations', ['location_code'], unique=False)
     op.create_index(op.f('ix_stock_locations_parent_location_id'), 'stock_locations', ['parent_location_id'], unique=False)
     op.create_index(op.f('ix_stock_locations_warehouse_id'), 'stock_locations', ['warehouse_id'], unique=False)
+    op.create_table('streaming_data_sources',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('source_name', sa.String(length=255), nullable=False),
+    sa.Column('source_type', sa.String(length=50), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('connection_config', sa.JSON(), nullable=False),
+    sa.Column('status', sa.Enum('ACTIVE', 'PAUSED', 'ERROR', 'STOPPED', name='streamstatus'), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('last_message_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('message_count', sa.Integer(), nullable=False),
+    sa.Column('error_count', sa.Integer(), nullable=False),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_stream_source_created_by'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_stream_source_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_stream_source_org_status', 'streaming_data_sources', ['organization_id', 'status'], unique=False)
+    op.create_index(op.f('ix_streaming_data_sources_id'), 'streaming_data_sources', ['id'], unique=False)
+    op.create_index(op.f('ix_streaming_data_sources_organization_id'), 'streaming_data_sources', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_streaming_data_sources_status'), 'streaming_data_sources', ['status'], unique=False)
     op.create_table('survey_templates',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -2603,55 +3355,22 @@ def upgrade() -> None:
     op.create_index(op.f('ix_user_email_tokens_user_id'), 'user_email_tokens', ['user_id'], unique=False)
     op.create_table('user_service_roles',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('role_id', sa.Integer(), nullable=False),
     sa.Column('assigned_by_id', sa.Integer(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('assigned_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['assigned_by_id'], ['users.id'], name='fk_user_service_role_assigned_by_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_user_service_role_organization_id'),
-    sa.ForeignKeyConstraint(['role_id'], ['service_roles.id'], name='fk_user_service_role_role_id'),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_user_service_role_user_id'),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['assigned_by_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['role_id'], ['service_roles.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id', 'role_id', name='uq_user_service_role')
     )
-    op.create_index('idx_user_service_role_active', 'user_service_roles', ['is_active'], unique=False)
-    op.create_index('idx_user_service_role_role', 'user_service_roles', ['role_id'], unique=False)
-    op.create_index('idx_user_service_role_user', 'user_service_roles', ['user_id'], unique=False)
+    op.create_index('idx_user_service_role_active', 'user_service_roles', ['user_id', 'is_active'], unique=False)
     op.create_index(op.f('ix_user_service_roles_id'), 'user_service_roles', ['id'], unique=False)
-    op.create_index(op.f('ix_user_service_roles_organization_id'), 'user_service_roles', ['organization_id'], unique=False)
-    op.create_table('vendors',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('company_id', sa.Integer(), nullable=True),
-    sa.Column('name', sa.String(), nullable=False),
-    sa.Column('contact_number', sa.String(), nullable=False),
-    sa.Column('email', sa.String(), nullable=True),
-    sa.Column('address1', sa.String(), nullable=False),
-    sa.Column('address2', sa.String(), nullable=True),
-    sa.Column('city', sa.String(), nullable=False),
-    sa.Column('state', sa.String(), nullable=False),
-    sa.Column('pin_code', sa.String(), nullable=False),
-    sa.Column('state_code', sa.String(), nullable=False),
-    sa.Column('gst_number', sa.String(), nullable=True),
-    sa.Column('pan_number', sa.String(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], name='fk_vendor_company_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_vendor_organization_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'name', name='uq_vendor_org_name')
-    )
-    op.create_index('idx_vendor_org_active', 'vendors', ['organization_id', 'is_active'], unique=False)
-    op.create_index('idx_vendor_org_name', 'vendors', ['organization_id', 'name'], unique=False)
-    op.create_index(op.f('ix_vendors_company_id'), 'vendors', ['company_id'], unique=False)
-    op.create_index(op.f('ix_vendors_id'), 'vendors', ['id'], unique=False)
-    op.create_index(op.f('ix_vendors_name'), 'vendors', ['name'], unique=False)
-    op.create_index(op.f('ix_vendors_organization_id'), 'vendors', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_user_service_roles_role_id'), 'user_service_roles', ['role_id'], unique=False)
+    op.create_index(op.f('ix_user_service_roles_user_id'), 'user_service_roles', ['user_id'], unique=False)
     op.create_table('webhooks',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -2764,60 +3483,24 @@ def upgrade() -> None:
     op.create_index(op.f('ix_workflow_templates_advanced_id'), 'workflow_templates_advanced', ['id'], unique=False)
     op.create_index(op.f('ix_workflow_templates_advanced_name'), 'workflow_templates_advanced', ['name'], unique=False)
     op.create_index(op.f('ix_workflow_templates_advanced_organization_id'), 'workflow_templates_advanced', ['organization_id'], unique=False)
-    op.create_table('accounts_payable',
+    op.create_table('ab_test_variants',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('vendor_id', sa.Integer(), nullable=False),
-    sa.Column('invoice_number', sa.String(length=50), nullable=False),
-    sa.Column('invoice_date', sa.Date(), nullable=False),
-    sa.Column('total_amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('paid_amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('balance_amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('due_date', sa.Date(), nullable=False),
-    sa.Column('payment_terms', sa.String(length=100), nullable=True),
-    sa.Column('status', sa.String(length=20), nullable=False),
-    sa.Column('is_overdue', sa.Boolean(), nullable=False),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'invoice_number', name='uq_org_invoice_number')
+    sa.Column('experiment_id', sa.Integer(), nullable=False),
+    sa.Column('variant_name', sa.String(length=100), nullable=False),
+    sa.Column('variant_type', sa.Enum('CONTROL', 'TREATMENT', name='varianttype'), nullable=False),
+    sa.Column('model_id', sa.Integer(), nullable=True),
+    sa.Column('model_version', sa.String(length=50), nullable=True),
+    sa.Column('variant_config', sa.JSON(), nullable=True),
+    sa.Column('traffic_percentage', sa.Float(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['experiment_id'], ['ab_test_experiments.id'], name='fk_variant_experiment_id'),
+    sa.ForeignKeyConstraint(['model_id'], ['ai_models.id'], name='fk_variant_model_id'),
+    sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_ap_org_vendor', 'accounts_payable', ['organization_id', 'vendor_id'], unique=False)
-    op.create_index('idx_ap_status', 'accounts_payable', ['status'], unique=False)
-    op.create_index(op.f('ix_accounts_payable_id'), 'accounts_payable', ['id'], unique=False)
-    op.create_index(op.f('ix_accounts_payable_invoice_number'), 'accounts_payable', ['invoice_number'], unique=False)
-    op.create_index(op.f('ix_accounts_payable_organization_id'), 'accounts_payable', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_accounts_payable_vendor_id'), 'accounts_payable', ['vendor_id'], unique=False)
-    op.create_table('accounts_receivable',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('invoice_number', sa.String(length=50), nullable=False),
-    sa.Column('invoice_date', sa.Date(), nullable=False),
-    sa.Column('total_amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('received_amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('balance_amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('due_date', sa.Date(), nullable=False),
-    sa.Column('payment_terms', sa.String(length=100), nullable=True),
-    sa.Column('status', sa.String(length=20), nullable=False),
-    sa.Column('is_overdue', sa.Boolean(), nullable=False),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'invoice_number', name='uq_org_ar_invoice_number')
-    )
-    op.create_index('idx_ar_org_customer', 'accounts_receivable', ['organization_id', 'customer_id'], unique=False)
-    op.create_index('idx_ar_status', 'accounts_receivable', ['status'], unique=False)
-    op.create_index(op.f('ix_accounts_receivable_customer_id'), 'accounts_receivable', ['customer_id'], unique=False)
-    op.create_index(op.f('ix_accounts_receivable_id'), 'accounts_receivable', ['id'], unique=False)
-    op.create_index(op.f('ix_accounts_receivable_invoice_number'), 'accounts_receivable', ['invoice_number'], unique=False)
-    op.create_index(op.f('ix_accounts_receivable_organization_id'), 'accounts_receivable', ['organization_id'], unique=False)
+    op.create_index('idx_variant_experiment', 'ab_test_variants', ['experiment_id'], unique=False)
+    op.create_index(op.f('ix_ab_test_variants_experiment_id'), 'ab_test_variants', ['experiment_id'], unique=False)
+    op.create_index(op.f('ix_ab_test_variants_id'), 'ab_test_variants', ['id'], unique=False)
     op.create_table('ai_insights',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -2859,42 +3542,37 @@ def upgrade() -> None:
     op.create_index(op.f('ix_ai_insights_id'), 'ai_insights', ['id'], unique=False)
     op.create_index(op.f('ix_ai_insights_insight_type'), 'ai_insights', ['insight_type'], unique=False)
     op.create_index(op.f('ix_ai_insights_organization_id'), 'ai_insights', ['organization_id'], unique=False)
-    op.create_table('analytics_summaries',
+    op.create_table('anomaly_detection_results',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('summary_type', sa.String(), nullable=False),
-    sa.Column('summary_date', sa.Date(), nullable=False),
-    sa.Column('total_jobs', sa.Integer(), nullable=False),
-    sa.Column('completed_jobs', sa.Integer(), nullable=False),
-    sa.Column('pending_jobs', sa.Integer(), nullable=False),
-    sa.Column('cancelled_jobs', sa.Integer(), nullable=False),
-    sa.Column('total_completion_time_hours', sa.Float(), nullable=True),
-    sa.Column('average_completion_time_hours', sa.Float(), nullable=True),
-    sa.Column('total_feedback_received', sa.Integer(), nullable=False),
-    sa.Column('average_overall_rating', sa.Float(), nullable=True),
-    sa.Column('average_service_quality', sa.Float(), nullable=True),
-    sa.Column('average_technician_rating', sa.Float(), nullable=True),
-    sa.Column('sla_met_count', sa.Integer(), nullable=False),
-    sa.Column('sla_breached_count', sa.Integer(), nullable=False),
-    sa.Column('sla_compliance_rate', sa.Float(), nullable=True),
-    sa.Column('technician_id', sa.Integer(), nullable=True),
-    sa.Column('customer_id', sa.Integer(), nullable=True),
-    sa.Column('summary_data', sa.JSON(), nullable=True),
-    sa.Column('calculated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_analytics_summary_customer_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_analytics_summary_organization_id'),
-    sa.ForeignKeyConstraint(['technician_id'], ['users.id'], name='fk_analytics_summary_technician_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'summary_type', 'summary_date', 'technician_id', 'customer_id', name='uq_analytics_summary_org_type_date_entities')
+    sa.Column('anomaly_model_id', sa.Integer(), nullable=False),
+    sa.Column('detected_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('severity', sa.String(), nullable=False),
+    sa.Column('anomaly_score', sa.Float(), nullable=False),
+    sa.Column('affected_data', sa.JSON(), nullable=False),
+    sa.Column('expected_range', sa.JSON(), nullable=True),
+    sa.Column('actual_value', sa.JSON(), nullable=True),
+    sa.Column('context', sa.JSON(), nullable=True),
+    sa.Column('root_cause_analysis', sa.Text(), nullable=True),
+    sa.Column('is_resolved', sa.Boolean(), nullable=False),
+    sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('resolved_by_id', sa.Integer(), nullable=True),
+    sa.Column('resolution_notes', sa.Text(), nullable=True),
+    sa.Column('is_false_positive', sa.Boolean(), nullable=False),
+    sa.Column('false_positive_reason', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['anomaly_model_id'], ['anomaly_detection_models.id'], name='fk_anomaly_result_model_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_anomaly_result_org_id'),
+    sa.ForeignKeyConstraint(['resolved_by_id'], ['users.id'], name='fk_anomaly_result_resolved_by'),
+    sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_analytics_summary_customer', 'analytics_summaries', ['customer_id'], unique=False)
-    op.create_index('idx_analytics_summary_org_type_date', 'analytics_summaries', ['organization_id', 'summary_type', 'summary_date'], unique=False)
-    op.create_index('idx_analytics_summary_technician', 'analytics_summaries', ['technician_id'], unique=False)
-    op.create_index(op.f('ix_analytics_summaries_id'), 'analytics_summaries', ['id'], unique=False)
-    op.create_index(op.f('ix_analytics_summaries_organization_id'), 'analytics_summaries', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_analytics_summaries_summary_date'), 'analytics_summaries', ['summary_date'], unique=False)
-    op.create_index(op.f('ix_analytics_summaries_summary_type'), 'analytics_summaries', ['summary_type'], unique=False)
+    op.create_index('idx_anomaly_result_org_detected', 'anomaly_detection_results', ['organization_id', 'detected_at'], unique=False)
+    op.create_index('idx_anomaly_result_resolved', 'anomaly_detection_results', ['organization_id', 'is_resolved'], unique=False)
+    op.create_index('idx_anomaly_result_severity', 'anomaly_detection_results', ['organization_id', 'severity'], unique=False)
+    op.create_index(op.f('ix_anomaly_detection_results_anomaly_model_id'), 'anomaly_detection_results', ['anomaly_model_id'], unique=False)
+    op.create_index(op.f('ix_anomaly_detection_results_detected_at'), 'anomaly_detection_results', ['detected_at'], unique=False)
+    op.create_index(op.f('ix_anomaly_detection_results_id'), 'anomaly_detection_results', ['id'], unique=False)
+    op.create_index(op.f('ix_anomaly_detection_results_organization_id'), 'anomaly_detection_results', ['organization_id'], unique=False)
     op.create_table('anomaly_detections',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -2995,58 +3673,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_api_usage_logs_request_ip'), 'api_usage_logs', ['request_ip'], unique=False)
     op.create_index(op.f('ix_api_usage_logs_status_code'), 'api_usage_logs', ['status_code'], unique=False)
     op.create_index(op.f('ix_api_usage_logs_timestamp'), 'api_usage_logs', ['timestamp'], unique=False)
-    op.create_table('assets',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('asset_code', sa.String(), nullable=False),
-    sa.Column('asset_name', sa.String(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('category', sa.String(), nullable=False),
-    sa.Column('subcategory', sa.String(), nullable=True),
-    sa.Column('manufacturer', sa.String(), nullable=True),
-    sa.Column('model', sa.String(), nullable=True),
-    sa.Column('serial_number', sa.String(), nullable=True),
-    sa.Column('year_of_manufacture', sa.Integer(), nullable=True),
-    sa.Column('purchase_cost', sa.Float(), nullable=True),
-    sa.Column('purchase_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('vendor_id', sa.Integer(), nullable=True),
-    sa.Column('warranty_start_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('warranty_end_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('location', sa.String(), nullable=True),
-    sa.Column('department', sa.String(), nullable=True),
-    sa.Column('assigned_to_employee', sa.String(), nullable=True),
-    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'MAINTENANCE', 'RETIRED', 'DISPOSED', name='assetstatus'), nullable=False),
-    sa.Column('condition', sa.Enum('EXCELLENT', 'GOOD', 'FAIR', 'POOR', 'CRITICAL', name='assetcondition'), nullable=False),
-    sa.Column('last_inspection_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('next_inspection_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('specifications', sa.Text(), nullable=True),
-    sa.Column('operating_capacity', sa.String(), nullable=True),
-    sa.Column('power_rating', sa.String(), nullable=True),
-    sa.Column('depreciation_method', sa.Enum('STRAIGHT_LINE', 'DECLINING_BALANCE', 'UNITS_OF_PRODUCTION', 'SUM_OF_YEARS', name='depreciationmethod'), nullable=True),
-    sa.Column('useful_life_years', sa.Integer(), nullable=True),
-    sa.Column('salvage_value', sa.Float(), nullable=True),
-    sa.Column('depreciation_rate', sa.Float(), nullable=True),
-    sa.Column('insurance_provider', sa.String(), nullable=True),
-    sa.Column('insurance_policy_number', sa.String(), nullable=True),
-    sa.Column('insurance_expiry_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('photo_path', sa.String(), nullable=True),
-    sa.Column('document_path', sa.String(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'asset_code', name='uq_asset_org_code')
-    )
-    op.create_index('idx_asset_org_category', 'assets', ['organization_id', 'category'], unique=False)
-    op.create_index('idx_asset_org_created', 'assets', ['organization_id', 'created_at'], unique=False)
-    op.create_index('idx_asset_org_location', 'assets', ['organization_id', 'location'], unique=False)
-    op.create_index('idx_asset_org_status', 'assets', ['organization_id', 'status'], unique=False)
-    op.create_index(op.f('ix_assets_id'), 'assets', ['id'], unique=False)
-    op.create_index(op.f('ix_assets_organization_id'), 'assets', ['organization_id'], unique=False)
     op.create_table('attendance_records',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -3083,6 +3709,27 @@ def upgrade() -> None:
     op.create_index(op.f('ix_attendance_records_employee_id'), 'attendance_records', ['employee_id'], unique=False)
     op.create_index(op.f('ix_attendance_records_id'), 'attendance_records', ['id'], unique=False)
     op.create_index(op.f('ix_attendance_records_organization_id'), 'attendance_records', ['organization_id'], unique=False)
+    op.create_table('automl_model_candidates',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('automl_run_id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('trial_number', sa.Integer(), nullable=False),
+    sa.Column('model_name', sa.String(), nullable=False),
+    sa.Column('algorithm', sa.String(), nullable=False),
+    sa.Column('hyperparameters', sa.JSON(), nullable=False),
+    sa.Column('score', sa.Float(), nullable=False),
+    sa.Column('training_time', sa.Float(), nullable=False),
+    sa.Column('evaluation_metrics', sa.JSON(), nullable=True),
+    sa.Column('model_path', sa.String(), nullable=True),
+    sa.Column('feature_importance', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['automl_run_id'], ['automl_runs.id'], name='fk_automl_candidate_run_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_automl_candidate_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_automl_model_candidates_automl_run_id'), 'automl_model_candidates', ['automl_run_id'], unique=False)
+    op.create_index(op.f('ix_automl_model_candidates_id'), 'automl_model_candidates', ['id'], unique=False)
+    op.create_index(op.f('ix_automl_model_candidates_organization_id'), 'automl_model_candidates', ['organization_id'], unique=False)
     op.create_table('bank_accounts',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -3276,122 +3923,38 @@ def upgrade() -> None:
     op.create_index(op.f('ix_contra_vouchers_id'), 'contra_vouchers', ['id'], unique=False)
     op.create_index(op.f('ix_contra_vouchers_organization_id'), 'contra_vouchers', ['organization_id'], unique=False)
     op.create_index(op.f('ix_contra_vouchers_voucher_number'), 'contra_vouchers', ['voucher_number'], unique=False)
-    op.create_table('credit_notes',
-    sa.Column('customer_id', sa.Integer(), nullable=True),
-    sa.Column('vendor_id', sa.Integer(), nullable=True),
-    sa.Column('reference_voucher_type', sa.String(), nullable=True),
-    sa.Column('reference_voucher_id', sa.Integer(), nullable=True),
-    sa.Column('reason', sa.String(), nullable=False),
+    op.create_table('customers',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_cn_org_voucher_number')
-    )
-    op.create_index('idx_cn_org_customer', 'credit_notes', ['organization_id', 'customer_id'], unique=False)
-    op.create_index('idx_cn_org_date', 'credit_notes', ['organization_id', 'date'], unique=False)
-    op.create_index('idx_cn_org_vendor', 'credit_notes', ['organization_id', 'vendor_id'], unique=False)
-    op.create_index(op.f('ix_credit_notes_id'), 'credit_notes', ['id'], unique=False)
-    op.create_index(op.f('ix_credit_notes_organization_id'), 'credit_notes', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_credit_notes_voucher_number'), 'credit_notes', ['voucher_number'], unique=False)
-    op.create_table('customer_analytics',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('total_purchases', sa.Float(), nullable=False),
-    sa.Column('average_order_value', sa.Float(), nullable=False),
-    sa.Column('purchase_frequency', sa.Float(), nullable=False),
-    sa.Column('last_purchase_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_customer_analytics_customer_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_customer_analytics_organization_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'customer_id', name='uq_customer_analytics_org_customer')
-    )
-    op.create_index('idx_customer_analytics_org', 'customer_analytics', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_customer_analytics_customer_id'), 'customer_analytics', ['customer_id'], unique=False)
-    op.create_index(op.f('ix_customer_analytics_id'), 'customer_analytics', ['id'], unique=False)
-    op.create_index(op.f('ix_customer_analytics_organization_id'), 'customer_analytics', ['organization_id'], unique=False)
-    op.create_table('customer_files',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('filename', sa.String(), nullable=False),
-    sa.Column('original_filename', sa.String(), nullable=False),
-    sa.Column('file_path', sa.String(), nullable=False),
-    sa.Column('file_size', sa.Integer(), nullable=False),
-    sa.Column('content_type', sa.String(), nullable=False),
-    sa.Column('file_type', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_customer_file_customer_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_customer_file_organization_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_customer_file_org_customer', 'customer_files', ['organization_id', 'customer_id'], unique=False)
-    op.create_index(op.f('ix_customer_files_id'), 'customer_files', ['id'], unique=False)
-    op.create_index(op.f('ix_customer_files_organization_id'), 'customer_files', ['organization_id'], unique=False)
-    op.create_table('customer_interactions',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('interaction_type', sa.String(), nullable=False),
-    sa.Column('subject', sa.String(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('interaction_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], name='fk_customer_interaction_created_by'),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_customer_interaction_customer_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_customer_interaction_organization_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_customer_interaction_date', 'customer_interactions', ['interaction_date'], unique=False)
-    op.create_index('idx_customer_interaction_org_customer', 'customer_interactions', ['organization_id', 'customer_id'], unique=False)
-    op.create_index('idx_customer_interaction_type_status', 'customer_interactions', ['interaction_type', 'status'], unique=False)
-    op.create_index(op.f('ix_customer_interactions_id'), 'customer_interactions', ['id'], unique=False)
-    op.create_index(op.f('ix_customer_interactions_organization_id'), 'customer_interactions', ['organization_id'], unique=False)
-    op.create_table('customer_segments',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('segment_name', sa.String(), nullable=False),
-    sa.Column('segment_value', sa.Float(), nullable=True),
-    sa.Column('segment_description', sa.Text(), nullable=True),
+    sa.Column('company_id', sa.Integer(), nullable=True),
+    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('contact_number', sa.String(), nullable=False),
+    sa.Column('email', sa.String(), nullable=True),
+    sa.Column('address1', sa.String(), nullable=False),
+    sa.Column('address2', sa.String(), nullable=True),
+    sa.Column('city', sa.String(), nullable=False),
+    sa.Column('state', sa.String(), nullable=False),
+    sa.Column('pin_code', sa.String(), nullable=False),
+    sa.Column('state_code', sa.String(), nullable=False),
+    sa.Column('gst_number', sa.String(), nullable=True),
+    sa.Column('pan_number', sa.String(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('assigned_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('assigned_by', sa.Integer(), nullable=True),
+    sa.Column('receivable_account_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['assigned_by'], ['users.id'], name='fk_customer_segment_assigned_by'),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_customer_segment_customer_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_customer_segment_organization_id'),
+    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], name='fk_customer_company_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_customer_organization_id'),
+    sa.ForeignKeyConstraint(['receivable_account_id'], ['chart_of_accounts.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'customer_id', 'segment_name', name='uq_customer_segment_org_customer_name')
+    sa.UniqueConstraint('organization_id', 'name', name='uq_customer_org_name')
     )
-    op.create_index('idx_customer_segment_assigned_date', 'customer_segments', ['assigned_date'], unique=False)
-    op.create_index('idx_customer_segment_name_active', 'customer_segments', ['segment_name', 'is_active'], unique=False)
-    op.create_index('idx_customer_segment_org_customer', 'customer_segments', ['organization_id', 'customer_id'], unique=False)
-    op.create_index(op.f('ix_customer_segments_id'), 'customer_segments', ['id'], unique=False)
-    op.create_index(op.f('ix_customer_segments_organization_id'), 'customer_segments', ['organization_id'], unique=False)
+    op.create_index('idx_customer_org_active', 'customers', ['organization_id', 'is_active'], unique=False)
+    op.create_index('idx_customer_org_name', 'customers', ['organization_id', 'name'], unique=False)
+    op.create_index(op.f('ix_customers_company_id'), 'customers', ['company_id'], unique=False)
+    op.create_index(op.f('ix_customers_id'), 'customers', ['id'], unique=False)
+    op.create_index(op.f('ix_customers_name'), 'customers', ['name'], unique=False)
+    op.create_index(op.f('ix_customers_organization_id'), 'customers', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_customers_receivable_account_id'), 'customers', ['receivable_account_id'], unique=False)
     op.create_table('data_transformation_rules',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -3448,39 +4011,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_dcf_models_financial_model_id'), 'dcf_models', ['financial_model_id'], unique=False)
     op.create_index(op.f('ix_dcf_models_id'), 'dcf_models', ['id'], unique=False)
     op.create_index(op.f('ix_dcf_models_organization_id'), 'dcf_models', ['organization_id'], unique=False)
-    op.create_table('debit_notes',
-    sa.Column('customer_id', sa.Integer(), nullable=True),
-    sa.Column('vendor_id', sa.Integer(), nullable=True),
-    sa.Column('reference_voucher_type', sa.String(), nullable=True),
-    sa.Column('reference_voucher_id', sa.Integer(), nullable=True),
-    sa.Column('reason', sa.String(), nullable=False),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_dn_org_voucher_number')
-    )
-    op.create_index('idx_dn_org_customer', 'debit_notes', ['organization_id', 'customer_id'], unique=False)
-    op.create_index('idx_dn_org_date', 'debit_notes', ['organization_id', 'date'], unique=False)
-    op.create_index('idx_dn_org_vendor', 'debit_notes', ['organization_id', 'vendor_id'], unique=False)
-    op.create_index(op.f('ix_debit_notes_id'), 'debit_notes', ['id'], unique=False)
-    op.create_index(op.f('ix_debit_notes_organization_id'), 'debit_notes', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_debit_notes_voucher_number'), 'debit_notes', ['voucher_number'], unique=False)
     op.create_table('employee_learning_paths',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -3636,6 +4166,46 @@ def upgrade() -> None:
     op.create_index('idx_exhibition_event_org_status', 'exhibition_events', ['organization_id', 'status'], unique=False)
     op.create_index(op.f('ix_exhibition_events_id'), 'exhibition_events', ['id'], unique=False)
     op.create_index(op.f('ix_exhibition_events_organization_id'), 'exhibition_events', ['organization_id'], unique=False)
+    op.create_table('expense_accounts',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('account_code', sa.String(length=50), nullable=False),
+    sa.Column('account_name', sa.String(length=200), nullable=False),
+    sa.Column('parent_account_id', sa.Integer(), nullable=True),
+    sa.Column('category', sa.String(length=100), nullable=True),
+    sa.Column('sub_category', sa.String(length=100), nullable=True),
+    sa.Column('opening_balance', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('current_balance', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('budgeted_amount', sa.Numeric(precision=15, scale=2), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('is_group', sa.Boolean(), nullable=False),
+    sa.Column('can_post', sa.Boolean(), nullable=False),
+    sa.Column('requires_approval', sa.Boolean(), nullable=False),
+    sa.Column('coa_account_id', sa.Integer(), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('tags', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('updated_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['coa_account_id'], ['chart_of_accounts.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['parent_account_id'], ['expense_accounts.id'], ),
+    sa.ForeignKeyConstraint(['updated_by'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'account_code', name='uq_org_expense_account_code')
+    )
+    op.create_index('idx_expense_account_org_active', 'expense_accounts', ['organization_id', 'is_active'], unique=False)
+    op.create_index('idx_expense_account_org_category', 'expense_accounts', ['organization_id', 'category'], unique=False)
+    op.create_index(op.f('ix_expense_accounts_account_code'), 'expense_accounts', ['account_code'], unique=False)
+    op.create_index(op.f('ix_expense_accounts_account_name'), 'expense_accounts', ['account_name'], unique=False)
+    op.create_index(op.f('ix_expense_accounts_category'), 'expense_accounts', ['category'], unique=False)
+    op.create_index(op.f('ix_expense_accounts_coa_account_id'), 'expense_accounts', ['coa_account_id'], unique=False)
+    op.create_index(op.f('ix_expense_accounts_id'), 'expense_accounts', ['id'], unique=False)
+    op.create_index(op.f('ix_expense_accounts_organization_id'), 'expense_accounts', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_expense_accounts_parent_account_id'), 'expense_accounts', ['parent_account_id'], unique=False)
     op.create_table('forecast_versions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('financial_forecast_id', sa.Integer(), nullable=False),
@@ -3750,6 +4320,44 @@ def upgrade() -> None:
     op.create_index(op.f('ix_integration_mappings_entity_type'), 'integration_mappings', ['entity_type'], unique=False)
     op.create_index(op.f('ix_integration_mappings_id'), 'integration_mappings', ['id'], unique=False)
     op.create_index(op.f('ix_integration_mappings_organization_id'), 'integration_mappings', ['organization_id'], unique=False)
+    op.create_table('integration_messages',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('integration_id', sa.Integer(), nullable=False),
+    sa.Column('external_id', sa.String(length=255), nullable=True),
+    sa.Column('direction', sa.String(length=20), nullable=False),
+    sa.Column('message_type', sa.String(length=50), nullable=False),
+    sa.Column('content', sa.Text(), nullable=True),
+    sa.Column('subject', sa.String(length=500), nullable=True),
+    sa.Column('attachments', sa.JSON(), nullable=True),
+    sa.Column('message_metadata', sa.JSON(), nullable=True),
+    sa.Column('from_user', sa.String(length=255), nullable=True),
+    sa.Column('from_user_id', sa.String(length=255), nullable=True),
+    sa.Column('to_user', sa.String(length=255), nullable=True),
+    sa.Column('to_user_id', sa.String(length=255), nullable=True),
+    sa.Column('channel', sa.String(length=255), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('delivered_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('read_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('retry_count', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('sent_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['integration_id'], ['integrations.id'], name='fk_message_integration_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_message_organization_id'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_message_user_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_message_created', 'integration_messages', ['created_at'], unique=False)
+    op.create_index('idx_message_external_id', 'integration_messages', ['external_id'], unique=False)
+    op.create_index('idx_message_org_integration', 'integration_messages', ['organization_id', 'integration_id'], unique=False)
+    op.create_index('idx_message_status', 'integration_messages', ['status'], unique=False)
+    op.create_index(op.f('ix_integration_messages_created_at'), 'integration_messages', ['created_at'], unique=False)
+    op.create_index(op.f('ix_integration_messages_external_id'), 'integration_messages', ['external_id'], unique=False)
+    op.create_index(op.f('ix_integration_messages_id'), 'integration_messages', ['id'], unique=False)
+    op.create_index(op.f('ix_integration_messages_integration_id'), 'integration_messages', ['integration_id'], unique=False)
+    op.create_index(op.f('ix_integration_messages_organization_id'), 'integration_messages', ['organization_id'], unique=False)
     op.create_table('integration_schedules',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -3817,6 +4425,32 @@ def upgrade() -> None:
     op.create_index(op.f('ix_integration_sync_jobs_id'), 'integration_sync_jobs', ['id'], unique=False)
     op.create_index(op.f('ix_integration_sync_jobs_job_type'), 'integration_sync_jobs', ['job_type'], unique=False)
     op.create_index(op.f('ix_integration_sync_jobs_organization_id'), 'integration_sync_jobs', ['organization_id'], unique=False)
+    op.create_table('integration_webhooks',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('integration_id', sa.Integer(), nullable=False),
+    sa.Column('webhook_url', sa.String(length=1000), nullable=False),
+    sa.Column('webhook_secret', sa.String(length=500), nullable=True),
+    sa.Column('event_types', sa.JSON(), nullable=True),
+    sa.Column('active', sa.Boolean(), nullable=False),
+    sa.Column('verified', sa.Boolean(), nullable=False),
+    sa.Column('total_events_received', sa.Integer(), nullable=False),
+    sa.Column('last_event_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_error', sa.Text(), nullable=True),
+    sa.Column('error_count', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('verified_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['integration_id'], ['integrations.id'], name='fk_webhook_integration_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_webhook_organization_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('webhook_url')
+    )
+    op.create_index('idx_webhook_active', 'integration_webhooks', ['active'], unique=False)
+    op.create_index('idx_webhook_org_integration', 'integration_webhooks', ['organization_id', 'integration_id'], unique=False)
+    op.create_index(op.f('ix_integration_webhooks_id'), 'integration_webhooks', ['id'], unique=False)
+    op.create_index(op.f('ix_integration_webhooks_integration_id'), 'integration_webhooks', ['integration_id'], unique=False)
+    op.create_index(op.f('ix_integration_webhooks_organization_id'), 'integration_webhooks', ['organization_id'], unique=False)
     op.create_table('inter_department_voucher_items',
     sa.Column('inter_department_voucher_id', sa.Integer(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
@@ -3834,31 +4468,32 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('alert_type', sa.String(), nullable=False),
-    sa.Column('current_stock', sa.Float(), nullable=False),
-    sa.Column('reorder_level', sa.Float(), nullable=False),
+    sa.Column('alert_type', sa.Enum('LOW_STOCK', 'OUT_OF_STOCK', 'SHORTAGE_FOR_MO', 'OVERSTOCK', 'EXPIRY_ALERT', name='alerttype'), nullable=False),
+    sa.Column('current_stock', sa.Numeric(precision=12, scale=3), nullable=False),
+    sa.Column('reorder_level', sa.Numeric(precision=12, scale=3), nullable=False),
     sa.Column('location', sa.String(), nullable=True),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('priority', sa.String(), nullable=False),
+    sa.Column('status', sa.Enum('ACTIVE', 'RESOLVED', 'DISMISSED', name='alertstatus'), nullable=False),
+    sa.Column('priority', sa.Enum('LOW', 'MEDIUM', 'HIGH', 'CRITICAL', name='alertpriority'), nullable=False),
     sa.Column('acknowledged_by_id', sa.Integer(), nullable=True),
     sa.Column('acknowledged_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('message', sa.Text(), nullable=True),
-    sa.Column('suggested_order_quantity', sa.Float(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('message', sa.Text(), nullable=False),
+    sa.Column('suggested_order_quantity', sa.Numeric(precision=12, scale=3), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['acknowledged_by_id'], ['users.id'], name='fk_inventory_alert_acknowledged_by_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_inventory_alert_organization_id'),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], name='fk_inventory_alert_product_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_inventory_alert_created_at', 'inventory_alerts', ['created_at'], unique=False)
-    op.create_index('idx_inventory_alert_org_priority', 'inventory_alerts', ['organization_id', 'priority'], unique=False)
+    op.create_index('idx_alert_org_type_status', 'inventory_alerts', ['organization_id', 'alert_type', 'status'], unique=False)
     op.create_index('idx_inventory_alert_org_product', 'inventory_alerts', ['organization_id', 'product_id'], unique=False)
     op.create_index('idx_inventory_alert_org_status', 'inventory_alerts', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_inventory_alert_type', 'inventory_alerts', ['alert_type'], unique=False)
+    op.create_index(op.f('ix_inventory_alerts_alert_type'), 'inventory_alerts', ['alert_type'], unique=False)
     op.create_index(op.f('ix_inventory_alerts_id'), 'inventory_alerts', ['id'], unique=False)
     op.create_index(op.f('ix_inventory_alerts_organization_id'), 'inventory_alerts', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_inventory_alerts_product_id'), 'inventory_alerts', ['product_id'], unique=False)
+    op.create_index(op.f('ix_inventory_alerts_status'), 'inventory_alerts', ['status'], unique=False)
     op.create_table('inventory_transactions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -3985,59 +4620,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_journal_vouchers_id'), 'journal_vouchers', ['id'], unique=False)
     op.create_index(op.f('ix_journal_vouchers_organization_id'), 'journal_vouchers', ['organization_id'], unique=False)
     op.create_index(op.f('ix_journal_vouchers_voucher_number'), 'journal_vouchers', ['voucher_number'], unique=False)
-    op.create_table('leads',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('lead_number', sa.String(), nullable=False),
-    sa.Column('first_name', sa.String(), nullable=False),
-    sa.Column('last_name', sa.String(), nullable=False),
-    sa.Column('email', sa.String(), nullable=False),
-    sa.Column('phone', sa.String(), nullable=True),
-    sa.Column('company', sa.String(), nullable=True),
-    sa.Column('job_title', sa.String(), nullable=True),
-    sa.Column('address1', sa.String(), nullable=True),
-    sa.Column('address2', sa.String(), nullable=True),
-    sa.Column('city', sa.String(), nullable=True),
-    sa.Column('state', sa.String(), nullable=True),
-    sa.Column('pin_code', sa.String(), nullable=True),
-    sa.Column('country', sa.String(), nullable=True),
-    sa.Column('status', sa.Enum('NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'CONVERTED', 'LOST', 'NURTURING', name='leadstatus'), nullable=False),
-    sa.Column('source', sa.Enum('WEBSITE', 'REFERRAL', 'EMAIL_CAMPAIGN', 'SOCIAL_MEDIA', 'COLD_CALL', 'TRADE_SHOW', 'PARTNER', 'ADVERTISEMENT', 'OTHER', name='leadsource'), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('score', sa.Integer(), nullable=False),
-    sa.Column('is_qualified', sa.Boolean(), nullable=False),
-    sa.Column('qualification_notes', sa.Text(), nullable=True),
-    sa.Column('estimated_value', sa.Float(), nullable=True),
-    sa.Column('expected_close_date', sa.Date(), nullable=True),
-    sa.Column('assigned_to_id', sa.Integer(), nullable=True),
-    sa.Column('created_by_id', sa.Integer(), nullable=True),
-    sa.Column('converted_to_customer_id', sa.Integer(), nullable=True),
-    sa.Column('converted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('custom_fields', sa.JSON(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('last_contacted', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['assigned_to_id'], ['users.id'], name='fk_lead_assigned_to_id'),
-    sa.ForeignKeyConstraint(['converted_to_customer_id'], ['customers.id'], name='fk_lead_converted_customer_id'),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_lead_created_by_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_lead_organization_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'lead_number', name='uq_lead_org_number')
-    )
-    op.create_index('idx_lead_company', 'leads', ['company'], unique=False)
-    op.create_index('idx_lead_org_assigned', 'leads', ['organization_id', 'assigned_to_id'], unique=False)
-    op.create_index('idx_lead_org_source', 'leads', ['organization_id', 'source'], unique=False)
-    op.create_index('idx_lead_org_status', 'leads', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_lead_qualified', 'leads', ['is_qualified'], unique=False)
-    op.create_index('idx_lead_score', 'leads', ['score'], unique=False)
-    op.create_index(op.f('ix_leads_company'), 'leads', ['company'], unique=False)
-    op.create_index(op.f('ix_leads_email'), 'leads', ['email'], unique=False)
-    op.create_index(op.f('ix_leads_id'), 'leads', ['id'], unique=False)
-    op.create_index(op.f('ix_leads_lead_number'), 'leads', ['lead_number'], unique=True)
-    op.create_index(op.f('ix_leads_organization_id'), 'leads', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_leads_source'), 'leads', ['source'], unique=False)
-    op.create_index(op.f('ix_leads_status'), 'leads', ['status'], unique=False)
     op.create_table('learning_path_programs',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('learning_path_id', sa.Integer(), nullable=False),
@@ -4090,6 +4672,26 @@ def upgrade() -> None:
     op.create_index(op.f('ix_leave_applications_id'), 'leave_applications', ['id'], unique=False)
     op.create_index(op.f('ix_leave_applications_leave_type_id'), 'leave_applications', ['leave_type_id'], unique=False)
     op.create_index(op.f('ix_leave_applications_organization_id'), 'leave_applications', ['organization_id'], unique=False)
+    op.create_table('live_predictions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('model_id', sa.Integer(), nullable=True),
+    sa.Column('prediction_type', sa.String(length=100), nullable=False),
+    sa.Column('input_data', sa.JSON(), nullable=False),
+    sa.Column('prediction_result', sa.JSON(), nullable=False),
+    sa.Column('confidence_score', sa.Float(), nullable=True),
+    sa.Column('context', sa.JSON(), nullable=True),
+    sa.Column('predicted_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['model_id'], ['ai_models.id'], name='fk_live_pred_model_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_live_pred_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_live_pred_org_type', 'live_predictions', ['organization_id', 'prediction_type'], unique=False)
+    op.create_index('idx_live_pred_timestamp', 'live_predictions', ['predicted_at'], unique=False)
+    op.create_index(op.f('ix_live_predictions_id'), 'live_predictions', ['id'], unique=False)
+    op.create_index(op.f('ix_live_predictions_organization_id'), 'live_predictions', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_live_predictions_predicted_at'), 'live_predictions', ['predicted_at'], unique=False)
+    op.create_index(op.f('ix_live_predictions_prediction_type'), 'live_predictions', ['prediction_type'], unique=False)
     op.create_table('mail_accounts',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
@@ -4138,35 +4740,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_mail_accounts_id'), 'mail_accounts', ['id'], unique=False)
     op.create_index(op.f('ix_mail_accounts_organization_id'), 'mail_accounts', ['organization_id'], unique=False)
     op.create_index(op.f('ix_mail_accounts_user_id'), 'mail_accounts', ['user_id'], unique=False)
-    op.create_table('marketing_list_contacts',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('marketing_list_id', sa.Integer(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=True),
-    sa.Column('email', sa.String(), nullable=True),
-    sa.Column('phone', sa.String(), nullable=True),
-    sa.Column('first_name', sa.String(), nullable=True),
-    sa.Column('last_name', sa.String(), nullable=True),
-    sa.Column('is_subscribed', sa.Boolean(), nullable=False),
-    sa.Column('subscribed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('unsubscribed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('opt_in_source', sa.String(), nullable=True),
-    sa.Column('custom_attributes', sa.JSON(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_marketing_list_contact_customer_id'),
-    sa.ForeignKeyConstraint(['marketing_list_id'], ['marketing_lists.id'], name='fk_marketing_list_contact_list_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_marketing_list_contact_organization_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('marketing_list_id', 'customer_id', name='uq_marketing_list_contact_customer'),
-    sa.UniqueConstraint('marketing_list_id', 'email', name='uq_marketing_list_contact_email')
-    )
-    op.create_index('idx_marketing_list_contact_email', 'marketing_list_contacts', ['email'], unique=False)
-    op.create_index('idx_marketing_list_contact_org_list', 'marketing_list_contacts', ['organization_id', 'marketing_list_id'], unique=False)
-    op.create_index('idx_marketing_list_contact_subscribed', 'marketing_list_contacts', ['is_subscribed'], unique=False)
-    op.create_index(op.f('ix_marketing_list_contacts_email'), 'marketing_list_contacts', ['email'], unique=False)
-    op.create_index(op.f('ix_marketing_list_contacts_id'), 'marketing_list_contacts', ['id'], unique=False)
-    op.create_index(op.f('ix_marketing_list_contacts_organization_id'), 'marketing_list_contacts', ['organization_id'], unique=False)
     op.create_table('master_tax_codes',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -4280,6 +4853,52 @@ def upgrade() -> None:
     op.create_index(op.f('ix_migration_logs_id'), 'migration_logs', ['id'], unique=False)
     op.create_index(op.f('ix_migration_logs_migration_job_id'), 'migration_logs', ['migration_job_id'], unique=False)
     op.create_index(op.f('ix_migration_logs_organization_id'), 'migration_logs', ['organization_id'], unique=False)
+    op.create_table('ml_model_trainings',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('algorithm_config_id', sa.Integer(), nullable=True),
+    sa.Column('training_name', sa.String(), nullable=False),
+    sa.Column('framework', sa.Enum('SCIKIT_LEARN', 'CATBOOST', 'LIGHTGBM', 'TENSORFLOW', 'PYTORCH', 'XGBOOST', name='mlframework'), nullable=False),
+    sa.Column('algorithm_name', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('dataset_config', sa.JSON(), nullable=False),
+    sa.Column('training_params', sa.JSON(), nullable=False),
+    sa.Column('hyperparameters', sa.JSON(), nullable=False),
+    sa.Column('status', sa.Enum('PENDING', 'TRAINING', 'COMPLETED', 'FAILED', name='trainingstatus'), nullable=False),
+    sa.Column('progress', sa.Float(), nullable=False),
+    sa.Column('current_epoch', sa.Integer(), nullable=False),
+    sa.Column('total_epochs', sa.Integer(), nullable=False),
+    sa.Column('training_metrics', sa.JSON(), nullable=True),
+    sa.Column('validation_metrics', sa.JSON(), nullable=True),
+    sa.Column('test_metrics', sa.JSON(), nullable=True),
+    sa.Column('best_score', sa.Float(), nullable=True),
+    sa.Column('best_epoch', sa.Integer(), nullable=True),
+    sa.Column('best_model_path', sa.String(), nullable=True),
+    sa.Column('training_history', sa.JSON(), nullable=True),
+    sa.Column('loss_curve', sa.JSON(), nullable=True),
+    sa.Column('model_path', sa.String(), nullable=True),
+    sa.Column('checkpoint_path', sa.String(), nullable=True),
+    sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('training_duration', sa.Float(), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('gpu_used', sa.Boolean(), nullable=False),
+    sa.Column('resource_usage', sa.JSON(), nullable=True),
+    sa.Column('training_metadata', sa.JSON(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['algorithm_config_id'], ['ml_algorithm_configs.id'], name='fk_ml_model_training_config_id'),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_ml_model_training_created_by'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ml_model_training_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_ml_model_trainings_algorithm_config_id'), 'ml_model_trainings', ['algorithm_config_id'], unique=False)
+    op.create_index(op.f('ix_ml_model_trainings_framework'), 'ml_model_trainings', ['framework'], unique=False)
+    op.create_index(op.f('ix_ml_model_trainings_id'), 'ml_model_trainings', ['id'], unique=False)
+    op.create_index(op.f('ix_ml_model_trainings_organization_id'), 'ml_model_trainings', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_ml_model_trainings_status'), 'ml_model_trainings', ['status'], unique=False)
+    op.create_index(op.f('ix_ml_model_trainings_training_name'), 'ml_model_trainings', ['training_name'], unique=False)
     op.create_table('ml_predictions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('ml_model_id', sa.Integer(), nullable=False),
@@ -4352,6 +4971,35 @@ def upgrade() -> None:
     op.create_index(op.f('ix_model_performance_metrics_metric_name'), 'model_performance_metrics', ['metric_name'], unique=False)
     op.create_index(op.f('ix_model_performance_metrics_model_id'), 'model_performance_metrics', ['model_id'], unique=False)
     op.create_index(op.f('ix_model_performance_metrics_organization_id'), 'model_performance_metrics', ['organization_id'], unique=False)
+    op.create_table('non_sales_credit_notes',
+    sa.Column('reason', sa.String(), nullable=False),
+    sa.Column('chart_account_id', sa.Integer(), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['chart_account_id'], ['chart_of_accounts.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_nscn_org_voucher_number')
+    )
+    op.create_index('idx_nscn_chart_account', 'non_sales_credit_notes', ['chart_account_id'], unique=False)
+    op.create_index('idx_nscn_org_date', 'non_sales_credit_notes', ['organization_id', 'date'], unique=False)
+    op.create_index(op.f('ix_non_sales_credit_notes_chart_account_id'), 'non_sales_credit_notes', ['chart_account_id'], unique=False)
+    op.create_index(op.f('ix_non_sales_credit_notes_id'), 'non_sales_credit_notes', ['id'], unique=False)
+    op.create_index(op.f('ix_non_sales_credit_notes_organization_id'), 'non_sales_credit_notes', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_non_sales_credit_notes_voucher_number'), 'non_sales_credit_notes', ['voucher_number'], unique=False)
     op.create_table('notification_logs',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -4563,6 +5211,54 @@ def upgrade() -> None:
     op.create_index(op.f('ix_performance_reviews_id'), 'performance_reviews', ['id'], unique=False)
     op.create_index(op.f('ix_performance_reviews_organization_id'), 'performance_reviews', ['organization_id'], unique=False)
     op.create_index(op.f('ix_performance_reviews_reviewer_id'), 'performance_reviews', ['reviewer_id'], unique=False)
+    op.create_table('prediction_explanations',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('model_explainability_id', sa.Integer(), nullable=False),
+    sa.Column('prediction_id', sa.String(), nullable=True),
+    sa.Column('input_features', sa.JSON(), nullable=False),
+    sa.Column('predicted_value', sa.Float(), nullable=False),
+    sa.Column('confidence_score', sa.Float(), nullable=True),
+    sa.Column('method', sa.Enum('SHAP', 'LIME', 'FEATURE_IMPORTANCE', 'PARTIAL_DEPENDENCE', 'ICE_PLOT', name='explainabilitymethod'), nullable=False),
+    sa.Column('shap_values', sa.JSON(), nullable=True),
+    sa.Column('lime_explanation', sa.JSON(), nullable=True),
+    sa.Column('feature_contributions', sa.JSON(), nullable=True),
+    sa.Column('top_positive_features', sa.JSON(), nullable=True),
+    sa.Column('top_negative_features', sa.JSON(), nullable=True),
+    sa.Column('visualization_data', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['model_explainability_id'], ['model_explainability.id'], name='fk_prediction_explanation_explainability_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_prediction_explanation_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_prediction_explanations_id'), 'prediction_explanations', ['id'], unique=False)
+    op.create_index(op.f('ix_prediction_explanations_model_explainability_id'), 'prediction_explanations', ['model_explainability_id'], unique=False)
+    op.create_index(op.f('ix_prediction_explanations_organization_id'), 'prediction_explanations', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_prediction_explanations_prediction_id'), 'prediction_explanations', ['prediction_id'], unique=False)
+    op.create_table('prediction_history',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('model_id', sa.Integer(), nullable=False),
+    sa.Column('prediction_timestamp', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('input_data', sa.JSON(), nullable=False),
+    sa.Column('predicted_value', sa.JSON(), nullable=False),
+    sa.Column('confidence_score', sa.Float(), nullable=True),
+    sa.Column('actual_value', sa.JSON(), nullable=True),
+    sa.Column('prediction_error', sa.Float(), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('context_metadata', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['model_id'], ['predictive_models.id'], name='fk_prediction_history_model_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_prediction_history_org_id'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_prediction_history_user_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_prediction_history_model_timestamp', 'prediction_history', ['model_id', 'prediction_timestamp'], unique=False)
+    op.create_index('idx_prediction_history_org_timestamp', 'prediction_history', ['organization_id', 'prediction_timestamp'], unique=False)
+    op.create_index(op.f('ix_prediction_history_id'), 'prediction_history', ['id'], unique=False)
+    op.create_index(op.f('ix_prediction_history_model_id'), 'prediction_history', ['model_id'], unique=False)
+    op.create_index(op.f('ix_prediction_history_organization_id'), 'prediction_history', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_prediction_history_prediction_timestamp'), 'prediction_history', ['prediction_timestamp'], unique=False)
     op.create_table('prediction_results',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -4635,83 +5331,6 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_product_tracking_id'), 'product_tracking', ['id'], unique=False)
     op.create_index(op.f('ix_product_tracking_product_id'), 'product_tracking', ['product_id'], unique=True)
-    op.create_table('proforma_invoices',
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('valid_until', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('payment_terms', sa.String(), nullable=True),
-    sa.Column('terms_conditions', sa.Text(), nullable=True),
-    sa.Column('parent_id', sa.Integer(), nullable=True),
-    sa.Column('revision_number', sa.Integer(), nullable=True),
-    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['parent_id'], ['proforma_invoices.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_pi_org_voucher_number')
-    )
-    op.create_index('idx_pi_org_customer', 'proforma_invoices', ['organization_id', 'customer_id'], unique=False)
-    op.create_index('idx_pi_org_date', 'proforma_invoices', ['organization_id', 'date'], unique=False)
-    op.create_index(op.f('ix_proforma_invoices_id'), 'proforma_invoices', ['id'], unique=False)
-    op.create_index(op.f('ix_proforma_invoices_organization_id'), 'proforma_invoices', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_proforma_invoices_voucher_number'), 'proforma_invoices', ['voucher_number'], unique=False)
-    op.create_table('projects',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('company_id', sa.Integer(), nullable=True),
-    sa.Column('project_code', sa.String(length=50), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('project_type', sa.Enum('INTERNAL', 'CLIENT', 'RESEARCH', 'MAINTENANCE', 'DEVELOPMENT', name='projecttype'), nullable=False),
-    sa.Column('status', sa.Enum('PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED', name='projectstatus'), nullable=False),
-    sa.Column('priority', sa.Enum('LOW', 'MEDIUM', 'HIGH', 'CRITICAL', name='projectpriority'), nullable=False),
-    sa.Column('start_date', sa.Date(), nullable=True),
-    sa.Column('end_date', sa.Date(), nullable=True),
-    sa.Column('planned_start_date', sa.Date(), nullable=True),
-    sa.Column('planned_end_date', sa.Date(), nullable=True),
-    sa.Column('budget', sa.Float(), nullable=True),
-    sa.Column('actual_cost', sa.Float(), nullable=True),
-    sa.Column('progress_percentage', sa.Float(), nullable=False),
-    sa.Column('client_id', sa.Integer(), nullable=True),
-    sa.Column('project_manager_id', sa.Integer(), nullable=False),
-    sa.Column('created_by', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.Column('is_billable', sa.Boolean(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('tags', sa.JSON(), nullable=True),
-    sa.Column('custom_fields', sa.JSON(), nullable=True),
-    sa.ForeignKeyConstraint(['client_id'], ['customers.id'], ),
-    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['project_manager_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'project_code', name='uq_project_org_code')
-    )
-    op.create_index('idx_project_org_client', 'projects', ['organization_id', 'client_id'], unique=False)
-    op.create_index('idx_project_org_manager', 'projects', ['organization_id', 'project_manager_id'], unique=False)
-    op.create_index('idx_project_org_status', 'projects', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_project_org_type', 'projects', ['organization_id', 'project_type'], unique=False)
-    op.create_index(op.f('ix_projects_company_id'), 'projects', ['company_id'], unique=False)
-    op.create_index(op.f('ix_projects_id'), 'projects', ['id'], unique=False)
-    op.create_index(op.f('ix_projects_name'), 'projects', ['name'], unique=False)
-    op.create_index(op.f('ix_projects_organization_id'), 'projects', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_projects_project_code'), 'projects', ['project_code'], unique=False)
     op.create_table('promotions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -4759,83 +5378,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_promotions_organization_id'), 'promotions', ['organization_id'], unique=False)
     op.create_index(op.f('ix_promotions_promotion_code'), 'promotions', ['promotion_code'], unique=False)
     op.create_index(op.f('ix_promotions_promotion_type'), 'promotions', ['promotion_type'], unique=False)
-    op.create_table('purchase_orders',
-    sa.Column('vendor_id', sa.Integer(), nullable=False),
-    sa.Column('delivery_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('payment_terms', sa.String(), nullable=True),
-    sa.Column('terms_conditions', sa.Text(), nullable=True),
-    sa.Column('line_discount_type', sa.String(), nullable=True),
-    sa.Column('total_discount_type', sa.String(), nullable=True),
-    sa.Column('total_discount', sa.Float(), nullable=True),
-    sa.Column('round_off', sa.Float(), nullable=True),
-    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('transporter_name', sa.String(), nullable=True),
-    sa.Column('tracking_number', sa.String(), nullable=True),
-    sa.Column('tracking_link', sa.String(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_po_org_voucher_number')
-    )
-    op.create_index('idx_po_org_date', 'purchase_orders', ['organization_id', 'date'], unique=False)
-    op.create_index('idx_po_org_status', 'purchase_orders', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_po_org_vendor', 'purchase_orders', ['organization_id', 'vendor_id'], unique=False)
-    op.create_index(op.f('ix_purchase_orders_id'), 'purchase_orders', ['id'], unique=False)
-    op.create_index(op.f('ix_purchase_orders_organization_id'), 'purchase_orders', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_purchase_orders_voucher_number'), 'purchase_orders', ['voucher_number'], unique=False)
-    op.create_table('quotations',
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('valid_until', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('payment_terms', sa.String(), nullable=True),
-    sa.Column('terms_conditions', sa.Text(), nullable=True),
-    sa.Column('line_discount_type', sa.String(), nullable=True),
-    sa.Column('total_discount_type', sa.String(), nullable=True),
-    sa.Column('total_discount', sa.Float(), nullable=True),
-    sa.Column('round_off', sa.Float(), nullable=True),
-    sa.Column('parent_id', sa.Integer(), nullable=True),
-    sa.Column('revision_number', sa.Integer(), nullable=True),
-    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['parent_id'], ['quotations.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_quotation_org_voucher_number')
-    )
-    op.create_index('idx_quotation_org_customer', 'quotations', ['organization_id', 'customer_id'], unique=False)
-    op.create_index('idx_quotation_org_date', 'quotations', ['organization_id', 'date'], unique=False)
-    op.create_index(op.f('ix_quotations_id'), 'quotations', ['id'], unique=False)
-    op.create_index(op.f('ix_quotations_organization_id'), 'quotations', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_quotations_voucher_number'), 'quotations', ['voucher_number'], unique=False)
     op.create_table('rate_limit_rules',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -5033,38 +5575,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_salary_structures_employee_id'), 'salary_structures', ['employee_id'], unique=False)
     op.create_index(op.f('ix_salary_structures_id'), 'salary_structures', ['id'], unique=False)
     op.create_index(op.f('ix_salary_structures_organization_id'), 'salary_structures', ['organization_id'], unique=False)
-    op.create_table('sales_orders',
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('delivery_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('payment_terms', sa.String(), nullable=True),
-    sa.Column('terms_conditions', sa.Text(), nullable=True),
-    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_so_org_voucher_number')
-    )
-    op.create_index('idx_so_org_customer', 'sales_orders', ['organization_id', 'customer_id'], unique=False)
-    op.create_index('idx_so_org_date', 'sales_orders', ['organization_id', 'date'], unique=False)
-    op.create_index('idx_so_org_status', 'sales_orders', ['organization_id', 'status'], unique=False)
-    op.create_index(op.f('ix_sales_orders_id'), 'sales_orders', ['id'], unique=False)
-    op.create_index(op.f('ix_sales_orders_organization_id'), 'sales_orders', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_sales_orders_voucher_number'), 'sales_orders', ['voucher_number'], unique=False)
     op.create_table('scenario_analysis',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('financial_model_id', sa.Integer(), nullable=False),
@@ -5106,6 +5616,83 @@ def upgrade() -> None:
     op.create_index('idx_stock_org_product', 'stock', ['organization_id', 'product_id'], unique=False)
     op.create_index(op.f('ix_stock_id'), 'stock', ['id'], unique=False)
     op.create_index(op.f('ix_stock_organization_id'), 'stock', ['organization_id'], unique=False)
+    op.create_table('streaming_alerts',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('data_source_id', sa.Integer(), nullable=True),
+    sa.Column('alert_type', sa.String(length=100), nullable=False),
+    sa.Column('alert_title', sa.String(length=255), nullable=False),
+    sa.Column('alert_message', sa.Text(), nullable=False),
+    sa.Column('severity', sa.Enum('INFO', 'WARNING', 'ERROR', 'CRITICAL', name='alertseverity'), nullable=False),
+    sa.Column('status', sa.Enum('OPEN', 'ACKNOWLEDGED', 'RESOLVED', 'CLOSED', name='alertstatus'), nullable=False),
+    sa.Column('alert_data', sa.JSON(), nullable=True),
+    sa.Column('acknowledged_by_id', sa.Integer(), nullable=True),
+    sa.Column('acknowledged_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('resolved_by_id', sa.Integer(), nullable=True),
+    sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('resolution_notes', sa.Text(), nullable=True),
+    sa.Column('triggered_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['acknowledged_by_id'], ['users.id'], name='fk_alert_acknowledged_by'),
+    sa.ForeignKeyConstraint(['data_source_id'], ['streaming_data_sources.id'], name='fk_alert_data_source_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_stream_alert_org_id'),
+    sa.ForeignKeyConstraint(['resolved_by_id'], ['users.id'], name='fk_alert_resolved_by'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_alert_org_status', 'streaming_alerts', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_alert_severity', 'streaming_alerts', ['severity', 'status'], unique=False)
+    op.create_index('idx_alert_triggered', 'streaming_alerts', ['triggered_at'], unique=False)
+    op.create_index(op.f('ix_streaming_alerts_alert_type'), 'streaming_alerts', ['alert_type'], unique=False)
+    op.create_index(op.f('ix_streaming_alerts_id'), 'streaming_alerts', ['id'], unique=False)
+    op.create_index(op.f('ix_streaming_alerts_organization_id'), 'streaming_alerts', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_streaming_alerts_severity'), 'streaming_alerts', ['severity'], unique=False)
+    op.create_index(op.f('ix_streaming_alerts_status'), 'streaming_alerts', ['status'], unique=False)
+    op.create_index(op.f('ix_streaming_alerts_triggered_at'), 'streaming_alerts', ['triggered_at'], unique=False)
+    op.create_table('streaming_events',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('data_source_id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('event_type', sa.String(length=100), nullable=False),
+    sa.Column('event_data', sa.JSON(), nullable=False),
+    sa.Column('processed', sa.Boolean(), nullable=False),
+    sa.Column('processed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('event_timestamp', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('received_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['data_source_id'], ['streaming_data_sources.id'], name='fk_event_data_source_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_stream_event_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_event_processed', 'streaming_events', ['processed', 'event_timestamp'], unique=False)
+    op.create_index('idx_event_source_type', 'streaming_events', ['data_source_id', 'event_type'], unique=False)
+    op.create_index('idx_event_timestamp', 'streaming_events', ['event_timestamp'], unique=False)
+    op.create_index(op.f('ix_streaming_events_data_source_id'), 'streaming_events', ['data_source_id'], unique=False)
+    op.create_index(op.f('ix_streaming_events_event_timestamp'), 'streaming_events', ['event_timestamp'], unique=False)
+    op.create_index(op.f('ix_streaming_events_event_type'), 'streaming_events', ['event_type'], unique=False)
+    op.create_index(op.f('ix_streaming_events_id'), 'streaming_events', ['id'], unique=False)
+    op.create_index(op.f('ix_streaming_events_organization_id'), 'streaming_events', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_streaming_events_processed'), 'streaming_events', ['processed'], unique=False)
+    op.create_table('streaming_metrics',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('data_source_id', sa.Integer(), nullable=True),
+    sa.Column('metric_name', sa.String(length=100), nullable=False),
+    sa.Column('metric_value', sa.Float(), nullable=False),
+    sa.Column('aggregation_type', sa.String(length=50), nullable=False),
+    sa.Column('time_window', sa.String(length=50), nullable=False),
+    sa.Column('window_start', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('window_end', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('dimensions', sa.JSON(), nullable=True),
+    sa.Column('calculated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['data_source_id'], ['streaming_data_sources.id'], name='fk_metric_data_source_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_stream_metric_org_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_metric_name_window', 'streaming_metrics', ['metric_name', 'window_start'], unique=False)
+    op.create_index('idx_metric_org_name', 'streaming_metrics', ['organization_id', 'metric_name'], unique=False)
+    op.create_index('idx_metric_window', 'streaming_metrics', ['window_start', 'window_end'], unique=False)
+    op.create_index(op.f('ix_streaming_metrics_id'), 'streaming_metrics', ['id'], unique=False)
+    op.create_index(op.f('ix_streaming_metrics_metric_name'), 'streaming_metrics', ['metric_name'], unique=False)
+    op.create_index(op.f('ix_streaming_metrics_organization_id'), 'streaming_metrics', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_streaming_metrics_window_start'), 'streaming_metrics', ['window_start'], unique=False)
     op.create_table('tally_ledger_mappings',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('tally_configuration_id', sa.Integer(), nullable=False),
@@ -5171,45 +5758,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_task_project_members_id'), 'task_project_members', ['id'], unique=False)
-    op.create_table('tickets',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('ticket_number', sa.String(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('assigned_to_id', sa.Integer(), nullable=True),
-    sa.Column('created_by_id', sa.Integer(), nullable=True),
-    sa.Column('title', sa.String(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('priority', sa.String(), nullable=False),
-    sa.Column('ticket_type', sa.String(), nullable=False),
-    sa.Column('resolution', sa.Text(), nullable=True),
-    sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('closed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('due_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('estimated_hours', sa.Float(), nullable=True),
-    sa.Column('actual_hours', sa.Float(), nullable=True),
-    sa.Column('customer_rating', sa.Integer(), nullable=True),
-    sa.Column('customer_feedback', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['assigned_to_id'], ['users.id'], name='fk_ticket_assigned_to_id'),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_ticket_created_by_id'),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_ticket_customer_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ticket_organization_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'ticket_number', name='uq_ticket_org_number')
-    )
-    op.create_index('idx_ticket_created_at', 'tickets', ['created_at'], unique=False)
-    op.create_index('idx_ticket_due_date', 'tickets', ['due_date'], unique=False)
-    op.create_index('idx_ticket_org_assigned', 'tickets', ['organization_id', 'assigned_to_id'], unique=False)
-    op.create_index('idx_ticket_org_customer', 'tickets', ['organization_id', 'customer_id'], unique=False)
-    op.create_index('idx_ticket_org_priority', 'tickets', ['organization_id', 'priority'], unique=False)
-    op.create_index('idx_ticket_org_status', 'tickets', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_ticket_org_type', 'tickets', ['organization_id', 'ticket_type'], unique=False)
-    op.create_index(op.f('ix_tickets_id'), 'tickets', ['id'], unique=False)
-    op.create_index(op.f('ix_tickets_organization_id'), 'tickets', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_tickets_ticket_number'), 'tickets', ['ticket_number'], unique=False)
     op.create_table('training_sessions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -5273,115 +5821,38 @@ def upgrade() -> None:
     op.create_index('idx_user_org_role_user', 'user_organization_roles', ['user_id'], unique=False)
     op.create_index(op.f('ix_user_organization_roles_id'), 'user_organization_roles', ['id'], unique=False)
     op.create_index(op.f('ix_user_organization_roles_organization_id'), 'user_organization_roles', ['organization_id'], unique=False)
-    op.create_table('vendor_evaluations',
+    op.create_table('vendors',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('vendor_id', sa.Integer(), nullable=False),
-    sa.Column('evaluation_date', sa.Date(), nullable=False),
-    sa.Column('evaluation_type', sa.String(length=50), nullable=False),
-    sa.Column('quality_rating', sa.Numeric(precision=3, scale=1), nullable=True),
-    sa.Column('delivery_rating', sa.Numeric(precision=3, scale=1), nullable=True),
-    sa.Column('service_rating', sa.Numeric(precision=3, scale=1), nullable=True),
-    sa.Column('price_rating', sa.Numeric(precision=3, scale=1), nullable=True),
-    sa.Column('communication_rating', sa.Numeric(precision=3, scale=1), nullable=True),
-    sa.Column('overall_rating', sa.Numeric(precision=3, scale=1), nullable=False),
-    sa.Column('strengths', sa.Text(), nullable=True),
-    sa.Column('weaknesses', sa.Text(), nullable=True),
-    sa.Column('improvement_suggestions', sa.Text(), nullable=True),
-    sa.Column('on_time_delivery_percentage', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('quality_rejection_percentage', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('vendor_status', sa.Enum('ACTIVE', 'INACTIVE', 'BLACKLISTED', 'UNDER_REVIEW', name='vendorstatus'), nullable=False),
-    sa.Column('evaluated_by', sa.Integer(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['evaluated_by'], ['platform_users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_vendor_eval_org_date', 'vendor_evaluations', ['organization_id', 'evaluation_date'], unique=False)
-    op.create_index('idx_vendor_eval_rating', 'vendor_evaluations', ['overall_rating'], unique=False)
-    op.create_index(op.f('ix_vendor_evaluations_evaluation_date'), 'vendor_evaluations', ['evaluation_date'], unique=False)
-    op.create_index(op.f('ix_vendor_evaluations_id'), 'vendor_evaluations', ['id'], unique=False)
-    op.create_index(op.f('ix_vendor_evaluations_organization_id'), 'vendor_evaluations', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_vendor_evaluations_vendor_id'), 'vendor_evaluations', ['vendor_id'], unique=False)
-    op.create_table('vendor_files',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('vendor_id', sa.Integer(), nullable=False),
-    sa.Column('filename', sa.String(), nullable=False),
-    sa.Column('original_filename', sa.String(), nullable=False),
-    sa.Column('file_path', sa.String(), nullable=False),
-    sa.Column('file_size', sa.Integer(), nullable=False),
-    sa.Column('content_type', sa.String(), nullable=False),
-    sa.Column('file_type', sa.String(), nullable=False),
+    sa.Column('company_id', sa.Integer(), nullable=True),
+    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('contact_number', sa.String(), nullable=False),
+    sa.Column('email', sa.String(), nullable=True),
+    sa.Column('address1', sa.String(), nullable=False),
+    sa.Column('address2', sa.String(), nullable=True),
+    sa.Column('city', sa.String(), nullable=False),
+    sa.Column('state', sa.String(), nullable=False),
+    sa.Column('pin_code', sa.String(), nullable=False),
+    sa.Column('state_code', sa.String(), nullable=False),
+    sa.Column('gst_number', sa.String(), nullable=True),
+    sa.Column('pan_number', sa.String(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('payable_account_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_vendor_file_organization_id'),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], name='fk_vendor_file_vendor_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_vendor_file_org_vendor', 'vendor_files', ['organization_id', 'vendor_id'], unique=False)
-    op.create_index(op.f('ix_vendor_files_id'), 'vendor_files', ['id'], unique=False)
-    op.create_index(op.f('ix_vendor_files_organization_id'), 'vendor_files', ['organization_id'], unique=False)
-    op.create_table('vendor_quotations',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('rfq_id', sa.Integer(), nullable=False),
-    sa.Column('vendor_id', sa.Integer(), nullable=False),
-    sa.Column('quotation_number', sa.String(length=50), nullable=False),
-    sa.Column('quotation_date', sa.Date(), nullable=False),
-    sa.Column('validity_date', sa.Date(), nullable=False),
-    sa.Column('total_amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('tax_amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('grand_total', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('payment_terms', sa.String(length=100), nullable=True),
-    sa.Column('delivery_terms', sa.String(length=100), nullable=True),
-    sa.Column('warranty_terms', sa.Text(), nullable=True),
-    sa.Column('is_selected', sa.Boolean(), nullable=False),
-    sa.Column('selection_rank', sa.Integer(), nullable=True),
-    sa.Column('technical_score', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('commercial_score', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('overall_score', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('evaluation_notes', sa.Text(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['rfq_id'], ['request_for_quotations.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], name='fk_vendor_company_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_vendor_organization_id'),
+    sa.ForeignKeyConstraint(['payable_account_id'], ['chart_of_accounts.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'quotation_number', name='uq_org_quotation_number')
+    sa.UniqueConstraint('organization_id', 'name', name='uq_vendor_org_name')
     )
-    op.create_index('idx_quotation_rfq_vendor', 'vendor_quotations', ['rfq_id', 'vendor_id'], unique=False)
-    op.create_index('idx_quotation_selected', 'vendor_quotations', ['is_selected'], unique=False)
-    op.create_index(op.f('ix_vendor_quotations_id'), 'vendor_quotations', ['id'], unique=False)
-    op.create_index(op.f('ix_vendor_quotations_organization_id'), 'vendor_quotations', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_vendor_quotations_quotation_date'), 'vendor_quotations', ['quotation_date'], unique=False)
-    op.create_index(op.f('ix_vendor_quotations_quotation_number'), 'vendor_quotations', ['quotation_number'], unique=False)
-    op.create_index(op.f('ix_vendor_quotations_rfq_id'), 'vendor_quotations', ['rfq_id'], unique=False)
-    op.create_index(op.f('ix_vendor_quotations_vendor_id'), 'vendor_quotations', ['vendor_id'], unique=False)
-    op.create_table('vendor_rfqs',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('rfq_id', sa.Integer(), nullable=False),
-    sa.Column('vendor_id', sa.Integer(), nullable=False),
-    sa.Column('invited_date', sa.Date(), nullable=False),
-    sa.Column('invitation_sent', sa.Boolean(), nullable=False),
-    sa.Column('has_responded', sa.Boolean(), nullable=False),
-    sa.Column('response_date', sa.Date(), nullable=True),
-    sa.Column('decline_reason', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['rfq_id'], ['request_for_quotations.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('rfq_id', 'vendor_id', name='uq_rfq_vendor')
-    )
-    op.create_index('idx_vendor_rfq_response', 'vendor_rfqs', ['has_responded'], unique=False)
-    op.create_index(op.f('ix_vendor_rfqs_id'), 'vendor_rfqs', ['id'], unique=False)
-    op.create_index(op.f('ix_vendor_rfqs_invited_date'), 'vendor_rfqs', ['invited_date'], unique=False)
-    op.create_index(op.f('ix_vendor_rfqs_rfq_id'), 'vendor_rfqs', ['rfq_id'], unique=False)
-    op.create_index(op.f('ix_vendor_rfqs_vendor_id'), 'vendor_rfqs', ['vendor_id'], unique=False)
+    op.create_index('idx_vendor_org_active', 'vendors', ['organization_id', 'is_active'], unique=False)
+    op.create_index('idx_vendor_org_name', 'vendors', ['organization_id', 'name'], unique=False)
+    op.create_index(op.f('ix_vendors_company_id'), 'vendors', ['company_id'], unique=False)
+    op.create_index(op.f('ix_vendors_id'), 'vendors', ['id'], unique=False)
+    op.create_index(op.f('ix_vendors_name'), 'vendors', ['name'], unique=False)
+    op.create_index(op.f('ix_vendors_organization_id'), 'vendors', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_vendors_payable_account_id'), 'vendors', ['payable_account_id'], unique=False)
     op.create_table('voucher_approvals',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -5591,6 +6062,189 @@ def upgrade() -> None:
     op.create_index(op.f('ix_workflow_steps_automation_step_order'), 'workflow_steps_automation', ['step_order'], unique=False)
     op.create_index(op.f('ix_workflow_steps_automation_step_type'), 'workflow_steps_automation', ['step_type'], unique=False)
     op.create_index(op.f('ix_workflow_steps_automation_workflow_template_id'), 'workflow_steps_automation', ['workflow_template_id'], unique=False)
+    op.create_table('ab_test_assignments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('experiment_id', sa.Integer(), nullable=False),
+    sa.Column('variant_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('session_id', sa.String(length=255), nullable=True),
+    sa.Column('assigned_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('last_seen_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['experiment_id'], ['ab_test_experiments.id'], name='fk_assignment_experiment_id'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_assignment_user_id'),
+    sa.ForeignKeyConstraint(['variant_id'], ['ab_test_variants.id'], name='fk_assignment_variant_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_assignment_experiment_session', 'ab_test_assignments', ['experiment_id', 'session_id'], unique=False)
+    op.create_index('idx_assignment_experiment_user', 'ab_test_assignments', ['experiment_id', 'user_id'], unique=False)
+    op.create_index(op.f('ix_ab_test_assignments_experiment_id'), 'ab_test_assignments', ['experiment_id'], unique=False)
+    op.create_index(op.f('ix_ab_test_assignments_id'), 'ab_test_assignments', ['id'], unique=False)
+    op.create_index(op.f('ix_ab_test_assignments_session_id'), 'ab_test_assignments', ['session_id'], unique=False)
+    op.create_index(op.f('ix_ab_test_assignments_user_id'), 'ab_test_assignments', ['user_id'], unique=False)
+    op.create_table('ab_test_results',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('experiment_id', sa.Integer(), nullable=False),
+    sa.Column('variant_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('session_id', sa.String(length=255), nullable=True),
+    sa.Column('metric_name', sa.String(length=100), nullable=False),
+    sa.Column('metric_value', sa.Float(), nullable=False),
+    sa.Column('result_metadata', sa.JSON(), nullable=True),
+    sa.Column('recorded_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['experiment_id'], ['ab_test_experiments.id'], name='fk_result_experiment_id'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name='fk_result_user_id'),
+    sa.ForeignKeyConstraint(['variant_id'], ['ab_test_variants.id'], name='fk_result_variant_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_result_experiment_variant', 'ab_test_results', ['experiment_id', 'variant_id'], unique=False)
+    op.create_index('idx_result_recorded_at', 'ab_test_results', ['recorded_at'], unique=False)
+    op.create_index(op.f('ix_ab_test_results_experiment_id'), 'ab_test_results', ['experiment_id'], unique=False)
+    op.create_index(op.f('ix_ab_test_results_id'), 'ab_test_results', ['id'], unique=False)
+    op.create_index(op.f('ix_ab_test_results_recorded_at'), 'ab_test_results', ['recorded_at'], unique=False)
+    op.create_index(op.f('ix_ab_test_results_session_id'), 'ab_test_results', ['session_id'], unique=False)
+    op.create_index(op.f('ix_ab_test_results_variant_id'), 'ab_test_results', ['variant_id'], unique=False)
+    op.create_table('accounts_payable',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('vendor_id', sa.Integer(), nullable=False),
+    sa.Column('invoice_number', sa.String(length=50), nullable=False),
+    sa.Column('invoice_date', sa.Date(), nullable=False),
+    sa.Column('total_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('paid_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('balance_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('due_date', sa.Date(), nullable=False),
+    sa.Column('payment_terms', sa.String(length=100), nullable=True),
+    sa.Column('status', sa.String(length=20), nullable=False),
+    sa.Column('is_overdue', sa.Boolean(), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'invoice_number', name='uq_org_invoice_number')
+    )
+    op.create_index('idx_ap_org_vendor', 'accounts_payable', ['organization_id', 'vendor_id'], unique=False)
+    op.create_index('idx_ap_status', 'accounts_payable', ['status'], unique=False)
+    op.create_index(op.f('ix_accounts_payable_id'), 'accounts_payable', ['id'], unique=False)
+    op.create_index(op.f('ix_accounts_payable_invoice_number'), 'accounts_payable', ['invoice_number'], unique=False)
+    op.create_index(op.f('ix_accounts_payable_organization_id'), 'accounts_payable', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_accounts_payable_vendor_id'), 'accounts_payable', ['vendor_id'], unique=False)
+    op.create_table('accounts_receivable',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('invoice_number', sa.String(length=50), nullable=False),
+    sa.Column('invoice_date', sa.Date(), nullable=False),
+    sa.Column('total_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('received_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('balance_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('due_date', sa.Date(), nullable=False),
+    sa.Column('payment_terms', sa.String(length=100), nullable=True),
+    sa.Column('status', sa.String(length=20), nullable=False),
+    sa.Column('is_overdue', sa.Boolean(), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'invoice_number', name='uq_org_ar_invoice_number')
+    )
+    op.create_index('idx_ar_org_customer', 'accounts_receivable', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_ar_status', 'accounts_receivable', ['status'], unique=False)
+    op.create_index(op.f('ix_accounts_receivable_customer_id'), 'accounts_receivable', ['customer_id'], unique=False)
+    op.create_index(op.f('ix_accounts_receivable_id'), 'accounts_receivable', ['id'], unique=False)
+    op.create_index(op.f('ix_accounts_receivable_invoice_number'), 'accounts_receivable', ['invoice_number'], unique=False)
+    op.create_index(op.f('ix_accounts_receivable_organization_id'), 'accounts_receivable', ['organization_id'], unique=False)
+    op.create_table('analytics_summaries',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('summary_type', sa.String(), nullable=False),
+    sa.Column('summary_date', sa.Date(), nullable=False),
+    sa.Column('total_jobs', sa.Integer(), nullable=False),
+    sa.Column('completed_jobs', sa.Integer(), nullable=False),
+    sa.Column('pending_jobs', sa.Integer(), nullable=False),
+    sa.Column('cancelled_jobs', sa.Integer(), nullable=False),
+    sa.Column('total_completion_time_hours', sa.Float(), nullable=True),
+    sa.Column('average_completion_time_hours', sa.Float(), nullable=True),
+    sa.Column('total_feedback_received', sa.Integer(), nullable=False),
+    sa.Column('average_overall_rating', sa.Float(), nullable=True),
+    sa.Column('average_service_quality', sa.Float(), nullable=True),
+    sa.Column('average_technician_rating', sa.Float(), nullable=True),
+    sa.Column('sla_met_count', sa.Integer(), nullable=False),
+    sa.Column('sla_breached_count', sa.Integer(), nullable=False),
+    sa.Column('sla_compliance_rate', sa.Float(), nullable=True),
+    sa.Column('technician_id', sa.Integer(), nullable=True),
+    sa.Column('customer_id', sa.Integer(), nullable=True),
+    sa.Column('summary_data', sa.JSON(), nullable=True),
+    sa.Column('calculated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_analytics_summary_customer_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_analytics_summary_organization_id'),
+    sa.ForeignKeyConstraint(['technician_id'], ['users.id'], name='fk_analytics_summary_technician_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'summary_type', 'summary_date', 'technician_id', 'customer_id', name='uq_analytics_summary_org_type_date_entities')
+    )
+    op.create_index('idx_analytics_summary_customer', 'analytics_summaries', ['customer_id'], unique=False)
+    op.create_index('idx_analytics_summary_org_type_date', 'analytics_summaries', ['organization_id', 'summary_type', 'summary_date'], unique=False)
+    op.create_index('idx_analytics_summary_technician', 'analytics_summaries', ['technician_id'], unique=False)
+    op.create_index(op.f('ix_analytics_summaries_id'), 'analytics_summaries', ['id'], unique=False)
+    op.create_index(op.f('ix_analytics_summaries_organization_id'), 'analytics_summaries', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_analytics_summaries_summary_date'), 'analytics_summaries', ['summary_date'], unique=False)
+    op.create_index(op.f('ix_analytics_summaries_summary_type'), 'analytics_summaries', ['summary_type'], unique=False)
+    op.create_table('assets',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('asset_code', sa.String(), nullable=False),
+    sa.Column('asset_name', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('category', sa.String(), nullable=False),
+    sa.Column('subcategory', sa.String(), nullable=True),
+    sa.Column('manufacturer', sa.String(), nullable=True),
+    sa.Column('model', sa.String(), nullable=True),
+    sa.Column('serial_number', sa.String(), nullable=True),
+    sa.Column('year_of_manufacture', sa.Integer(), nullable=True),
+    sa.Column('purchase_cost', sa.Float(), nullable=True),
+    sa.Column('purchase_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('vendor_id', sa.Integer(), nullable=True),
+    sa.Column('warranty_start_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('warranty_end_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('location', sa.String(), nullable=True),
+    sa.Column('department', sa.String(), nullable=True),
+    sa.Column('assigned_to_employee', sa.String(), nullable=True),
+    sa.Column('status', sa.Enum('ACTIVE', 'INACTIVE', 'MAINTENANCE', 'RETIRED', 'DISPOSED', name='assetstatus'), nullable=False),
+    sa.Column('condition', sa.Enum('EXCELLENT', 'GOOD', 'FAIR', 'POOR', 'CRITICAL', name='assetcondition'), nullable=False),
+    sa.Column('last_inspection_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('next_inspection_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('specifications', sa.Text(), nullable=True),
+    sa.Column('operating_capacity', sa.String(), nullable=True),
+    sa.Column('power_rating', sa.String(), nullable=True),
+    sa.Column('depreciation_method', sa.Enum('STRAIGHT_LINE', 'DECLINING_BALANCE', 'UNITS_OF_PRODUCTION', 'SUM_OF_YEARS', name='depreciationmethod'), nullable=True),
+    sa.Column('useful_life_years', sa.Integer(), nullable=True),
+    sa.Column('salvage_value', sa.Float(), nullable=True),
+    sa.Column('depreciation_rate', sa.Float(), nullable=True),
+    sa.Column('insurance_provider', sa.String(), nullable=True),
+    sa.Column('insurance_policy_number', sa.String(), nullable=True),
+    sa.Column('insurance_expiry_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('photo_path', sa.String(), nullable=True),
+    sa.Column('document_path', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'asset_code', name='uq_asset_org_code')
+    )
+    op.create_index('idx_asset_org_category', 'assets', ['organization_id', 'category'], unique=False)
+    op.create_index('idx_asset_org_created', 'assets', ['organization_id', 'created_at'], unique=False)
+    op.create_index('idx_asset_org_location', 'assets', ['organization_id', 'location'], unique=False)
+    op.create_index('idx_asset_org_status', 'assets', ['organization_id', 'status'], unique=False)
+    op.create_index(op.f('ix_assets_id'), 'assets', ['id'], unique=False)
+    op.create_index(op.f('ix_assets_organization_id'), 'assets', ['organization_id'], unique=False)
     op.create_table('bank_reconciliations',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -5642,6 +6296,37 @@ def upgrade() -> None:
     op.create_index('idx_bom_comp_org_item', 'bom_components', ['organization_id', 'component_item_id'], unique=False)
     op.create_index(op.f('ix_bom_components_id'), 'bom_components', ['id'], unique=False)
     op.create_index(op.f('ix_bom_components_organization_id'), 'bom_components', ['organization_id'], unique=False)
+    op.create_table('bom_revisions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('bom_id', sa.Integer(), nullable=False),
+    sa.Column('revision_number', sa.String(), nullable=False),
+    sa.Column('revision_date', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('previous_version', sa.String(), nullable=True),
+    sa.Column('new_version', sa.String(), nullable=False),
+    sa.Column('change_type', sa.String(), nullable=False),
+    sa.Column('change_description', sa.Text(), nullable=False),
+    sa.Column('change_reason', sa.Text(), nullable=True),
+    sa.Column('change_requested_by', sa.Integer(), nullable=True),
+    sa.Column('change_approved_by', sa.Integer(), nullable=True),
+    sa.Column('approval_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('approval_status', sa.String(), nullable=True),
+    sa.Column('cost_impact', sa.Float(), nullable=True),
+    sa.Column('affected_orders_count', sa.Integer(), nullable=True),
+    sa.Column('implementation_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.ForeignKeyConstraint(['bom_id'], ['bill_of_materials.id'], ),
+    sa.ForeignKeyConstraint(['change_approved_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['change_requested_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_bom_rev_org_bom', 'bom_revisions', ['organization_id', 'bom_id'], unique=False)
+    op.create_index('idx_bom_rev_org_date', 'bom_revisions', ['organization_id', 'revision_date'], unique=False)
+    op.create_index('idx_bom_rev_status', 'bom_revisions', ['approval_status'], unique=False)
+    op.create_index(op.f('ix_bom_revisions_id'), 'bom_revisions', ['id'], unique=False)
+    op.create_index(op.f('ix_bom_revisions_organization_id'), 'bom_revisions', ['organization_id'], unique=False)
     op.create_table('business_card_scans',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -5724,6 +6409,1313 @@ def upgrade() -> None:
     op.create_index(op.f('ix_categories_name'), 'categories', ['name'], unique=False)
     op.create_index(op.f('ix_categories_organization_id'), 'categories', ['organization_id'], unique=False)
     op.create_index(op.f('ix_categories_parent_category_id'), 'categories', ['parent_category_id'], unique=False)
+    op.create_table('credit_notes',
+    sa.Column('customer_id', sa.Integer(), nullable=True),
+    sa.Column('vendor_id', sa.Integer(), nullable=True),
+    sa.Column('reference_voucher_type', sa.String(), nullable=True),
+    sa.Column('reference_voucher_id', sa.Integer(), nullable=True),
+    sa.Column('reason', sa.String(), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_cn_org_voucher_number')
+    )
+    op.create_index('idx_cn_org_customer', 'credit_notes', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_cn_org_date', 'credit_notes', ['organization_id', 'date'], unique=False)
+    op.create_index('idx_cn_org_vendor', 'credit_notes', ['organization_id', 'vendor_id'], unique=False)
+    op.create_index(op.f('ix_credit_notes_id'), 'credit_notes', ['id'], unique=False)
+    op.create_index(op.f('ix_credit_notes_organization_id'), 'credit_notes', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_credit_notes_voucher_number'), 'credit_notes', ['voucher_number'], unique=False)
+    op.create_table('customer_analytics',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('total_purchases', sa.Float(), nullable=False),
+    sa.Column('average_order_value', sa.Float(), nullable=False),
+    sa.Column('purchase_frequency', sa.Float(), nullable=False),
+    sa.Column('last_purchase_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_customer_analytics_customer_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_customer_analytics_organization_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'customer_id', name='uq_customer_analytics_org_customer')
+    )
+    op.create_index('idx_customer_analytics_org', 'customer_analytics', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_customer_analytics_customer_id'), 'customer_analytics', ['customer_id'], unique=False)
+    op.create_index(op.f('ix_customer_analytics_id'), 'customer_analytics', ['id'], unique=False)
+    op.create_index(op.f('ix_customer_analytics_organization_id'), 'customer_analytics', ['organization_id'], unique=False)
+    op.create_table('customer_files',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('filename', sa.String(), nullable=False),
+    sa.Column('original_filename', sa.String(), nullable=False),
+    sa.Column('file_path', sa.String(), nullable=False),
+    sa.Column('file_size', sa.Integer(), nullable=False),
+    sa.Column('content_type', sa.String(), nullable=False),
+    sa.Column('file_type', sa.String(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_customer_file_customer_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_customer_file_organization_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_customer_file_org_customer', 'customer_files', ['organization_id', 'customer_id'], unique=False)
+    op.create_index(op.f('ix_customer_files_id'), 'customer_files', ['id'], unique=False)
+    op.create_index(op.f('ix_customer_files_organization_id'), 'customer_files', ['organization_id'], unique=False)
+    op.create_table('customer_interactions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('interaction_type', sa.String(), nullable=False),
+    sa.Column('subject', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('interaction_date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], name='fk_customer_interaction_created_by'),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_customer_interaction_customer_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_customer_interaction_organization_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_customer_interaction_date', 'customer_interactions', ['interaction_date'], unique=False)
+    op.create_index('idx_customer_interaction_org_customer', 'customer_interactions', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_customer_interaction_type_status', 'customer_interactions', ['interaction_type', 'status'], unique=False)
+    op.create_index(op.f('ix_customer_interactions_id'), 'customer_interactions', ['id'], unique=False)
+    op.create_index(op.f('ix_customer_interactions_organization_id'), 'customer_interactions', ['organization_id'], unique=False)
+    op.create_table('customer_segments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('segment_name', sa.String(), nullable=False),
+    sa.Column('segment_value', sa.Float(), nullable=True),
+    sa.Column('segment_description', sa.Text(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('assigned_date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('assigned_by', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['assigned_by'], ['users.id'], name='fk_customer_segment_assigned_by'),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_customer_segment_customer_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_customer_segment_organization_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'customer_id', 'segment_name', name='uq_customer_segment_org_customer_name')
+    )
+    op.create_index('idx_customer_segment_assigned_date', 'customer_segments', ['assigned_date'], unique=False)
+    op.create_index('idx_customer_segment_name_active', 'customer_segments', ['segment_name', 'is_active'], unique=False)
+    op.create_index('idx_customer_segment_org_customer', 'customer_segments', ['organization_id', 'customer_id'], unique=False)
+    op.create_index(op.f('ix_customer_segments_id'), 'customer_segments', ['id'], unique=False)
+    op.create_index(op.f('ix_customer_segments_organization_id'), 'customer_segments', ['organization_id'], unique=False)
+    op.create_table('debit_notes',
+    sa.Column('customer_id', sa.Integer(), nullable=True),
+    sa.Column('vendor_id', sa.Integer(), nullable=True),
+    sa.Column('reference_voucher_type', sa.String(), nullable=True),
+    sa.Column('reference_voucher_id', sa.Integer(), nullable=True),
+    sa.Column('reason', sa.String(), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_dn_org_voucher_number')
+    )
+    op.create_index('idx_dn_org_customer', 'debit_notes', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_dn_org_date', 'debit_notes', ['organization_id', 'date'], unique=False)
+    op.create_index('idx_dn_org_vendor', 'debit_notes', ['organization_id', 'vendor_id'], unique=False)
+    op.create_index(op.f('ix_debit_notes_id'), 'debit_notes', ['id'], unique=False)
+    op.create_index(op.f('ix_debit_notes_organization_id'), 'debit_notes', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_debit_notes_voucher_number'), 'debit_notes', ['voucher_number'], unique=False)
+    op.create_table('email_sync_logs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('account_id', sa.Integer(), nullable=False),
+    sa.Column('sync_type', sa.String(length=50), nullable=False),
+    sa.Column('folder', sa.String(length=255), nullable=True),
+    sa.Column('status', sa.String(length=20), nullable=False),
+    sa.Column('messages_processed', sa.Integer(), nullable=False),
+    sa.Column('messages_new', sa.Integer(), nullable=False),
+    sa.Column('messages_updated', sa.Integer(), nullable=False),
+    sa.Column('messages_deleted', sa.Integer(), nullable=False),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('error_details', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('started_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('duration_seconds', sa.Float(), nullable=True),
+    sa.Column('sync_from_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('sync_to_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_uid_synced', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['account_id'], ['mail_accounts.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_email_sync_log_account_started', 'email_sync_logs', ['account_id', 'started_at'], unique=False)
+    op.create_index('idx_email_sync_log_status', 'email_sync_logs', ['status'], unique=False)
+    op.create_index(op.f('ix_email_sync_logs_account_id'), 'email_sync_logs', ['account_id'], unique=False)
+    op.create_index(op.f('ix_email_sync_logs_id'), 'email_sync_logs', ['id'], unique=False)
+    op.create_table('email_threads',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('thread_id', sa.String(length=255), nullable=False),
+    sa.Column('subject', sa.String(length=500), nullable=False),
+    sa.Column('original_subject', sa.String(length=500), nullable=False),
+    sa.Column('participants', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('primary_participants', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('message_count', sa.Integer(), nullable=False),
+    sa.Column('unread_count', sa.Integer(), nullable=False),
+    sa.Column('has_attachments', sa.Boolean(), nullable=False),
+    sa.Column('status', sa.Enum('UNREAD', 'READ', 'REPLIED', 'FORWARDED', 'ARCHIVED', 'DELETED', 'SPAM', name='email_message_status'), nullable=False),
+    sa.Column('priority', sa.Enum('LOW', 'NORMAL', 'HIGH', 'URGENT', name='email_priority'), nullable=False),
+    sa.Column('is_flagged', sa.Boolean(), nullable=False),
+    sa.Column('is_important', sa.Boolean(), nullable=False),
+    sa.Column('first_message_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('last_message_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('last_activity_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('account_id', sa.Integer(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=True),
+    sa.Column('vendor_id', sa.Integer(), nullable=True),
+    sa.Column('labels', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('folder', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['account_id'], ['mail_accounts.id'], ),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('thread_id', 'account_id', name='uq_email_thread_id_account')
+    )
+    op.create_index('idx_email_thread_last_activity', 'email_threads', ['last_activity_at'], unique=False)
+    op.create_index('idx_email_thread_org_account', 'email_threads', ['organization_id', 'account_id'], unique=False)
+    op.create_index('idx_email_thread_participants', 'email_threads', ['participants'], unique=False, postgresql_using='gin')
+    op.create_index('idx_email_thread_status', 'email_threads', ['status'], unique=False)
+    op.create_index(op.f('ix_email_threads_account_id'), 'email_threads', ['account_id'], unique=False)
+    op.create_index(op.f('ix_email_threads_customer_id'), 'email_threads', ['customer_id'], unique=False)
+    op.create_index(op.f('ix_email_threads_id'), 'email_threads', ['id'], unique=False)
+    op.create_index(op.f('ix_email_threads_organization_id'), 'email_threads', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_email_threads_status'), 'email_threads', ['status'], unique=False)
+    op.create_index(op.f('ix_email_threads_subject'), 'email_threads', ['subject'], unique=False)
+    op.create_index(op.f('ix_email_threads_thread_id'), 'email_threads', ['thread_id'], unique=False)
+    op.create_index(op.f('ix_email_threads_vendor_id'), 'email_threads', ['vendor_id'], unique=False)
+    op.create_table('freight_cost_analysis',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('analysis_name', sa.String(), nullable=False),
+    sa.Column('period_start', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('period_end', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('carrier_id', sa.Integer(), nullable=True),
+    sa.Column('route_id', sa.Integer(), nullable=True),
+    sa.Column('total_freight_cost', sa.Float(), nullable=True),
+    sa.Column('base_freight_cost', sa.Float(), nullable=True),
+    sa.Column('fuel_surcharges', sa.Float(), nullable=True),
+    sa.Column('handling_charges', sa.Float(), nullable=True),
+    sa.Column('insurance_costs', sa.Float(), nullable=True),
+    sa.Column('other_charges', sa.Float(), nullable=True),
+    sa.Column('total_shipments', sa.Integer(), nullable=True),
+    sa.Column('total_weight_kg', sa.Float(), nullable=True),
+    sa.Column('total_volume_cbm', sa.Float(), nullable=True),
+    sa.Column('average_cost_per_kg', sa.Float(), nullable=True),
+    sa.Column('average_cost_per_cbm', sa.Float(), nullable=True),
+    sa.Column('average_cost_per_shipment', sa.Float(), nullable=True),
+    sa.Column('on_time_delivery_percentage', sa.Float(), nullable=True),
+    sa.Column('damage_incidents', sa.Integer(), nullable=True),
+    sa.Column('previous_period_cost', sa.Float(), nullable=True),
+    sa.Column('cost_variance', sa.Float(), nullable=True),
+    sa.Column('cost_variance_percentage', sa.Float(), nullable=True),
+    sa.Column('cost_optimization_opportunities', sa.Text(), nullable=True),
+    sa.Column('recommended_actions', sa.Text(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['carrier_id'], ['carriers.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['route_id'], ['routes.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_freight_analysis_org_carrier', 'freight_cost_analysis', ['organization_id', 'carrier_id'], unique=False)
+    op.create_index('idx_freight_analysis_org_period', 'freight_cost_analysis', ['organization_id', 'period_start'], unique=False)
+    op.create_index('idx_freight_analysis_org_route', 'freight_cost_analysis', ['organization_id', 'route_id'], unique=False)
+    op.create_index(op.f('ix_freight_cost_analysis_id'), 'freight_cost_analysis', ['id'], unique=False)
+    op.create_index(op.f('ix_freight_cost_analysis_organization_id'), 'freight_cost_analysis', ['organization_id'], unique=False)
+    op.create_table('freight_rates',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('rate_code', sa.String(), nullable=False),
+    sa.Column('carrier_id', sa.Integer(), nullable=False),
+    sa.Column('route_id', sa.Integer(), nullable=True),
+    sa.Column('effective_date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('expiry_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('freight_mode', sa.Enum('LTL', 'FTL', 'EXPRESS', 'STANDARD', 'ECONOMY', name='freightmode'), nullable=False),
+    sa.Column('service_type', sa.String(), nullable=True),
+    sa.Column('rate_basis', sa.String(), nullable=False),
+    sa.Column('minimum_charge', sa.Float(), nullable=True),
+    sa.Column('rate_per_kg', sa.Float(), nullable=True),
+    sa.Column('minimum_weight_kg', sa.Float(), nullable=True),
+    sa.Column('maximum_weight_kg', sa.Float(), nullable=True),
+    sa.Column('rate_per_cbm', sa.Float(), nullable=True),
+    sa.Column('minimum_volume_cbm', sa.Float(), nullable=True),
+    sa.Column('maximum_volume_cbm', sa.Float(), nullable=True),
+    sa.Column('rate_per_km', sa.Float(), nullable=True),
+    sa.Column('fixed_rate', sa.Float(), nullable=True),
+    sa.Column('fuel_surcharge_percentage', sa.Float(), nullable=True),
+    sa.Column('handling_charge', sa.Float(), nullable=True),
+    sa.Column('documentation_charge', sa.Float(), nullable=True),
+    sa.Column('insurance_percentage', sa.Float(), nullable=True),
+    sa.Column('cod_charge_percentage', sa.Float(), nullable=True),
+    sa.Column('dangerous_goods_surcharge', sa.Float(), nullable=True),
+    sa.Column('oversized_surcharge', sa.Float(), nullable=True),
+    sa.Column('standard_transit_days', sa.Integer(), nullable=True),
+    sa.Column('express_transit_days', sa.Integer(), nullable=True),
+    sa.Column('currency', sa.String(), nullable=True),
+    sa.Column('tax_applicable', sa.Boolean(), nullable=True),
+    sa.Column('tax_percentage', sa.Float(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('is_negotiated', sa.Boolean(), nullable=True),
+    sa.Column('freight_expense_account_id', sa.Integer(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('terms_conditions', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['carrier_id'], ['carriers.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['freight_expense_account_id'], ['chart_of_accounts.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['route_id'], ['routes.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'rate_code', name='uq_freight_rate_org_code')
+    )
+    op.create_index('idx_freight_rate_org_active', 'freight_rates', ['organization_id', 'is_active'], unique=False)
+    op.create_index('idx_freight_rate_org_carrier', 'freight_rates', ['organization_id', 'carrier_id'], unique=False)
+    op.create_index('idx_freight_rate_org_effective', 'freight_rates', ['organization_id', 'effective_date'], unique=False)
+    op.create_index('idx_freight_rate_org_route', 'freight_rates', ['organization_id', 'route_id'], unique=False)
+    op.create_index(op.f('ix_freight_rates_freight_expense_account_id'), 'freight_rates', ['freight_expense_account_id'], unique=False)
+    op.create_index(op.f('ix_freight_rates_id'), 'freight_rates', ['id'], unique=False)
+    op.create_index(op.f('ix_freight_rates_organization_id'), 'freight_rates', ['organization_id'], unique=False)
+    op.create_table('integration_sync_records',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('sync_job_id', sa.Integer(), nullable=False),
+    sa.Column('entity_type', sa.String(length=100), nullable=False),
+    sa.Column('local_id', sa.String(length=100), nullable=True),
+    sa.Column('external_id', sa.String(length=100), nullable=True),
+    sa.Column('operation', sa.String(length=50), nullable=False),
+    sa.Column('sync_direction', sa.Enum('INBOUND', 'OUTBOUND', 'BIDIRECTIONAL', name='syncdirection'), nullable=False),
+    sa.Column('status', sa.Enum('SUCCESS', 'FAILED', 'PARTIAL', 'IN_PROGRESS', name='syncstatus'), nullable=False),
+    sa.Column('source_data', sa.JSON(), nullable=True),
+    sa.Column('target_data', sa.JSON(), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('validation_errors', sa.JSON(), nullable=True),
+    sa.Column('processed_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['sync_job_id'], ['integration_sync_jobs.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_sync_record_org_entity', 'integration_sync_records', ['organization_id', 'entity_type'], unique=False)
+    op.create_index('idx_sync_record_org_external', 'integration_sync_records', ['organization_id', 'external_id'], unique=False)
+    op.create_index('idx_sync_record_org_job', 'integration_sync_records', ['organization_id', 'sync_job_id'], unique=False)
+    op.create_index('idx_sync_record_org_local', 'integration_sync_records', ['organization_id', 'local_id'], unique=False)
+    op.create_index('idx_sync_record_org_status', 'integration_sync_records', ['organization_id', 'status'], unique=False)
+    op.create_index(op.f('ix_integration_sync_records_entity_type'), 'integration_sync_records', ['entity_type'], unique=False)
+    op.create_index(op.f('ix_integration_sync_records_external_id'), 'integration_sync_records', ['external_id'], unique=False)
+    op.create_index(op.f('ix_integration_sync_records_id'), 'integration_sync_records', ['id'], unique=False)
+    op.create_index(op.f('ix_integration_sync_records_local_id'), 'integration_sync_records', ['local_id'], unique=False)
+    op.create_index(op.f('ix_integration_sync_records_organization_id'), 'integration_sync_records', ['organization_id'], unique=False)
+    op.create_table('integration_webhook_events',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('webhook_id', sa.Integer(), nullable=False),
+    sa.Column('event_type', sa.String(length=100), nullable=False),
+    sa.Column('event_id', sa.String(length=255), nullable=True),
+    sa.Column('payload', sa.JSON(), nullable=True),
+    sa.Column('headers', sa.JSON(), nullable=True),
+    sa.Column('processed', sa.Boolean(), nullable=False),
+    sa.Column('processed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('retry_count', sa.Integer(), nullable=False),
+    sa.Column('received_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_webhook_event_organization_id'),
+    sa.ForeignKeyConstraint(['webhook_id'], ['integration_webhooks.id'], name='fk_event_webhook_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_webhook_event_org_webhook', 'integration_webhook_events', ['organization_id', 'webhook_id'], unique=False)
+    op.create_index('idx_webhook_event_processed', 'integration_webhook_events', ['processed'], unique=False)
+    op.create_index('idx_webhook_event_type', 'integration_webhook_events', ['event_type'], unique=False)
+    op.create_index(op.f('ix_integration_webhook_events_event_id'), 'integration_webhook_events', ['event_id'], unique=False)
+    op.create_index(op.f('ix_integration_webhook_events_event_type'), 'integration_webhook_events', ['event_type'], unique=False)
+    op.create_index(op.f('ix_integration_webhook_events_id'), 'integration_webhook_events', ['id'], unique=False)
+    op.create_index(op.f('ix_integration_webhook_events_organization_id'), 'integration_webhook_events', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_integration_webhook_events_received_at'), 'integration_webhook_events', ['received_at'], unique=False)
+    op.create_index(op.f('ix_integration_webhook_events_webhook_id'), 'integration_webhook_events', ['webhook_id'], unique=False)
+    op.create_table('interviews',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('job_application_id', sa.Integer(), nullable=False),
+    sa.Column('interview_type', sa.String(), nullable=False),
+    sa.Column('interview_round', sa.Integer(), nullable=False),
+    sa.Column('interview_title', sa.String(), nullable=False),
+    sa.Column('scheduled_date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('duration_minutes', sa.Integer(), nullable=False),
+    sa.Column('interview_mode', sa.String(), nullable=False),
+    sa.Column('location', sa.String(), nullable=True),
+    sa.Column('meeting_link', sa.String(), nullable=True),
+    sa.Column('primary_interviewer_id', sa.Integer(), nullable=False),
+    sa.Column('secondary_interviewers', sa.JSON(), nullable=True),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('overall_rating', sa.Integer(), nullable=True),
+    sa.Column('recommendation', sa.String(), nullable=True),
+    sa.Column('technical_score', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('communication_score', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('cultural_fit_score', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('problem_solving_score', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('interviewer_feedback', sa.Text(), nullable=True),
+    sa.Column('candidate_feedback', sa.Text(), nullable=True),
+    sa.Column('strengths', sa.Text(), nullable=True),
+    sa.Column('weaknesses', sa.Text(), nullable=True),
+    sa.Column('cancellation_reason', sa.String(), nullable=True),
+    sa.Column('rescheduled_from', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('custom_scores', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_interview_created_by_id'),
+    sa.ForeignKeyConstraint(['job_application_id'], ['job_applications.id'], name='fk_interview_job_application_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_interview_organization_id'),
+    sa.ForeignKeyConstraint(['primary_interviewer_id'], ['users.id'], name='fk_interview_primary_interviewer_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_interview_interviewer', 'interviews', ['primary_interviewer_id'], unique=False)
+    op.create_index('idx_interview_org_date', 'interviews', ['organization_id', 'scheduled_date'], unique=False)
+    op.create_index('idx_interview_status', 'interviews', ['status'], unique=False)
+    op.create_index(op.f('ix_interviews_id'), 'interviews', ['id'], unique=False)
+    op.create_index(op.f('ix_interviews_job_application_id'), 'interviews', ['job_application_id'], unique=False)
+    op.create_index(op.f('ix_interviews_organization_id'), 'interviews', ['organization_id'], unique=False)
+    op.create_table('job_offers',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('job_application_id', sa.Integer(), nullable=False),
+    sa.Column('offer_title', sa.String(), nullable=False),
+    sa.Column('offer_date', sa.Date(), nullable=False),
+    sa.Column('valid_until', sa.Date(), nullable=False),
+    sa.Column('base_salary', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('variable_pay', sa.Numeric(precision=15, scale=2), nullable=True),
+    sa.Column('bonus', sa.Numeric(precision=15, scale=2), nullable=True),
+    sa.Column('total_compensation', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('salary_currency', sa.String(), nullable=False),
+    sa.Column('benefits_package', sa.JSON(), nullable=True),
+    sa.Column('joining_bonus', sa.Numeric(precision=15, scale=2), nullable=True),
+    sa.Column('relocation_allowance', sa.Numeric(precision=15, scale=2), nullable=True),
+    sa.Column('employment_type', sa.String(), nullable=False),
+    sa.Column('probation_period', sa.Integer(), nullable=True),
+    sa.Column('notice_period', sa.Integer(), nullable=True),
+    sa.Column('start_date', sa.Date(), nullable=True),
+    sa.Column('work_location', sa.String(), nullable=False),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('sent_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('response_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('is_negotiable', sa.Boolean(), nullable=False),
+    sa.Column('negotiation_rounds', sa.Integer(), nullable=False),
+    sa.Column('negotiation_notes', sa.Text(), nullable=True),
+    sa.Column('approved_by_id', sa.Integer(), nullable=True),
+    sa.Column('approved_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('offer_letter_path', sa.String(), nullable=True),
+    sa.Column('contract_path', sa.String(), nullable=True),
+    sa.Column('special_conditions', sa.Text(), nullable=True),
+    sa.Column('rejection_reason', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['approved_by_id'], ['users.id'], name='fk_job_offer_approved_by_id'),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_job_offer_created_by_id'),
+    sa.ForeignKeyConstraint(['job_application_id'], ['job_applications.id'], name='fk_job_offer_job_application_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_job_offer_organization_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_job_offer_application', 'job_offers', ['job_application_id'], unique=False)
+    op.create_index('idx_job_offer_dates', 'job_offers', ['offer_date', 'valid_until'], unique=False)
+    op.create_index('idx_job_offer_org_status', 'job_offers', ['organization_id', 'status'], unique=False)
+    op.create_index(op.f('ix_job_offers_id'), 'job_offers', ['id'], unique=False)
+    op.create_index(op.f('ix_job_offers_job_application_id'), 'job_offers', ['job_application_id'], unique=False)
+    op.create_index(op.f('ix_job_offers_organization_id'), 'job_offers', ['organization_id'], unique=False)
+    op.create_table('leads',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('lead_number', sa.String(), nullable=False),
+    sa.Column('first_name', sa.String(), nullable=False),
+    sa.Column('last_name', sa.String(), nullable=False),
+    sa.Column('email', sa.String(), nullable=False),
+    sa.Column('phone', sa.String(), nullable=True),
+    sa.Column('company', sa.String(), nullable=True),
+    sa.Column('job_title', sa.String(), nullable=True),
+    sa.Column('address1', sa.String(), nullable=True),
+    sa.Column('address2', sa.String(), nullable=True),
+    sa.Column('city', sa.String(), nullable=True),
+    sa.Column('state', sa.String(), nullable=True),
+    sa.Column('pin_code', sa.String(), nullable=True),
+    sa.Column('country', sa.String(), nullable=True),
+    sa.Column('status', sa.Enum('NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'CONVERTED', 'LOST', 'NURTURING', name='leadstatus'), nullable=False),
+    sa.Column('source', sa.Enum('WEBSITE', 'REFERRAL', 'EMAIL_CAMPAIGN', 'SOCIAL_MEDIA', 'COLD_CALL', 'TRADE_SHOW', 'PARTNER', 'ADVERTISEMENT', 'OTHER', name='leadsource'), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('score', sa.Integer(), nullable=False),
+    sa.Column('is_qualified', sa.Boolean(), nullable=False),
+    sa.Column('qualification_notes', sa.Text(), nullable=True),
+    sa.Column('estimated_value', sa.Float(), nullable=True),
+    sa.Column('expected_close_date', sa.Date(), nullable=True),
+    sa.Column('assigned_to_id', sa.Integer(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=True),
+    sa.Column('converted_to_customer_id', sa.Integer(), nullable=True),
+    sa.Column('converted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('custom_fields', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_contacted', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['assigned_to_id'], ['users.id'], name='fk_lead_assigned_to_id'),
+    sa.ForeignKeyConstraint(['converted_to_customer_id'], ['customers.id'], name='fk_lead_converted_customer_id'),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_lead_created_by_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_lead_organization_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'lead_number', name='uq_lead_org_number')
+    )
+    op.create_index('idx_lead_company', 'leads', ['company'], unique=False)
+    op.create_index('idx_lead_org_assigned', 'leads', ['organization_id', 'assigned_to_id'], unique=False)
+    op.create_index('idx_lead_org_source', 'leads', ['organization_id', 'source'], unique=False)
+    op.create_index('idx_lead_org_status', 'leads', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_lead_qualified', 'leads', ['is_qualified'], unique=False)
+    op.create_index('idx_lead_score', 'leads', ['score'], unique=False)
+    op.create_index(op.f('ix_leads_company'), 'leads', ['company'], unique=False)
+    op.create_index(op.f('ix_leads_email'), 'leads', ['email'], unique=False)
+    op.create_index(op.f('ix_leads_id'), 'leads', ['id'], unique=False)
+    op.create_index(op.f('ix_leads_lead_number'), 'leads', ['lead_number'], unique=True)
+    op.create_index(op.f('ix_leads_organization_id'), 'leads', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_leads_source'), 'leads', ['source'], unique=False)
+    op.create_index(op.f('ix_leads_status'), 'leads', ['status'], unique=False)
+    op.create_table('manufacturing_orders',
+    sa.Column('bom_id', sa.Integer(), nullable=False),
+    sa.Column('planned_quantity', sa.Float(), nullable=False),
+    sa.Column('produced_quantity', sa.Float(), nullable=True),
+    sa.Column('scrap_quantity', sa.Float(), nullable=True),
+    sa.Column('planned_start_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('planned_end_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('actual_start_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('actual_end_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('production_status', sa.String(), nullable=True),
+    sa.Column('priority', sa.String(), nullable=True),
+    sa.Column('production_department', sa.String(), nullable=True),
+    sa.Column('production_location', sa.String(), nullable=True),
+    sa.Column('assigned_operator', sa.String(), nullable=True),
+    sa.Column('assigned_supervisor', sa.String(), nullable=True),
+    sa.Column('machine_id', sa.String(), nullable=True),
+    sa.Column('workstation_id', sa.String(), nullable=True),
+    sa.Column('estimated_labor_hours', sa.Float(), nullable=True),
+    sa.Column('actual_labor_hours', sa.Float(), nullable=True),
+    sa.Column('estimated_setup_time', sa.Float(), nullable=True),
+    sa.Column('estimated_run_time', sa.Float(), nullable=True),
+    sa.Column('actual_setup_time', sa.Float(), nullable=True),
+    sa.Column('actual_run_time', sa.Float(), nullable=True),
+    sa.Column('completion_percentage', sa.Float(), nullable=True),
+    sa.Column('last_updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['bom_id'], ['bill_of_materials.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_mo_org_voucher_number')
+    )
+    op.create_index('idx_mo_org_bom', 'manufacturing_orders', ['organization_id', 'bom_id'], unique=False)
+    op.create_index('idx_mo_org_date', 'manufacturing_orders', ['organization_id', 'date'], unique=False)
+    op.create_index('idx_mo_org_status', 'manufacturing_orders', ['organization_id', 'production_status'], unique=False)
+    op.create_index(op.f('ix_manufacturing_orders_id'), 'manufacturing_orders', ['id'], unique=False)
+    op.create_index(op.f('ix_manufacturing_orders_organization_id'), 'manufacturing_orders', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_manufacturing_orders_voucher_number'), 'manufacturing_orders', ['voucher_number'], unique=False)
+    op.create_table('marketing_list_contacts',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('marketing_list_id', sa.Integer(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=True),
+    sa.Column('email', sa.String(), nullable=True),
+    sa.Column('phone', sa.String(), nullable=True),
+    sa.Column('first_name', sa.String(), nullable=True),
+    sa.Column('last_name', sa.String(), nullable=True),
+    sa.Column('is_subscribed', sa.Boolean(), nullable=False),
+    sa.Column('subscribed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('unsubscribed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('opt_in_source', sa.String(), nullable=True),
+    sa.Column('custom_attributes', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_marketing_list_contact_customer_id'),
+    sa.ForeignKeyConstraint(['marketing_list_id'], ['marketing_lists.id'], name='fk_marketing_list_contact_list_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_marketing_list_contact_organization_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('marketing_list_id', 'customer_id', name='uq_marketing_list_contact_customer'),
+    sa.UniqueConstraint('marketing_list_id', 'email', name='uq_marketing_list_contact_email')
+    )
+    op.create_index('idx_marketing_list_contact_email', 'marketing_list_contacts', ['email'], unique=False)
+    op.create_index('idx_marketing_list_contact_org_list', 'marketing_list_contacts', ['organization_id', 'marketing_list_id'], unique=False)
+    op.create_index('idx_marketing_list_contact_subscribed', 'marketing_list_contacts', ['is_subscribed'], unique=False)
+    op.create_index(op.f('ix_marketing_list_contacts_email'), 'marketing_list_contacts', ['email'], unique=False)
+    op.create_index(op.f('ix_marketing_list_contacts_id'), 'marketing_list_contacts', ['id'], unique=False)
+    op.create_index(op.f('ix_marketing_list_contacts_organization_id'), 'marketing_list_contacts', ['organization_id'], unique=False)
+    op.create_table('non_sales_credit_note_items',
+    sa.Column('non_sales_credit_note_id', sa.Integer(), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['non_sales_credit_note_id'], ['non_sales_credit_notes.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_non_sales_credit_note_items_id'), 'non_sales_credit_note_items', ['id'], unique=False)
+    op.create_table('payment_records',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('payment_number', sa.String(length=50), nullable=False),
+    sa.Column('payment_date', sa.Date(), nullable=False),
+    sa.Column('payment_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('payment_method', sa.String(length=50), nullable=False),
+    sa.Column('reference_type', sa.String(length=20), nullable=False),
+    sa.Column('reference_id', sa.Integer(), nullable=False),
+    sa.Column('bank_account_id', sa.Integer(), nullable=True),
+    sa.Column('status', sa.String(length=20), nullable=False),
+    sa.Column('transaction_fee', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['bank_account_id'], ['bank_accounts.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'payment_number', name='uq_org_payment_number')
+    )
+    op.create_index('idx_pr_org_date', 'payment_records', ['organization_id', 'payment_date'], unique=False)
+    op.create_index('idx_pr_reference', 'payment_records', ['reference_type', 'reference_id'], unique=False)
+    op.create_index(op.f('ix_payment_records_id'), 'payment_records', ['id'], unique=False)
+    op.create_index(op.f('ix_payment_records_organization_id'), 'payment_records', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_payment_records_payment_date'), 'payment_records', ['payment_date'], unique=False)
+    op.create_index(op.f('ix_payment_records_payment_number'), 'payment_records', ['payment_number'], unique=False)
+    op.create_index(op.f('ix_payment_records_reference_id'), 'payment_records', ['reference_id'], unique=False)
+    op.create_table('payroll_lines',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('payroll_run_id', sa.Integer(), nullable=False),
+    sa.Column('employee_id', sa.Integer(), nullable=False),
+    sa.Column('component_id', sa.Integer(), nullable=False),
+    sa.Column('chart_account_id', sa.Integer(), nullable=False),
+    sa.Column('line_type', sa.String(length=50), nullable=False),
+    sa.Column('amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('posting_type', sa.String(length=20), nullable=False),
+    sa.Column('description', sa.String(length=500), nullable=False),
+    sa.Column('gl_entry_id', sa.Integer(), nullable=True),
+    sa.Column('journal_voucher_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['chart_account_id'], ['chart_of_accounts.id'], ),
+    sa.ForeignKeyConstraint(['component_id'], ['payroll_components.id'], ),
+    sa.ForeignKeyConstraint(['employee_id'], ['employee_profiles.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['payroll_run_id'], ['payroll_runs.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_payroll_line_account', 'payroll_lines', ['chart_account_id'], unique=False)
+    op.create_index('idx_payroll_line_component', 'payroll_lines', ['component_id'], unique=False)
+    op.create_index('idx_payroll_line_employee', 'payroll_lines', ['employee_id'], unique=False)
+    op.create_index('idx_payroll_line_gl_entry', 'payroll_lines', ['gl_entry_id'], unique=False)
+    op.create_index('idx_payroll_line_org_run', 'payroll_lines', ['organization_id', 'payroll_run_id'], unique=False)
+    op.create_index(op.f('ix_payroll_lines_chart_account_id'), 'payroll_lines', ['chart_account_id'], unique=False)
+    op.create_index(op.f('ix_payroll_lines_component_id'), 'payroll_lines', ['component_id'], unique=False)
+    op.create_index(op.f('ix_payroll_lines_employee_id'), 'payroll_lines', ['employee_id'], unique=False)
+    op.create_index(op.f('ix_payroll_lines_id'), 'payroll_lines', ['id'], unique=False)
+    op.create_index(op.f('ix_payroll_lines_organization_id'), 'payroll_lines', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_payroll_lines_payroll_run_id'), 'payroll_lines', ['payroll_run_id'], unique=False)
+    op.create_table('payslips',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('employee_id', sa.Integer(), nullable=False),
+    sa.Column('payroll_period_id', sa.Integer(), nullable=False),
+    sa.Column('salary_structure_id', sa.Integer(), nullable=False),
+    sa.Column('payslip_number', sa.String(), nullable=False),
+    sa.Column('pay_date', sa.Date(), nullable=False),
+    sa.Column('working_days', sa.Integer(), nullable=False),
+    sa.Column('present_days', sa.Integer(), nullable=False),
+    sa.Column('absent_days', sa.Integer(), nullable=False),
+    sa.Column('leave_days', sa.Integer(), nullable=False),
+    sa.Column('overtime_hours', sa.Numeric(precision=5, scale=2), nullable=False),
+    sa.Column('basic_salary', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('hra', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('transport_allowance', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('medical_allowance', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('special_allowance', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('overtime_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('other_allowances', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('provident_fund', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('professional_tax', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('income_tax', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('loan_deduction', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('other_deductions', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('gross_pay', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('total_deductions', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('net_pay', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('variable_earnings', sa.JSON(), nullable=True),
+    sa.Column('variable_deductions', sa.JSON(), nullable=True),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('generated_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('sent_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('acknowledged_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('pdf_path', sa.String(), nullable=True),
+    sa.Column('email_sent', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['employee_id'], ['employee_profiles.id'], name='fk_payslip_employee_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_payslip_organization_id'),
+    sa.ForeignKeyConstraint(['payroll_period_id'], ['payroll_periods.id'], name='fk_payslip_payroll_period_id'),
+    sa.ForeignKeyConstraint(['salary_structure_id'], ['salary_structures.id'], name='fk_payslip_salary_structure_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'employee_id', 'payroll_period_id', name='uq_payslip_org_emp_period')
+    )
+    op.create_index('idx_payslip_org_employee', 'payslips', ['organization_id', 'employee_id'], unique=False)
+    op.create_index('idx_payslip_period', 'payslips', ['payroll_period_id'], unique=False)
+    op.create_index('idx_payslip_status', 'payslips', ['status'], unique=False)
+    op.create_index(op.f('ix_payslips_employee_id'), 'payslips', ['employee_id'], unique=False)
+    op.create_index(op.f('ix_payslips_id'), 'payslips', ['id'], unique=False)
+    op.create_index(op.f('ix_payslips_organization_id'), 'payslips', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_payslips_payroll_period_id'), 'payslips', ['payroll_period_id'], unique=False)
+    op.create_index(op.f('ix_payslips_payslip_number'), 'payslips', ['payslip_number'], unique=True)
+    op.create_index(op.f('ix_payslips_salary_structure_id'), 'payslips', ['salary_structure_id'], unique=False)
+    op.create_table('product_batches',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('product_tracking_id', sa.Integer(), nullable=False),
+    sa.Column('batch_number', sa.String(length=100), nullable=False),
+    sa.Column('batch_name', sa.String(length=200), nullable=True),
+    sa.Column('manufacturing_date', sa.Date(), nullable=True),
+    sa.Column('expiry_date', sa.Date(), nullable=True),
+    sa.Column('supplier_batch_number', sa.String(length=100), nullable=True),
+    sa.Column('supplier_id', sa.Integer(), nullable=True),
+    sa.Column('quality_grade', sa.String(length=50), nullable=True),
+    sa.Column('quality_notes', sa.Text(), nullable=True),
+    sa.Column('batch_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
+    sa.Column('available_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('is_expired', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['product_tracking_id'], ['product_tracking.id'], ),
+    sa.ForeignKeyConstraint(['supplier_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'batch_number', name='uq_org_batch_number')
+    )
+    op.create_index('idx_batch_active', 'product_batches', ['is_active'], unique=False)
+    op.create_index('idx_batch_expiry', 'product_batches', ['expiry_date'], unique=False)
+    op.create_index(op.f('ix_product_batches_batch_number'), 'product_batches', ['batch_number'], unique=False)
+    op.create_index(op.f('ix_product_batches_expiry_date'), 'product_batches', ['expiry_date'], unique=False)
+    op.create_index(op.f('ix_product_batches_id'), 'product_batches', ['id'], unique=False)
+    op.create_index(op.f('ix_product_batches_organization_id'), 'product_batches', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_product_batches_product_tracking_id'), 'product_batches', ['product_tracking_id'], unique=False)
+    op.create_table('proforma_invoices',
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('valid_until', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('payment_terms', sa.String(), nullable=True),
+    sa.Column('terms_conditions', sa.Text(), nullable=True),
+    sa.Column('parent_id', sa.Integer(), nullable=True),
+    sa.Column('revision_number', sa.Integer(), nullable=True),
+    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['parent_id'], ['proforma_invoices.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_pi_org_voucher_number')
+    )
+    op.create_index('idx_pi_org_customer', 'proforma_invoices', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_pi_org_date', 'proforma_invoices', ['organization_id', 'date'], unique=False)
+    op.create_index(op.f('ix_proforma_invoices_id'), 'proforma_invoices', ['id'], unique=False)
+    op.create_index(op.f('ix_proforma_invoices_organization_id'), 'proforma_invoices', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_proforma_invoices_voucher_number'), 'proforma_invoices', ['voucher_number'], unique=False)
+    op.create_table('projects',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('company_id', sa.Integer(), nullable=True),
+    sa.Column('project_code', sa.String(length=50), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('project_type', sa.Enum('INTERNAL', 'CLIENT', 'RESEARCH', 'MAINTENANCE', 'DEVELOPMENT', name='projecttype'), nullable=False),
+    sa.Column('status', sa.Enum('PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED', name='projectstatus'), nullable=False),
+    sa.Column('priority', sa.Enum('LOW', 'MEDIUM', 'HIGH', 'CRITICAL', name='projectpriority'), nullable=False),
+    sa.Column('start_date', sa.Date(), nullable=True),
+    sa.Column('end_date', sa.Date(), nullable=True),
+    sa.Column('planned_start_date', sa.Date(), nullable=True),
+    sa.Column('planned_end_date', sa.Date(), nullable=True),
+    sa.Column('budget', sa.Float(), nullable=True),
+    sa.Column('actual_cost', sa.Float(), nullable=True),
+    sa.Column('progress_percentage', sa.Float(), nullable=False),
+    sa.Column('client_id', sa.Integer(), nullable=True),
+    sa.Column('project_manager_id', sa.Integer(), nullable=False),
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('is_billable', sa.Boolean(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('tags', sa.JSON(), nullable=True),
+    sa.Column('custom_fields', sa.JSON(), nullable=True),
+    sa.ForeignKeyConstraint(['client_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['project_manager_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'project_code', name='uq_project_org_code')
+    )
+    op.create_index('idx_project_org_client', 'projects', ['organization_id', 'client_id'], unique=False)
+    op.create_index('idx_project_org_manager', 'projects', ['organization_id', 'project_manager_id'], unique=False)
+    op.create_index('idx_project_org_status', 'projects', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_project_org_type', 'projects', ['organization_id', 'project_type'], unique=False)
+    op.create_index(op.f('ix_projects_company_id'), 'projects', ['company_id'], unique=False)
+    op.create_index(op.f('ix_projects_id'), 'projects', ['id'], unique=False)
+    op.create_index(op.f('ix_projects_name'), 'projects', ['name'], unique=False)
+    op.create_index(op.f('ix_projects_organization_id'), 'projects', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_projects_project_code'), 'projects', ['project_code'], unique=False)
+    op.create_table('promotion_redemptions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('promotion_id', sa.Integer(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=True),
+    sa.Column('voucher_type', sa.String(), nullable=True),
+    sa.Column('voucher_id', sa.Integer(), nullable=True),
+    sa.Column('voucher_number', sa.String(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=False),
+    sa.Column('order_amount', sa.Float(), nullable=False),
+    sa.Column('final_amount', sa.Float(), nullable=False),
+    sa.Column('redeemed_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_promotion_redemption_customer_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_promotion_redemption_organization_id'),
+    sa.ForeignKeyConstraint(['promotion_id'], ['promotions.id'], name='fk_promotion_redemption_promotion_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_promotion_redemption_customer', 'promotion_redemptions', ['customer_id'], unique=False)
+    op.create_index('idx_promotion_redemption_date', 'promotion_redemptions', ['redeemed_at'], unique=False)
+    op.create_index('idx_promotion_redemption_org_promotion', 'promotion_redemptions', ['organization_id', 'promotion_id'], unique=False)
+    op.create_index(op.f('ix_promotion_redemptions_id'), 'promotion_redemptions', ['id'], unique=False)
+    op.create_index(op.f('ix_promotion_redemptions_organization_id'), 'promotion_redemptions', ['organization_id'], unique=False)
+    op.create_table('purchase_orders',
+    sa.Column('vendor_id', sa.Integer(), nullable=False),
+    sa.Column('delivery_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('payment_terms', sa.String(), nullable=True),
+    sa.Column('terms_conditions', sa.Text(), nullable=True),
+    sa.Column('line_discount_type', sa.String(), nullable=True),
+    sa.Column('total_discount_type', sa.String(), nullable=True),
+    sa.Column('total_discount', sa.Float(), nullable=True),
+    sa.Column('round_off', sa.Float(), nullable=True),
+    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('transporter_name', sa.String(), nullable=True),
+    sa.Column('tracking_number', sa.String(), nullable=True),
+    sa.Column('tracking_link', sa.String(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_po_org_voucher_number')
+    )
+    op.create_index('idx_po_org_date', 'purchase_orders', ['organization_id', 'date'], unique=False)
+    op.create_index('idx_po_org_status', 'purchase_orders', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_po_org_vendor', 'purchase_orders', ['organization_id', 'vendor_id'], unique=False)
+    op.create_index(op.f('ix_purchase_orders_id'), 'purchase_orders', ['id'], unique=False)
+    op.create_index(op.f('ix_purchase_orders_organization_id'), 'purchase_orders', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_purchase_orders_voucher_number'), 'purchase_orders', ['voucher_number'], unique=False)
+    op.create_table('quotations',
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('valid_until', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('payment_terms', sa.String(), nullable=True),
+    sa.Column('terms_conditions', sa.Text(), nullable=True),
+    sa.Column('line_discount_type', sa.String(), nullable=True),
+    sa.Column('total_discount_type', sa.String(), nullable=True),
+    sa.Column('total_discount', sa.Float(), nullable=True),
+    sa.Column('round_off', sa.Float(), nullable=True),
+    sa.Column('parent_id', sa.Integer(), nullable=True),
+    sa.Column('revision_number', sa.Integer(), nullable=True),
+    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['parent_id'], ['quotations.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_quotation_org_voucher_number')
+    )
+    op.create_index('idx_quotation_org_customer', 'quotations', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_quotation_org_date', 'quotations', ['organization_id', 'date'], unique=False)
+    op.create_index(op.f('ix_quotations_id'), 'quotations', ['id'], unique=False)
+    op.create_index(op.f('ix_quotations_organization_id'), 'quotations', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_quotations_voucher_number'), 'quotations', ['voucher_number'], unique=False)
+    op.create_table('sales_orders',
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('delivery_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('payment_terms', sa.String(), nullable=True),
+    sa.Column('terms_conditions', sa.Text(), nullable=True),
+    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_so_org_voucher_number')
+    )
+    op.create_index('idx_so_org_customer', 'sales_orders', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_so_org_date', 'sales_orders', ['organization_id', 'date'], unique=False)
+    op.create_index('idx_so_org_status', 'sales_orders', ['organization_id', 'status'], unique=False)
+    op.create_index(op.f('ix_sales_orders_id'), 'sales_orders', ['id'], unique=False)
+    op.create_index(op.f('ix_sales_orders_organization_id'), 'sales_orders', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_sales_orders_voucher_number'), 'sales_orders', ['voucher_number'], unique=False)
+    op.create_table('tickets',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('ticket_number', sa.String(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('assigned_to_id', sa.Integer(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=True),
+    sa.Column('title', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('priority', sa.String(), nullable=False),
+    sa.Column('ticket_type', sa.String(), nullable=False),
+    sa.Column('resolution', sa.Text(), nullable=True),
+    sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('closed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('due_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('estimated_hours', sa.Float(), nullable=True),
+    sa.Column('actual_hours', sa.Float(), nullable=True),
+    sa.Column('customer_rating', sa.Integer(), nullable=True),
+    sa.Column('customer_feedback', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['assigned_to_id'], ['users.id'], name='fk_ticket_assigned_to_id'),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_ticket_created_by_id'),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_ticket_customer_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ticket_organization_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'ticket_number', name='uq_ticket_org_number')
+    )
+    op.create_index('idx_ticket_created_at', 'tickets', ['created_at'], unique=False)
+    op.create_index('idx_ticket_due_date', 'tickets', ['due_date'], unique=False)
+    op.create_index('idx_ticket_org_assigned', 'tickets', ['organization_id', 'assigned_to_id'], unique=False)
+    op.create_index('idx_ticket_org_customer', 'tickets', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_ticket_org_priority', 'tickets', ['organization_id', 'priority'], unique=False)
+    op.create_index('idx_ticket_org_status', 'tickets', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_ticket_org_type', 'tickets', ['organization_id', 'ticket_type'], unique=False)
+    op.create_index(op.f('ix_tickets_id'), 'tickets', ['id'], unique=False)
+    op.create_index(op.f('ix_tickets_organization_id'), 'tickets', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_tickets_ticket_number'), 'tickets', ['ticket_number'], unique=False)
+    op.create_table('training_enrollments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('employee_id', sa.Integer(), nullable=False),
+    sa.Column('program_id', sa.Integer(), nullable=False),
+    sa.Column('session_id', sa.Integer(), nullable=True),
+    sa.Column('enrollment_date', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('enrollment_type', sa.String(), nullable=False),
+    sa.Column('enrollment_source', sa.String(), nullable=False),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('approved_by_id', sa.Integer(), nullable=True),
+    sa.Column('approved_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('attendance_percentage', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('participation_score', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('assignment_score', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('final_score', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('completed_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('certificate_issued', sa.Boolean(), nullable=False),
+    sa.Column('certificate_number', sa.String(), nullable=True),
+    sa.Column('certificate_path', sa.String(), nullable=True),
+    sa.Column('participant_rating', sa.Integer(), nullable=True),
+    sa.Column('participant_feedback', sa.Text(), nullable=True),
+    sa.Column('instructor_feedback', sa.Text(), nullable=True),
+    sa.Column('cost_allocated', sa.Numeric(precision=15, scale=2), nullable=True),
+    sa.Column('budget_code', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['approved_by_id'], ['users.id'], name='fk_training_enrollment_approved_by_id'),
+    sa.ForeignKeyConstraint(['employee_id'], ['employee_profiles.id'], name='fk_training_enrollment_employee_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_training_enrollment_organization_id'),
+    sa.ForeignKeyConstraint(['program_id'], ['training_programs.id'], name='fk_training_enrollment_program_id'),
+    sa.ForeignKeyConstraint(['session_id'], ['training_sessions.id'], name='fk_training_enrollment_session_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('employee_id', 'program_id', 'session_id', name='uq_training_enrollment_emp_prog_session')
+    )
+    op.create_index('idx_training_enrollment_org_employee', 'training_enrollments', ['organization_id', 'employee_id'], unique=False)
+    op.create_index('idx_training_enrollment_status', 'training_enrollments', ['status'], unique=False)
+    op.create_index(op.f('ix_training_enrollments_employee_id'), 'training_enrollments', ['employee_id'], unique=False)
+    op.create_index(op.f('ix_training_enrollments_id'), 'training_enrollments', ['id'], unique=False)
+    op.create_index(op.f('ix_training_enrollments_organization_id'), 'training_enrollments', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_training_enrollments_program_id'), 'training_enrollments', ['program_id'], unique=False)
+    op.create_index(op.f('ix_training_enrollments_session_id'), 'training_enrollments', ['session_id'], unique=False)
+    op.create_table('vendor_evaluations',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('vendor_id', sa.Integer(), nullable=False),
+    sa.Column('evaluation_date', sa.Date(), nullable=False),
+    sa.Column('evaluation_type', sa.String(length=50), nullable=False),
+    sa.Column('quality_rating', sa.Numeric(precision=3, scale=1), nullable=True),
+    sa.Column('delivery_rating', sa.Numeric(precision=3, scale=1), nullable=True),
+    sa.Column('service_rating', sa.Numeric(precision=3, scale=1), nullable=True),
+    sa.Column('price_rating', sa.Numeric(precision=3, scale=1), nullable=True),
+    sa.Column('communication_rating', sa.Numeric(precision=3, scale=1), nullable=True),
+    sa.Column('overall_rating', sa.Numeric(precision=3, scale=1), nullable=False),
+    sa.Column('strengths', sa.Text(), nullable=True),
+    sa.Column('weaknesses', sa.Text(), nullable=True),
+    sa.Column('improvement_suggestions', sa.Text(), nullable=True),
+    sa.Column('on_time_delivery_percentage', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('quality_rejection_percentage', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('vendor_status', sa.Enum('ACTIVE', 'INACTIVE', 'BLACKLISTED', 'UNDER_REVIEW', name='vendorstatus'), nullable=False),
+    sa.Column('evaluated_by', sa.Integer(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['evaluated_by'], ['platform_users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_vendor_eval_org_date', 'vendor_evaluations', ['organization_id', 'evaluation_date'], unique=False)
+    op.create_index('idx_vendor_eval_rating', 'vendor_evaluations', ['overall_rating'], unique=False)
+    op.create_index(op.f('ix_vendor_evaluations_evaluation_date'), 'vendor_evaluations', ['evaluation_date'], unique=False)
+    op.create_index(op.f('ix_vendor_evaluations_id'), 'vendor_evaluations', ['id'], unique=False)
+    op.create_index(op.f('ix_vendor_evaluations_organization_id'), 'vendor_evaluations', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_vendor_evaluations_vendor_id'), 'vendor_evaluations', ['vendor_id'], unique=False)
+    op.create_table('vendor_files',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('vendor_id', sa.Integer(), nullable=False),
+    sa.Column('filename', sa.String(), nullable=False),
+    sa.Column('original_filename', sa.String(), nullable=False),
+    sa.Column('file_path', sa.String(), nullable=False),
+    sa.Column('file_size', sa.Integer(), nullable=False),
+    sa.Column('content_type', sa.String(), nullable=False),
+    sa.Column('file_type', sa.String(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_vendor_file_organization_id'),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], name='fk_vendor_file_vendor_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_vendor_file_org_vendor', 'vendor_files', ['organization_id', 'vendor_id'], unique=False)
+    op.create_index(op.f('ix_vendor_files_id'), 'vendor_files', ['id'], unique=False)
+    op.create_index(op.f('ix_vendor_files_organization_id'), 'vendor_files', ['organization_id'], unique=False)
+    op.create_table('vendor_quotations',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('rfq_id', sa.Integer(), nullable=False),
+    sa.Column('vendor_id', sa.Integer(), nullable=False),
+    sa.Column('quotation_number', sa.String(length=50), nullable=False),
+    sa.Column('quotation_date', sa.Date(), nullable=False),
+    sa.Column('validity_date', sa.Date(), nullable=False),
+    sa.Column('total_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('tax_amount', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('grand_total', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('payment_terms', sa.String(length=100), nullable=True),
+    sa.Column('delivery_terms', sa.String(length=100), nullable=True),
+    sa.Column('warranty_terms', sa.Text(), nullable=True),
+    sa.Column('is_selected', sa.Boolean(), nullable=False),
+    sa.Column('selection_rank', sa.Integer(), nullable=True),
+    sa.Column('technical_score', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('commercial_score', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('overall_score', sa.Numeric(precision=5, scale=2), nullable=True),
+    sa.Column('evaluation_notes', sa.Text(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['rfq_id'], ['request_for_quotations.id'], ),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'quotation_number', name='uq_org_quotation_number')
+    )
+    op.create_index('idx_quotation_rfq_vendor', 'vendor_quotations', ['rfq_id', 'vendor_id'], unique=False)
+    op.create_index('idx_quotation_selected', 'vendor_quotations', ['is_selected'], unique=False)
+    op.create_index(op.f('ix_vendor_quotations_id'), 'vendor_quotations', ['id'], unique=False)
+    op.create_index(op.f('ix_vendor_quotations_organization_id'), 'vendor_quotations', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_vendor_quotations_quotation_date'), 'vendor_quotations', ['quotation_date'], unique=False)
+    op.create_index(op.f('ix_vendor_quotations_quotation_number'), 'vendor_quotations', ['quotation_number'], unique=False)
+    op.create_index(op.f('ix_vendor_quotations_rfq_id'), 'vendor_quotations', ['rfq_id'], unique=False)
+    op.create_index(op.f('ix_vendor_quotations_vendor_id'), 'vendor_quotations', ['vendor_id'], unique=False)
+    op.create_table('vendor_rfqs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('rfq_id', sa.Integer(), nullable=False),
+    sa.Column('vendor_id', sa.Integer(), nullable=False),
+    sa.Column('invited_date', sa.Date(), nullable=False),
+    sa.Column('invitation_sent', sa.Boolean(), nullable=False),
+    sa.Column('has_responded', sa.Boolean(), nullable=False),
+    sa.Column('response_date', sa.Date(), nullable=True),
+    sa.Column('decline_reason', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['rfq_id'], ['request_for_quotations.id'], ),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('rfq_id', 'vendor_id', name='uq_rfq_vendor')
+    )
+    op.create_index('idx_vendor_rfq_response', 'vendor_rfqs', ['has_responded'], unique=False)
+    op.create_index(op.f('ix_vendor_rfqs_id'), 'vendor_rfqs', ['id'], unique=False)
+    op.create_index(op.f('ix_vendor_rfqs_invited_date'), 'vendor_rfqs', ['invited_date'], unique=False)
+    op.create_index(op.f('ix_vendor_rfqs_rfq_id'), 'vendor_rfqs', ['rfq_id'], unique=False)
+    op.create_index(op.f('ix_vendor_rfqs_vendor_id'), 'vendor_rfqs', ['vendor_id'], unique=False)
+    op.create_table('website_projects',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('project_name', sa.String(), nullable=False),
+    sa.Column('project_type', sa.String(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=True),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('domain', sa.String(), nullable=True),
+    sa.Column('subdomain', sa.String(), nullable=True),
+    sa.Column('theme', sa.String(), nullable=False),
+    sa.Column('primary_color', sa.String(), nullable=True),
+    sa.Column('secondary_color', sa.String(), nullable=True),
+    sa.Column('site_title', sa.String(), nullable=True),
+    sa.Column('site_description', sa.Text(), nullable=True),
+    sa.Column('logo_url', sa.String(), nullable=True),
+    sa.Column('favicon_url', sa.String(), nullable=True),
+    sa.Column('pages_config', sa.JSON(), nullable=True),
+    sa.Column('seo_config', sa.JSON(), nullable=True),
+    sa.Column('analytics_config', sa.JSON(), nullable=True),
+    sa.Column('deployment_url', sa.String(), nullable=True),
+    sa.Column('deployment_provider', sa.String(), nullable=True),
+    sa.Column('last_deployed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('chatbot_enabled', sa.Boolean(), nullable=False),
+    sa.Column('chatbot_config', sa.JSON(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=True),
+    sa.Column('updated_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_website_project_created_by_id'),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_website_project_customer_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_website_project_organization_id'),
+    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], name='fk_website_project_updated_by_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'project_name', name='uq_website_project_org_name')
+    )
+    op.create_index('idx_website_project_created_at', 'website_projects', ['created_at'], unique=False)
+    op.create_index('idx_website_project_customer', 'website_projects', ['customer_id'], unique=False)
+    op.create_index('idx_website_project_org_status', 'website_projects', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_website_project_org_type', 'website_projects', ['organization_id', 'project_type'], unique=False)
+    op.create_index(op.f('ix_website_projects_id'), 'website_projects', ['id'], unique=False)
+    op.create_index(op.f('ix_website_projects_organization_id'), 'website_projects', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_website_projects_project_name'), 'website_projects', ['project_name'], unique=False)
+    op.create_table('workflow_instances',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('template_id', sa.Integer(), nullable=False),
+    sa.Column('instance_name', sa.String(length=255), nullable=False),
+    sa.Column('reference_number', sa.String(length=100), nullable=True),
+    sa.Column('entity_type', sa.String(length=100), nullable=False),
+    sa.Column('entity_id', sa.Integer(), nullable=False),
+    sa.Column('entity_data', sa.JSON(), nullable=True),
+    sa.Column('status', sa.Enum('CREATED', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'CANCELLED', 'PAUSED', name='instancestatus'), nullable=False),
+    sa.Column('current_step_id', sa.Integer(), nullable=True),
+    sa.Column('total_steps', sa.Integer(), nullable=False),
+    sa.Column('completed_steps', sa.Integer(), nullable=False),
+    sa.Column('started_at', sa.DateTime(), nullable=True),
+    sa.Column('completed_at', sa.DateTime(), nullable=True),
+    sa.Column('deadline', sa.DateTime(), nullable=True),
+    sa.Column('triggered_by', sa.Integer(), nullable=False),
+    sa.Column('trigger_reason', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['current_step_id'], ['workflow_steps.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['template_id'], ['workflow_templates.id'], ),
+    sa.ForeignKeyConstraint(['triggered_by'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_workflow_instance_org_entity', 'workflow_instances', ['organization_id', 'entity_type', 'entity_id'], unique=False)
+    op.create_index('idx_workflow_instance_org_status', 'workflow_instances', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_workflow_instance_org_template', 'workflow_instances', ['organization_id', 'template_id'], unique=False)
+    op.create_index('idx_workflow_instance_org_triggered', 'workflow_instances', ['organization_id', 'triggered_by'], unique=False)
+    op.create_index(op.f('ix_workflow_instances_id'), 'workflow_instances', ['id'], unique=False)
+    op.create_index(op.f('ix_workflow_instances_organization_id'), 'workflow_instances', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_workflow_instances_reference_number'), 'workflow_instances', ['reference_number'], unique=False)
+    op.create_table('workflow_instances_automation',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('workflow_template_id', sa.Integer(), nullable=False),
+    sa.Column('instance_name', sa.String(length=200), nullable=True),
+    sa.Column('reference_type', sa.String(length=100), nullable=True),
+    sa.Column('reference_id', sa.Integer(), nullable=True),
+    sa.Column('status', sa.Enum('DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED', 'FAILED', 'CANCELLED', name='workflowstatus'), nullable=False),
+    sa.Column('current_step_id', sa.Integer(), nullable=True),
+    sa.Column('started_at', sa.DateTime(), nullable=True),
+    sa.Column('completed_at', sa.DateTime(), nullable=True),
+    sa.Column('failed_at', sa.DateTime(), nullable=True),
+    sa.Column('cancelled_at', sa.DateTime(), nullable=True),
+    sa.Column('input_data', sa.JSON(), nullable=True),
+    sa.Column('current_data', sa.JSON(), nullable=True),
+    sa.Column('output_data', sa.JSON(), nullable=True),
+    sa.Column('total_steps', sa.Integer(), nullable=False),
+    sa.Column('completed_steps', sa.Integer(), nullable=False),
+    sa.Column('failed_steps', sa.Integer(), nullable=False),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('retry_count', sa.Integer(), nullable=False),
+    sa.Column('initiated_by', sa.Integer(), nullable=True),
+    sa.Column('assigned_to', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['current_step_id'], ['workflow_steps_automation.id'], ),
+    sa.ForeignKeyConstraint(['initiated_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['workflow_template_id'], ['workflow_templates_advanced.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.execute("CREATE INDEX IF NOT EXISTS idx_workflow_instance_org_status ON workflow_instances_automation (organization_id, status)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_workflow_instance_reference ON workflow_instances_automation (reference_type, reference_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_workflow_instance_template ON workflow_instances_automation (workflow_template_id)")
+    op.create_index(op.f('ix_workflow_instances_automation_current_step_id'), 'workflow_instances_automation', ['current_step_id'], unique=False)
+    op.create_index(op.f('ix_workflow_instances_automation_id'), 'workflow_instances_automation', ['id'], unique=False)
+    op.create_index(op.f('ix_workflow_instances_automation_instance_name'), 'workflow_instances_automation', ['instance_name'], unique=False)
+    op.create_index(op.f('ix_workflow_instances_automation_organization_id'), 'workflow_instances_automation', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_workflow_instances_automation_reference_id'), 'workflow_instances_automation', ['reference_id'], unique=False)
+    op.create_index(op.f('ix_workflow_instances_automation_reference_type'), 'workflow_instances_automation', ['reference_type'], unique=False)
+    op.create_index(op.f('ix_workflow_instances_automation_status'), 'workflow_instances_automation', ['status'], unique=False)
+    op.create_index(op.f('ix_workflow_instances_automation_workflow_template_id'), 'workflow_instances_automation', ['workflow_template_id'], unique=False)
+    op.create_table('batch_locations',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('batch_id', sa.Integer(), nullable=False),
+    sa.Column('stock_location_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Numeric(precision=12, scale=3), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['batch_id'], ['product_batches.id'], ),
+    sa.ForeignKeyConstraint(['stock_location_id'], ['stock_locations.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('batch_id', 'stock_location_id', name='uq_batch_location')
+    )
+    op.create_index(op.f('ix_batch_locations_batch_id'), 'batch_locations', ['batch_id'], unique=False)
+    op.create_index(op.f('ix_batch_locations_id'), 'batch_locations', ['id'], unique=False)
+    op.create_index(op.f('ix_batch_locations_stock_location_id'), 'batch_locations', ['stock_location_id'], unique=False)
+    op.create_table('bom_alternate_components',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('primary_component_id', sa.Integer(), nullable=False),
+    sa.Column('alternate_item_id', sa.Integer(), nullable=False),
+    sa.Column('quantity_required', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_cost', sa.Float(), nullable=True),
+    sa.Column('cost_difference', sa.Float(), nullable=True),
+    sa.Column('preference_rank', sa.Integer(), nullable=True),
+    sa.Column('is_preferred', sa.Boolean(), nullable=True),
+    sa.Column('min_order_quantity', sa.Float(), nullable=True),
+    sa.Column('lead_time_days', sa.Integer(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['alternate_item_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['primary_component_id'], ['bom_components.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_bom_alt_org_item', 'bom_alternate_components', ['organization_id', 'alternate_item_id'], unique=False)
+    op.create_index('idx_bom_alt_org_primary', 'bom_alternate_components', ['organization_id', 'primary_component_id'], unique=False)
+    op.create_index(op.f('ix_bom_alternate_components_id'), 'bom_alternate_components', ['id'], unique=False)
+    op.create_index(op.f('ix_bom_alternate_components_organization_id'), 'bom_alternate_components', ['organization_id'], unique=False)
     op.create_table('chatbot_conversations',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -5931,169 +7923,110 @@ def upgrade() -> None:
     op.create_index(op.f('ix_dispatch_orders_id'), 'dispatch_orders', ['id'], unique=False)
     op.create_index(op.f('ix_dispatch_orders_order_number'), 'dispatch_orders', ['order_number'], unique=False)
     op.create_index(op.f('ix_dispatch_orders_organization_id'), 'dispatch_orders', ['organization_id'], unique=False)
-    op.create_table('email_sync_logs',
+    op.create_table('emails',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('account_id', sa.Integer(), nullable=False),
-    sa.Column('sync_type', sa.String(length=50), nullable=False),
-    sa.Column('folder', sa.String(length=255), nullable=True),
-    sa.Column('status', sa.String(length=20), nullable=False),
-    sa.Column('messages_processed', sa.Integer(), nullable=False),
-    sa.Column('messages_new', sa.Integer(), nullable=False),
-    sa.Column('messages_updated', sa.Integer(), nullable=False),
-    sa.Column('messages_deleted', sa.Integer(), nullable=False),
-    sa.Column('error_message', sa.Text(), nullable=True),
-    sa.Column('error_details', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('started_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('duration_seconds', sa.Float(), nullable=True),
-    sa.Column('sync_from_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('sync_to_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('last_uid_synced', sa.String(length=255), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['account_id'], ['mail_accounts.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_email_sync_log_account_started', 'email_sync_logs', ['account_id', 'started_at'], unique=False)
-    op.create_index('idx_email_sync_log_status', 'email_sync_logs', ['status'], unique=False)
-    op.create_index(op.f('ix_email_sync_logs_account_id'), 'email_sync_logs', ['account_id'], unique=False)
-    op.create_index(op.f('ix_email_sync_logs_id'), 'email_sync_logs', ['id'], unique=False)
-    op.create_table('email_threads',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('thread_id', sa.String(length=255), nullable=False),
+    sa.Column('message_id', sa.String(length=255), nullable=False),
+    sa.Column('thread_id', sa.Integer(), nullable=True),
+    sa.Column('provider_message_id', sa.String(length=255), nullable=True),
+    sa.Column('uid', sa.String(length=255), nullable=True),
     sa.Column('subject', sa.String(length=500), nullable=False),
-    sa.Column('original_subject', sa.String(length=500), nullable=False),
-    sa.Column('participants', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-    sa.Column('primary_participants', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-    sa.Column('message_count', sa.Integer(), nullable=False),
-    sa.Column('unread_count', sa.Integer(), nullable=False),
-    sa.Column('has_attachments', sa.Boolean(), nullable=False),
-    sa.Column('status', sa.Enum('unread', 'read', 'replied', 'forwarded', 'archived', 'deleted', 'spam', name='emailstatus'), nullable=False),
-    sa.Column('priority', sa.Enum('low', 'normal', 'high', 'urgent', name='emailpriority'), nullable=False),
+    sa.Column('from_address', sa.String(length=255), nullable=False),
+    sa.Column('from_name', sa.String(length=255), nullable=True),
+    sa.Column('reply_to', sa.String(length=255), nullable=True),
+    sa.Column('to_addresses', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('cc_addresses', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('bcc_addresses', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('body_text', sa.Text(), nullable=True),
+    sa.Column('body_html', sa.Text(), nullable=True),
+    sa.Column('body_html_raw', sa.Text(), nullable=True),
+    sa.Column('status', sa.Enum('UNREAD', 'READ', 'REPLIED', 'FORWARDED', 'ARCHIVED', 'DELETED', 'SPAM', name='email_message_status'), nullable=False),
+    sa.Column('priority', sa.Enum('LOW', 'NORMAL', 'HIGH', 'URGENT', name='email_priority'), nullable=False),
     sa.Column('is_flagged', sa.Boolean(), nullable=False),
     sa.Column('is_important', sa.Boolean(), nullable=False),
-    sa.Column('first_message_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('last_message_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('last_activity_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('has_attachments', sa.Boolean(), nullable=False),
+    sa.Column('sent_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('received_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
     sa.Column('account_id', sa.Integer(), nullable=False),
     sa.Column('customer_id', sa.Integer(), nullable=True),
     sa.Column('vendor_id', sa.Integer(), nullable=True),
-    sa.Column('labels', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('folder', sa.String(length=255), nullable=True),
+    sa.Column('labels', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('size_bytes', sa.Integer(), nullable=True),
+    sa.Column('headers_raw', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('is_processed', sa.Boolean(), nullable=False),
+    sa.Column('processing_error', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['account_id'], ['mail_accounts.id'], ),
     sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['thread_id'], ['email_threads.id'], ),
     sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('thread_id', 'account_id', name='uq_email_thread_id_account')
+    sa.UniqueConstraint('message_id', 'account_id', name='uq_email_message_id_account')
     )
-    op.create_index('idx_email_thread_last_activity', 'email_threads', ['last_activity_at'], unique=False)
-    op.create_index('idx_email_thread_org_account', 'email_threads', ['organization_id', 'account_id'], unique=False)
-    op.create_index('idx_email_thread_participants', 'email_threads', ['participants'], unique=False, postgresql_using='gin')
-    op.create_index('idx_email_thread_status', 'email_threads', ['status'], unique=False)
-    op.create_index(op.f('ix_email_threads_account_id'), 'email_threads', ['account_id'], unique=False)
-    op.create_index(op.f('ix_email_threads_customer_id'), 'email_threads', ['customer_id'], unique=False)
-    op.create_index(op.f('ix_email_threads_id'), 'email_threads', ['id'], unique=False)
-    op.create_index(op.f('ix_email_threads_organization_id'), 'email_threads', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_email_threads_subject'), 'email_threads', ['subject'], unique=False)
-    op.create_index(op.f('ix_email_threads_thread_id'), 'email_threads', ['thread_id'], unique=False)
-    op.create_index(op.f('ix_email_threads_vendor_id'), 'email_threads', ['vendor_id'], unique=False)
-    op.create_table('freight_cost_analysis',
+    op.create_index('idx_email_org_account', 'emails', ['organization_id', 'account_id'], unique=False)
+    op.create_index('idx_email_org_from_received', 'emails', ['organization_id', 'from_address', 'received_at'], unique=False)
+    op.create_index('idx_email_status_received', 'emails', ['status', 'received_at'], unique=False)
+    op.create_index('idx_email_subject_text', 'emails', ['subject'], unique=False)
+    op.create_index(op.f('ix_emails_account_id'), 'emails', ['account_id'], unique=False)
+    op.create_index(op.f('ix_emails_customer_id'), 'emails', ['customer_id'], unique=False)
+    op.create_index(op.f('ix_emails_folder'), 'emails', ['folder'], unique=False)
+    op.create_index(op.f('ix_emails_from_address'), 'emails', ['from_address'], unique=False)
+    op.create_index(op.f('ix_emails_id'), 'emails', ['id'], unique=False)
+    op.create_index(op.f('ix_emails_message_id'), 'emails', ['message_id'], unique=False)
+    op.create_index(op.f('ix_emails_organization_id'), 'emails', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_emails_provider_message_id'), 'emails', ['provider_message_id'], unique=False)
+    op.create_index(op.f('ix_emails_received_at'), 'emails', ['received_at'], unique=False)
+    op.create_index(op.f('ix_emails_sent_at'), 'emails', ['sent_at'], unique=False)
+    op.create_index(op.f('ix_emails_status'), 'emails', ['status'], unique=False)
+    op.create_index(op.f('ix_emails_subject'), 'emails', ['subject'], unique=False)
+    op.create_index(op.f('ix_emails_thread_id'), 'emails', ['thread_id'], unique=False)
+    op.create_index(op.f('ix_emails_uid'), 'emails', ['uid'], unique=False)
+    op.create_index(op.f('ix_emails_vendor_id'), 'emails', ['vendor_id'], unique=False)
+    op.create_table('exhibition_prospects',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('analysis_name', sa.String(), nullable=False),
-    sa.Column('period_start', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('period_end', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('carrier_id', sa.Integer(), nullable=True),
-    sa.Column('route_id', sa.Integer(), nullable=True),
-    sa.Column('total_freight_cost', sa.Float(), nullable=True),
-    sa.Column('base_freight_cost', sa.Float(), nullable=True),
-    sa.Column('fuel_surcharges', sa.Float(), nullable=True),
-    sa.Column('handling_charges', sa.Float(), nullable=True),
-    sa.Column('insurance_costs', sa.Float(), nullable=True),
-    sa.Column('other_charges', sa.Float(), nullable=True),
-    sa.Column('total_shipments', sa.Integer(), nullable=True),
-    sa.Column('total_weight_kg', sa.Float(), nullable=True),
-    sa.Column('total_volume_cbm', sa.Float(), nullable=True),
-    sa.Column('average_cost_per_kg', sa.Float(), nullable=True),
-    sa.Column('average_cost_per_cbm', sa.Float(), nullable=True),
-    sa.Column('average_cost_per_shipment', sa.Float(), nullable=True),
-    sa.Column('on_time_delivery_percentage', sa.Float(), nullable=True),
-    sa.Column('damage_incidents', sa.Integer(), nullable=True),
-    sa.Column('previous_period_cost', sa.Float(), nullable=True),
-    sa.Column('cost_variance', sa.Float(), nullable=True),
-    sa.Column('cost_variance_percentage', sa.Float(), nullable=True),
-    sa.Column('cost_optimization_opportunities', sa.Text(), nullable=True),
-    sa.Column('recommended_actions', sa.Text(), nullable=True),
+    sa.Column('exhibition_event_id', sa.Integer(), nullable=False),
+    sa.Column('card_scan_id', sa.Integer(), nullable=True),
+    sa.Column('full_name', sa.String(), nullable=False),
+    sa.Column('company_name', sa.String(), nullable=False),
+    sa.Column('designation', sa.String(), nullable=True),
+    sa.Column('email', sa.String(), nullable=True),
+    sa.Column('phone', sa.String(), nullable=True),
+    sa.Column('mobile', sa.String(), nullable=True),
+    sa.Column('website', sa.String(), nullable=True),
+    sa.Column('address', sa.Text(), nullable=True),
+    sa.Column('lead_score', sa.Float(), nullable=True),
+    sa.Column('qualification_status', sa.String(), nullable=False),
+    sa.Column('interest_level', sa.String(), nullable=True),
     sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('crm_customer_id', sa.Integer(), nullable=True),
+    sa.Column('assigned_to_id', sa.Integer(), nullable=True),
+    sa.Column('follow_up_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('intro_email_sent_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_contact_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('contact_attempts', sa.Integer(), nullable=False),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('conversion_status', sa.String(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['carrier_id'], ['carriers.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['assigned_to_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['card_scan_id'], ['business_card_scans.id'], ),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['crm_customer_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['exhibition_event_id'], ['exhibition_events.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['route_id'], ['routes.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index('idx_freight_analysis_org_carrier', 'freight_cost_analysis', ['organization_id', 'carrier_id'], unique=False)
-    op.create_index('idx_freight_analysis_org_period', 'freight_cost_analysis', ['organization_id', 'period_start'], unique=False)
-    op.create_index('idx_freight_analysis_org_route', 'freight_cost_analysis', ['organization_id', 'route_id'], unique=False)
-    op.create_index(op.f('ix_freight_cost_analysis_id'), 'freight_cost_analysis', ['id'], unique=False)
-    op.create_index(op.f('ix_freight_cost_analysis_organization_id'), 'freight_cost_analysis', ['organization_id'], unique=False)
-    op.create_table('freight_rates',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('rate_code', sa.String(), nullable=False),
-    sa.Column('carrier_id', sa.Integer(), nullable=False),
-    sa.Column('route_id', sa.Integer(), nullable=True),
-    sa.Column('effective_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('expiry_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('freight_mode', sa.Enum('LTL', 'FTL', 'EXPRESS', 'STANDARD', 'ECONOMY', name='freightmode'), nullable=False),
-    sa.Column('service_type', sa.String(), nullable=True),
-    sa.Column('rate_basis', sa.String(), nullable=False),
-    sa.Column('minimum_charge', sa.Float(), nullable=True),
-    sa.Column('rate_per_kg', sa.Float(), nullable=True),
-    sa.Column('minimum_weight_kg', sa.Float(), nullable=True),
-    sa.Column('maximum_weight_kg', sa.Float(), nullable=True),
-    sa.Column('rate_per_cbm', sa.Float(), nullable=True),
-    sa.Column('minimum_volume_cbm', sa.Float(), nullable=True),
-    sa.Column('maximum_volume_cbm', sa.Float(), nullable=True),
-    sa.Column('rate_per_km', sa.Float(), nullable=True),
-    sa.Column('fixed_rate', sa.Float(), nullable=True),
-    sa.Column('fuel_surcharge_percentage', sa.Float(), nullable=True),
-    sa.Column('handling_charge', sa.Float(), nullable=True),
-    sa.Column('documentation_charge', sa.Float(), nullable=True),
-    sa.Column('insurance_percentage', sa.Float(), nullable=True),
-    sa.Column('cod_charge_percentage', sa.Float(), nullable=True),
-    sa.Column('dangerous_goods_surcharge', sa.Float(), nullable=True),
-    sa.Column('oversized_surcharge', sa.Float(), nullable=True),
-    sa.Column('standard_transit_days', sa.Integer(), nullable=True),
-    sa.Column('express_transit_days', sa.Integer(), nullable=True),
-    sa.Column('currency', sa.String(), nullable=True),
-    sa.Column('tax_applicable', sa.Boolean(), nullable=True),
-    sa.Column('tax_percentage', sa.Float(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('is_negotiated', sa.Boolean(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('terms_conditions', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['carrier_id'], ['carriers.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['route_id'], ['routes.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'rate_code', name='uq_freight_rate_org_code')
-    )
-    op.create_index('idx_freight_rate_org_active', 'freight_rates', ['organization_id', 'is_active'], unique=False)
-    op.create_index('idx_freight_rate_org_carrier', 'freight_rates', ['organization_id', 'carrier_id'], unique=False)
-    op.create_index('idx_freight_rate_org_effective', 'freight_rates', ['organization_id', 'effective_date'], unique=False)
-    op.create_index('idx_freight_rate_org_route', 'freight_rates', ['organization_id', 'route_id'], unique=False)
-    op.create_index(op.f('ix_freight_rates_id'), 'freight_rates', ['id'], unique=False)
-    op.create_index(op.f('ix_freight_rates_organization_id'), 'freight_rates', ['organization_id'], unique=False)
+    op.create_index('idx_exhibition_prospect_assigned', 'exhibition_prospects', ['assigned_to_id'], unique=False)
+    op.create_index('idx_exhibition_prospect_company', 'exhibition_prospects', ['company_name'], unique=False)
+    op.create_index('idx_exhibition_prospect_event', 'exhibition_prospects', ['exhibition_event_id'], unique=False)
+    op.create_index('idx_exhibition_prospect_status', 'exhibition_prospects', ['status'], unique=False)
+    op.create_index(op.f('ix_exhibition_prospects_id'), 'exhibition_prospects', ['id'], unique=False)
+    op.create_index(op.f('ix_exhibition_prospects_organization_id'), 'exhibition_prospects', ['organization_id'], unique=False)
     op.create_table('goods_receipt_notes',
     sa.Column('purchase_order_id', sa.Integer(), nullable=False),
     sa.Column('vendor_id', sa.Integer(), nullable=False),
@@ -6132,125 +8065,51 @@ def upgrade() -> None:
     op.create_index(op.f('ix_goods_receipt_notes_id'), 'goods_receipt_notes', ['id'], unique=False)
     op.create_index(op.f('ix_goods_receipt_notes_organization_id'), 'goods_receipt_notes', ['organization_id'], unique=False)
     op.create_index(op.f('ix_goods_receipt_notes_voucher_number'), 'goods_receipt_notes', ['voucher_number'], unique=False)
-    op.create_table('integration_sync_records',
+    op.create_table('job_card_vouchers',
+    sa.Column('job_type', sa.String(), nullable=False),
+    sa.Column('vendor_id', sa.Integer(), nullable=False),
+    sa.Column('manufacturing_order_id', sa.Integer(), nullable=True),
+    sa.Column('job_description', sa.Text(), nullable=False),
+    sa.Column('job_category', sa.String(), nullable=True),
+    sa.Column('expected_completion_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('actual_completion_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('materials_supplied_by', sa.String(), nullable=True),
+    sa.Column('delivery_address', sa.Text(), nullable=True),
+    sa.Column('transport_mode', sa.String(), nullable=True),
+    sa.Column('job_status', sa.String(), nullable=True),
+    sa.Column('quality_specifications', sa.Text(), nullable=True),
+    sa.Column('quality_check_required', sa.Boolean(), nullable=True),
+    sa.Column('approved_by', sa.Integer(), nullable=True),
+    sa.Column('approval_date', sa.DateTime(timezone=True), nullable=True),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('sync_job_id', sa.Integer(), nullable=False),
-    sa.Column('entity_type', sa.String(length=100), nullable=False),
-    sa.Column('local_id', sa.String(length=100), nullable=True),
-    sa.Column('external_id', sa.String(length=100), nullable=True),
-    sa.Column('operation', sa.String(length=50), nullable=False),
-    sa.Column('sync_direction', sa.Enum('INBOUND', 'OUTBOUND', 'BIDIRECTIONAL', name='syncdirection'), nullable=False),
-    sa.Column('status', sa.Enum('SUCCESS', 'FAILED', 'PARTIAL', 'IN_PROGRESS', name='syncstatus'), nullable=False),
-    sa.Column('source_data', sa.JSON(), nullable=True),
-    sa.Column('target_data', sa.JSON(), nullable=True),
-    sa.Column('error_message', sa.Text(), nullable=True),
-    sa.Column('validation_errors', sa.JSON(), nullable=True),
-    sa.Column('processed_at', sa.DateTime(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['approved_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['manufacturing_order_id'], ['manufacturing_orders.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['sync_job_id'], ['integration_sync_jobs.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_jcv_org_voucher_number')
     )
-    op.create_index('idx_sync_record_org_entity', 'integration_sync_records', ['organization_id', 'entity_type'], unique=False)
-    op.create_index('idx_sync_record_org_external', 'integration_sync_records', ['organization_id', 'external_id'], unique=False)
-    op.create_index('idx_sync_record_org_job', 'integration_sync_records', ['organization_id', 'sync_job_id'], unique=False)
-    op.create_index('idx_sync_record_org_local', 'integration_sync_records', ['organization_id', 'local_id'], unique=False)
-    op.create_index('idx_sync_record_org_status', 'integration_sync_records', ['organization_id', 'status'], unique=False)
-    op.create_index(op.f('ix_integration_sync_records_entity_type'), 'integration_sync_records', ['entity_type'], unique=False)
-    op.create_index(op.f('ix_integration_sync_records_external_id'), 'integration_sync_records', ['external_id'], unique=False)
-    op.create_index(op.f('ix_integration_sync_records_id'), 'integration_sync_records', ['id'], unique=False)
-    op.create_index(op.f('ix_integration_sync_records_local_id'), 'integration_sync_records', ['local_id'], unique=False)
-    op.create_index(op.f('ix_integration_sync_records_organization_id'), 'integration_sync_records', ['organization_id'], unique=False)
-    op.create_table('interviews',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('job_application_id', sa.Integer(), nullable=False),
-    sa.Column('interview_type', sa.String(), nullable=False),
-    sa.Column('interview_round', sa.Integer(), nullable=False),
-    sa.Column('interview_title', sa.String(), nullable=False),
-    sa.Column('scheduled_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('duration_minutes', sa.Integer(), nullable=False),
-    sa.Column('interview_mode', sa.String(), nullable=False),
-    sa.Column('location', sa.String(), nullable=True),
-    sa.Column('meeting_link', sa.String(), nullable=True),
-    sa.Column('primary_interviewer_id', sa.Integer(), nullable=False),
-    sa.Column('secondary_interviewers', sa.JSON(), nullable=True),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('overall_rating', sa.Integer(), nullable=True),
-    sa.Column('recommendation', sa.String(), nullable=True),
-    sa.Column('technical_score', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('communication_score', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('cultural_fit_score', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('problem_solving_score', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('interviewer_feedback', sa.Text(), nullable=True),
-    sa.Column('candidate_feedback', sa.Text(), nullable=True),
-    sa.Column('strengths', sa.Text(), nullable=True),
-    sa.Column('weaknesses', sa.Text(), nullable=True),
-    sa.Column('cancellation_reason', sa.String(), nullable=True),
-    sa.Column('rescheduled_from', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('custom_scores', sa.JSON(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_interview_created_by_id'),
-    sa.ForeignKeyConstraint(['job_application_id'], ['job_applications.id'], name='fk_interview_job_application_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_interview_organization_id'),
-    sa.ForeignKeyConstraint(['primary_interviewer_id'], ['users.id'], name='fk_interview_primary_interviewer_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_interview_interviewer', 'interviews', ['primary_interviewer_id'], unique=False)
-    op.create_index('idx_interview_org_date', 'interviews', ['organization_id', 'scheduled_date'], unique=False)
-    op.create_index('idx_interview_status', 'interviews', ['status'], unique=False)
-    op.create_index(op.f('ix_interviews_id'), 'interviews', ['id'], unique=False)
-    op.create_index(op.f('ix_interviews_job_application_id'), 'interviews', ['job_application_id'], unique=False)
-    op.create_index(op.f('ix_interviews_organization_id'), 'interviews', ['organization_id'], unique=False)
-    op.create_table('job_offers',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('job_application_id', sa.Integer(), nullable=False),
-    sa.Column('offer_title', sa.String(), nullable=False),
-    sa.Column('offer_date', sa.Date(), nullable=False),
-    sa.Column('valid_until', sa.Date(), nullable=False),
-    sa.Column('base_salary', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('variable_pay', sa.Numeric(precision=15, scale=2), nullable=True),
-    sa.Column('bonus', sa.Numeric(precision=15, scale=2), nullable=True),
-    sa.Column('total_compensation', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('salary_currency', sa.String(), nullable=False),
-    sa.Column('benefits_package', sa.JSON(), nullable=True),
-    sa.Column('joining_bonus', sa.Numeric(precision=15, scale=2), nullable=True),
-    sa.Column('relocation_allowance', sa.Numeric(precision=15, scale=2), nullable=True),
-    sa.Column('employment_type', sa.String(), nullable=False),
-    sa.Column('probation_period', sa.Integer(), nullable=True),
-    sa.Column('notice_period', sa.Integer(), nullable=True),
-    sa.Column('start_date', sa.Date(), nullable=True),
-    sa.Column('work_location', sa.String(), nullable=False),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('sent_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('response_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('is_negotiable', sa.Boolean(), nullable=False),
-    sa.Column('negotiation_rounds', sa.Integer(), nullable=False),
-    sa.Column('negotiation_notes', sa.Text(), nullable=True),
-    sa.Column('approved_by_id', sa.Integer(), nullable=True),
-    sa.Column('approved_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('offer_letter_path', sa.String(), nullable=True),
-    sa.Column('contract_path', sa.String(), nullable=True),
-    sa.Column('special_conditions', sa.Text(), nullable=True),
-    sa.Column('rejection_reason', sa.String(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['approved_by_id'], ['users.id'], name='fk_job_offer_approved_by_id'),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_job_offer_created_by_id'),
-    sa.ForeignKeyConstraint(['job_application_id'], ['job_applications.id'], name='fk_job_offer_job_application_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_job_offer_organization_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_job_offer_application', 'job_offers', ['job_application_id'], unique=False)
-    op.create_index('idx_job_offer_dates', 'job_offers', ['offer_date', 'valid_until'], unique=False)
-    op.create_index('idx_job_offer_org_status', 'job_offers', ['organization_id', 'status'], unique=False)
-    op.create_index(op.f('ix_job_offers_id'), 'job_offers', ['id'], unique=False)
-    op.create_index(op.f('ix_job_offers_job_application_id'), 'job_offers', ['job_application_id'], unique=False)
-    op.create_index(op.f('ix_job_offers_organization_id'), 'job_offers', ['organization_id'], unique=False)
+    op.create_index('idx_jcv_org_date', 'job_card_vouchers', ['organization_id', 'date'], unique=False)
+    op.create_index('idx_jcv_org_mo', 'job_card_vouchers', ['organization_id', 'manufacturing_order_id'], unique=False)
+    op.create_index('idx_jcv_org_status', 'job_card_vouchers', ['organization_id', 'job_status'], unique=False)
+    op.create_index('idx_jcv_org_vendor', 'job_card_vouchers', ['organization_id', 'vendor_id'], unique=False)
+    op.create_index(op.f('ix_job_card_vouchers_id'), 'job_card_vouchers', ['id'], unique=False)
+    op.create_index(op.f('ix_job_card_vouchers_organization_id'), 'job_card_vouchers', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_job_card_vouchers_voucher_number'), 'job_card_vouchers', ['voucher_number'], unique=False)
     op.create_table('lead_activities',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -6311,1095 +8170,6 @@ def upgrade() -> None:
     op.create_index('idx_maint_sched_org_type', 'maintenance_schedules', ['organization_id', 'maintenance_type'], unique=False)
     op.create_index(op.f('ix_maintenance_schedules_id'), 'maintenance_schedules', ['id'], unique=False)
     op.create_index(op.f('ix_maintenance_schedules_organization_id'), 'maintenance_schedules', ['organization_id'], unique=False)
-    op.create_table('manufacturing_orders',
-    sa.Column('bom_id', sa.Integer(), nullable=False),
-    sa.Column('planned_quantity', sa.Float(), nullable=False),
-    sa.Column('produced_quantity', sa.Float(), nullable=True),
-    sa.Column('scrap_quantity', sa.Float(), nullable=True),
-    sa.Column('planned_start_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('planned_end_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('actual_start_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('actual_end_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('production_status', sa.String(), nullable=True),
-    sa.Column('priority', sa.String(), nullable=True),
-    sa.Column('production_department', sa.String(), nullable=True),
-    sa.Column('production_location', sa.String(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['bom_id'], ['bill_of_materials.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_mo_org_voucher_number')
-    )
-    op.create_index('idx_mo_org_bom', 'manufacturing_orders', ['organization_id', 'bom_id'], unique=False)
-    op.create_index('idx_mo_org_date', 'manufacturing_orders', ['organization_id', 'date'], unique=False)
-    op.create_index('idx_mo_org_status', 'manufacturing_orders', ['organization_id', 'production_status'], unique=False)
-    op.create_index(op.f('ix_manufacturing_orders_id'), 'manufacturing_orders', ['id'], unique=False)
-    op.create_index(op.f('ix_manufacturing_orders_organization_id'), 'manufacturing_orders', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_manufacturing_orders_voucher_number'), 'manufacturing_orders', ['voucher_number'], unique=False)
-    op.create_table('opportunities',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('opportunity_number', sa.String(), nullable=False),
-    sa.Column('name', sa.String(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('stage', sa.Enum('PROSPECTING', 'QUALIFICATION', 'PROPOSAL', 'NEGOTIATION', 'CLOSED_WON', 'CLOSED_LOST', name='opportunitystage'), nullable=False),
-    sa.Column('probability', sa.Float(), nullable=False),
-    sa.Column('amount', sa.Float(), nullable=False),
-    sa.Column('expected_revenue', sa.Float(), nullable=False),
-    sa.Column('expected_close_date', sa.Date(), nullable=False),
-    sa.Column('actual_close_date', sa.Date(), nullable=True),
-    sa.Column('customer_id', sa.Integer(), nullable=True),
-    sa.Column('lead_id', sa.Integer(), nullable=True),
-    sa.Column('assigned_to_id', sa.Integer(), nullable=True),
-    sa.Column('created_by_id', sa.Integer(), nullable=True),
-    sa.Column('competitors', sa.Text(), nullable=True),
-    sa.Column('win_reason', sa.Text(), nullable=True),
-    sa.Column('loss_reason', sa.Text(), nullable=True),
-    sa.Column('source', sa.Enum('WEBSITE', 'REFERRAL', 'EMAIL_CAMPAIGN', 'SOCIAL_MEDIA', 'COLD_CALL', 'TRADE_SHOW', 'PARTNER', 'ADVERTISEMENT', 'OTHER', name='leadsource'), nullable=False),
-    sa.Column('custom_fields', sa.JSON(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['assigned_to_id'], ['users.id'], name='fk_opportunity_assigned_to_id'),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_opportunity_created_by_id'),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_opportunity_customer_id'),
-    sa.ForeignKeyConstraint(['lead_id'], ['leads.id'], name='fk_opportunity_lead_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_opportunity_organization_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'opportunity_number', name='uq_opportunity_org_number')
-    )
-    op.create_index('idx_opportunity_amount', 'opportunities', ['amount'], unique=False)
-    op.create_index('idx_opportunity_close_date', 'opportunities', ['expected_close_date'], unique=False)
-    op.create_index('idx_opportunity_org_assigned', 'opportunities', ['organization_id', 'assigned_to_id'], unique=False)
-    op.create_index('idx_opportunity_org_stage', 'opportunities', ['organization_id', 'stage'], unique=False)
-    op.create_index('idx_opportunity_probability', 'opportunities', ['probability'], unique=False)
-    op.create_index(op.f('ix_opportunities_id'), 'opportunities', ['id'], unique=False)
-    op.create_index(op.f('ix_opportunities_name'), 'opportunities', ['name'], unique=False)
-    op.create_index(op.f('ix_opportunities_opportunity_number'), 'opportunities', ['opportunity_number'], unique=True)
-    op.create_index(op.f('ix_opportunities_organization_id'), 'opportunities', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_opportunities_source'), 'opportunities', ['source'], unique=False)
-    op.create_index(op.f('ix_opportunities_stage'), 'opportunities', ['stage'], unique=False)
-    op.create_table('payment_records',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('payment_number', sa.String(length=50), nullable=False),
-    sa.Column('payment_date', sa.Date(), nullable=False),
-    sa.Column('payment_amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('payment_method', sa.String(length=50), nullable=False),
-    sa.Column('reference_type', sa.String(length=20), nullable=False),
-    sa.Column('reference_id', sa.Integer(), nullable=False),
-    sa.Column('bank_account_id', sa.Integer(), nullable=True),
-    sa.Column('status', sa.String(length=20), nullable=False),
-    sa.Column('transaction_fee', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['bank_account_id'], ['bank_accounts.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'payment_number', name='uq_org_payment_number')
-    )
-    op.create_index('idx_pr_org_date', 'payment_records', ['organization_id', 'payment_date'], unique=False)
-    op.create_index('idx_pr_reference', 'payment_records', ['reference_type', 'reference_id'], unique=False)
-    op.create_index(op.f('ix_payment_records_id'), 'payment_records', ['id'], unique=False)
-    op.create_index(op.f('ix_payment_records_organization_id'), 'payment_records', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_payment_records_payment_date'), 'payment_records', ['payment_date'], unique=False)
-    op.create_index(op.f('ix_payment_records_payment_number'), 'payment_records', ['payment_number'], unique=False)
-    op.create_index(op.f('ix_payment_records_reference_id'), 'payment_records', ['reference_id'], unique=False)
-    op.create_table('payroll_lines',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('payroll_run_id', sa.Integer(), nullable=False),
-    sa.Column('employee_id', sa.Integer(), nullable=False),
-    sa.Column('component_id', sa.Integer(), nullable=False),
-    sa.Column('chart_account_id', sa.Integer(), nullable=False),
-    sa.Column('line_type', sa.String(length=50), nullable=False),
-    sa.Column('amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('posting_type', sa.String(length=20), nullable=False),
-    sa.Column('description', sa.String(length=500), nullable=False),
-    sa.Column('gl_entry_id', sa.Integer(), nullable=True),
-    sa.Column('journal_voucher_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['chart_account_id'], ['chart_of_accounts.id'], ),
-    sa.ForeignKeyConstraint(['component_id'], ['payroll_components.id'], ),
-    sa.ForeignKeyConstraint(['employee_id'], ['employee_profiles.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['payroll_run_id'], ['payroll_runs.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_payroll_line_account', 'payroll_lines', ['chart_account_id'], unique=False)
-    op.create_index('idx_payroll_line_component', 'payroll_lines', ['component_id'], unique=False)
-    op.create_index('idx_payroll_line_employee', 'payroll_lines', ['employee_id'], unique=False)
-    op.create_index('idx_payroll_line_gl_entry', 'payroll_lines', ['gl_entry_id'], unique=False)
-    op.create_index('idx_payroll_line_org_run', 'payroll_lines', ['organization_id', 'payroll_run_id'], unique=False)
-    op.create_index(op.f('ix_payroll_lines_chart_account_id'), 'payroll_lines', ['chart_account_id'], unique=False)
-    op.create_index(op.f('ix_payroll_lines_component_id'), 'payroll_lines', ['component_id'], unique=False)
-    op.create_index(op.f('ix_payroll_lines_employee_id'), 'payroll_lines', ['employee_id'], unique=False)
-    op.create_index(op.f('ix_payroll_lines_id'), 'payroll_lines', ['id'], unique=False)
-    op.create_index(op.f('ix_payroll_lines_organization_id'), 'payroll_lines', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_payroll_lines_payroll_run_id'), 'payroll_lines', ['payroll_run_id'], unique=False)
-    op.create_table('payslips',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('employee_id', sa.Integer(), nullable=False),
-    sa.Column('payroll_period_id', sa.Integer(), nullable=False),
-    sa.Column('salary_structure_id', sa.Integer(), nullable=False),
-    sa.Column('payslip_number', sa.String(), nullable=False),
-    sa.Column('pay_date', sa.Date(), nullable=False),
-    sa.Column('working_days', sa.Integer(), nullable=False),
-    sa.Column('present_days', sa.Integer(), nullable=False),
-    sa.Column('absent_days', sa.Integer(), nullable=False),
-    sa.Column('leave_days', sa.Integer(), nullable=False),
-    sa.Column('overtime_hours', sa.Numeric(precision=5, scale=2), nullable=False),
-    sa.Column('basic_salary', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('hra', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('transport_allowance', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('medical_allowance', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('special_allowance', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('overtime_amount', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('other_allowances', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('provident_fund', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('professional_tax', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('income_tax', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('loan_deduction', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('other_deductions', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('gross_pay', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('total_deductions', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('net_pay', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('variable_earnings', sa.JSON(), nullable=True),
-    sa.Column('variable_deductions', sa.JSON(), nullable=True),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('generated_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('sent_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('acknowledged_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('pdf_path', sa.String(), nullable=True),
-    sa.Column('email_sent', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['employee_id'], ['employee_profiles.id'], name='fk_payslip_employee_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_payslip_organization_id'),
-    sa.ForeignKeyConstraint(['payroll_period_id'], ['payroll_periods.id'], name='fk_payslip_payroll_period_id'),
-    sa.ForeignKeyConstraint(['salary_structure_id'], ['salary_structures.id'], name='fk_payslip_salary_structure_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'employee_id', 'payroll_period_id', name='uq_payslip_org_emp_period')
-    )
-    op.create_index('idx_payslip_org_employee', 'payslips', ['organization_id', 'employee_id'], unique=False)
-    op.create_index('idx_payslip_period', 'payslips', ['payroll_period_id'], unique=False)
-    op.create_index('idx_payslip_status', 'payslips', ['status'], unique=False)
-    op.create_index(op.f('ix_payslips_employee_id'), 'payslips', ['employee_id'], unique=False)
-    op.create_index(op.f('ix_payslips_id'), 'payslips', ['id'], unique=False)
-    op.create_index(op.f('ix_payslips_organization_id'), 'payslips', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_payslips_payroll_period_id'), 'payslips', ['payroll_period_id'], unique=False)
-    op.create_index(op.f('ix_payslips_payslip_number'), 'payslips', ['payslip_number'], unique=True)
-    op.create_index(op.f('ix_payslips_salary_structure_id'), 'payslips', ['salary_structure_id'], unique=False)
-    op.create_table('product_batches',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('product_tracking_id', sa.Integer(), nullable=False),
-    sa.Column('batch_number', sa.String(length=100), nullable=False),
-    sa.Column('batch_name', sa.String(length=200), nullable=True),
-    sa.Column('manufacturing_date', sa.Date(), nullable=True),
-    sa.Column('expiry_date', sa.Date(), nullable=True),
-    sa.Column('supplier_batch_number', sa.String(length=100), nullable=True),
-    sa.Column('supplier_id', sa.Integer(), nullable=True),
-    sa.Column('quality_grade', sa.String(length=50), nullable=True),
-    sa.Column('quality_notes', sa.Text(), nullable=True),
-    sa.Column('batch_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
-    sa.Column('available_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('is_expired', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['product_tracking_id'], ['product_tracking.id'], ),
-    sa.ForeignKeyConstraint(['supplier_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'batch_number', name='uq_org_batch_number')
-    )
-    op.create_index('idx_batch_active', 'product_batches', ['is_active'], unique=False)
-    op.create_index('idx_batch_expiry', 'product_batches', ['expiry_date'], unique=False)
-    op.create_index(op.f('ix_product_batches_batch_number'), 'product_batches', ['batch_number'], unique=False)
-    op.create_index(op.f('ix_product_batches_expiry_date'), 'product_batches', ['expiry_date'], unique=False)
-    op.create_index(op.f('ix_product_batches_id'), 'product_batches', ['id'], unique=False)
-    op.create_index(op.f('ix_product_batches_organization_id'), 'product_batches', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_product_batches_product_tracking_id'), 'product_batches', ['product_tracking_id'], unique=False)
-    op.create_table('proforma_invoice_items',
-    sa.Column('proforma_invoice_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('discount_percentage', sa.Float(), nullable=True),
-    sa.Column('gst_rate', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=False),
-    sa.Column('taxable_amount', sa.Float(), nullable=True),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['proforma_invoice_id'], ['proforma_invoices.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_proforma_invoice_items_id'), 'proforma_invoice_items', ['id'], unique=False)
-    op.create_table('project_documents',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('project_id', sa.Integer(), nullable=False),
-    sa.Column('document_name', sa.String(length=255), nullable=False),
-    sa.Column('document_type', sa.String(length=100), nullable=True),
-    sa.Column('file_path', sa.String(length=500), nullable=True),
-    sa.Column('file_size', sa.Integer(), nullable=True),
-    sa.Column('mime_type', sa.String(length=100), nullable=True),
-    sa.Column('version', sa.String(length=20), nullable=True),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('tags', sa.JSON(), nullable=True),
-    sa.Column('is_public', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.Column('uploaded_by', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
-    sa.ForeignKeyConstraint(['uploaded_by'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_document_org_project', 'project_documents', ['organization_id', 'project_id'], unique=False)
-    op.create_index('idx_document_org_public', 'project_documents', ['organization_id', 'is_public'], unique=False)
-    op.create_index('idx_document_org_type', 'project_documents', ['organization_id', 'document_type'], unique=False)
-    op.create_index(op.f('ix_project_documents_id'), 'project_documents', ['id'], unique=False)
-    op.create_index(op.f('ix_project_documents_organization_id'), 'project_documents', ['organization_id'], unique=False)
-    op.create_table('project_milestones',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('project_id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('status', sa.Enum('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'DELAYED', name='milestonestatus'), nullable=False),
-    sa.Column('target_date', sa.Date(), nullable=False),
-    sa.Column('completion_date', sa.Date(), nullable=True),
-    sa.Column('progress_percentage', sa.Float(), nullable=False),
-    sa.Column('dependencies', sa.JSON(), nullable=True),
-    sa.Column('assigned_to', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.Column('created_by', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_milestone_org_project', 'project_milestones', ['organization_id', 'project_id'], unique=False)
-    op.create_index('idx_milestone_org_status', 'project_milestones', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_milestone_org_target_date', 'project_milestones', ['organization_id', 'target_date'], unique=False)
-    op.create_index(op.f('ix_project_milestones_id'), 'project_milestones', ['id'], unique=False)
-    op.create_index(op.f('ix_project_milestones_organization_id'), 'project_milestones', ['organization_id'], unique=False)
-    op.create_table('project_resources',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('project_id', sa.Integer(), nullable=False),
-    sa.Column('resource_type', sa.Enum('HUMAN', 'EQUIPMENT', 'MATERIAL', 'BUDGET', name='resourcetype'), nullable=False),
-    sa.Column('resource_name', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('allocated_quantity', sa.Float(), nullable=False),
-    sa.Column('used_quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(length=50), nullable=True),
-    sa.Column('unit_cost', sa.Float(), nullable=True),
-    sa.Column('total_cost', sa.Float(), nullable=True),
-    sa.Column('allocation_start', sa.Date(), nullable=True),
-    sa.Column('allocation_end', sa.Date(), nullable=True),
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.Column('created_by', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_resource_org_project', 'project_resources', ['organization_id', 'project_id'], unique=False)
-    op.create_index('idx_resource_org_type', 'project_resources', ['organization_id', 'resource_type'], unique=False)
-    op.create_index('idx_resource_org_user', 'project_resources', ['organization_id', 'user_id'], unique=False)
-    op.create_index(op.f('ix_project_resources_id'), 'project_resources', ['id'], unique=False)
-    op.create_index(op.f('ix_project_resources_organization_id'), 'project_resources', ['organization_id'], unique=False)
-    op.create_table('promotion_redemptions',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('promotion_id', sa.Integer(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=True),
-    sa.Column('voucher_type', sa.String(), nullable=True),
-    sa.Column('voucher_id', sa.Integer(), nullable=True),
-    sa.Column('voucher_number', sa.String(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=False),
-    sa.Column('order_amount', sa.Float(), nullable=False),
-    sa.Column('final_amount', sa.Float(), nullable=False),
-    sa.Column('redeemed_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_promotion_redemption_customer_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_promotion_redemption_organization_id'),
-    sa.ForeignKeyConstraint(['promotion_id'], ['promotions.id'], name='fk_promotion_redemption_promotion_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_promotion_redemption_customer', 'promotion_redemptions', ['customer_id'], unique=False)
-    op.create_index('idx_promotion_redemption_date', 'promotion_redemptions', ['redeemed_at'], unique=False)
-    op.create_index('idx_promotion_redemption_org_promotion', 'promotion_redemptions', ['organization_id', 'promotion_id'], unique=False)
-    op.create_index(op.f('ix_promotion_redemptions_id'), 'promotion_redemptions', ['id'], unique=False)
-    op.create_index(op.f('ix_promotion_redemptions_organization_id'), 'promotion_redemptions', ['organization_id'], unique=False)
-    op.create_table('purchase_order_items',
-    sa.Column('purchase_order_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('delivered_quantity', sa.Float(), nullable=True),
-    sa.Column('pending_quantity', sa.Float(), nullable=False),
-    sa.Column('discount_percentage', sa.Float(), nullable=True),
-    sa.Column('gst_rate', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=False),
-    sa.Column('taxable_amount', sa.Float(), nullable=True),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('discounted_price', sa.Float(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['purchase_order_id'], ['purchase_orders.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_purchase_order_items_id'), 'purchase_order_items', ['id'], unique=False)
-    op.create_table('purchase_requisitions',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('requisition_number', sa.String(length=50), nullable=False),
-    sa.Column('requisition_date', sa.Date(), nullable=False),
-    sa.Column('required_date', sa.Date(), nullable=False),
-    sa.Column('department', sa.String(length=100), nullable=True),
-    sa.Column('cost_center', sa.String(length=100), nullable=True),
-    sa.Column('project_code', sa.String(length=100), nullable=True),
-    sa.Column('purpose', sa.Text(), nullable=False),
-    sa.Column('justification', sa.Text(), nullable=True),
-    sa.Column('estimated_budget', sa.Numeric(precision=15, scale=2), nullable=True),
-    sa.Column('approval_status', sa.String(length=20), nullable=False),
-    sa.Column('approved_by', sa.Integer(), nullable=True),
-    sa.Column('approved_date', sa.Date(), nullable=True),
-    sa.Column('rejection_reason', sa.Text(), nullable=True),
-    sa.Column('purchase_order_id', sa.Integer(), nullable=True),
-    sa.Column('requested_by', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['approved_by'], ['platform_users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['purchase_order_id'], ['purchase_orders.id'], ),
-    sa.ForeignKeyConstraint(['requested_by'], ['platform_users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_pr_org_status', 'purchase_requisitions', ['organization_id', 'approval_status'], unique=False)
-    op.create_index('idx_pr_required_date', 'purchase_requisitions', ['required_date'], unique=False)
-    op.create_index(op.f('ix_purchase_requisitions_approval_status'), 'purchase_requisitions', ['approval_status'], unique=False)
-    op.create_index(op.f('ix_purchase_requisitions_id'), 'purchase_requisitions', ['id'], unique=False)
-    op.create_index(op.f('ix_purchase_requisitions_organization_id'), 'purchase_requisitions', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_purchase_requisitions_purchase_order_id'), 'purchase_requisitions', ['purchase_order_id'], unique=False)
-    op.create_index(op.f('ix_purchase_requisitions_required_date'), 'purchase_requisitions', ['required_date'], unique=False)
-    op.create_index(op.f('ix_purchase_requisitions_requisition_date'), 'purchase_requisitions', ['requisition_date'], unique=False)
-    op.create_index(op.f('ix_purchase_requisitions_requisition_number'), 'purchase_requisitions', ['requisition_number'], unique=True)
-    op.create_table('quotation_items',
-    sa.Column('quotation_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('discount_percentage', sa.Float(), nullable=True),
-    sa.Column('gst_rate', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=False),
-    sa.Column('taxable_amount', sa.Float(), nullable=True),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['quotation_id'], ['quotations.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_quotation_items_id'), 'quotation_items', ['id'], unique=False)
-    op.create_table('sales_order_items',
-    sa.Column('sales_order_id', sa.Integer(), nullable=False),
-    sa.Column('delivered_quantity', sa.Float(), nullable=True),
-    sa.Column('pending_quantity', sa.Float(), nullable=False),
-    sa.Column('discount_percentage', sa.Float(), nullable=True),
-    sa.Column('gst_rate', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=False),
-    sa.Column('taxable_amount', sa.Float(), nullable=True),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['sales_order_id'], ['sales_orders.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_sales_order_items_id'), 'sales_order_items', ['id'], unique=False)
-    op.create_table('sla_tracking',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('ticket_id', sa.Integer(), nullable=False),
-    sa.Column('policy_id', sa.Integer(), nullable=False),
-    sa.Column('response_deadline', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('resolution_deadline', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('first_response_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('response_status', sa.String(), nullable=False),
-    sa.Column('resolution_status', sa.String(), nullable=False),
-    sa.Column('escalation_triggered', sa.Boolean(), nullable=False),
-    sa.Column('escalation_triggered_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('escalation_level', sa.Integer(), nullable=False),
-    sa.Column('response_breach_hours', sa.Float(), nullable=True),
-    sa.Column('resolution_breach_hours', sa.Float(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_sla_tracking_organization_id'),
-    sa.ForeignKeyConstraint(['policy_id'], ['sla_policies.id'], name='fk_sla_tracking_policy_id'),
-    sa.ForeignKeyConstraint(['ticket_id'], ['tickets.id'], name='fk_sla_tracking_ticket_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('ticket_id')
-    )
-    op.create_index('idx_sla_tracking_escalation', 'sla_tracking', ['escalation_triggered'], unique=False)
-    op.create_index('idx_sla_tracking_org_ticket', 'sla_tracking', ['organization_id', 'ticket_id'], unique=False)
-    op.create_index('idx_sla_tracking_policy', 'sla_tracking', ['policy_id'], unique=False)
-    op.create_index('idx_sla_tracking_resolution_deadline', 'sla_tracking', ['resolution_deadline'], unique=False)
-    op.create_index('idx_sla_tracking_resolution_status', 'sla_tracking', ['resolution_status'], unique=False)
-    op.create_index('idx_sla_tracking_response_deadline', 'sla_tracking', ['response_deadline'], unique=False)
-    op.create_index('idx_sla_tracking_response_status', 'sla_tracking', ['response_status'], unique=False)
-    op.create_index(op.f('ix_sla_tracking_id'), 'sla_tracking', ['id'], unique=False)
-    op.create_index(op.f('ix_sla_tracking_organization_id'), 'sla_tracking', ['organization_id'], unique=False)
-    op.create_table('tasks',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('title', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('status', sa.Enum('TODO', 'IN_PROGRESS', 'REVIEW', 'DONE', 'CANCELLED', name='taskstatus'), nullable=False),
-    sa.Column('priority', sa.Enum('LOW', 'NORMAL', 'HIGH', 'URGENT', name='taskpriority'), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.Column('due_date', sa.DateTime(), nullable=True),
-    sa.Column('start_date', sa.DateTime(), nullable=True),
-    sa.Column('completed_at', sa.DateTime(), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('company_id', sa.Integer(), nullable=True),
-    sa.Column('task_project_id', sa.Integer(), nullable=True),
-    sa.Column('project_id', sa.Integer(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=False),
-    sa.Column('assigned_to', sa.Integer(), nullable=True),
-    sa.Column('estimated_hours', sa.Integer(), nullable=True),
-    sa.Column('actual_hours', sa.Integer(), nullable=True),
-    sa.Column('tags', sa.JSON(), nullable=True),
-    sa.Column('custom_fields', sa.JSON(), nullable=True),
-    sa.Column('external_id', sa.String(length=255), nullable=True),
-    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
-    sa.ForeignKeyConstraint(['task_project_id'], ['task_projects.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_tasks_external_id'), 'tasks', ['external_id'], unique=False)
-    op.create_index(op.f('ix_tasks_id'), 'tasks', ['id'], unique=False)
-    op.create_index(op.f('ix_tasks_title'), 'tasks', ['title'], unique=False)
-    op.create_table('ticket_attachments',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('ticket_id', sa.Integer(), nullable=False),
-    sa.Column('filename', sa.String(), nullable=False),
-    sa.Column('original_filename', sa.String(), nullable=False),
-    sa.Column('file_path', sa.String(), nullable=False),
-    sa.Column('file_size', sa.Integer(), nullable=False),
-    sa.Column('content_type', sa.String(), nullable=False),
-    sa.Column('file_type', sa.String(), nullable=False),
-    sa.Column('uploaded_by_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ticket_attachment_organization_id'),
-    sa.ForeignKeyConstraint(['ticket_id'], ['tickets.id'], name='fk_ticket_attachment_ticket_id'),
-    sa.ForeignKeyConstraint(['uploaded_by_id'], ['users.id'], name='fk_ticket_attachment_uploaded_by_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_ticket_attachment_org_ticket', 'ticket_attachments', ['organization_id', 'ticket_id'], unique=False)
-    op.create_index('idx_ticket_attachment_type', 'ticket_attachments', ['file_type'], unique=False)
-    op.create_index('idx_ticket_attachment_uploaded_by', 'ticket_attachments', ['uploaded_by_id'], unique=False)
-    op.create_index(op.f('ix_ticket_attachments_id'), 'ticket_attachments', ['id'], unique=False)
-    op.create_index(op.f('ix_ticket_attachments_organization_id'), 'ticket_attachments', ['organization_id'], unique=False)
-    op.create_table('ticket_history',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('ticket_id', sa.Integer(), nullable=False),
-    sa.Column('action', sa.String(), nullable=False),
-    sa.Column('field_changed', sa.String(), nullable=True),
-    sa.Column('old_value', sa.Text(), nullable=True),
-    sa.Column('new_value', sa.Text(), nullable=True),
-    sa.Column('comment', sa.Text(), nullable=True),
-    sa.Column('changed_by_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['changed_by_id'], ['users.id'], name='fk_ticket_history_changed_by_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ticket_history_organization_id'),
-    sa.ForeignKeyConstraint(['ticket_id'], ['tickets.id'], name='fk_ticket_history_ticket_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_ticket_history_action', 'ticket_history', ['action'], unique=False)
-    op.create_index('idx_ticket_history_created_at', 'ticket_history', ['created_at'], unique=False)
-    op.create_index('idx_ticket_history_org_ticket', 'ticket_history', ['organization_id', 'ticket_id'], unique=False)
-    op.create_index('idx_ticket_history_user', 'ticket_history', ['changed_by_id'], unique=False)
-    op.create_index(op.f('ix_ticket_history_id'), 'ticket_history', ['id'], unique=False)
-    op.create_index(op.f('ix_ticket_history_organization_id'), 'ticket_history', ['organization_id'], unique=False)
-    op.create_table('training_enrollments',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('employee_id', sa.Integer(), nullable=False),
-    sa.Column('program_id', sa.Integer(), nullable=False),
-    sa.Column('session_id', sa.Integer(), nullable=True),
-    sa.Column('enrollment_date', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('enrollment_type', sa.String(), nullable=False),
-    sa.Column('enrollment_source', sa.String(), nullable=False),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('approved_by_id', sa.Integer(), nullable=True),
-    sa.Column('approved_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('attendance_percentage', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('participation_score', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('assignment_score', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('final_score', sa.Numeric(precision=5, scale=2), nullable=True),
-    sa.Column('completed_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('certificate_issued', sa.Boolean(), nullable=False),
-    sa.Column('certificate_number', sa.String(), nullable=True),
-    sa.Column('certificate_path', sa.String(), nullable=True),
-    sa.Column('participant_rating', sa.Integer(), nullable=True),
-    sa.Column('participant_feedback', sa.Text(), nullable=True),
-    sa.Column('instructor_feedback', sa.Text(), nullable=True),
-    sa.Column('cost_allocated', sa.Numeric(precision=15, scale=2), nullable=True),
-    sa.Column('budget_code', sa.String(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['approved_by_id'], ['users.id'], name='fk_training_enrollment_approved_by_id'),
-    sa.ForeignKeyConstraint(['employee_id'], ['employee_profiles.id'], name='fk_training_enrollment_employee_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_training_enrollment_organization_id'),
-    sa.ForeignKeyConstraint(['program_id'], ['training_programs.id'], name='fk_training_enrollment_program_id'),
-    sa.ForeignKeyConstraint(['session_id'], ['training_sessions.id'], name='fk_training_enrollment_session_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('employee_id', 'program_id', 'session_id', name='uq_training_enrollment_emp_prog_session')
-    )
-    op.create_index('idx_training_enrollment_org_employee', 'training_enrollments', ['organization_id', 'employee_id'], unique=False)
-    op.create_index('idx_training_enrollment_status', 'training_enrollments', ['status'], unique=False)
-    op.create_index(op.f('ix_training_enrollments_employee_id'), 'training_enrollments', ['employee_id'], unique=False)
-    op.create_index(op.f('ix_training_enrollments_id'), 'training_enrollments', ['id'], unique=False)
-    op.create_index(op.f('ix_training_enrollments_organization_id'), 'training_enrollments', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_training_enrollments_program_id'), 'training_enrollments', ['program_id'], unique=False)
-    op.create_index(op.f('ix_training_enrollments_session_id'), 'training_enrollments', ['session_id'], unique=False)
-    op.create_table('vendor_quotation_items',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('quotation_id', sa.Integer(), nullable=False),
-    sa.Column('rfq_item_id', sa.Integer(), nullable=False),
-    sa.Column('vendor_item_code', sa.String(length=100), nullable=True),
-    sa.Column('vendor_item_name', sa.String(length=200), nullable=True),
-    sa.Column('brand', sa.String(length=100), nullable=True),
-    sa.Column('model', sa.String(length=100), nullable=True),
-    sa.Column('quoted_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
-    sa.Column('unit_price', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('total_price', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('delivery_period', sa.String(length=50), nullable=True),
-    sa.Column('remarks', sa.Text(), nullable=True),
-    sa.Column('meets_specifications', sa.Boolean(), nullable=False),
-    sa.Column('deviation_notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['quotation_id'], ['vendor_quotations.id'], ),
-    sa.ForeignKeyConstraint(['rfq_item_id'], ['rfq_items.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_vendor_quotation_items_id'), 'vendor_quotation_items', ['id'], unique=False)
-    op.create_index(op.f('ix_vendor_quotation_items_quotation_id'), 'vendor_quotation_items', ['quotation_id'], unique=False)
-    op.create_index(op.f('ix_vendor_quotation_items_rfq_item_id'), 'vendor_quotation_items', ['rfq_item_id'], unique=False)
-    op.create_table('workflow_instances',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('template_id', sa.Integer(), nullable=False),
-    sa.Column('instance_name', sa.String(length=255), nullable=False),
-    sa.Column('reference_number', sa.String(length=100), nullable=True),
-    sa.Column('entity_type', sa.String(length=100), nullable=False),
-    sa.Column('entity_id', sa.Integer(), nullable=False),
-    sa.Column('entity_data', sa.JSON(), nullable=True),
-    sa.Column('status', sa.Enum('CREATED', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'CANCELLED', 'PAUSED', name='instancestatus'), nullable=False),
-    sa.Column('current_step_id', sa.Integer(), nullable=True),
-    sa.Column('total_steps', sa.Integer(), nullable=False),
-    sa.Column('completed_steps', sa.Integer(), nullable=False),
-    sa.Column('started_at', sa.DateTime(), nullable=True),
-    sa.Column('completed_at', sa.DateTime(), nullable=True),
-    sa.Column('deadline', sa.DateTime(), nullable=True),
-    sa.Column('triggered_by', sa.Integer(), nullable=False),
-    sa.Column('trigger_reason', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['current_step_id'], ['workflow_steps.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['template_id'], ['workflow_templates.id'], ),
-    sa.ForeignKeyConstraint(['triggered_by'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_workflow_instance_org_entity', 'workflow_instances', ['organization_id', 'entity_type', 'entity_id'], unique=False)
-    op.create_index('idx_workflow_instance_org_status', 'workflow_instances', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_workflow_instance_org_template', 'workflow_instances', ['organization_id', 'template_id'], unique=False)
-    op.create_index('idx_workflow_instance_org_triggered', 'workflow_instances', ['organization_id', 'triggered_by'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_id'), 'workflow_instances', ['id'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_organization_id'), 'workflow_instances', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_reference_number'), 'workflow_instances', ['reference_number'], unique=False)
-    op.create_table('workflow_instances_automation',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('workflow_template_id', sa.Integer(), nullable=False),
-    sa.Column('instance_name', sa.String(length=200), nullable=True),
-    sa.Column('reference_type', sa.String(length=100), nullable=True),
-    sa.Column('reference_id', sa.Integer(), nullable=True),
-    sa.Column('status', sa.Enum('DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED', 'FAILED', 'CANCELLED', name='workflowstatus'), nullable=False),
-    sa.Column('current_step_id', sa.Integer(), nullable=True),
-    sa.Column('started_at', sa.DateTime(), nullable=True),
-    sa.Column('completed_at', sa.DateTime(), nullable=True),
-    sa.Column('failed_at', sa.DateTime(), nullable=True),
-    sa.Column('cancelled_at', sa.DateTime(), nullable=True),
-    sa.Column('input_data', sa.JSON(), nullable=True),
-    sa.Column('current_data', sa.JSON(), nullable=True),
-    sa.Column('output_data', sa.JSON(), nullable=True),
-    sa.Column('total_steps', sa.Integer(), nullable=False),
-    sa.Column('completed_steps', sa.Integer(), nullable=False),
-    sa.Column('failed_steps', sa.Integer(), nullable=False),
-    sa.Column('error_message', sa.Text(), nullable=True),
-    sa.Column('retry_count', sa.Integer(), nullable=False),
-    sa.Column('initiated_by', sa.Integer(), nullable=True),
-    sa.Column('assigned_to', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['current_step_id'], ['workflow_steps_automation.id'], ),
-    sa.ForeignKeyConstraint(['initiated_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['workflow_template_id'], ['workflow_templates_advanced.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_workflow_inst_auto_org_status', 'workflow_instances_automation', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_workflow_instance_reference', 'workflow_instances_automation', ['reference_type', 'reference_id'], unique=False)
-    op.create_index('idx_workflow_instance_template', 'workflow_instances_automation', ['workflow_template_id'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_automation_current_step_id'), 'workflow_instances_automation', ['current_step_id'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_automation_id'), 'workflow_instances_automation', ['id'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_automation_instance_name'), 'workflow_instances_automation', ['instance_name'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_automation_organization_id'), 'workflow_instances_automation', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_automation_reference_id'), 'workflow_instances_automation', ['reference_id'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_automation_reference_type'), 'workflow_instances_automation', ['reference_type'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_automation_status'), 'workflow_instances_automation', ['status'], unique=False)
-    op.create_index(op.f('ix_workflow_instances_automation_workflow_template_id'), 'workflow_instances_automation', ['workflow_template_id'], unique=False)
-    op.create_table('batch_locations',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('batch_id', sa.Integer(), nullable=False),
-    sa.Column('stock_location_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Numeric(precision=12, scale=3), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['batch_id'], ['product_batches.id'], ),
-    sa.ForeignKeyConstraint(['stock_location_id'], ['stock_locations.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('batch_id', 'stock_location_id', name='uq_batch_location')
-    )
-    op.create_index(op.f('ix_batch_locations_batch_id'), 'batch_locations', ['batch_id'], unique=False)
-    op.create_index(op.f('ix_batch_locations_id'), 'batch_locations', ['id'], unique=False)
-    op.create_index(op.f('ix_batch_locations_stock_location_id'), 'batch_locations', ['stock_location_id'], unique=False)
-    op.create_table('calendar_events',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('title', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('event_type', sa.Enum('TASK', 'APPOINTMENT', 'MEETING', 'REMINDER', 'DEADLINE', 'PERSONAL', 'HOLIDAY', name='eventtype'), nullable=False),
-    sa.Column('status', sa.Enum('SCHEDULED', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW', name='eventstatus'), nullable=False),
-    sa.Column('start_datetime', sa.DateTime(), nullable=False),
-    sa.Column('end_datetime', sa.DateTime(), nullable=False),
-    sa.Column('all_day', sa.Boolean(), nullable=False),
-    sa.Column('timezone', sa.String(length=50), nullable=False),
-    sa.Column('location', sa.String(length=255), nullable=True),
-    sa.Column('meeting_url', sa.String(length=500), nullable=True),
-    sa.Column('meeting_id', sa.String(length=100), nullable=True),
-    sa.Column('meeting_password', sa.String(length=100), nullable=True),
-    sa.Column('recurrence_type', sa.Enum('NONE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY', 'CUSTOM', name='recurrencetype'), nullable=False),
-    sa.Column('recurrence_rule', sa.JSON(), nullable=True),
-    sa.Column('recurrence_end_date', sa.Date(), nullable=True),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('created_by', sa.Integer(), nullable=False),
-    sa.Column('task_id', sa.Integer(), nullable=True),
-    sa.Column('color', sa.String(length=7), nullable=True),
-    sa.Column('is_private', sa.Boolean(), nullable=False),
-    sa.Column('priority', sa.String(length=20), nullable=False),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('custom_fields', sa.JSON(), nullable=True),
-    sa.Column('google_event_id', sa.String(length=255), nullable=True),
-    sa.Column('google_calendar_id', sa.String(length=255), nullable=True),
-    sa.Column('last_google_sync', sa.DateTime(), nullable=True),
-    sa.Column('external_id', sa.String(length=255), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_calendar_events_end_datetime'), 'calendar_events', ['end_datetime'], unique=False)
-    op.create_index(op.f('ix_calendar_events_external_id'), 'calendar_events', ['external_id'], unique=False)
-    op.create_index(op.f('ix_calendar_events_google_event_id'), 'calendar_events', ['google_event_id'], unique=False)
-    op.create_index(op.f('ix_calendar_events_id'), 'calendar_events', ['id'], unique=False)
-    op.create_index(op.f('ix_calendar_events_start_datetime'), 'calendar_events', ['start_datetime'], unique=False)
-    op.create_index(op.f('ix_calendar_events_title'), 'calendar_events', ['title'], unique=False)
-    op.create_table('chatbot_messages',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('conversation_id', sa.Integer(), nullable=False),
-    sa.Column('message_type', sa.String(), nullable=False),
-    sa.Column('content', sa.Text(), nullable=False),
-    sa.Column('message_format', sa.String(), nullable=False),
-    sa.Column('sender_id', sa.String(), nullable=True),
-    sa.Column('agent_id', sa.Integer(), nullable=True),
-    sa.Column('intent_detected', sa.String(), nullable=True),
-    sa.Column('confidence_score', sa.Float(), nullable=True),
-    sa.Column('entities_extracted', sa.JSON(), nullable=True),
-    sa.Column('is_read', sa.Boolean(), nullable=False),
-    sa.Column('read_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['agent_id'], ['users.id'], name='fk_chatbot_message_agent_id'),
-    sa.ForeignKeyConstraint(['conversation_id'], ['chatbot_conversations.id'], name='fk_chatbot_message_conversation_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_chatbot_message_organization_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_chatbot_message_created', 'chatbot_messages', ['created_at'], unique=False)
-    op.create_index('idx_chatbot_message_org_conversation', 'chatbot_messages', ['organization_id', 'conversation_id'], unique=False)
-    op.create_index('idx_chatbot_message_type', 'chatbot_messages', ['message_type'], unique=False)
-    op.create_index(op.f('ix_chatbot_messages_id'), 'chatbot_messages', ['id'], unique=False)
-    op.create_index(op.f('ix_chatbot_messages_organization_id'), 'chatbot_messages', ['organization_id'], unique=False)
-    op.create_table('delivery_challan_items',
-    sa.Column('delivery_challan_id', sa.Integer(), nullable=False),
-    sa.Column('so_item_id', sa.Integer(), nullable=True),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('unit_price', sa.Float(), nullable=True),
-    sa.Column('total_amount', sa.Float(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.ForeignKeyConstraint(['delivery_challan_id'], ['delivery_challans.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['so_item_id'], ['sales_order_items.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_delivery_challan_items_id'), 'delivery_challan_items', ['id'], unique=False)
-    op.create_table('dispatch_items',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('dispatch_order_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('serial_numbers', sa.Text(), nullable=True),
-    sa.Column('batch_numbers', sa.Text(), nullable=True),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['dispatch_order_id'], ['dispatch_orders.id'], name='fk_dispatch_item_dispatch_order_id'),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], name='fk_dispatch_item_product_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_dispatch_item_order', 'dispatch_items', ['dispatch_order_id'], unique=False)
-    op.create_index('idx_dispatch_item_product', 'dispatch_items', ['product_id'], unique=False)
-    op.create_index('idx_dispatch_item_status', 'dispatch_items', ['status'], unique=False)
-    op.create_index(op.f('ix_dispatch_items_id'), 'dispatch_items', ['id'], unique=False)
-    op.create_table('emails',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('message_id', sa.String(length=255), nullable=False),
-    sa.Column('thread_id', sa.Integer(), nullable=True),
-    sa.Column('provider_message_id', sa.String(length=255), nullable=True),
-    sa.Column('uid', sa.String(length=255), nullable=True),
-    sa.Column('subject', sa.String(length=500), nullable=False),
-    sa.Column('from_address', sa.String(length=255), nullable=False),
-    sa.Column('from_name', sa.String(length=255), nullable=True),
-    sa.Column('reply_to', sa.String(length=255), nullable=True),
-    sa.Column('to_addresses', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-    sa.Column('cc_addresses', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('bcc_addresses', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('body_text', sa.Text(), nullable=True),
-    sa.Column('body_html', sa.Text(), nullable=True),
-    sa.Column('body_html_raw', sa.Text(), nullable=True),
-    sa.Column('status', sa.Enum('unread', 'read', 'replied', 'forwarded', 'archived', 'deleted', 'spam', name='emailstatus'), nullable=False),
-    sa.Column('priority', sa.Enum('low', 'normal', 'high', 'urgent', name='emailpriority'), nullable=False),
-    sa.Column('is_flagged', sa.Boolean(), nullable=False),
-    sa.Column('is_important', sa.Boolean(), nullable=False),
-    sa.Column('has_attachments', sa.Boolean(), nullable=False),
-    sa.Column('sent_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('received_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('account_id', sa.Integer(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=True),
-    sa.Column('vendor_id', sa.Integer(), nullable=True),
-    sa.Column('folder', sa.String(length=255), nullable=True),
-    sa.Column('labels', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('size_bytes', sa.Integer(), nullable=True),
-    sa.Column('headers_raw', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('is_processed', sa.Boolean(), nullable=False),
-    sa.Column('processing_error', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['account_id'], ['mail_accounts.id'], ),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['thread_id'], ['email_threads.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('message_id', 'account_id', name='uq_email_message_id_account')
-    )
-    op.create_index('idx_email_from_received', 'emails', ['from_address', 'received_at'], unique=False)
-    op.create_index('idx_email_org_account', 'emails', ['organization_id', 'account_id'], unique=False)
-    op.create_index('idx_email_status_received', 'emails', ['status', 'received_at'], unique=False)
-    op.create_index('idx_email_subject_text', 'emails', ['subject'], unique=False)
-    op.create_index(op.f('ix_emails_account_id'), 'emails', ['account_id'], unique=False)
-    op.create_index(op.f('ix_emails_customer_id'), 'emails', ['customer_id'], unique=False)
-    op.create_index(op.f('ix_emails_folder'), 'emails', ['folder'], unique=False)
-    op.create_index(op.f('ix_emails_from_address'), 'emails', ['from_address'], unique=False)
-    op.create_index(op.f('ix_emails_id'), 'emails', ['id'], unique=False)
-    op.create_index(op.f('ix_emails_message_id'), 'emails', ['message_id'], unique=False)
-    op.create_index(op.f('ix_emails_organization_id'), 'emails', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_emails_provider_message_id'), 'emails', ['provider_message_id'], unique=False)
-    op.create_index(op.f('ix_emails_received_at'), 'emails', ['received_at'], unique=False)
-    op.create_index(op.f('ix_emails_sent_at'), 'emails', ['sent_at'], unique=False)
-    op.create_index(op.f('ix_emails_status'), 'emails', ['status'], unique=False)
-    op.create_index(op.f('ix_emails_subject'), 'emails', ['subject'], unique=False)
-    op.create_index(op.f('ix_emails_thread_id'), 'emails', ['thread_id'], unique=False)
-    op.create_index(op.f('ix_emails_uid'), 'emails', ['uid'], unique=False)
-    op.create_index(op.f('ix_emails_vendor_id'), 'emails', ['vendor_id'], unique=False)
-    op.create_table('exhibition_prospects',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('exhibition_event_id', sa.Integer(), nullable=False),
-    sa.Column('card_scan_id', sa.Integer(), nullable=True),
-    sa.Column('full_name', sa.String(), nullable=False),
-    sa.Column('company_name', sa.String(), nullable=False),
-    sa.Column('designation', sa.String(), nullable=True),
-    sa.Column('email', sa.String(), nullable=True),
-    sa.Column('phone', sa.String(), nullable=True),
-    sa.Column('mobile', sa.String(), nullable=True),
-    sa.Column('website', sa.String(), nullable=True),
-    sa.Column('address', sa.Text(), nullable=True),
-    sa.Column('lead_score', sa.Float(), nullable=True),
-    sa.Column('qualification_status', sa.String(), nullable=False),
-    sa.Column('interest_level', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('crm_customer_id', sa.Integer(), nullable=True),
-    sa.Column('assigned_to_id', sa.Integer(), nullable=True),
-    sa.Column('follow_up_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('intro_email_sent_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('last_contact_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('contact_attempts', sa.Integer(), nullable=False),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('conversion_status', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['assigned_to_id'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['card_scan_id'], ['business_card_scans.id'], ),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['crm_customer_id'], ['customers.id'], ),
-    sa.ForeignKeyConstraint(['exhibition_event_id'], ['exhibition_events.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_exhibition_prospect_assigned', 'exhibition_prospects', ['assigned_to_id'], unique=False)
-    op.create_index('idx_exhibition_prospect_company', 'exhibition_prospects', ['company_name'], unique=False)
-    op.create_index('idx_exhibition_prospect_event', 'exhibition_prospects', ['exhibition_event_id'], unique=False)
-    op.create_index('idx_exhibition_prospect_status', 'exhibition_prospects', ['status'], unique=False)
-    op.create_index(op.f('ix_exhibition_prospects_id'), 'exhibition_prospects', ['id'], unique=False)
-    op.create_index(op.f('ix_exhibition_prospects_organization_id'), 'exhibition_prospects', ['organization_id'], unique=False)
-    op.create_table('goods_receipt_note_items',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('grn_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('po_item_id', sa.Integer(), nullable=True),
-    sa.Column('ordered_quantity', sa.Float(), nullable=False),
-    sa.Column('received_quantity', sa.Float(), nullable=False),
-    sa.Column('accepted_quantity', sa.Float(), nullable=False),
-    sa.Column('rejected_quantity', sa.Float(), nullable=True),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('total_cost', sa.Float(), nullable=False),
-    sa.Column('remarks', sa.Text(), nullable=True),
-    sa.Column('batch_number', sa.String(), nullable=True),
-    sa.Column('expiry_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('quality_status', sa.String(), nullable=True),
-    sa.ForeignKeyConstraint(['grn_id'], ['goods_receipt_notes.id'], ),
-    sa.ForeignKeyConstraint(['po_item_id'], ['purchase_order_items.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_goods_receipt_note_items_id'), 'goods_receipt_note_items', ['id'], unique=False)
-    op.create_table('installation_jobs',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('job_number', sa.String(), nullable=False),
-    sa.Column('dispatch_order_id', sa.Integer(), nullable=False),
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('ticket_id', sa.Integer(), nullable=True),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('priority', sa.String(), nullable=False),
-    sa.Column('scheduled_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('estimated_duration_hours', sa.Float(), nullable=True),
-    sa.Column('actual_start_time', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('actual_end_time', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('assigned_technician_id', sa.Integer(), nullable=True),
-    sa.Column('installation_address', sa.Text(), nullable=False),
-    sa.Column('contact_person', sa.String(), nullable=True),
-    sa.Column('contact_number', sa.String(), nullable=True),
-    sa.Column('installation_notes', sa.Text(), nullable=True),
-    sa.Column('completion_notes', sa.Text(), nullable=True),
-    sa.Column('customer_feedback', sa.Text(), nullable=True),
-    sa.Column('customer_rating', sa.Integer(), nullable=True),
-    sa.Column('created_by_id', sa.Integer(), nullable=True),
-    sa.Column('updated_by_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['assigned_technician_id'], ['users.id'], name='fk_installation_job_assigned_technician_id'),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_installation_job_created_by_id'),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_installation_job_customer_id'),
-    sa.ForeignKeyConstraint(['dispatch_order_id'], ['dispatch_orders.id'], name='fk_installation_job_dispatch_order_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_installation_job_organization_id'),
-    sa.ForeignKeyConstraint(['ticket_id'], ['tickets.id'], name='fk_installation_job_ticket_id'),
-    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], name='fk_installation_job_updated_by_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'job_number', name='uq_installation_job_org_number')
-    )
-    op.create_index('idx_installation_job_created_at', 'installation_jobs', ['created_at'], unique=False)
-    op.create_index('idx_installation_job_dispatch_order', 'installation_jobs', ['dispatch_order_id'], unique=False)
-    op.create_index('idx_installation_job_org_customer', 'installation_jobs', ['organization_id', 'customer_id'], unique=False)
-    op.create_index('idx_installation_job_org_status', 'installation_jobs', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_installation_job_org_technician', 'installation_jobs', ['organization_id', 'assigned_technician_id'], unique=False)
-    op.create_index('idx_installation_job_priority', 'installation_jobs', ['priority'], unique=False)
-    op.create_index('idx_installation_job_scheduled_date', 'installation_jobs', ['scheduled_date'], unique=False)
-    op.create_index(op.f('ix_installation_jobs_id'), 'installation_jobs', ['id'], unique=False)
-    op.create_index(op.f('ix_installation_jobs_job_number'), 'installation_jobs', ['job_number'], unique=False)
-    op.create_index(op.f('ix_installation_jobs_organization_id'), 'installation_jobs', ['organization_id'], unique=False)
-    op.create_table('job_card_vouchers',
-    sa.Column('job_type', sa.String(), nullable=False),
-    sa.Column('vendor_id', sa.Integer(), nullable=False),
-    sa.Column('manufacturing_order_id', sa.Integer(), nullable=True),
-    sa.Column('job_description', sa.Text(), nullable=False),
-    sa.Column('job_category', sa.String(), nullable=True),
-    sa.Column('expected_completion_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('actual_completion_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('materials_supplied_by', sa.String(), nullable=True),
-    sa.Column('delivery_address', sa.Text(), nullable=True),
-    sa.Column('transport_mode', sa.String(), nullable=True),
-    sa.Column('job_status', sa.String(), nullable=True),
-    sa.Column('quality_specifications', sa.Text(), nullable=True),
-    sa.Column('quality_check_required', sa.Boolean(), nullable=True),
-    sa.Column('approved_by', sa.Integer(), nullable=True),
-    sa.Column('approval_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['approved_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['manufacturing_order_id'], ['manufacturing_orders.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_jcv_org_voucher_number')
-    )
-    op.create_index('idx_jcv_org_date', 'job_card_vouchers', ['organization_id', 'date'], unique=False)
-    op.create_index('idx_jcv_org_mo', 'job_card_vouchers', ['organization_id', 'manufacturing_order_id'], unique=False)
-    op.create_index('idx_jcv_org_status', 'job_card_vouchers', ['organization_id', 'job_status'], unique=False)
-    op.create_index('idx_jcv_org_vendor', 'job_card_vouchers', ['organization_id', 'vendor_id'], unique=False)
-    op.create_index(op.f('ix_job_card_vouchers_id'), 'job_card_vouchers', ['id'], unique=False)
-    op.create_index(op.f('ix_job_card_vouchers_organization_id'), 'job_card_vouchers', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_job_card_vouchers_voucher_number'), 'job_card_vouchers', ['voucher_number'], unique=False)
-    op.create_table('maintenance_records',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('asset_id', sa.Integer(), nullable=False),
-    sa.Column('schedule_id', sa.Integer(), nullable=True),
-    sa.Column('work_order_number', sa.String(), nullable=False),
-    sa.Column('maintenance_type', sa.Enum('PREVENTIVE', 'CORRECTIVE', 'EMERGENCY', 'INSPECTION', name='maintenancetype'), nullable=False),
-    sa.Column('priority', sa.String(), nullable=True),
-    sa.Column('scheduled_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('actual_start_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('actual_end_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('description', sa.Text(), nullable=False),
-    sa.Column('work_performed', sa.Text(), nullable=True),
-    sa.Column('findings', sa.Text(), nullable=True),
-    sa.Column('recommendations', sa.Text(), nullable=True),
-    sa.Column('assigned_technician', sa.String(), nullable=True),
-    sa.Column('performed_by', sa.String(), nullable=True),
-    sa.Column('supervised_by', sa.String(), nullable=True),
-    sa.Column('status', sa.Enum('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'OVERDUE', name='maintenancestatus'), nullable=False),
-    sa.Column('labor_cost', sa.Float(), nullable=True),
-    sa.Column('parts_cost', sa.Float(), nullable=True),
-    sa.Column('external_cost', sa.Float(), nullable=True),
-    sa.Column('total_cost', sa.Float(), nullable=True),
-    sa.Column('meter_reading_before', sa.Float(), nullable=True),
-    sa.Column('meter_reading_after', sa.Float(), nullable=True),
-    sa.Column('safety_incidents', sa.Text(), nullable=True),
-    sa.Column('quality_check_passed', sa.Boolean(), nullable=True),
-    sa.Column('quality_remarks', sa.Text(), nullable=True),
-    sa.Column('condition_before', sa.Enum('EXCELLENT', 'GOOD', 'FAIR', 'POOR', 'CRITICAL', name='assetcondition'), nullable=True),
-    sa.Column('condition_after', sa.Enum('EXCELLENT', 'GOOD', 'FAIR', 'POOR', 'CRITICAL', name='assetcondition'), nullable=True),
-    sa.Column('photos_path', sa.String(), nullable=True),
-    sa.Column('documents_path', sa.String(), nullable=True),
-    sa.Column('approved_by', sa.Integer(), nullable=True),
-    sa.Column('approval_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['approved_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['asset_id'], ['assets.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['schedule_id'], ['maintenance_schedules.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'work_order_number', name='uq_maint_rec_org_wo')
-    )
-    op.create_index('idx_maint_rec_org_asset', 'maintenance_records', ['organization_id', 'asset_id'], unique=False)
-    op.create_index('idx_maint_rec_org_date', 'maintenance_records', ['organization_id', 'scheduled_date'], unique=False)
-    op.create_index('idx_maint_rec_org_status', 'maintenance_records', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_maint_rec_org_type', 'maintenance_records', ['organization_id', 'maintenance_type'], unique=False)
-    op.create_index(op.f('ix_maintenance_records_id'), 'maintenance_records', ['id'], unique=False)
-    op.create_index(op.f('ix_maintenance_records_organization_id'), 'maintenance_records', ['organization_id'], unique=False)
     op.create_table('manufacturing_journal_vouchers',
     sa.Column('manufacturing_order_id', sa.Integer(), nullable=False),
     sa.Column('bom_id', sa.Integer(), nullable=False),
@@ -7530,51 +8300,76 @@ def upgrade() -> None:
     op.create_index(op.f('ix_material_receipt_vouchers_id'), 'material_receipt_vouchers', ['id'], unique=False)
     op.create_index(op.f('ix_material_receipt_vouchers_organization_id'), 'material_receipt_vouchers', ['organization_id'], unique=False)
     op.create_index(op.f('ix_material_receipt_vouchers_voucher_number'), 'material_receipt_vouchers', ['voucher_number'], unique=False)
-    op.create_table('opportunity_activities',
+    op.create_table('opportunities',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('opportunity_id', sa.Integer(), nullable=False),
-    sa.Column('activity_type', sa.String(), nullable=False),
-    sa.Column('subject', sa.String(), nullable=False),
+    sa.Column('opportunity_number', sa.String(), nullable=False),
+    sa.Column('name', sa.String(), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('outcome', sa.String(), nullable=True),
-    sa.Column('activity_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('duration_minutes', sa.Integer(), nullable=True),
+    sa.Column('stage', sa.Enum('PROSPECTING', 'QUALIFICATION', 'PROPOSAL', 'NEGOTIATION', 'CLOSED_WON', 'CLOSED_LOST', name='opportunitystage'), nullable=False),
+    sa.Column('probability', sa.Float(), nullable=False),
+    sa.Column('amount', sa.Float(), nullable=False),
+    sa.Column('expected_revenue', sa.Float(), nullable=False),
+    sa.Column('expected_close_date', sa.Date(), nullable=False),
+    sa.Column('actual_close_date', sa.Date(), nullable=True),
+    sa.Column('customer_id', sa.Integer(), nullable=True),
+    sa.Column('lead_id', sa.Integer(), nullable=True),
+    sa.Column('assigned_to_id', sa.Integer(), nullable=True),
     sa.Column('created_by_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_opportunity_activity_created_by_id'),
-    sa.ForeignKeyConstraint(['opportunity_id'], ['opportunities.id'], name='fk_opportunity_activity_opportunity_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_opportunity_activity_organization_id'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_opportunity_activity_date', 'opportunity_activities', ['activity_date'], unique=False)
-    op.create_index('idx_opportunity_activity_org_opp', 'opportunity_activities', ['organization_id', 'opportunity_id'], unique=False)
-    op.create_index('idx_opportunity_activity_type', 'opportunity_activities', ['activity_type'], unique=False)
-    op.create_index(op.f('ix_opportunity_activities_id'), 'opportunity_activities', ['id'], unique=False)
-    op.create_index(op.f('ix_opportunity_activities_organization_id'), 'opportunity_activities', ['organization_id'], unique=False)
-    op.create_table('opportunity_products',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('opportunity_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=True),
-    sa.Column('product_name', sa.String(), nullable=False),
-    sa.Column('product_description', sa.Text(), nullable=True),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('discount_percent', sa.Float(), nullable=False),
-    sa.Column('discount_amount', sa.Float(), nullable=False),
-    sa.Column('final_amount', sa.Float(), nullable=False),
+    sa.Column('competitors', sa.Text(), nullable=True),
+    sa.Column('win_reason', sa.Text(), nullable=True),
+    sa.Column('loss_reason', sa.Text(), nullable=True),
+    sa.Column('source', sa.Enum('WEBSITE', 'REFERRAL', 'EMAIL_CAMPAIGN', 'SOCIAL_MEDIA', 'COLD_CALL', 'TRADE_SHOW', 'PARTNER', 'ADVERTISEMENT', 'OTHER', name='leadsource'), nullable=False),
+    sa.Column('custom_fields', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['opportunity_id'], ['opportunities.id'], name='fk_opportunity_product_opportunity_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_opportunity_product_organization_id'),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], name='fk_opportunity_product_product_id'),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['assigned_to_id'], ['users.id'], name='fk_opportunity_assigned_to_id'),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_opportunity_created_by_id'),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_opportunity_customer_id'),
+    sa.ForeignKeyConstraint(['lead_id'], ['leads.id'], name='fk_opportunity_lead_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_opportunity_organization_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'opportunity_number', name='uq_opportunity_org_number')
     )
-    op.create_index('idx_opportunity_product_org_opp', 'opportunity_products', ['organization_id', 'opportunity_id'], unique=False)
-    op.create_index(op.f('ix_opportunity_products_id'), 'opportunity_products', ['id'], unique=False)
-    op.create_index(op.f('ix_opportunity_products_organization_id'), 'opportunity_products', ['organization_id'], unique=False)
+    op.create_index('idx_opportunity_amount', 'opportunities', ['amount'], unique=False)
+    op.create_index('idx_opportunity_close_date', 'opportunities', ['expected_close_date'], unique=False)
+    op.create_index('idx_opportunity_org_assigned', 'opportunities', ['organization_id', 'assigned_to_id'], unique=False)
+    op.create_index('idx_opportunity_org_stage', 'opportunities', ['organization_id', 'stage'], unique=False)
+    op.create_index('idx_opportunity_probability', 'opportunities', ['probability'], unique=False)
+    op.create_index(op.f('ix_opportunities_id'), 'opportunities', ['id'], unique=False)
+    op.create_index(op.f('ix_opportunities_name'), 'opportunities', ['name'], unique=False)
+    op.create_index(op.f('ix_opportunities_opportunity_number'), 'opportunities', ['opportunity_number'], unique=True)
+    op.create_index(op.f('ix_opportunities_organization_id'), 'opportunities', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_opportunities_source'), 'opportunities', ['source'], unique=False)
+    op.create_index(op.f('ix_opportunities_stage'), 'opportunities', ['stage'], unique=False)
+    op.create_table('orders',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('order_number', sa.String(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('sales_order_id', sa.Integer(), nullable=True),
+    sa.Column('order_date', sa.Date(), nullable=False),
+    sa.Column('due_date', sa.Date(), nullable=False),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('workflow_stage', sa.String(), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['sales_order_id'], ['sales_orders.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'order_number', name='uq_order_org_number')
+    )
+    op.create_index('idx_order_org_customer', 'orders', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_order_org_date', 'orders', ['organization_id', 'order_date'], unique=False)
+    op.create_index('idx_order_org_stage', 'orders', ['organization_id', 'workflow_stage'], unique=False)
+    op.create_index('idx_order_org_status', 'orders', ['organization_id', 'status'], unique=False)
+    op.create_index(op.f('ix_orders_id'), 'orders', ['id'], unique=False)
+    op.create_index(op.f('ix_orders_order_number'), 'orders', ['order_number'], unique=True)
+    op.create_index(op.f('ix_orders_organization_id'), 'orders', ['organization_id'], unique=False)
     op.create_table('product_serials',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -7650,6 +8445,1290 @@ def upgrade() -> None:
     op.create_index(op.f('ix_production_entries_id'), 'production_entries', ['id'], unique=False)
     op.create_index(op.f('ix_production_entries_organization_id'), 'production_entries', ['organization_id'], unique=False)
     op.create_index(op.f('ix_production_entries_voucher_number'), 'production_entries', ['voucher_number'], unique=False)
+    op.create_table('proforma_invoice_items',
+    sa.Column('proforma_invoice_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('discount_percentage', sa.Float(), nullable=True),
+    sa.Column('gst_rate', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=False),
+    sa.Column('taxable_amount', sa.Float(), nullable=True),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['proforma_invoice_id'], ['proforma_invoices.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_proforma_invoice_items_id'), 'proforma_invoice_items', ['id'], unique=False)
+    op.create_table('project_documents',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('document_name', sa.String(length=255), nullable=False),
+    sa.Column('document_type', sa.String(length=100), nullable=True),
+    sa.Column('file_path', sa.String(length=500), nullable=True),
+    sa.Column('file_size', sa.Integer(), nullable=True),
+    sa.Column('mime_type', sa.String(length=100), nullable=True),
+    sa.Column('version', sa.String(length=20), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('tags', sa.JSON(), nullable=True),
+    sa.Column('is_public', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('uploaded_by', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
+    sa.ForeignKeyConstraint(['uploaded_by'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_document_org_project', 'project_documents', ['organization_id', 'project_id'], unique=False)
+    op.create_index('idx_document_org_public', 'project_documents', ['organization_id', 'is_public'], unique=False)
+    op.create_index('idx_document_org_type', 'project_documents', ['organization_id', 'document_type'], unique=False)
+    op.create_index(op.f('ix_project_documents_id'), 'project_documents', ['id'], unique=False)
+    op.create_index(op.f('ix_project_documents_organization_id'), 'project_documents', ['organization_id'], unique=False)
+    op.create_table('project_milestones',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('status', sa.Enum('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'DELAYED', name='milestonestatus'), nullable=False),
+    sa.Column('target_date', sa.Date(), nullable=False),
+    sa.Column('completion_date', sa.Date(), nullable=True),
+    sa.Column('progress_percentage', sa.Float(), nullable=False),
+    sa.Column('dependencies', sa.JSON(), nullable=True),
+    sa.Column('assigned_to', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_milestone_org_project', 'project_milestones', ['organization_id', 'project_id'], unique=False)
+    op.create_index('idx_milestone_org_status', 'project_milestones', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_milestone_org_target_date', 'project_milestones', ['organization_id', 'target_date'], unique=False)
+    op.create_index(op.f('ix_project_milestones_id'), 'project_milestones', ['id'], unique=False)
+    op.create_index(op.f('ix_project_milestones_organization_id'), 'project_milestones', ['organization_id'], unique=False)
+    op.create_table('project_resources',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('resource_type', sa.Enum('HUMAN', 'EQUIPMENT', 'MATERIAL', 'BUDGET', name='resourcetype'), nullable=False),
+    sa.Column('resource_name', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('allocated_quantity', sa.Float(), nullable=False),
+    sa.Column('used_quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(length=50), nullable=True),
+    sa.Column('unit_cost', sa.Float(), nullable=True),
+    sa.Column('total_cost', sa.Float(), nullable=True),
+    sa.Column('allocation_start', sa.Date(), nullable=True),
+    sa.Column('allocation_end', sa.Date(), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_resource_org_project', 'project_resources', ['organization_id', 'project_id'], unique=False)
+    op.create_index('idx_resource_org_type', 'project_resources', ['organization_id', 'resource_type'], unique=False)
+    op.create_index('idx_resource_org_user', 'project_resources', ['organization_id', 'user_id'], unique=False)
+    op.create_index(op.f('ix_project_resources_id'), 'project_resources', ['id'], unique=False)
+    op.create_index(op.f('ix_project_resources_organization_id'), 'project_resources', ['organization_id'], unique=False)
+    op.create_table('purchase_order_items',
+    sa.Column('purchase_order_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('delivered_quantity', sa.Float(), nullable=True),
+    sa.Column('pending_quantity', sa.Float(), nullable=False),
+    sa.Column('discount_percentage', sa.Float(), nullable=True),
+    sa.Column('gst_rate', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=False),
+    sa.Column('taxable_amount', sa.Float(), nullable=True),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('discounted_price', sa.Float(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['purchase_order_id'], ['purchase_orders.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_purchase_order_items_id'), 'purchase_order_items', ['id'], unique=False)
+    op.create_table('purchase_requisitions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('requisition_number', sa.String(length=50), nullable=False),
+    sa.Column('requisition_date', sa.Date(), nullable=False),
+    sa.Column('required_date', sa.Date(), nullable=False),
+    sa.Column('department', sa.String(length=100), nullable=True),
+    sa.Column('cost_center', sa.String(length=100), nullable=True),
+    sa.Column('project_code', sa.String(length=100), nullable=True),
+    sa.Column('purpose', sa.Text(), nullable=False),
+    sa.Column('justification', sa.Text(), nullable=True),
+    sa.Column('estimated_budget', sa.Numeric(precision=15, scale=2), nullable=True),
+    sa.Column('approval_status', sa.String(length=20), nullable=False),
+    sa.Column('approved_by', sa.Integer(), nullable=True),
+    sa.Column('approved_date', sa.Date(), nullable=True),
+    sa.Column('rejection_reason', sa.Text(), nullable=True),
+    sa.Column('purchase_order_id', sa.Integer(), nullable=True),
+    sa.Column('requested_by', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['approved_by'], ['platform_users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['purchase_order_id'], ['purchase_orders.id'], ),
+    sa.ForeignKeyConstraint(['requested_by'], ['platform_users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_pr_org_status', 'purchase_requisitions', ['organization_id', 'approval_status'], unique=False)
+    op.create_index('idx_pr_required_date', 'purchase_requisitions', ['required_date'], unique=False)
+    op.create_index(op.f('ix_purchase_requisitions_approval_status'), 'purchase_requisitions', ['approval_status'], unique=False)
+    op.create_index(op.f('ix_purchase_requisitions_id'), 'purchase_requisitions', ['id'], unique=False)
+    op.create_index(op.f('ix_purchase_requisitions_organization_id'), 'purchase_requisitions', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_purchase_requisitions_purchase_order_id'), 'purchase_requisitions', ['purchase_order_id'], unique=False)
+    op.create_index(op.f('ix_purchase_requisitions_required_date'), 'purchase_requisitions', ['required_date'], unique=False)
+    op.create_index(op.f('ix_purchase_requisitions_requisition_date'), 'purchase_requisitions', ['requisition_date'], unique=False)
+    op.create_index(op.f('ix_purchase_requisitions_requisition_number'), 'purchase_requisitions', ['requisition_number'], unique=True)
+    op.create_table('quotation_items',
+    sa.Column('quotation_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('discount_percentage', sa.Float(), nullable=True),
+    sa.Column('gst_rate', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=False),
+    sa.Column('taxable_amount', sa.Float(), nullable=True),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['quotation_id'], ['quotations.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_quotation_items_id'), 'quotation_items', ['id'], unique=False)
+    op.create_table('sales_order_items',
+    sa.Column('sales_order_id', sa.Integer(), nullable=False),
+    sa.Column('delivered_quantity', sa.Float(), nullable=True),
+    sa.Column('pending_quantity', sa.Float(), nullable=False),
+    sa.Column('discount_percentage', sa.Float(), nullable=True),
+    sa.Column('gst_rate', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=False),
+    sa.Column('taxable_amount', sa.Float(), nullable=True),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['sales_order_id'], ['sales_orders.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_sales_order_items_id'), 'sales_order_items', ['id'], unique=False)
+    op.create_table('shipments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('shipment_number', sa.String(), nullable=False),
+    sa.Column('carrier_id', sa.Integer(), nullable=False),
+    sa.Column('route_id', sa.Integer(), nullable=True),
+    sa.Column('sales_order_id', sa.Integer(), nullable=True),
+    sa.Column('purchase_order_id', sa.Integer(), nullable=True),
+    sa.Column('manufacturing_order_id', sa.Integer(), nullable=True),
+    sa.Column('tracking_number', sa.String(), nullable=True),
+    sa.Column('awb_number', sa.String(), nullable=True),
+    sa.Column('bol_number', sa.String(), nullable=True),
+    sa.Column('freight_mode', sa.Enum('LTL', 'FTL', 'EXPRESS', 'STANDARD', 'ECONOMY', name='freightmode'), nullable=False),
+    sa.Column('service_type', sa.String(), nullable=True),
+    sa.Column('origin_name', sa.String(), nullable=False),
+    sa.Column('origin_address', sa.Text(), nullable=True),
+    sa.Column('origin_city', sa.String(), nullable=False),
+    sa.Column('origin_state', sa.String(), nullable=True),
+    sa.Column('origin_postal_code', sa.String(), nullable=True),
+    sa.Column('origin_country', sa.String(), nullable=True),
+    sa.Column('destination_name', sa.String(), nullable=False),
+    sa.Column('destination_address', sa.Text(), nullable=True),
+    sa.Column('destination_city', sa.String(), nullable=False),
+    sa.Column('destination_state', sa.String(), nullable=True),
+    sa.Column('destination_postal_code', sa.String(), nullable=True),
+    sa.Column('destination_country', sa.String(), nullable=True),
+    sa.Column('total_weight_kg', sa.Float(), nullable=True),
+    sa.Column('total_volume_cbm', sa.Float(), nullable=True),
+    sa.Column('total_pieces', sa.Integer(), nullable=True),
+    sa.Column('declared_value', sa.Float(), nullable=True),
+    sa.Column('is_fragile', sa.Boolean(), nullable=True),
+    sa.Column('is_hazardous', sa.Boolean(), nullable=True),
+    sa.Column('temperature_controlled', sa.Boolean(), nullable=True),
+    sa.Column('signature_required', sa.Boolean(), nullable=True),
+    sa.Column('pickup_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('pickup_time_from', sa.String(), nullable=True),
+    sa.Column('pickup_time_to', sa.String(), nullable=True),
+    sa.Column('expected_delivery_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('actual_delivery_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('status', sa.Enum('PLANNED', 'BOOKED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED', 'DELAYED', name='shipmentstatus'), nullable=False),
+    sa.Column('last_location_update', sa.String(), nullable=True),
+    sa.Column('last_status_update', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('freight_charges', sa.Float(), nullable=True),
+    sa.Column('fuel_surcharge', sa.Float(), nullable=True),
+    sa.Column('handling_charges', sa.Float(), nullable=True),
+    sa.Column('insurance_charges', sa.Float(), nullable=True),
+    sa.Column('other_charges', sa.Float(), nullable=True),
+    sa.Column('total_charges', sa.Float(), nullable=True),
+    sa.Column('payment_terms', sa.String(), nullable=True),
+    sa.Column('cod_amount', sa.Float(), nullable=True),
+    sa.Column('shipping_documents', sa.JSON(), nullable=True),
+    sa.Column('special_instructions', sa.Text(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['carrier_id'], ['carriers.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['manufacturing_order_id'], ['manufacturing_orders.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['purchase_order_id'], ['purchase_orders.id'], ),
+    sa.ForeignKeyConstraint(['route_id'], ['routes.id'], ),
+    sa.ForeignKeyConstraint(['sales_order_id'], ['sales_orders.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'shipment_number', name='uq_shipment_org_number')
+    )
+    op.create_index('idx_shipment_org_carrier', 'shipments', ['organization_id', 'carrier_id'], unique=False)
+    op.create_index('idx_shipment_org_pickup_date', 'shipments', ['organization_id', 'pickup_date'], unique=False)
+    op.create_index('idx_shipment_org_status', 'shipments', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_shipment_org_tracking', 'shipments', ['organization_id', 'tracking_number'], unique=False)
+    op.create_index(op.f('ix_shipments_id'), 'shipments', ['id'], unique=False)
+    op.create_index(op.f('ix_shipments_organization_id'), 'shipments', ['organization_id'], unique=False)
+    op.create_table('sla_tracking',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('ticket_id', sa.Integer(), nullable=False),
+    sa.Column('policy_id', sa.Integer(), nullable=False),
+    sa.Column('response_deadline', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('resolution_deadline', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('first_response_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('resolved_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('response_status', sa.String(), nullable=False),
+    sa.Column('resolution_status', sa.String(), nullable=False),
+    sa.Column('escalation_triggered', sa.Boolean(), nullable=False),
+    sa.Column('escalation_triggered_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('escalation_level', sa.Integer(), nullable=False),
+    sa.Column('response_breach_hours', sa.Float(), nullable=True),
+    sa.Column('resolution_breach_hours', sa.Float(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_sla_tracking_organization_id'),
+    sa.ForeignKeyConstraint(['policy_id'], ['sla_policies.id'], name='fk_sla_tracking_policy_id'),
+    sa.ForeignKeyConstraint(['ticket_id'], ['tickets.id'], name='fk_sla_tracking_ticket_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('ticket_id')
+    )
+    op.create_index('idx_sla_tracking_escalation', 'sla_tracking', ['escalation_triggered'], unique=False)
+    op.create_index('idx_sla_tracking_org_ticket', 'sla_tracking', ['organization_id', 'ticket_id'], unique=False)
+    op.create_index('idx_sla_tracking_policy', 'sla_tracking', ['policy_id'], unique=False)
+    op.create_index('idx_sla_tracking_resolution_deadline', 'sla_tracking', ['resolution_deadline'], unique=False)
+    op.create_index('idx_sla_tracking_resolution_status', 'sla_tracking', ['resolution_status'], unique=False)
+    op.create_index('idx_sla_tracking_response_deadline', 'sla_tracking', ['response_deadline'], unique=False)
+    op.create_index('idx_sla_tracking_response_status', 'sla_tracking', ['response_status'], unique=False)
+    op.create_index(op.f('ix_sla_tracking_id'), 'sla_tracking', ['id'], unique=False)
+    op.create_index(op.f('ix_sla_tracking_organization_id'), 'sla_tracking', ['organization_id'], unique=False)
+    op.create_table('stock_adjustment_items',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('adjustment_id', sa.Integer(), nullable=False),
+    sa.Column('warehouse_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('book_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
+    sa.Column('physical_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
+    sa.Column('adjustment_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
+    sa.Column('unit_cost', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('adjustment_value', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('batch_id', sa.Integer(), nullable=True),
+    sa.Column('serial_numbers', sa.JSON(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['adjustment_id'], ['stock_adjustments.id'], ),
+    sa.ForeignKeyConstraint(['batch_id'], ['product_batches.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['warehouse_id'], ['warehouses.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_stock_adjustment_items_adjustment_id'), 'stock_adjustment_items', ['adjustment_id'], unique=False)
+    op.create_index(op.f('ix_stock_adjustment_items_batch_id'), 'stock_adjustment_items', ['batch_id'], unique=False)
+    op.create_index(op.f('ix_stock_adjustment_items_id'), 'stock_adjustment_items', ['id'], unique=False)
+    op.create_index(op.f('ix_stock_adjustment_items_product_id'), 'stock_adjustment_items', ['product_id'], unique=False)
+    op.create_index(op.f('ix_stock_adjustment_items_warehouse_id'), 'stock_adjustment_items', ['warehouse_id'], unique=False)
+    op.create_table('stock_journals',
+    sa.Column('journal_type', sa.String(), nullable=False),
+    sa.Column('from_location', sa.String(), nullable=True),
+    sa.Column('to_location', sa.String(), nullable=True),
+    sa.Column('from_warehouse', sa.String(), nullable=True),
+    sa.Column('to_warehouse', sa.String(), nullable=True),
+    sa.Column('manufacturing_order_id', sa.Integer(), nullable=True),
+    sa.Column('bom_id', sa.Integer(), nullable=True),
+    sa.Column('transfer_reason', sa.String(), nullable=True),
+    sa.Column('assembly_product_id', sa.Integer(), nullable=True),
+    sa.Column('assembly_quantity', sa.Float(), nullable=True),
+    sa.Column('physical_verification_done', sa.Boolean(), nullable=True),
+    sa.Column('verified_by', sa.String(), nullable=True),
+    sa.Column('verification_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('approved_by', sa.Integer(), nullable=True),
+    sa.Column('approval_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['approved_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['assembly_product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['bom_id'], ['bill_of_materials.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['manufacturing_order_id'], ['manufacturing_orders.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_sj_org_voucher_number')
+    )
+    op.create_index('idx_sj_org_date', 'stock_journals', ['organization_id', 'date'], unique=False)
+    op.create_index('idx_sj_org_from_loc', 'stock_journals', ['organization_id', 'from_location'], unique=False)
+    op.create_index('idx_sj_org_mo', 'stock_journals', ['organization_id', 'manufacturing_order_id'], unique=False)
+    op.create_index('idx_sj_org_to_loc', 'stock_journals', ['organization_id', 'to_location'], unique=False)
+    op.create_index('idx_sj_org_type', 'stock_journals', ['organization_id', 'journal_type'], unique=False)
+    op.create_index(op.f('ix_stock_journals_id'), 'stock_journals', ['id'], unique=False)
+    op.create_index(op.f('ix_stock_journals_organization_id'), 'stock_journals', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_stock_journals_voucher_number'), 'stock_journals', ['voucher_number'], unique=False)
+    op.create_table('stock_movements',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('warehouse_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('movement_type', sa.Enum('RECEIPT', 'ISSUE', 'TRANSFER', 'ADJUSTMENT', 'RETURN', 'DAMAGE', 'OBSOLETE', name='stockmovementtype'), nullable=False),
+    sa.Column('movement_date', sa.DateTime(), nullable=False),
+    sa.Column('reference_number', sa.String(length=100), nullable=True),
+    sa.Column('quantity', sa.Numeric(precision=12, scale=3), nullable=False),
+    sa.Column('unit_cost', sa.Numeric(precision=15, scale=2), nullable=True),
+    sa.Column('total_value', sa.Numeric(precision=15, scale=2), nullable=True),
+    sa.Column('batch_id', sa.Integer(), nullable=True),
+    sa.Column('serial_numbers', sa.JSON(), nullable=True),
+    sa.Column('from_location_id', sa.Integer(), nullable=True),
+    sa.Column('to_location_id', sa.Integer(), nullable=True),
+    sa.Column('source_document_type', sa.String(length=50), nullable=True),
+    sa.Column('source_document_id', sa.Integer(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['batch_id'], ['product_batches.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['platform_users.id'], ),
+    sa.ForeignKeyConstraint(['from_location_id'], ['stock_locations.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['to_location_id'], ['stock_locations.id'], ),
+    sa.ForeignKeyConstraint(['warehouse_id'], ['warehouses.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_stock_movement_org_date', 'stock_movements', ['organization_id', 'movement_date'], unique=False)
+    op.create_index('idx_stock_movement_type', 'stock_movements', ['movement_type'], unique=False)
+    op.create_index(op.f('ix_stock_movements_batch_id'), 'stock_movements', ['batch_id'], unique=False)
+    op.create_index(op.f('ix_stock_movements_from_location_id'), 'stock_movements', ['from_location_id'], unique=False)
+    op.create_index(op.f('ix_stock_movements_id'), 'stock_movements', ['id'], unique=False)
+    op.create_index(op.f('ix_stock_movements_movement_date'), 'stock_movements', ['movement_date'], unique=False)
+    op.create_index(op.f('ix_stock_movements_movement_type'), 'stock_movements', ['movement_type'], unique=False)
+    op.create_index(op.f('ix_stock_movements_organization_id'), 'stock_movements', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_stock_movements_product_id'), 'stock_movements', ['product_id'], unique=False)
+    op.create_index(op.f('ix_stock_movements_reference_number'), 'stock_movements', ['reference_number'], unique=False)
+    op.create_index(op.f('ix_stock_movements_source_document_id'), 'stock_movements', ['source_document_id'], unique=False)
+    op.create_index(op.f('ix_stock_movements_source_document_type'), 'stock_movements', ['source_document_type'], unique=False)
+    op.create_index(op.f('ix_stock_movements_to_location_id'), 'stock_movements', ['to_location_id'], unique=False)
+    op.create_index(op.f('ix_stock_movements_warehouse_id'), 'stock_movements', ['warehouse_id'], unique=False)
+    op.create_table('tasks',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('status', sa.Enum('TODO', 'IN_PROGRESS', 'REVIEW', 'DONE', 'CANCELLED', name='taskstatus'), nullable=False),
+    sa.Column('priority', sa.Enum('LOW', 'NORMAL', 'HIGH', 'URGENT', name='taskpriority'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.Column('due_date', sa.DateTime(), nullable=True),
+    sa.Column('start_date', sa.DateTime(), nullable=True),
+    sa.Column('completed_at', sa.DateTime(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('company_id', sa.Integer(), nullable=True),
+    sa.Column('task_project_id', sa.Integer(), nullable=True),
+    sa.Column('project_id', sa.Integer(), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.Column('assigned_to', sa.Integer(), nullable=True),
+    sa.Column('estimated_hours', sa.Integer(), nullable=True),
+    sa.Column('actual_hours', sa.Integer(), nullable=True),
+    sa.Column('tags', sa.JSON(), nullable=True),
+    sa.Column('custom_fields', sa.JSON(), nullable=True),
+    sa.Column('external_id', sa.String(length=255), nullable=True),
+    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['projects.id'], ),
+    sa.ForeignKeyConstraint(['task_project_id'], ['task_projects.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_tasks_external_id'), 'tasks', ['external_id'], unique=False)
+    op.create_index(op.f('ix_tasks_id'), 'tasks', ['id'], unique=False)
+    op.create_index(op.f('ix_tasks_title'), 'tasks', ['title'], unique=False)
+    op.create_table('ticket_attachments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('ticket_id', sa.Integer(), nullable=False),
+    sa.Column('filename', sa.String(), nullable=False),
+    sa.Column('original_filename', sa.String(), nullable=False),
+    sa.Column('file_path', sa.String(), nullable=False),
+    sa.Column('file_size', sa.Integer(), nullable=False),
+    sa.Column('content_type', sa.String(), nullable=False),
+    sa.Column('file_type', sa.String(), nullable=False),
+    sa.Column('uploaded_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ticket_attachment_organization_id'),
+    sa.ForeignKeyConstraint(['ticket_id'], ['tickets.id'], name='fk_ticket_attachment_ticket_id'),
+    sa.ForeignKeyConstraint(['uploaded_by_id'], ['users.id'], name='fk_ticket_attachment_uploaded_by_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_ticket_attachment_org_ticket', 'ticket_attachments', ['organization_id', 'ticket_id'], unique=False)
+    op.create_index('idx_ticket_attachment_type', 'ticket_attachments', ['file_type'], unique=False)
+    op.create_index('idx_ticket_attachment_uploaded_by', 'ticket_attachments', ['uploaded_by_id'], unique=False)
+    op.create_index(op.f('ix_ticket_attachments_id'), 'ticket_attachments', ['id'], unique=False)
+    op.create_index(op.f('ix_ticket_attachments_organization_id'), 'ticket_attachments', ['organization_id'], unique=False)
+    op.create_table('ticket_history',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('ticket_id', sa.Integer(), nullable=False),
+    sa.Column('action', sa.String(), nullable=False),
+    sa.Column('field_changed', sa.String(), nullable=True),
+    sa.Column('old_value', sa.Text(), nullable=True),
+    sa.Column('new_value', sa.Text(), nullable=True),
+    sa.Column('comment', sa.Text(), nullable=True),
+    sa.Column('changed_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['changed_by_id'], ['users.id'], name='fk_ticket_history_changed_by_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_ticket_history_organization_id'),
+    sa.ForeignKeyConstraint(['ticket_id'], ['tickets.id'], name='fk_ticket_history_ticket_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_ticket_history_action', 'ticket_history', ['action'], unique=False)
+    op.create_index('idx_ticket_history_created_at', 'ticket_history', ['created_at'], unique=False)
+    op.create_index('idx_ticket_history_org_ticket', 'ticket_history', ['organization_id', 'ticket_id'], unique=False)
+    op.create_index('idx_ticket_history_user', 'ticket_history', ['changed_by_id'], unique=False)
+    op.create_index(op.f('ix_ticket_history_id'), 'ticket_history', ['id'], unique=False)
+    op.create_index(op.f('ix_ticket_history_organization_id'), 'ticket_history', ['organization_id'], unique=False)
+    op.create_table('vendor_quotation_items',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('quotation_id', sa.Integer(), nullable=False),
+    sa.Column('rfq_item_id', sa.Integer(), nullable=False),
+    sa.Column('vendor_item_code', sa.String(length=100), nullable=True),
+    sa.Column('vendor_item_name', sa.String(length=200), nullable=True),
+    sa.Column('brand', sa.String(length=100), nullable=True),
+    sa.Column('model', sa.String(length=100), nullable=True),
+    sa.Column('quoted_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
+    sa.Column('unit_price', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('total_price', sa.Numeric(precision=15, scale=2), nullable=False),
+    sa.Column('delivery_period', sa.String(length=50), nullable=True),
+    sa.Column('remarks', sa.Text(), nullable=True),
+    sa.Column('meets_specifications', sa.Boolean(), nullable=False),
+    sa.Column('deviation_notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['quotation_id'], ['vendor_quotations.id'], ),
+    sa.ForeignKeyConstraint(['rfq_item_id'], ['rfq_items.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_vendor_quotation_items_id'), 'vendor_quotation_items', ['id'], unique=False)
+    op.create_index(op.f('ix_vendor_quotation_items_quotation_id'), 'vendor_quotation_items', ['quotation_id'], unique=False)
+    op.create_index(op.f('ix_vendor_quotation_items_rfq_item_id'), 'vendor_quotation_items', ['rfq_item_id'], unique=False)
+    op.create_table('website_deployments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('deployment_version', sa.String(), nullable=False),
+    sa.Column('deployment_status', sa.String(), nullable=False),
+    sa.Column('deployment_url', sa.String(), nullable=True),
+    sa.Column('deployment_provider', sa.String(), nullable=False),
+    sa.Column('deployment_config', sa.JSON(), nullable=True),
+    sa.Column('deployment_log', sa.Text(), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('deployed_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['deployed_by_id'], ['users.id'], name='fk_website_deployment_deployed_by_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_website_deployment_organization_id'),
+    sa.ForeignKeyConstraint(['project_id'], ['website_projects.id'], name='fk_website_deployment_project_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_website_deployment_created', 'website_deployments', ['created_at'], unique=False)
+    op.create_index('idx_website_deployment_org_project', 'website_deployments', ['organization_id', 'project_id'], unique=False)
+    op.create_index('idx_website_deployment_status', 'website_deployments', ['deployment_status'], unique=False)
+    op.create_index(op.f('ix_website_deployments_id'), 'website_deployments', ['id'], unique=False)
+    op.create_index(op.f('ix_website_deployments_organization_id'), 'website_deployments', ['organization_id'], unique=False)
+    op.create_table('website_maintenance_logs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('maintenance_type', sa.String(), nullable=False),
+    sa.Column('title', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('changes_summary', sa.Text(), nullable=True),
+    sa.Column('files_affected', sa.JSON(), nullable=True),
+    sa.Column('automated', sa.Boolean(), nullable=False),
+    sa.Column('scheduled_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('performed_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_website_maintenance_log_organization_id'),
+    sa.ForeignKeyConstraint(['performed_by_id'], ['users.id'], name='fk_website_maintenance_log_performed_by_id'),
+    sa.ForeignKeyConstraint(['project_id'], ['website_projects.id'], name='fk_website_maintenance_log_project_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_website_maintenance_log_automated', 'website_maintenance_logs', ['automated'], unique=False)
+    op.create_index('idx_website_maintenance_log_created', 'website_maintenance_logs', ['created_at'], unique=False)
+    op.create_index('idx_website_maintenance_log_org_project', 'website_maintenance_logs', ['organization_id', 'project_id'], unique=False)
+    op.create_index('idx_website_maintenance_log_status', 'website_maintenance_logs', ['status'], unique=False)
+    op.create_index('idx_website_maintenance_log_type', 'website_maintenance_logs', ['maintenance_type'], unique=False)
+    op.create_index(op.f('ix_website_maintenance_logs_id'), 'website_maintenance_logs', ['id'], unique=False)
+    op.create_index(op.f('ix_website_maintenance_logs_organization_id'), 'website_maintenance_logs', ['organization_id'], unique=False)
+    op.create_table('website_pages',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('page_name', sa.String(), nullable=False),
+    sa.Column('page_slug', sa.String(), nullable=False),
+    sa.Column('page_type', sa.String(), nullable=False),
+    sa.Column('title', sa.String(), nullable=False),
+    sa.Column('meta_description', sa.Text(), nullable=True),
+    sa.Column('content', sa.Text(), nullable=True),
+    sa.Column('sections_config', sa.JSON(), nullable=True),
+    sa.Column('is_published', sa.Boolean(), nullable=False),
+    sa.Column('order_index', sa.Integer(), nullable=False),
+    sa.Column('seo_keywords', sa.Text(), nullable=True),
+    sa.Column('og_image', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_website_page_organization_id'),
+    sa.ForeignKeyConstraint(['project_id'], ['website_projects.id'], name='fk_website_page_project_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('project_id', 'page_slug', name='uq_website_page_project_slug')
+    )
+    op.create_index('idx_website_page_order', 'website_pages', ['project_id', 'order_index'], unique=False)
+    op.create_index('idx_website_page_org_project', 'website_pages', ['organization_id', 'project_id'], unique=False)
+    op.create_index('idx_website_page_published', 'website_pages', ['is_published'], unique=False)
+    op.create_index('idx_website_page_type', 'website_pages', ['page_type'], unique=False)
+    op.create_index(op.f('ix_website_pages_id'), 'website_pages', ['id'], unique=False)
+    op.create_index(op.f('ix_website_pages_organization_id'), 'website_pages', ['organization_id'], unique=False)
+    op.create_table('workflow_step_executions_automation',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('workflow_instance_id', sa.Integer(), nullable=False),
+    sa.Column('workflow_step_id', sa.Integer(), nullable=False),
+    sa.Column('status', sa.String(length=50), nullable=False),
+    sa.Column('started_at', sa.DateTime(), nullable=True),
+    sa.Column('completed_at', sa.DateTime(), nullable=True),
+    sa.Column('failed_at', sa.DateTime(), nullable=True),
+    sa.Column('input_data', sa.JSON(), nullable=True),
+    sa.Column('output_data', sa.JSON(), nullable=True),
+    sa.Column('error_data', sa.JSON(), nullable=True),
+    sa.Column('approval_status', sa.String(length=50), nullable=True),
+    sa.Column('approved_by', sa.Integer(), nullable=True),
+    sa.Column('approved_at', sa.DateTime(), nullable=True),
+    sa.Column('approval_comments', sa.Text(), nullable=True),
+    sa.Column('execution_time_ms', sa.Integer(), nullable=True),
+    sa.Column('retry_count', sa.Integer(), nullable=False),
+    sa.Column('error_message', sa.Text(), nullable=True),
+    sa.Column('assigned_to', sa.Integer(), nullable=True),
+    sa.Column('completed_by', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['approved_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['completed_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['workflow_instance_id'], ['workflow_instances_automation.id'], ),
+    sa.ForeignKeyConstraint(['workflow_step_id'], ['workflow_steps_automation.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('workflow_instance_id', 'workflow_step_id', name='uq_workflow_step_execution')
+    )
+    op.create_index('idx_workflow_step_execution_assignee', 'workflow_step_executions_automation', ['assigned_to'], unique=False)
+    op.create_index('idx_workflow_step_execution_status', 'workflow_step_executions_automation', ['status'], unique=False)
+    op.create_index(op.f('ix_workflow_step_executions_automation_approval_status'), 'workflow_step_executions_automation', ['approval_status'], unique=False)
+    op.create_index(op.f('ix_workflow_step_executions_automation_id'), 'workflow_step_executions_automation', ['id'], unique=False)
+    op.create_index(op.f('ix_workflow_step_executions_automation_status'), 'workflow_step_executions_automation', ['status'], unique=False)
+    op.create_index(op.f('ix_workflow_step_executions_automation_workflow_instance_id'), 'workflow_step_executions_automation', ['workflow_instance_id'], unique=False)
+    op.create_index(op.f('ix_workflow_step_executions_automation_workflow_step_id'), 'workflow_step_executions_automation', ['workflow_step_id'], unique=False)
+    op.create_table('workflow_step_instances',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('instance_id', sa.Integer(), nullable=False),
+    sa.Column('step_id', sa.Integer(), nullable=False),
+    sa.Column('status', sa.Enum('CREATED', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'CANCELLED', 'PAUSED', name='instancestatus'), nullable=False),
+    sa.Column('assigned_to', sa.Integer(), nullable=True),
+    sa.Column('started_at', sa.DateTime(), nullable=True),
+    sa.Column('completed_at', sa.DateTime(), nullable=True),
+    sa.Column('deadline', sa.DateTime(), nullable=True),
+    sa.Column('result_data', sa.JSON(), nullable=True),
+    sa.Column('comments', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['instance_id'], ['workflow_instances.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['step_id'], ['workflow_steps.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_workflow_step_instance_org_assigned', 'workflow_step_instances', ['organization_id', 'assigned_to'], unique=False)
+    op.create_index('idx_workflow_step_instance_org_instance', 'workflow_step_instances', ['organization_id', 'instance_id'], unique=False)
+    op.create_index('idx_workflow_step_instance_org_status', 'workflow_step_instances', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_workflow_step_instance_org_step', 'workflow_step_instances', ['organization_id', 'step_id'], unique=False)
+    op.create_index(op.f('ix_workflow_step_instances_id'), 'workflow_step_instances', ['id'], unique=False)
+    op.create_index(op.f('ix_workflow_step_instances_organization_id'), 'workflow_step_instances', ['organization_id'], unique=False)
+    op.create_table('approval_requests',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('company_id', sa.Integer(), nullable=True),
+    sa.Column('approval_code', sa.String(length=100), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('entity_type', sa.String(length=100), nullable=False),
+    sa.Column('entity_id', sa.Integer(), nullable=False),
+    sa.Column('entity_data', sa.JSON(), nullable=True),
+    sa.Column('status', sa.Enum('PENDING', 'APPROVED', 'REJECTED', 'DELEGATED', 'ESCALATED', 'CANCELLED', name='approvalstatus'), nullable=False),
+    sa.Column('priority', sa.String(length=20), nullable=True),
+    sa.Column('requested_by', sa.Integer(), nullable=False),
+    sa.Column('assigned_to', sa.Integer(), nullable=False),
+    sa.Column('workflow_instance_id', sa.Integer(), nullable=True),
+    sa.Column('step_instance_id', sa.Integer(), nullable=True),
+    sa.Column('requested_at', sa.DateTime(), nullable=False),
+    sa.Column('deadline', sa.DateTime(), nullable=True),
+    sa.Column('responded_at', sa.DateTime(), nullable=True),
+    sa.Column('decision', sa.Enum('PENDING', 'APPROVED', 'REJECTED', 'DELEGATED', 'ESCALATED', 'CANCELLED', name='approvalstatus'), nullable=True),
+    sa.Column('decision_comments', sa.Text(), nullable=True),
+    sa.Column('decision_data', sa.JSON(), nullable=True),
+    sa.Column('delegated_to', sa.Integer(), nullable=True),
+    sa.Column('delegation_reason', sa.Text(), nullable=True),
+    sa.Column('escalated_to', sa.Integer(), nullable=True),
+    sa.Column('escalation_reason', sa.Text(), nullable=True),
+    sa.Column('escalated_at', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
+    sa.ForeignKeyConstraint(['delegated_to'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['escalated_to'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['requested_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['step_instance_id'], ['workflow_step_instances.id'], ),
+    sa.ForeignKeyConstraint(['workflow_instance_id'], ['workflow_instances.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'approval_code', name='uq_approval_org_code')
+    )
+    op.create_index('idx_approval_org_assigned', 'approval_requests', ['organization_id', 'assigned_to'], unique=False)
+    op.create_index('idx_approval_org_entity', 'approval_requests', ['organization_id', 'entity_type', 'entity_id'], unique=False)
+    op.create_index('idx_approval_org_requested', 'approval_requests', ['organization_id', 'requested_by'], unique=False)
+    op.create_index('idx_approval_org_status', 'approval_requests', ['organization_id', 'status'], unique=False)
+    op.create_index(op.f('ix_approval_requests_approval_code'), 'approval_requests', ['approval_code'], unique=False)
+    op.create_index(op.f('ix_approval_requests_company_id'), 'approval_requests', ['company_id'], unique=False)
+    op.create_index(op.f('ix_approval_requests_entity_type'), 'approval_requests', ['entity_type'], unique=False)
+    op.create_index(op.f('ix_approval_requests_id'), 'approval_requests', ['id'], unique=False)
+    op.create_index(op.f('ix_approval_requests_organization_id'), 'approval_requests', ['organization_id'], unique=False)
+    op.create_table('calendar_events',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('event_type', sa.Enum('TASK', 'APPOINTMENT', 'MEETING', 'REMINDER', 'DEADLINE', 'PERSONAL', 'HOLIDAY', name='eventtype'), nullable=False),
+    sa.Column('status', sa.Enum('SCHEDULED', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW', name='eventstatus'), nullable=False),
+    sa.Column('start_datetime', sa.DateTime(), nullable=False),
+    sa.Column('end_datetime', sa.DateTime(), nullable=False),
+    sa.Column('all_day', sa.Boolean(), nullable=False),
+    sa.Column('timezone', sa.String(length=50), nullable=False),
+    sa.Column('location', sa.String(length=255), nullable=True),
+    sa.Column('meeting_url', sa.String(length=500), nullable=True),
+    sa.Column('meeting_id', sa.String(length=100), nullable=True),
+    sa.Column('meeting_password', sa.String(length=100), nullable=True),
+    sa.Column('recurrence_type', sa.Enum('NONE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY', 'CUSTOM', name='recurrencetype'), nullable=False),
+    sa.Column('recurrence_rule', sa.JSON(), nullable=True),
+    sa.Column('recurrence_end_date', sa.Date(), nullable=True),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('created_by', sa.Integer(), nullable=False),
+    sa.Column('task_id', sa.Integer(), nullable=True),
+    sa.Column('color', sa.String(length=7), nullable=True),
+    sa.Column('is_private', sa.Boolean(), nullable=False),
+    sa.Column('priority', sa.String(length=20), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('custom_fields', sa.JSON(), nullable=True),
+    sa.Column('google_event_id', sa.String(length=255), nullable=True),
+    sa.Column('google_calendar_id', sa.String(length=255), nullable=True),
+    sa.Column('last_google_sync', sa.DateTime(), nullable=True),
+    sa.Column('external_id', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_calendar_events_end_datetime'), 'calendar_events', ['end_datetime'], unique=False)
+    op.create_index(op.f('ix_calendar_events_external_id'), 'calendar_events', ['external_id'], unique=False)
+    op.create_index(op.f('ix_calendar_events_google_event_id'), 'calendar_events', ['google_event_id'], unique=False)
+    op.create_index(op.f('ix_calendar_events_id'), 'calendar_events', ['id'], unique=False)
+    op.create_index(op.f('ix_calendar_events_start_datetime'), 'calendar_events', ['start_datetime'], unique=False)
+    op.create_index(op.f('ix_calendar_events_title'), 'calendar_events', ['title'], unique=False)
+    op.create_table('chatbot_messages',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('conversation_id', sa.Integer(), nullable=False),
+    sa.Column('message_type', sa.String(), nullable=False),
+    sa.Column('content', sa.Text(), nullable=False),
+    sa.Column('message_format', sa.String(), nullable=False),
+    sa.Column('sender_id', sa.String(), nullable=True),
+    sa.Column('agent_id', sa.Integer(), nullable=True),
+    sa.Column('intent_detected', sa.String(), nullable=True),
+    sa.Column('confidence_score', sa.Float(), nullable=True),
+    sa.Column('entities_extracted', sa.JSON(), nullable=True),
+    sa.Column('is_read', sa.Boolean(), nullable=False),
+    sa.Column('read_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['agent_id'], ['users.id'], name='fk_chatbot_message_agent_id'),
+    sa.ForeignKeyConstraint(['conversation_id'], ['chatbot_conversations.id'], name='fk_chatbot_message_conversation_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_chatbot_message_organization_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_chatbot_message_created', 'chatbot_messages', ['created_at'], unique=False)
+    op.create_index('idx_chatbot_message_org_conversation', 'chatbot_messages', ['organization_id', 'conversation_id'], unique=False)
+    op.create_index('idx_chatbot_message_type', 'chatbot_messages', ['message_type'], unique=False)
+    op.create_index(op.f('ix_chatbot_messages_id'), 'chatbot_messages', ['id'], unique=False)
+    op.create_index(op.f('ix_chatbot_messages_organization_id'), 'chatbot_messages', ['organization_id'], unique=False)
+    op.create_table('commissions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('sales_person_id', sa.Integer(), nullable=False),
+    sa.Column('sales_person_name', sa.String(), nullable=False),
+    sa.Column('person_type', sa.String(), nullable=False),
+    sa.Column('opportunity_id', sa.Integer(), nullable=True),
+    sa.Column('lead_id', sa.Integer(), nullable=True),
+    sa.Column('commission_type', sa.String(), nullable=False),
+    sa.Column('commission_rate', sa.Float(), nullable=True),
+    sa.Column('commission_amount', sa.Float(), nullable=True),
+    sa.Column('base_amount', sa.Float(), nullable=False),
+    sa.Column('commission_date', sa.Date(), nullable=False),
+    sa.Column('payment_status', sa.String(), nullable=False),
+    sa.Column('payment_date', sa.Date(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_commission_created_by_id'),
+    sa.ForeignKeyConstraint(['lead_id'], ['leads.id'], name='fk_commission_lead_id'),
+    sa.ForeignKeyConstraint(['opportunity_id'], ['opportunities.id'], name='fk_commission_opportunity_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_commission_organization_id'),
+    sa.ForeignKeyConstraint(['sales_person_id'], ['users.id'], name='fk_commission_sales_person_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_commission_org_person', 'commissions', ['organization_id', 'sales_person_id'], unique=False)
+    op.create_index('idx_commission_payment_status', 'commissions', ['payment_status', 'commission_date'], unique=False)
+    op.create_index(op.f('ix_commissions_commission_date'), 'commissions', ['commission_date'], unique=False)
+    op.create_index(op.f('ix_commissions_id'), 'commissions', ['id'], unique=False)
+    op.create_index(op.f('ix_commissions_lead_id'), 'commissions', ['lead_id'], unique=False)
+    op.create_index(op.f('ix_commissions_opportunity_id'), 'commissions', ['opportunity_id'], unique=False)
+    op.create_index(op.f('ix_commissions_organization_id'), 'commissions', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_commissions_sales_person_id'), 'commissions', ['sales_person_id'], unique=False)
+    op.create_table('delivery_challan_items',
+    sa.Column('delivery_challan_id', sa.Integer(), nullable=False),
+    sa.Column('so_item_id', sa.Integer(), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('unit_price', sa.Float(), nullable=True),
+    sa.Column('total_amount', sa.Float(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.ForeignKeyConstraint(['delivery_challan_id'], ['delivery_challans.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['so_item_id'], ['sales_order_items.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_delivery_challan_items_id'), 'delivery_challan_items', ['id'], unique=False)
+    op.create_table('dispatch_items',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('dispatch_order_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('serial_numbers', sa.Text(), nullable=True),
+    sa.Column('batch_numbers', sa.Text(), nullable=True),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['dispatch_order_id'], ['dispatch_orders.id'], name='fk_dispatch_item_dispatch_order_id'),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], name='fk_dispatch_item_product_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_dispatch_item_order', 'dispatch_items', ['dispatch_order_id'], unique=False)
+    op.create_index('idx_dispatch_item_product', 'dispatch_items', ['product_id'], unique=False)
+    op.create_index('idx_dispatch_item_status', 'dispatch_items', ['status'], unique=False)
+    op.create_index(op.f('ix_dispatch_items_id'), 'dispatch_items', ['id'], unique=False)
+    op.create_table('email_analytics',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('email_id', sa.Integer(), nullable=True),
+    sa.Column('scheduled_email_id', sa.Integer(), nullable=True),
+    sa.Column('message_id', sa.String(length=255), nullable=True),
+    sa.Column('to_address', sa.String(length=255), nullable=False),
+    sa.Column('subject', sa.String(length=500), nullable=True),
+    sa.Column('delivered', sa.Boolean(), nullable=False),
+    sa.Column('delivered_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('opened', sa.Boolean(), nullable=False),
+    sa.Column('opened_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('open_count', sa.Integer(), nullable=False),
+    sa.Column('clicked', sa.Boolean(), nullable=False),
+    sa.Column('clicked_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('click_count', sa.Integer(), nullable=False),
+    sa.Column('bounced', sa.Boolean(), nullable=False),
+    sa.Column('bounced_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('bounce_type', sa.String(length=50), nullable=True),
+    sa.Column('bounce_reason', sa.Text(), nullable=True),
+    sa.Column('marked_as_spam', sa.Boolean(), nullable=False),
+    sa.Column('marked_as_spam_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('user_agent', sa.Text(), nullable=True),
+    sa.Column('ip_address', sa.String(length=45), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['email_id'], ['emails.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['scheduled_email_id'], ['scheduled_emails.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_email_analytics_bounced', 'email_analytics', ['bounced', 'bounced_at'], unique=False)
+    op.create_index('idx_email_analytics_opened', 'email_analytics', ['opened', 'opened_at'], unique=False)
+    op.create_index('idx_email_analytics_org_delivered', 'email_analytics', ['organization_id', 'delivered'], unique=False)
+    op.create_index(op.f('ix_email_analytics_email_id'), 'email_analytics', ['email_id'], unique=False)
+    op.create_index(op.f('ix_email_analytics_id'), 'email_analytics', ['id'], unique=False)
+    op.create_index(op.f('ix_email_analytics_message_id'), 'email_analytics', ['message_id'], unique=False)
+    op.create_index(op.f('ix_email_analytics_organization_id'), 'email_analytics', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_email_analytics_scheduled_email_id'), 'email_analytics', ['scheduled_email_id'], unique=False)
+    op.create_index(op.f('ix_email_analytics_to_address'), 'email_analytics', ['to_address'], unique=False)
+    op.create_table('email_attachments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('email_id', sa.Integer(), nullable=False),
+    sa.Column('filename', sa.String(length=255), nullable=False),
+    sa.Column('original_filename', sa.String(length=255), nullable=False),
+    sa.Column('content_type', sa.String(length=100), nullable=True),
+    sa.Column('size_bytes', sa.Integer(), nullable=True),
+    sa.Column('content_id', sa.String(length=255), nullable=True),
+    sa.Column('content_disposition', sa.String(length=50), nullable=True),
+    sa.Column('file_path', sa.String(length=500), nullable=True),
+    sa.Column('file_hash', sa.String(length=64), nullable=True),
+    sa.Column('is_safe', sa.Boolean(), nullable=True),
+    sa.Column('scan_result', sa.Text(), nullable=True),
+    sa.Column('is_quarantined', sa.Boolean(), nullable=False),
+    sa.Column('is_downloaded', sa.Boolean(), nullable=False),
+    sa.Column('download_count', sa.Integer(), nullable=False),
+    sa.Column('last_downloaded_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('is_inline', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['email_id'], ['emails.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_email_attachment_email_id', 'email_attachments', ['email_id'], unique=False)
+    op.create_index('idx_email_attachment_filename', 'email_attachments', ['filename'], unique=False)
+    op.create_index('idx_email_attachment_hash', 'email_attachments', ['file_hash'], unique=False)
+    op.create_index(op.f('ix_email_attachments_email_id'), 'email_attachments', ['email_id'], unique=False)
+    op.create_index(op.f('ix_email_attachments_id'), 'email_attachments', ['id'], unique=False)
+    op.create_table('goods_receipt_note_items',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('grn_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('po_item_id', sa.Integer(), nullable=True),
+    sa.Column('ordered_quantity', sa.Float(), nullable=False),
+    sa.Column('received_quantity', sa.Float(), nullable=False),
+    sa.Column('accepted_quantity', sa.Float(), nullable=False),
+    sa.Column('rejected_quantity', sa.Float(), nullable=True),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('total_cost', sa.Float(), nullable=False),
+    sa.Column('remarks', sa.Text(), nullable=True),
+    sa.Column('batch_number', sa.String(), nullable=True),
+    sa.Column('expiry_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('quality_status', sa.String(), nullable=True),
+    sa.ForeignKeyConstraint(['grn_id'], ['goods_receipt_notes.id'], ),
+    sa.ForeignKeyConstraint(['po_item_id'], ['purchase_order_items.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_goods_receipt_note_items_id'), 'goods_receipt_note_items', ['id'], unique=False)
+    op.create_table('installation_jobs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('job_number', sa.String(), nullable=False),
+    sa.Column('dispatch_order_id', sa.Integer(), nullable=False),
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('ticket_id', sa.Integer(), nullable=True),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('priority', sa.String(), nullable=False),
+    sa.Column('scheduled_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('estimated_duration_hours', sa.Float(), nullable=True),
+    sa.Column('actual_start_time', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('actual_end_time', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('assigned_technician_id', sa.Integer(), nullable=True),
+    sa.Column('installation_address', sa.Text(), nullable=False),
+    sa.Column('contact_person', sa.String(), nullable=True),
+    sa.Column('contact_number', sa.String(), nullable=True),
+    sa.Column('installation_notes', sa.Text(), nullable=True),
+    sa.Column('completion_notes', sa.Text(), nullable=True),
+    sa.Column('customer_feedback', sa.Text(), nullable=True),
+    sa.Column('customer_rating', sa.Integer(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=True),
+    sa.Column('updated_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['assigned_technician_id'], ['users.id'], name='fk_installation_job_assigned_technician_id'),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_installation_job_created_by_id'),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], name='fk_installation_job_customer_id'),
+    sa.ForeignKeyConstraint(['dispatch_order_id'], ['dispatch_orders.id'], name='fk_installation_job_dispatch_order_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_installation_job_organization_id'),
+    sa.ForeignKeyConstraint(['ticket_id'], ['tickets.id'], name='fk_installation_job_ticket_id'),
+    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], name='fk_installation_job_updated_by_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'job_number', name='uq_installation_job_org_number')
+    )
+    op.create_index('idx_installation_job_created_at', 'installation_jobs', ['created_at'], unique=False)
+    op.create_index('idx_installation_job_dispatch_order', 'installation_jobs', ['dispatch_order_id'], unique=False)
+    op.create_index('idx_installation_job_org_customer', 'installation_jobs', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_installation_job_org_status', 'installation_jobs', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_installation_job_org_technician', 'installation_jobs', ['organization_id', 'assigned_technician_id'], unique=False)
+    op.create_index('idx_installation_job_priority', 'installation_jobs', ['priority'], unique=False)
+    op.create_index('idx_installation_job_scheduled_date', 'installation_jobs', ['scheduled_date'], unique=False)
+    op.create_index(op.f('ix_installation_jobs_id'), 'installation_jobs', ['id'], unique=False)
+    op.create_index(op.f('ix_installation_jobs_job_number'), 'installation_jobs', ['job_number'], unique=False)
+    op.create_index(op.f('ix_installation_jobs_organization_id'), 'installation_jobs', ['organization_id'], unique=False)
+    op.create_table('job_card_received_outputs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('job_card_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity_received', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_rate', sa.Float(), nullable=True),
+    sa.Column('total_value', sa.Float(), nullable=True),
+    sa.Column('quality_status', sa.String(), nullable=True),
+    sa.Column('inspection_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('inspection_remarks', sa.Text(), nullable=True),
+    sa.Column('batch_number', sa.String(), nullable=True),
+    sa.Column('receipt_date', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['job_card_id'], ['job_card_vouchers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_job_card_received_outputs_id'), 'job_card_received_outputs', ['id'], unique=False)
+    op.create_index(op.f('ix_job_card_received_outputs_organization_id'), 'job_card_received_outputs', ['organization_id'], unique=False)
+    op.create_table('job_card_supplied_materials',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('job_card_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity_supplied', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_rate', sa.Float(), nullable=True),
+    sa.Column('total_value', sa.Float(), nullable=True),
+    sa.Column('batch_number', sa.String(), nullable=True),
+    sa.Column('lot_number', sa.String(), nullable=True),
+    sa.Column('supply_date', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['job_card_id'], ['job_card_vouchers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_job_card_supplied_materials_id'), 'job_card_supplied_materials', ['id'], unique=False)
+    op.create_index(op.f('ix_job_card_supplied_materials_organization_id'), 'job_card_supplied_materials', ['organization_id'], unique=False)
+    op.create_table('maintenance_records',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('asset_id', sa.Integer(), nullable=False),
+    sa.Column('schedule_id', sa.Integer(), nullable=True),
+    sa.Column('work_order_number', sa.String(), nullable=False),
+    sa.Column('maintenance_type', sa.Enum('PREVENTIVE', 'CORRECTIVE', 'EMERGENCY', 'INSPECTION', name='maintenancetype'), nullable=False),
+    sa.Column('priority', sa.String(), nullable=True),
+    sa.Column('scheduled_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('actual_start_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('actual_end_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('description', sa.Text(), nullable=False),
+    sa.Column('work_performed', sa.Text(), nullable=True),
+    sa.Column('findings', sa.Text(), nullable=True),
+    sa.Column('recommendations', sa.Text(), nullable=True),
+    sa.Column('assigned_technician', sa.String(), nullable=True),
+    sa.Column('performed_by', sa.String(), nullable=True),
+    sa.Column('supervised_by', sa.String(), nullable=True),
+    sa.Column('status', sa.Enum('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'OVERDUE', name='maintenancestatus'), nullable=False),
+    sa.Column('labor_cost', sa.Float(), nullable=True),
+    sa.Column('parts_cost', sa.Float(), nullable=True),
+    sa.Column('external_cost', sa.Float(), nullable=True),
+    sa.Column('total_cost', sa.Float(), nullable=True),
+    sa.Column('meter_reading_before', sa.Float(), nullable=True),
+    sa.Column('meter_reading_after', sa.Float(), nullable=True),
+    sa.Column('safety_incidents', sa.Text(), nullable=True),
+    sa.Column('quality_check_passed', sa.Boolean(), nullable=True),
+    sa.Column('quality_remarks', sa.Text(), nullable=True),
+    sa.Column('condition_before', sa.Enum('EXCELLENT', 'GOOD', 'FAIR', 'POOR', 'CRITICAL', name='assetcondition'), nullable=True),
+    sa.Column('condition_after', sa.Enum('EXCELLENT', 'GOOD', 'FAIR', 'POOR', 'CRITICAL', name='assetcondition'), nullable=True),
+    sa.Column('photos_path', sa.String(), nullable=True),
+    sa.Column('documents_path', sa.String(), nullable=True),
+    sa.Column('approved_by', sa.Integer(), nullable=True),
+    sa.Column('approval_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['approved_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['asset_id'], ['assets.id'], ),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['schedule_id'], ['maintenance_schedules.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'work_order_number', name='uq_maint_rec_org_wo')
+    )
+    op.create_index('idx_maint_rec_org_asset', 'maintenance_records', ['organization_id', 'asset_id'], unique=False)
+    op.create_index('idx_maint_rec_org_date', 'maintenance_records', ['organization_id', 'scheduled_date'], unique=False)
+    op.create_index('idx_maint_rec_org_status', 'maintenance_records', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_maint_rec_org_type', 'maintenance_records', ['organization_id', 'maintenance_type'], unique=False)
+    op.create_index(op.f('ix_maintenance_records_id'), 'maintenance_records', ['id'], unique=False)
+    op.create_index(op.f('ix_maintenance_records_organization_id'), 'maintenance_records', ['organization_id'], unique=False)
+    op.create_table('manufacturing_journal_byproducts',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('journal_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_value', sa.Float(), nullable=True),
+    sa.Column('total_value', sa.Float(), nullable=True),
+    sa.Column('batch_number', sa.String(), nullable=True),
+    sa.Column('condition', sa.String(), nullable=True),
+    sa.ForeignKeyConstraint(['journal_id'], ['manufacturing_journal_vouchers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_manufacturing_journal_byproducts_id'), 'manufacturing_journal_byproducts', ['id'], unique=False)
+    op.create_index(op.f('ix_manufacturing_journal_byproducts_organization_id'), 'manufacturing_journal_byproducts', ['organization_id'], unique=False)
+    op.create_table('manufacturing_journal_finished_products',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('journal_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_cost', sa.Float(), nullable=True),
+    sa.Column('total_cost', sa.Float(), nullable=True),
+    sa.Column('quality_grade', sa.String(), nullable=True),
+    sa.Column('batch_number', sa.String(), nullable=True),
+    sa.Column('lot_number', sa.String(), nullable=True),
+    sa.ForeignKeyConstraint(['journal_id'], ['manufacturing_journal_vouchers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_manufacturing_journal_finished_products_id'), 'manufacturing_journal_finished_products', ['id'], unique=False)
+    op.create_index(op.f('ix_manufacturing_journal_finished_products_organization_id'), 'manufacturing_journal_finished_products', ['organization_id'], unique=False)
+    op.create_table('manufacturing_journal_materials',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('journal_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity_consumed', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_cost', sa.Float(), nullable=True),
+    sa.Column('total_cost', sa.Float(), nullable=True),
+    sa.Column('batch_number', sa.String(), nullable=True),
+    sa.Column('lot_number', sa.String(), nullable=True),
+    sa.ForeignKeyConstraint(['journal_id'], ['manufacturing_journal_vouchers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_manufacturing_journal_materials_id'), 'manufacturing_journal_materials', ['id'], unique=False)
+    op.create_index(op.f('ix_manufacturing_journal_materials_organization_id'), 'manufacturing_journal_materials', ['organization_id'], unique=False)
+    op.create_table('material_issue_items',
+    sa.Column('material_issue_id', sa.Integer(), nullable=False),
+    sa.Column('batch_number', sa.String(), nullable=True),
+    sa.Column('lot_number', sa.String(), nullable=True),
+    sa.Column('expiry_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('warehouse_location', sa.String(), nullable=True),
+    sa.Column('bin_location', sa.String(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('discount_percentage', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('taxable_amount', sa.Float(), nullable=False),
+    sa.Column('gst_rate', sa.Float(), nullable=True),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['material_issue_id'], ['material_issues.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_material_issue_items_id'), 'material_issue_items', ['id'], unique=False)
+    op.create_table('material_receipt_items',
+    sa.Column('receipt_id', sa.Integer(), nullable=False),
+    sa.Column('batch_number', sa.String(), nullable=True),
+    sa.Column('lot_number', sa.String(), nullable=True),
+    sa.Column('expiry_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('warehouse_location', sa.String(), nullable=True),
+    sa.Column('bin_location', sa.String(), nullable=True),
+    sa.Column('quality_status', sa.String(), nullable=True),
+    sa.Column('inspection_remarks', sa.Text(), nullable=True),
+    sa.Column('received_quantity', sa.Float(), nullable=True),
+    sa.Column('accepted_quantity', sa.Float(), nullable=True),
+    sa.Column('rejected_quantity', sa.Float(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('discount_percentage', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('taxable_amount', sa.Float(), nullable=False),
+    sa.Column('gst_rate', sa.Float(), nullable=True),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['receipt_id'], ['material_receipt_vouchers.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_material_receipt_items_id'), 'material_receipt_items', ['id'], unique=False)
+    op.create_table('opportunity_activities',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('opportunity_id', sa.Integer(), nullable=False),
+    sa.Column('activity_type', sa.String(), nullable=False),
+    sa.Column('subject', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('outcome', sa.String(), nullable=True),
+    sa.Column('activity_date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('duration_minutes', sa.Integer(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_opportunity_activity_created_by_id'),
+    sa.ForeignKeyConstraint(['opportunity_id'], ['opportunities.id'], name='fk_opportunity_activity_opportunity_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_opportunity_activity_organization_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_opportunity_activity_date', 'opportunity_activities', ['activity_date'], unique=False)
+    op.create_index('idx_opportunity_activity_org_opp', 'opportunity_activities', ['organization_id', 'opportunity_id'], unique=False)
+    op.create_index('idx_opportunity_activity_type', 'opportunity_activities', ['activity_type'], unique=False)
+    op.create_index(op.f('ix_opportunity_activities_id'), 'opportunity_activities', ['id'], unique=False)
+    op.create_index(op.f('ix_opportunity_activities_organization_id'), 'opportunity_activities', ['organization_id'], unique=False)
+    op.create_table('opportunity_products',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('opportunity_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=True),
+    sa.Column('product_name', sa.String(), nullable=False),
+    sa.Column('product_description', sa.Text(), nullable=True),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('discount_percent', sa.Float(), nullable=False),
+    sa.Column('discount_amount', sa.Float(), nullable=False),
+    sa.Column('final_amount', sa.Float(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['opportunity_id'], ['opportunities.id'], name='fk_opportunity_product_opportunity_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_opportunity_product_organization_id'),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], name='fk_opportunity_product_product_id'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_opportunity_product_org_opp', 'opportunity_products', ['organization_id', 'opportunity_id'], unique=False)
+    op.create_index(op.f('ix_opportunity_products_id'), 'opportunity_products', ['id'], unique=False)
+    op.create_index(op.f('ix_opportunity_products_organization_id'), 'opportunity_products', ['organization_id'], unique=False)
+    op.create_table('order_items',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('order_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_order_item_order', 'order_items', ['order_id'], unique=False)
+    op.create_index('idx_order_item_product', 'order_items', ['product_id'], unique=False)
+    op.create_index(op.f('ix_order_items_id'), 'order_items', ['id'], unique=False)
+    op.create_table('order_workflow_history',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('order_id', sa.Integer(), nullable=False),
+    sa.Column('from_stage', sa.String(), nullable=True),
+    sa.Column('to_stage', sa.String(), nullable=False),
+    sa.Column('changed_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('changed_by_id', sa.Integer(), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['changed_by_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_workflow_history_changed_at', 'order_workflow_history', ['changed_at'], unique=False)
+    op.create_index('idx_workflow_history_order', 'order_workflow_history', ['order_id'], unique=False)
+    op.create_index(op.f('ix_order_workflow_history_id'), 'order_workflow_history', ['id'], unique=False)
+    op.create_table('production_entry_items',
+    sa.Column('production_entry_id', sa.Integer(), nullable=False),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('discount_percentage', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('taxable_amount', sa.Float(), nullable=False),
+    sa.Column('gst_rate', sa.Float(), nullable=True),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['production_entry_id'], ['production_entries.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_production_entry_items_id'), 'production_entry_items', ['id'], unique=False)
     op.create_table('project_time_logs',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -7787,868 +9866,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_sales_vouchers_organization_id'), 'sales_vouchers', ['organization_id'], unique=False)
     op.create_index(op.f('ix_sales_vouchers_voucher_number'), 'sales_vouchers', ['voucher_number'], unique=False)
     op.create_index(op.f('ix_sales_vouchers_voucher_type'), 'sales_vouchers', ['voucher_type'], unique=False)
-    op.create_table('shipments',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('shipment_number', sa.String(), nullable=False),
-    sa.Column('carrier_id', sa.Integer(), nullable=False),
-    sa.Column('route_id', sa.Integer(), nullable=True),
-    sa.Column('sales_order_id', sa.Integer(), nullable=True),
-    sa.Column('purchase_order_id', sa.Integer(), nullable=True),
-    sa.Column('manufacturing_order_id', sa.Integer(), nullable=True),
-    sa.Column('tracking_number', sa.String(), nullable=True),
-    sa.Column('awb_number', sa.String(), nullable=True),
-    sa.Column('bol_number', sa.String(), nullable=True),
-    sa.Column('freight_mode', sa.Enum('LTL', 'FTL', 'EXPRESS', 'STANDARD', 'ECONOMY', name='freightmode'), nullable=False),
-    sa.Column('service_type', sa.String(), nullable=True),
-    sa.Column('origin_name', sa.String(), nullable=False),
-    sa.Column('origin_address', sa.Text(), nullable=True),
-    sa.Column('origin_city', sa.String(), nullable=False),
-    sa.Column('origin_state', sa.String(), nullable=True),
-    sa.Column('origin_postal_code', sa.String(), nullable=True),
-    sa.Column('origin_country', sa.String(), nullable=True),
-    sa.Column('destination_name', sa.String(), nullable=False),
-    sa.Column('destination_address', sa.Text(), nullable=True),
-    sa.Column('destination_city', sa.String(), nullable=False),
-    sa.Column('destination_state', sa.String(), nullable=True),
-    sa.Column('destination_postal_code', sa.String(), nullable=True),
-    sa.Column('destination_country', sa.String(), nullable=True),
-    sa.Column('total_weight_kg', sa.Float(), nullable=True),
-    sa.Column('total_volume_cbm', sa.Float(), nullable=True),
-    sa.Column('total_pieces', sa.Integer(), nullable=True),
-    sa.Column('declared_value', sa.Float(), nullable=True),
-    sa.Column('is_fragile', sa.Boolean(), nullable=True),
-    sa.Column('is_hazardous', sa.Boolean(), nullable=True),
-    sa.Column('temperature_controlled', sa.Boolean(), nullable=True),
-    sa.Column('signature_required', sa.Boolean(), nullable=True),
-    sa.Column('pickup_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('pickup_time_from', sa.String(), nullable=True),
-    sa.Column('pickup_time_to', sa.String(), nullable=True),
-    sa.Column('expected_delivery_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('actual_delivery_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('status', sa.Enum('PLANNED', 'BOOKED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED', 'DELAYED', name='shipmentstatus'), nullable=False),
-    sa.Column('last_location_update', sa.String(), nullable=True),
-    sa.Column('last_status_update', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('freight_charges', sa.Float(), nullable=True),
-    sa.Column('fuel_surcharge', sa.Float(), nullable=True),
-    sa.Column('handling_charges', sa.Float(), nullable=True),
-    sa.Column('insurance_charges', sa.Float(), nullable=True),
-    sa.Column('other_charges', sa.Float(), nullable=True),
-    sa.Column('total_charges', sa.Float(), nullable=True),
-    sa.Column('payment_terms', sa.String(), nullable=True),
-    sa.Column('cod_amount', sa.Float(), nullable=True),
-    sa.Column('shipping_documents', sa.JSON(), nullable=True),
-    sa.Column('special_instructions', sa.Text(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['carrier_id'], ['carriers.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['manufacturing_order_id'], ['manufacturing_orders.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['purchase_order_id'], ['purchase_orders.id'], ),
-    sa.ForeignKeyConstraint(['route_id'], ['routes.id'], ),
-    sa.ForeignKeyConstraint(['sales_order_id'], ['sales_orders.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'shipment_number', name='uq_shipment_org_number')
-    )
-    op.create_index('idx_shipment_org_carrier', 'shipments', ['organization_id', 'carrier_id'], unique=False)
-    op.create_index('idx_shipment_org_pickup_date', 'shipments', ['organization_id', 'pickup_date'], unique=False)
-    op.create_index('idx_shipment_org_status', 'shipments', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_shipment_org_tracking', 'shipments', ['organization_id', 'tracking_number'], unique=False)
-    op.create_index(op.f('ix_shipments_id'), 'shipments', ['id'], unique=False)
-    op.create_index(op.f('ix_shipments_organization_id'), 'shipments', ['organization_id'], unique=False)
-    op.create_table('stock_adjustment_items',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('adjustment_id', sa.Integer(), nullable=False),
-    sa.Column('warehouse_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('book_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
-    sa.Column('physical_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
-    sa.Column('adjustment_quantity', sa.Numeric(precision=12, scale=3), nullable=False),
-    sa.Column('unit_cost', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('adjustment_value', sa.Numeric(precision=15, scale=2), nullable=False),
-    sa.Column('batch_id', sa.Integer(), nullable=True),
-    sa.Column('serial_numbers', sa.JSON(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.ForeignKeyConstraint(['adjustment_id'], ['stock_adjustments.id'], ),
-    sa.ForeignKeyConstraint(['batch_id'], ['product_batches.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['warehouse_id'], ['warehouses.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_stock_adjustment_items_adjustment_id'), 'stock_adjustment_items', ['adjustment_id'], unique=False)
-    op.create_index(op.f('ix_stock_adjustment_items_batch_id'), 'stock_adjustment_items', ['batch_id'], unique=False)
-    op.create_index(op.f('ix_stock_adjustment_items_id'), 'stock_adjustment_items', ['id'], unique=False)
-    op.create_index(op.f('ix_stock_adjustment_items_product_id'), 'stock_adjustment_items', ['product_id'], unique=False)
-    op.create_index(op.f('ix_stock_adjustment_items_warehouse_id'), 'stock_adjustment_items', ['warehouse_id'], unique=False)
-    op.create_table('stock_journals',
-    sa.Column('journal_type', sa.String(), nullable=False),
-    sa.Column('from_location', sa.String(), nullable=True),
-    sa.Column('to_location', sa.String(), nullable=True),
-    sa.Column('from_warehouse', sa.String(), nullable=True),
-    sa.Column('to_warehouse', sa.String(), nullable=True),
-    sa.Column('manufacturing_order_id', sa.Integer(), nullable=True),
-    sa.Column('bom_id', sa.Integer(), nullable=True),
-    sa.Column('transfer_reason', sa.String(), nullable=True),
-    sa.Column('assembly_product_id', sa.Integer(), nullable=True),
-    sa.Column('assembly_quantity', sa.Float(), nullable=True),
-    sa.Column('physical_verification_done', sa.Boolean(), nullable=True),
-    sa.Column('verified_by', sa.String(), nullable=True),
-    sa.Column('verification_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('approved_by', sa.Integer(), nullable=True),
-    sa.Column('approval_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['approved_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['assembly_product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['bom_id'], ['bill_of_materials.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['manufacturing_order_id'], ['manufacturing_orders.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_sj_org_voucher_number')
-    )
-    op.create_index('idx_sj_org_date', 'stock_journals', ['organization_id', 'date'], unique=False)
-    op.create_index('idx_sj_org_from_loc', 'stock_journals', ['organization_id', 'from_location'], unique=False)
-    op.create_index('idx_sj_org_mo', 'stock_journals', ['organization_id', 'manufacturing_order_id'], unique=False)
-    op.create_index('idx_sj_org_to_loc', 'stock_journals', ['organization_id', 'to_location'], unique=False)
-    op.create_index('idx_sj_org_type', 'stock_journals', ['organization_id', 'journal_type'], unique=False)
-    op.create_index(op.f('ix_stock_journals_id'), 'stock_journals', ['id'], unique=False)
-    op.create_index(op.f('ix_stock_journals_organization_id'), 'stock_journals', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_stock_journals_voucher_number'), 'stock_journals', ['voucher_number'], unique=False)
-    op.create_table('stock_movements',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('warehouse_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('movement_type', sa.Enum('RECEIPT', 'ISSUE', 'TRANSFER', 'ADJUSTMENT', 'RETURN', 'DAMAGE', 'OBSOLETE', name='stockmovementtype'), nullable=False),
-    sa.Column('movement_date', sa.DateTime(), nullable=False),
-    sa.Column('reference_number', sa.String(length=100), nullable=True),
-    sa.Column('quantity', sa.Numeric(precision=12, scale=3), nullable=False),
-    sa.Column('unit_cost', sa.Numeric(precision=15, scale=2), nullable=True),
-    sa.Column('total_value', sa.Numeric(precision=15, scale=2), nullable=True),
-    sa.Column('batch_id', sa.Integer(), nullable=True),
-    sa.Column('serial_numbers', sa.JSON(), nullable=True),
-    sa.Column('from_location_id', sa.Integer(), nullable=True),
-    sa.Column('to_location_id', sa.Integer(), nullable=True),
-    sa.Column('source_document_type', sa.String(length=50), nullable=True),
-    sa.Column('source_document_id', sa.Integer(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['batch_id'], ['product_batches.id'], ),
-    sa.ForeignKeyConstraint(['created_by'], ['platform_users.id'], ),
-    sa.ForeignKeyConstraint(['from_location_id'], ['stock_locations.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['to_location_id'], ['stock_locations.id'], ),
-    sa.ForeignKeyConstraint(['warehouse_id'], ['warehouses.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_stock_movement_org_date', 'stock_movements', ['organization_id', 'movement_date'], unique=False)
-    op.create_index('idx_stock_movement_type', 'stock_movements', ['movement_type'], unique=False)
-    op.create_index(op.f('ix_stock_movements_batch_id'), 'stock_movements', ['batch_id'], unique=False)
-    op.create_index(op.f('ix_stock_movements_from_location_id'), 'stock_movements', ['from_location_id'], unique=False)
-    op.create_index(op.f('ix_stock_movements_id'), 'stock_movements', ['id'], unique=False)
-    op.create_index(op.f('ix_stock_movements_movement_date'), 'stock_movements', ['movement_date'], unique=False)
-    op.create_index(op.f('ix_stock_movements_movement_type'), 'stock_movements', ['movement_type'], unique=False)
-    op.create_index(op.f('ix_stock_movements_organization_id'), 'stock_movements', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_stock_movements_product_id'), 'stock_movements', ['product_id'], unique=False)
-    op.create_index(op.f('ix_stock_movements_reference_number'), 'stock_movements', ['reference_number'], unique=False)
-    op.create_index(op.f('ix_stock_movements_source_document_id'), 'stock_movements', ['source_document_id'], unique=False)
-    op.create_index(op.f('ix_stock_movements_source_document_type'), 'stock_movements', ['source_document_type'], unique=False)
-    op.create_index(op.f('ix_stock_movements_to_location_id'), 'stock_movements', ['to_location_id'], unique=False)
-    op.create_index(op.f('ix_stock_movements_warehouse_id'), 'stock_movements', ['warehouse_id'], unique=False)
-    op.create_table('task_attachments',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('task_id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('filename', sa.String(length=255), nullable=False),
-    sa.Column('file_path', sa.String(length=500), nullable=False),
-    sa.Column('file_size', sa.Integer(), nullable=True),
-    sa.Column('mime_type', sa.String(length=100), nullable=True),
-    sa.Column('uploaded_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_task_attachments_id'), 'task_attachments', ['id'], unique=False)
-    op.create_table('task_comments',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('task_id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('content', sa.Text(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_task_comments_id'), 'task_comments', ['id'], unique=False)
-    op.create_table('task_reminders',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('task_id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('remind_at', sa.DateTime(), nullable=False),
-    sa.Column('message', sa.String(length=255), nullable=True),
-    sa.Column('is_sent', sa.Boolean(), nullable=False),
-    sa.Column('sent_at', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_task_reminders_id'), 'task_reminders', ['id'], unique=False)
-    op.create_table('task_time_logs',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('task_id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('description', sa.String(length=255), nullable=True),
-    sa.Column('hours', sa.Integer(), nullable=False),
-    sa.Column('logged_at', sa.DateTime(), nullable=False),
-    sa.Column('work_date', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_task_time_logs_id'), 'task_time_logs', ['id'], unique=False)
-    op.create_table('workflow_step_executions_automation',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('workflow_instance_id', sa.Integer(), nullable=False),
-    sa.Column('workflow_step_id', sa.Integer(), nullable=False),
-    sa.Column('status', sa.String(length=50), nullable=False),
-    sa.Column('started_at', sa.DateTime(), nullable=True),
-    sa.Column('completed_at', sa.DateTime(), nullable=True),
-    sa.Column('failed_at', sa.DateTime(), nullable=True),
-    sa.Column('input_data', sa.JSON(), nullable=True),
-    sa.Column('output_data', sa.JSON(), nullable=True),
-    sa.Column('error_data', sa.JSON(), nullable=True),
-    sa.Column('approval_status', sa.String(length=50), nullable=True),
-    sa.Column('approved_by', sa.Integer(), nullable=True),
-    sa.Column('approved_at', sa.DateTime(), nullable=True),
-    sa.Column('approval_comments', sa.Text(), nullable=True),
-    sa.Column('execution_time_ms', sa.Integer(), nullable=True),
-    sa.Column('retry_count', sa.Integer(), nullable=False),
-    sa.Column('error_message', sa.Text(), nullable=True),
-    sa.Column('assigned_to', sa.Integer(), nullable=True),
-    sa.Column('completed_by', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['approved_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['completed_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['workflow_instance_id'], ['workflow_instances_automation.id'], ),
-    sa.ForeignKeyConstraint(['workflow_step_id'], ['workflow_steps_automation.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('workflow_instance_id', 'workflow_step_id', name='uq_workflow_step_execution')
-    )
-    op.create_index('idx_workflow_step_execution_assignee', 'workflow_step_executions_automation', ['assigned_to'], unique=False)
-    op.create_index('idx_workflow_step_execution_status', 'workflow_step_executions_automation', ['status'], unique=False)
-    op.create_index(op.f('ix_workflow_step_executions_automation_approval_status'), 'workflow_step_executions_automation', ['approval_status'], unique=False)
-    op.create_index(op.f('ix_workflow_step_executions_automation_id'), 'workflow_step_executions_automation', ['id'], unique=False)
-    op.create_index(op.f('ix_workflow_step_executions_automation_status'), 'workflow_step_executions_automation', ['status'], unique=False)
-    op.create_index(op.f('ix_workflow_step_executions_automation_workflow_instance_id'), 'workflow_step_executions_automation', ['workflow_instance_id'], unique=False)
-    op.create_index(op.f('ix_workflow_step_executions_automation_workflow_step_id'), 'workflow_step_executions_automation', ['workflow_step_id'], unique=False)
-    op.create_table('workflow_step_instances',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('instance_id', sa.Integer(), nullable=False),
-    sa.Column('step_id', sa.Integer(), nullable=False),
-    sa.Column('status', sa.Enum('CREATED', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'CANCELLED', 'PAUSED', name='instancestatus'), nullable=False),
-    sa.Column('assigned_to', sa.Integer(), nullable=True),
-    sa.Column('started_at', sa.DateTime(), nullable=True),
-    sa.Column('completed_at', sa.DateTime(), nullable=True),
-    sa.Column('deadline', sa.DateTime(), nullable=True),
-    sa.Column('result_data', sa.JSON(), nullable=True),
-    sa.Column('comments', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['instance_id'], ['workflow_instances.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['step_id'], ['workflow_steps.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_workflow_step_instance_org_assigned', 'workflow_step_instances', ['organization_id', 'assigned_to'], unique=False)
-    op.create_index('idx_workflow_step_instance_org_instance', 'workflow_step_instances', ['organization_id', 'instance_id'], unique=False)
-    op.create_index('idx_workflow_step_instance_org_status', 'workflow_step_instances', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_workflow_step_instance_org_step', 'workflow_step_instances', ['organization_id', 'step_id'], unique=False)
-    op.create_index(op.f('ix_workflow_step_instances_id'), 'workflow_step_instances', ['id'], unique=False)
-    op.create_index(op.f('ix_workflow_step_instances_organization_id'), 'workflow_step_instances', ['organization_id'], unique=False)
-    op.create_table('approval_requests',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('company_id', sa.Integer(), nullable=True),
-    sa.Column('approval_code', sa.String(length=100), nullable=False),
-    sa.Column('title', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('entity_type', sa.String(length=100), nullable=False),
-    sa.Column('entity_id', sa.Integer(), nullable=False),
-    sa.Column('entity_data', sa.JSON(), nullable=True),
-    sa.Column('status', sa.Enum('PENDING', 'APPROVED', 'REJECTED', 'DELEGATED', 'ESCALATED', 'CANCELLED', name='approvalstatus'), nullable=False),
-    sa.Column('priority', sa.String(length=20), nullable=True),
-    sa.Column('requested_by', sa.Integer(), nullable=False),
-    sa.Column('assigned_to', sa.Integer(), nullable=False),
-    sa.Column('workflow_instance_id', sa.Integer(), nullable=True),
-    sa.Column('step_instance_id', sa.Integer(), nullable=True),
-    sa.Column('requested_at', sa.DateTime(), nullable=False),
-    sa.Column('deadline', sa.DateTime(), nullable=True),
-    sa.Column('responded_at', sa.DateTime(), nullable=True),
-    sa.Column('decision', sa.Enum('PENDING', 'APPROVED', 'REJECTED', 'DELEGATED', 'ESCALATED', 'CANCELLED', name='approvalstatus'), nullable=True),
-    sa.Column('decision_comments', sa.Text(), nullable=True),
-    sa.Column('decision_data', sa.JSON(), nullable=True),
-    sa.Column('delegated_to', sa.Integer(), nullable=True),
-    sa.Column('delegation_reason', sa.Text(), nullable=True),
-    sa.Column('escalated_to', sa.Integer(), nullable=True),
-    sa.Column('escalation_reason', sa.Text(), nullable=True),
-    sa.Column('escalated_at', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['assigned_to'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], ),
-    sa.ForeignKeyConstraint(['delegated_to'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['escalated_to'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['requested_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['step_instance_id'], ['workflow_step_instances.id'], ),
-    sa.ForeignKeyConstraint(['workflow_instance_id'], ['workflow_instances.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'approval_code', name='uq_approval_org_code')
-    )
-    op.create_index('idx_approval_org_assigned', 'approval_requests', ['organization_id', 'assigned_to'], unique=False)
-    op.create_index('idx_approval_org_entity', 'approval_requests', ['organization_id', 'entity_type', 'entity_id'], unique=False)
-    op.create_index('idx_approval_org_requested', 'approval_requests', ['organization_id', 'requested_by'], unique=False)
-    op.create_index('idx_approval_org_status', 'approval_requests', ['organization_id', 'status'], unique=False)
-    op.create_index(op.f('ix_approval_requests_approval_code'), 'approval_requests', ['approval_code'], unique=False)
-    op.create_index(op.f('ix_approval_requests_company_id'), 'approval_requests', ['company_id'], unique=False)
-    op.create_index(op.f('ix_approval_requests_entity_type'), 'approval_requests', ['entity_type'], unique=False)
-    op.create_index(op.f('ix_approval_requests_id'), 'approval_requests', ['id'], unique=False)
-    op.create_index(op.f('ix_approval_requests_organization_id'), 'approval_requests', ['organization_id'], unique=False)
-    op.create_table('completion_records',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('installation_job_id', sa.Integer(), nullable=False),
-    sa.Column('completion_status', sa.String(), nullable=False),
-    sa.Column('completed_by_id', sa.Integer(), nullable=False),
-    sa.Column('completion_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('actual_start_time', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('actual_end_time', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('total_duration_minutes', sa.Integer(), nullable=True),
-    sa.Column('work_performed', sa.Text(), nullable=False),
-    sa.Column('issues_encountered', sa.Text(), nullable=True),
-    sa.Column('resolution_notes', sa.Text(), nullable=True),
-    sa.Column('materials_used', sa.Text(), nullable=True),
-    sa.Column('parts_replaced', sa.Text(), nullable=True),
-    sa.Column('quality_check_passed', sa.Boolean(), nullable=False),
-    sa.Column('verification_notes', sa.Text(), nullable=True),
-    sa.Column('photos_attached', sa.Boolean(), nullable=False),
-    sa.Column('customer_present', sa.Boolean(), nullable=False),
-    sa.Column('customer_signature_received', sa.Boolean(), nullable=False),
-    sa.Column('customer_feedback_notes', sa.Text(), nullable=True),
-    sa.Column('customer_rating', sa.Integer(), nullable=True),
-    sa.Column('follow_up_required', sa.Boolean(), nullable=False),
-    sa.Column('follow_up_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('follow_up_notes', sa.Text(), nullable=True),
-    sa.Column('feedback_request_sent', sa.Boolean(), nullable=False),
-    sa.Column('feedback_request_sent_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['completed_by_id'], ['users.id'], name='fk_completion_record_completed_by_id'),
-    sa.ForeignKeyConstraint(['installation_job_id'], ['installation_jobs.id'], name='fk_completion_record_installation_job_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_completion_record_organization_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('installation_job_id')
-    )
-    op.create_index('idx_completion_record_completed_by', 'completion_records', ['completed_by_id'], unique=False)
-    op.create_index('idx_completion_record_completion_date', 'completion_records', ['completion_date'], unique=False)
-    op.create_index('idx_completion_record_feedback_sent', 'completion_records', ['feedback_request_sent'], unique=False)
-    op.create_index('idx_completion_record_follow_up', 'completion_records', ['follow_up_required', 'follow_up_date'], unique=False)
-    op.create_index('idx_completion_record_org_job', 'completion_records', ['organization_id', 'installation_job_id'], unique=False)
-    op.create_index('idx_completion_record_status', 'completion_records', ['completion_status'], unique=False)
-    op.create_index(op.f('ix_completion_records_id'), 'completion_records', ['id'], unique=False)
-    op.create_index(op.f('ix_completion_records_organization_id'), 'completion_records', ['organization_id'], unique=False)
-    op.create_table('email_analytics',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('email_id', sa.Integer(), nullable=True),
-    sa.Column('scheduled_email_id', sa.Integer(), nullable=True),
-    sa.Column('message_id', sa.String(length=255), nullable=True),
-    sa.Column('to_address', sa.String(length=255), nullable=False),
-    sa.Column('subject', sa.String(length=500), nullable=True),
-    sa.Column('delivered', sa.Boolean(), nullable=False),
-    sa.Column('delivered_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('opened', sa.Boolean(), nullable=False),
-    sa.Column('opened_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('open_count', sa.Integer(), nullable=False),
-    sa.Column('clicked', sa.Boolean(), nullable=False),
-    sa.Column('clicked_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('click_count', sa.Integer(), nullable=False),
-    sa.Column('bounced', sa.Boolean(), nullable=False),
-    sa.Column('bounced_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('bounce_type', sa.String(length=50), nullable=True),
-    sa.Column('bounce_reason', sa.Text(), nullable=True),
-    sa.Column('marked_as_spam', sa.Boolean(), nullable=False),
-    sa.Column('marked_as_spam_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('user_agent', sa.Text(), nullable=True),
-    sa.Column('ip_address', sa.String(length=45), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['email_id'], ['emails.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['scheduled_email_id'], ['scheduled_emails.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_email_analytics_bounced', 'email_analytics', ['bounced', 'bounced_at'], unique=False)
-    op.create_index('idx_email_analytics_opened', 'email_analytics', ['opened', 'opened_at'], unique=False)
-    op.create_index('idx_email_analytics_org_delivered', 'email_analytics', ['organization_id', 'delivered'], unique=False)
-    op.create_index(op.f('ix_email_analytics_email_id'), 'email_analytics', ['email_id'], unique=False)
-    op.create_index(op.f('ix_email_analytics_id'), 'email_analytics', ['id'], unique=False)
-    op.create_index(op.f('ix_email_analytics_message_id'), 'email_analytics', ['message_id'], unique=False)
-    op.create_index(op.f('ix_email_analytics_organization_id'), 'email_analytics', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_email_analytics_scheduled_email_id'), 'email_analytics', ['scheduled_email_id'], unique=False)
-    op.create_index(op.f('ix_email_analytics_to_address'), 'email_analytics', ['to_address'], unique=False)
-    op.create_table('email_attachments',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('email_id', sa.Integer(), nullable=False),
-    sa.Column('filename', sa.String(length=255), nullable=False),
-    sa.Column('original_filename', sa.String(length=255), nullable=False),
-    sa.Column('content_type', sa.String(length=100), nullable=True),
-    sa.Column('size_bytes', sa.Integer(), nullable=True),
-    sa.Column('content_id', sa.String(length=255), nullable=True),
-    sa.Column('content_disposition', sa.String(length=50), nullable=True),
-    sa.Column('file_path', sa.String(length=500), nullable=True),
-    sa.Column('file_hash', sa.String(length=64), nullable=True),
-    sa.Column('is_safe', sa.Boolean(), nullable=True),
-    sa.Column('scan_result', sa.Text(), nullable=True),
-    sa.Column('is_quarantined', sa.Boolean(), nullable=False),
-    sa.Column('is_downloaded', sa.Boolean(), nullable=False),
-    sa.Column('download_count', sa.Integer(), nullable=False),
-    sa.Column('last_downloaded_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('is_inline', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['email_id'], ['emails.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_email_attachment_email_id', 'email_attachments', ['email_id'], unique=False)
-    op.create_index('idx_email_attachment_filename', 'email_attachments', ['filename'], unique=False)
-    op.create_index('idx_email_attachment_hash', 'email_attachments', ['file_hash'], unique=False)
-    op.create_index(op.f('ix_email_attachments_email_id'), 'email_attachments', ['email_id'], unique=False)
-    op.create_index(op.f('ix_email_attachments_id'), 'email_attachments', ['id'], unique=False)
-    op.create_table('event_attendees',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('event_id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('external_email', sa.String(length=255), nullable=True),
-    sa.Column('external_name', sa.String(length=255), nullable=True),
-    sa.Column('response_status', sa.String(length=20), nullable=False),
-    sa.Column('is_organizer', sa.Boolean(), nullable=False),
-    sa.Column('is_required', sa.Boolean(), nullable=False),
-    sa.Column('responded_at', sa.DateTime(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['event_id'], ['calendar_events.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_event_attendees_id'), 'event_attendees', ['id'], unique=False)
-    op.create_table('event_reminders',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('event_id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('remind_before_minutes', sa.Integer(), nullable=False),
-    sa.Column('reminder_type', sa.String(length=20), nullable=False),
-    sa.Column('message', sa.String(length=500), nullable=True),
-    sa.Column('is_sent', sa.Boolean(), nullable=False),
-    sa.Column('sent_at', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['event_id'], ['calendar_events.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_event_reminders_id'), 'event_reminders', ['id'], unique=False)
-    op.create_table('installation_tasks',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('installation_job_id', sa.Integer(), nullable=False),
-    sa.Column('task_number', sa.String(), nullable=False),
-    sa.Column('title', sa.String(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('priority', sa.String(), nullable=False),
-    sa.Column('estimated_duration_minutes', sa.Integer(), nullable=True),
-    sa.Column('sequence_order', sa.Integer(), nullable=False),
-    sa.Column('assigned_technician_id', sa.Integer(), nullable=True),
-    sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('work_notes', sa.Text(), nullable=True),
-    sa.Column('completion_notes', sa.Text(), nullable=True),
-    sa.Column('depends_on_task_id', sa.Integer(), nullable=True),
-    sa.Column('created_by_id', sa.Integer(), nullable=True),
-    sa.Column('updated_by_id', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['assigned_technician_id'], ['users.id'], name='fk_installation_task_assigned_technician_id'),
-    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_installation_task_created_by_id'),
-    sa.ForeignKeyConstraint(['depends_on_task_id'], ['installation_tasks.id'], name='fk_installation_task_depends_on_task_id'),
-    sa.ForeignKeyConstraint(['installation_job_id'], ['installation_jobs.id'], name='fk_installation_task_installation_job_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_installation_task_organization_id'),
-    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], name='fk_installation_task_updated_by_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'task_number', name='uq_installation_task_org_number')
-    )
-    op.create_index('idx_installation_task_created_at', 'installation_tasks', ['created_at'], unique=False)
-    op.create_index('idx_installation_task_org_job', 'installation_tasks', ['organization_id', 'installation_job_id'], unique=False)
-    op.create_index('idx_installation_task_sequence', 'installation_tasks', ['installation_job_id', 'sequence_order'], unique=False)
-    op.create_index('idx_installation_task_status', 'installation_tasks', ['status'], unique=False)
-    op.create_index('idx_installation_task_technician', 'installation_tasks', ['assigned_technician_id'], unique=False)
-    op.create_index(op.f('ix_installation_tasks_id'), 'installation_tasks', ['id'], unique=False)
-    op.create_index(op.f('ix_installation_tasks_organization_id'), 'installation_tasks', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_installation_tasks_task_number'), 'installation_tasks', ['task_number'], unique=False)
-    op.create_table('job_card_received_outputs',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('job_card_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity_received', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_rate', sa.Float(), nullable=True),
-    sa.Column('total_value', sa.Float(), nullable=True),
-    sa.Column('quality_status', sa.String(), nullable=True),
-    sa.Column('inspection_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('inspection_remarks', sa.Text(), nullable=True),
-    sa.Column('batch_number', sa.String(), nullable=True),
-    sa.Column('receipt_date', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['job_card_id'], ['job_card_vouchers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_job_card_received_outputs_id'), 'job_card_received_outputs', ['id'], unique=False)
-    op.create_index(op.f('ix_job_card_received_outputs_organization_id'), 'job_card_received_outputs', ['organization_id'], unique=False)
-    op.create_table('job_card_supplied_materials',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('job_card_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity_supplied', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_rate', sa.Float(), nullable=True),
-    sa.Column('total_value', sa.Float(), nullable=True),
-    sa.Column('batch_number', sa.String(), nullable=True),
-    sa.Column('lot_number', sa.String(), nullable=True),
-    sa.Column('supply_date', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['job_card_id'], ['job_card_vouchers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_job_card_supplied_materials_id'), 'job_card_supplied_materials', ['id'], unique=False)
-    op.create_index(op.f('ix_job_card_supplied_materials_organization_id'), 'job_card_supplied_materials', ['organization_id'], unique=False)
-    op.create_table('job_parts',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('job_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity_required', sa.Float(), nullable=False),
-    sa.Column('quantity_used', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('location_used', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('unit_cost', sa.Float(), nullable=True),
-    sa.Column('total_cost', sa.Float(), nullable=True),
-    sa.Column('allocated_by_id', sa.Integer(), nullable=True),
-    sa.Column('used_by_id', sa.Integer(), nullable=True),
-    sa.Column('allocated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('used_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['allocated_by_id'], ['users.id'], name='fk_job_parts_allocated_by_id'),
-    sa.ForeignKeyConstraint(['job_id'], ['installation_jobs.id'], name='fk_job_parts_job_id'),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_job_parts_organization_id'),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], name='fk_job_parts_product_id'),
-    sa.ForeignKeyConstraint(['used_by_id'], ['users.id'], name='fk_job_parts_used_by_id'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('job_id', 'product_id', name='uq_job_parts_job_product')
-    )
-    op.create_index('idx_job_parts_org_product', 'job_parts', ['organization_id', 'product_id'], unique=False)
-    op.create_index('idx_job_parts_org_status', 'job_parts', ['organization_id', 'status'], unique=False)
-    op.create_index('idx_job_parts_used_at', 'job_parts', ['used_at'], unique=False)
-    op.create_index(op.f('ix_job_parts_id'), 'job_parts', ['id'], unique=False)
-    op.create_index(op.f('ix_job_parts_organization_id'), 'job_parts', ['organization_id'], unique=False)
-    op.create_table('maintenance_parts_used',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('maintenance_record_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity_used', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_cost', sa.Float(), nullable=True),
-    sa.Column('total_cost', sa.Float(), nullable=True),
-    sa.Column('batch_number', sa.String(), nullable=True),
-    sa.Column('serial_number', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.ForeignKeyConstraint(['maintenance_record_id'], ['maintenance_records.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_maint_parts_org_product', 'maintenance_parts_used', ['organization_id', 'product_id'], unique=False)
-    op.create_index('idx_maint_parts_org_record', 'maintenance_parts_used', ['organization_id', 'maintenance_record_id'], unique=False)
-    op.create_index(op.f('ix_maintenance_parts_used_id'), 'maintenance_parts_used', ['id'], unique=False)
-    op.create_index(op.f('ix_maintenance_parts_used_organization_id'), 'maintenance_parts_used', ['organization_id'], unique=False)
-    op.create_table('manufacturing_journal_byproducts',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('journal_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_value', sa.Float(), nullable=True),
-    sa.Column('total_value', sa.Float(), nullable=True),
-    sa.Column('batch_number', sa.String(), nullable=True),
-    sa.Column('condition', sa.String(), nullable=True),
-    sa.ForeignKeyConstraint(['journal_id'], ['manufacturing_journal_vouchers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_manufacturing_journal_byproducts_id'), 'manufacturing_journal_byproducts', ['id'], unique=False)
-    op.create_index(op.f('ix_manufacturing_journal_byproducts_organization_id'), 'manufacturing_journal_byproducts', ['organization_id'], unique=False)
-    op.create_table('manufacturing_journal_finished_products',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('journal_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_cost', sa.Float(), nullable=True),
-    sa.Column('total_cost', sa.Float(), nullable=True),
-    sa.Column('quality_grade', sa.String(), nullable=True),
-    sa.Column('batch_number', sa.String(), nullable=True),
-    sa.Column('lot_number', sa.String(), nullable=True),
-    sa.ForeignKeyConstraint(['journal_id'], ['manufacturing_journal_vouchers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_manufacturing_journal_finished_products_id'), 'manufacturing_journal_finished_products', ['id'], unique=False)
-    op.create_index(op.f('ix_manufacturing_journal_finished_products_organization_id'), 'manufacturing_journal_finished_products', ['organization_id'], unique=False)
-    op.create_table('manufacturing_journal_materials',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('journal_id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity_consumed', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_cost', sa.Float(), nullable=True),
-    sa.Column('total_cost', sa.Float(), nullable=True),
-    sa.Column('batch_number', sa.String(), nullable=True),
-    sa.Column('lot_number', sa.String(), nullable=True),
-    sa.ForeignKeyConstraint(['journal_id'], ['manufacturing_journal_vouchers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_manufacturing_journal_materials_id'), 'manufacturing_journal_materials', ['id'], unique=False)
-    op.create_index(op.f('ix_manufacturing_journal_materials_organization_id'), 'manufacturing_journal_materials', ['organization_id'], unique=False)
-    op.create_table('material_issue_items',
-    sa.Column('material_issue_id', sa.Integer(), nullable=False),
-    sa.Column('batch_number', sa.String(), nullable=True),
-    sa.Column('lot_number', sa.String(), nullable=True),
-    sa.Column('expiry_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('warehouse_location', sa.String(), nullable=True),
-    sa.Column('bin_location', sa.String(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('discount_percentage', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('taxable_amount', sa.Float(), nullable=False),
-    sa.Column('gst_rate', sa.Float(), nullable=True),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['material_issue_id'], ['material_issues.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_material_issue_items_id'), 'material_issue_items', ['id'], unique=False)
-    op.create_table('material_receipt_items',
-    sa.Column('receipt_id', sa.Integer(), nullable=False),
-    sa.Column('batch_number', sa.String(), nullable=True),
-    sa.Column('lot_number', sa.String(), nullable=True),
-    sa.Column('expiry_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('warehouse_location', sa.String(), nullable=True),
-    sa.Column('bin_location', sa.String(), nullable=True),
-    sa.Column('quality_status', sa.String(), nullable=True),
-    sa.Column('inspection_remarks', sa.Text(), nullable=True),
-    sa.Column('received_quantity', sa.Float(), nullable=True),
-    sa.Column('accepted_quantity', sa.Float(), nullable=True),
-    sa.Column('rejected_quantity', sa.Float(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('discount_percentage', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('taxable_amount', sa.Float(), nullable=False),
-    sa.Column('gst_rate', sa.Float(), nullable=True),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['receipt_id'], ['material_receipt_vouchers.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_material_receipt_items_id'), 'material_receipt_items', ['id'], unique=False)
-    op.create_table('production_entry_items',
-    sa.Column('production_entry_id', sa.Integer(), nullable=False),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('discount_percentage', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('taxable_amount', sa.Float(), nullable=False),
-    sa.Column('gst_rate', sa.Float(), nullable=True),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['production_entry_id'], ['production_entries.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_production_entry_items_id'), 'production_entry_items', ['id'], unique=False)
-    op.create_table('purchase_returns',
-    sa.Column('vendor_id', sa.Integer(), nullable=False),
-    sa.Column('reference_voucher_id', sa.Integer(), nullable=True),
-    sa.Column('reason', sa.Text(), nullable=True),
-    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['reference_voucher_id'], ['purchase_vouchers.id'], ),
-    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_pr_org_voucher_number')
-    )
-    op.create_index('idx_purchase_return_org_date', 'purchase_returns', ['organization_id', 'date'], unique=False)
-    op.create_index('idx_pr_org_vendor', 'purchase_returns', ['organization_id', 'vendor_id'], unique=False)
-    op.create_index(op.f('ix_purchase_returns_id'), 'purchase_returns', ['id'], unique=False)
-    op.create_index(op.f('ix_purchase_returns_organization_id'), 'purchase_returns', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_purchase_returns_voucher_number'), 'purchase_returns', ['voucher_number'], unique=False)
-    op.create_table('purchase_voucher_items',
-    sa.Column('purchase_voucher_id', sa.Integer(), nullable=False),
-    sa.Column('grn_item_id', sa.Integer(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('discount_percentage', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('taxable_amount', sa.Float(), nullable=False),
-    sa.Column('gst_rate', sa.Float(), nullable=True),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['grn_item_id'], ['goods_receipt_note_items.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['purchase_voucher_id'], ['purchase_vouchers.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_purchase_voucher_items_id'), 'purchase_voucher_items', ['id'], unique=False)
-    op.create_table('sales_returns',
-    sa.Column('customer_id', sa.Integer(), nullable=False),
-    sa.Column('reference_voucher_id', sa.Integer(), nullable=True),
-    sa.Column('reason', sa.Text(), nullable=True),
-    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('organization_id', sa.Integer(), nullable=False),
-    sa.Column('voucher_number', sa.String(), nullable=False),
-    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('status', sa.String(), nullable=True),
-    sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_by', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
-    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
-    sa.ForeignKeyConstraint(['reference_voucher_id'], ['sales_vouchers.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_sr_org_voucher_number')
-    )
-    op.create_index('idx_sr_org_customer', 'sales_returns', ['organization_id', 'customer_id'], unique=False)
-    op.create_index('idx_sr_org_date', 'sales_returns', ['organization_id', 'date'], unique=False)
-    op.create_index(op.f('ix_sales_returns_id'), 'sales_returns', ['id'], unique=False)
-    op.create_index(op.f('ix_sales_returns_organization_id'), 'sales_returns', ['organization_id'], unique=False)
-    op.create_index(op.f('ix_sales_returns_voucher_number'), 'sales_returns', ['voucher_number'], unique=False)
-    op.create_table('sales_voucher_items',
-    sa.Column('sales_voucher_id', sa.Integer(), nullable=False),
-    sa.Column('delivery_challan_item_id', sa.Integer(), nullable=True),
-    sa.Column('hsn_code', sa.String(), nullable=True),
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('product_id', sa.Integer(), nullable=False),
-    sa.Column('quantity', sa.Float(), nullable=False),
-    sa.Column('unit', sa.String(), nullable=False),
-    sa.Column('unit_price', sa.Float(), nullable=False),
-    sa.Column('discount_percentage', sa.Float(), nullable=True),
-    sa.Column('discount_amount', sa.Float(), nullable=True),
-    sa.Column('taxable_amount', sa.Float(), nullable=False),
-    sa.Column('gst_rate', sa.Float(), nullable=True),
-    sa.Column('cgst_amount', sa.Float(), nullable=True),
-    sa.Column('sgst_amount', sa.Float(), nullable=True),
-    sa.Column('igst_amount', sa.Float(), nullable=True),
-    sa.Column('total_amount', sa.Float(), nullable=False),
-    sa.ForeignKeyConstraint(['delivery_challan_item_id'], ['delivery_challan_items.id'], ),
-    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.ForeignKeyConstraint(['sales_voucher_id'], ['sales_vouchers.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_sales_voucher_items_id'), 'sales_voucher_items', ['id'], unique=False)
     op.create_table('shipment_items',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -8736,6 +9953,59 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_stock_journal_entries_id'), 'stock_journal_entries', ['id'], unique=False)
     op.create_index(op.f('ix_stock_journal_entries_organization_id'), 'stock_journal_entries', ['organization_id'], unique=False)
+    op.create_table('task_attachments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('task_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('filename', sa.String(length=255), nullable=False),
+    sa.Column('file_path', sa.String(length=500), nullable=False),
+    sa.Column('file_size', sa.Integer(), nullable=True),
+    sa.Column('mime_type', sa.String(length=100), nullable=True),
+    sa.Column('uploaded_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_task_attachments_id'), 'task_attachments', ['id'], unique=False)
+    op.create_table('task_comments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('task_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('content', sa.Text(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_task_comments_id'), 'task_comments', ['id'], unique=False)
+    op.create_table('task_reminders',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('task_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('remind_at', sa.DateTime(), nullable=False),
+    sa.Column('message', sa.String(length=255), nullable=True),
+    sa.Column('is_sent', sa.Boolean(), nullable=False),
+    sa.Column('sent_at', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_task_reminders_id'), 'task_reminders', ['id'], unique=False)
+    op.create_table('task_time_logs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('task_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('description', sa.String(length=255), nullable=True),
+    sa.Column('hours', sa.Integer(), nullable=False),
+    sa.Column('logged_at', sa.DateTime(), nullable=False),
+    sa.Column('work_date', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_task_time_logs_id'), 'task_time_logs', ['id'], unique=False)
     op.create_table('approval_attachments',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -8776,6 +10046,279 @@ def upgrade() -> None:
     op.create_index('idx_approval_history_org_performer', 'approval_history', ['organization_id', 'performed_by'], unique=False)
     op.create_index(op.f('ix_approval_history_id'), 'approval_history', ['id'], unique=False)
     op.create_index(op.f('ix_approval_history_organization_id'), 'approval_history', ['organization_id'], unique=False)
+    op.create_table('completion_records',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('installation_job_id', sa.Integer(), nullable=False),
+    sa.Column('completion_status', sa.String(), nullable=False),
+    sa.Column('completed_by_id', sa.Integer(), nullable=False),
+    sa.Column('completion_date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('actual_start_time', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('actual_end_time', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('total_duration_minutes', sa.Integer(), nullable=True),
+    sa.Column('work_performed', sa.Text(), nullable=False),
+    sa.Column('issues_encountered', sa.Text(), nullable=True),
+    sa.Column('resolution_notes', sa.Text(), nullable=True),
+    sa.Column('materials_used', sa.Text(), nullable=True),
+    sa.Column('parts_replaced', sa.Text(), nullable=True),
+    sa.Column('quality_check_passed', sa.Boolean(), nullable=False),
+    sa.Column('verification_notes', sa.Text(), nullable=True),
+    sa.Column('photos_attached', sa.Boolean(), nullable=False),
+    sa.Column('customer_present', sa.Boolean(), nullable=False),
+    sa.Column('customer_signature_received', sa.Boolean(), nullable=False),
+    sa.Column('customer_feedback_notes', sa.Text(), nullable=True),
+    sa.Column('customer_rating', sa.Integer(), nullable=True),
+    sa.Column('follow_up_required', sa.Boolean(), nullable=False),
+    sa.Column('follow_up_date', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('follow_up_notes', sa.Text(), nullable=True),
+    sa.Column('feedback_request_sent', sa.Boolean(), nullable=False),
+    sa.Column('feedback_request_sent_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['completed_by_id'], ['users.id'], name='fk_completion_record_completed_by_id'),
+    sa.ForeignKeyConstraint(['installation_job_id'], ['installation_jobs.id'], name='fk_completion_record_installation_job_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_completion_record_organization_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('installation_job_id')
+    )
+    op.create_index('idx_completion_record_completed_by', 'completion_records', ['completed_by_id'], unique=False)
+    op.create_index('idx_completion_record_completion_date', 'completion_records', ['completion_date'], unique=False)
+    op.create_index('idx_completion_record_feedback_sent', 'completion_records', ['feedback_request_sent'], unique=False)
+    op.create_index('idx_completion_record_follow_up', 'completion_records', ['follow_up_required', 'follow_up_date'], unique=False)
+    op.create_index('idx_completion_record_org_job', 'completion_records', ['organization_id', 'installation_job_id'], unique=False)
+    op.create_index('idx_completion_record_status', 'completion_records', ['completion_status'], unique=False)
+    op.create_index(op.f('ix_completion_records_id'), 'completion_records', ['id'], unique=False)
+    op.create_index(op.f('ix_completion_records_organization_id'), 'completion_records', ['organization_id'], unique=False)
+    op.create_table('event_attendees',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('event_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('external_email', sa.String(length=255), nullable=True),
+    sa.Column('external_name', sa.String(length=255), nullable=True),
+    sa.Column('response_status', sa.String(length=20), nullable=False),
+    sa.Column('is_organizer', sa.Boolean(), nullable=False),
+    sa.Column('is_required', sa.Boolean(), nullable=False),
+    sa.Column('responded_at', sa.DateTime(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['event_id'], ['calendar_events.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_event_attendees_id'), 'event_attendees', ['id'], unique=False)
+    op.create_table('event_reminders',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('event_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('remind_before_minutes', sa.Integer(), nullable=False),
+    sa.Column('reminder_type', sa.String(length=20), nullable=False),
+    sa.Column('message', sa.String(length=500), nullable=True),
+    sa.Column('is_sent', sa.Boolean(), nullable=False),
+    sa.Column('sent_at', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['event_id'], ['calendar_events.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_event_reminders_id'), 'event_reminders', ['id'], unique=False)
+    op.create_table('installation_tasks',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('installation_job_id', sa.Integer(), nullable=False),
+    sa.Column('task_number', sa.String(), nullable=False),
+    sa.Column('title', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('priority', sa.String(), nullable=False),
+    sa.Column('estimated_duration_minutes', sa.Integer(), nullable=True),
+    sa.Column('sequence_order', sa.Integer(), nullable=False),
+    sa.Column('assigned_technician_id', sa.Integer(), nullable=True),
+    sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('work_notes', sa.Text(), nullable=True),
+    sa.Column('completion_notes', sa.Text(), nullable=True),
+    sa.Column('depends_on_task_id', sa.Integer(), nullable=True),
+    sa.Column('created_by_id', sa.Integer(), nullable=True),
+    sa.Column('updated_by_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['assigned_technician_id'], ['users.id'], name='fk_installation_task_assigned_technician_id'),
+    sa.ForeignKeyConstraint(['created_by_id'], ['users.id'], name='fk_installation_task_created_by_id'),
+    sa.ForeignKeyConstraint(['depends_on_task_id'], ['installation_tasks.id'], name='fk_installation_task_depends_on_task_id'),
+    sa.ForeignKeyConstraint(['installation_job_id'], ['installation_jobs.id'], name='fk_installation_task_installation_job_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_installation_task_organization_id'),
+    sa.ForeignKeyConstraint(['updated_by_id'], ['users.id'], name='fk_installation_task_updated_by_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'task_number', name='uq_installation_task_org_number')
+    )
+    op.create_index('idx_installation_task_created_at', 'installation_tasks', ['created_at'], unique=False)
+    op.create_index('idx_installation_task_org_job', 'installation_tasks', ['organization_id', 'installation_job_id'], unique=False)
+    op.create_index('idx_installation_task_sequence', 'installation_tasks', ['installation_job_id', 'sequence_order'], unique=False)
+    op.create_index('idx_installation_task_status', 'installation_tasks', ['status'], unique=False)
+    op.create_index('idx_installation_task_technician', 'installation_tasks', ['assigned_technician_id'], unique=False)
+    op.create_index(op.f('ix_installation_tasks_id'), 'installation_tasks', ['id'], unique=False)
+    op.create_index(op.f('ix_installation_tasks_organization_id'), 'installation_tasks', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_installation_tasks_task_number'), 'installation_tasks', ['task_number'], unique=False)
+    op.create_table('job_parts',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('job_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity_required', sa.Float(), nullable=False),
+    sa.Column('quantity_used', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('status', sa.String(), nullable=False),
+    sa.Column('location_used', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('unit_cost', sa.Float(), nullable=True),
+    sa.Column('total_cost', sa.Float(), nullable=True),
+    sa.Column('allocated_by_id', sa.Integer(), nullable=True),
+    sa.Column('used_by_id', sa.Integer(), nullable=True),
+    sa.Column('allocated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('used_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['allocated_by_id'], ['users.id'], name='fk_job_parts_allocated_by_id'),
+    sa.ForeignKeyConstraint(['job_id'], ['installation_jobs.id'], name='fk_job_parts_job_id'),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], name='fk_job_parts_organization_id'),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], name='fk_job_parts_product_id'),
+    sa.ForeignKeyConstraint(['used_by_id'], ['users.id'], name='fk_job_parts_used_by_id'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('job_id', 'product_id', name='uq_job_parts_job_product')
+    )
+    op.create_index('idx_job_parts_org_product', 'job_parts', ['organization_id', 'product_id'], unique=False)
+    op.create_index('idx_job_parts_org_status', 'job_parts', ['organization_id', 'status'], unique=False)
+    op.create_index('idx_job_parts_used_at', 'job_parts', ['used_at'], unique=False)
+    op.create_index(op.f('ix_job_parts_id'), 'job_parts', ['id'], unique=False)
+    op.create_index(op.f('ix_job_parts_organization_id'), 'job_parts', ['organization_id'], unique=False)
+    op.create_table('maintenance_parts_used',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('maintenance_record_id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity_used', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_cost', sa.Float(), nullable=True),
+    sa.Column('total_cost', sa.Float(), nullable=True),
+    sa.Column('batch_number', sa.String(), nullable=True),
+    sa.Column('serial_number', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.ForeignKeyConstraint(['maintenance_record_id'], ['maintenance_records.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_maint_parts_org_product', 'maintenance_parts_used', ['organization_id', 'product_id'], unique=False)
+    op.create_index('idx_maint_parts_org_record', 'maintenance_parts_used', ['organization_id', 'maintenance_record_id'], unique=False)
+    op.create_index(op.f('ix_maintenance_parts_used_id'), 'maintenance_parts_used', ['id'], unique=False)
+    op.create_index(op.f('ix_maintenance_parts_used_organization_id'), 'maintenance_parts_used', ['organization_id'], unique=False)
+    op.create_table('purchase_returns',
+    sa.Column('vendor_id', sa.Integer(), nullable=False),
+    sa.Column('reference_voucher_id', sa.Integer(), nullable=True),
+    sa.Column('reason', sa.Text(), nullable=True),
+    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['reference_voucher_id'], ['purchase_vouchers.id'], ),
+    sa.ForeignKeyConstraint(['vendor_id'], ['vendors.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_pr_org_voucher_number')
+    )
+    op.create_index('idx_pr_org_vendor', 'purchase_returns', ['organization_id', 'vendor_id'], unique=False)
+    op.create_index('idx_purchase_return_org_date', 'purchase_returns', ['organization_id', 'date'], unique=False)
+    op.create_index(op.f('ix_purchase_returns_id'), 'purchase_returns', ['id'], unique=False)
+    op.create_index(op.f('ix_purchase_returns_organization_id'), 'purchase_returns', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_purchase_returns_voucher_number'), 'purchase_returns', ['voucher_number'], unique=False)
+    op.create_table('purchase_voucher_items',
+    sa.Column('purchase_voucher_id', sa.Integer(), nullable=False),
+    sa.Column('grn_item_id', sa.Integer(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('discount_percentage', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('taxable_amount', sa.Float(), nullable=False),
+    sa.Column('gst_rate', sa.Float(), nullable=True),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['grn_item_id'], ['goods_receipt_note_items.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['purchase_voucher_id'], ['purchase_vouchers.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_purchase_voucher_items_id'), 'purchase_voucher_items', ['id'], unique=False)
+    op.create_table('sales_returns',
+    sa.Column('customer_id', sa.Integer(), nullable=False),
+    sa.Column('reference_voucher_id', sa.Integer(), nullable=True),
+    sa.Column('reason', sa.Text(), nullable=True),
+    sa.Column('additional_charges', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('organization_id', sa.Integer(), nullable=False),
+    sa.Column('voucher_number', sa.String(), nullable=False),
+    sa.Column('date', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_by', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['customer_id'], ['customers.id'], ),
+    sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
+    sa.ForeignKeyConstraint(['reference_voucher_id'], ['sales_vouchers.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('organization_id', 'voucher_number', name='uq_sr_org_voucher_number')
+    )
+    op.create_index('idx_sr_org_customer', 'sales_returns', ['organization_id', 'customer_id'], unique=False)
+    op.create_index('idx_sr_org_date', 'sales_returns', ['organization_id', 'date'], unique=False)
+    op.create_index(op.f('ix_sales_returns_id'), 'sales_returns', ['id'], unique=False)
+    op.create_index(op.f('ix_sales_returns_organization_id'), 'sales_returns', ['organization_id'], unique=False)
+    op.create_index(op.f('ix_sales_returns_voucher_number'), 'sales_returns', ['voucher_number'], unique=False)
+    op.create_table('sales_voucher_items',
+    sa.Column('sales_voucher_id', sa.Integer(), nullable=False),
+    sa.Column('delivery_challan_item_id', sa.Integer(), nullable=True),
+    sa.Column('hsn_code', sa.String(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Float(), nullable=False),
+    sa.Column('unit', sa.String(), nullable=False),
+    sa.Column('unit_price', sa.Float(), nullable=False),
+    sa.Column('discount_percentage', sa.Float(), nullable=True),
+    sa.Column('discount_amount', sa.Float(), nullable=True),
+    sa.Column('taxable_amount', sa.Float(), nullable=False),
+    sa.Column('gst_rate', sa.Float(), nullable=True),
+    sa.Column('cgst_amount', sa.Float(), nullable=True),
+    sa.Column('sgst_amount', sa.Float(), nullable=True),
+    sa.Column('igst_amount', sa.Float(), nullable=True),
+    sa.Column('total_amount', sa.Float(), nullable=False),
+    sa.ForeignKeyConstraint(['delivery_challan_item_id'], ['delivery_challan_items.id'], ),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.ForeignKeyConstraint(['sales_voucher_id'], ['sales_vouchers.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_sales_voucher_items_id'), 'sales_voucher_items', ['id'], unique=False)
     op.create_table('customer_feedback',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -8977,6 +10520,55 @@ def downgrade() -> None:
     op.drop_index('idx_customer_feedback_customer', table_name='customer_feedback')
     op.drop_index('idx_customer_feedback_completion', table_name='customer_feedback')
     op.drop_table('customer_feedback')
+    op.drop_index(op.f('ix_sales_voucher_items_id'), table_name='sales_voucher_items')
+    op.drop_table('sales_voucher_items')
+    op.drop_index(op.f('ix_sales_returns_voucher_number'), table_name='sales_returns')
+    op.drop_index(op.f('ix_sales_returns_organization_id'), table_name='sales_returns')
+    op.drop_index(op.f('ix_sales_returns_id'), table_name='sales_returns')
+    op.drop_index('idx_sr_org_date', table_name='sales_returns')
+    op.drop_index('idx_sr_org_customer', table_name='sales_returns')
+    op.drop_table('sales_returns')
+    op.drop_index(op.f('ix_purchase_voucher_items_id'), table_name='purchase_voucher_items')
+    op.drop_table('purchase_voucher_items')
+    op.drop_index(op.f('ix_purchase_returns_voucher_number'), table_name='purchase_returns')
+    op.drop_index(op.f('ix_purchase_returns_organization_id'), table_name='purchase_returns')
+    op.drop_index(op.f('ix_purchase_returns_id'), table_name='purchase_returns')
+    op.drop_index('idx_purchase_return_org_date', table_name='purchase_returns')
+    op.drop_index('idx_pr_org_vendor', table_name='purchase_returns')
+    op.drop_table('purchase_returns')
+    op.drop_index(op.f('ix_maintenance_parts_used_organization_id'), table_name='maintenance_parts_used')
+    op.drop_index(op.f('ix_maintenance_parts_used_id'), table_name='maintenance_parts_used')
+    op.drop_index('idx_maint_parts_org_record', table_name='maintenance_parts_used')
+    op.drop_index('idx_maint_parts_org_product', table_name='maintenance_parts_used')
+    op.drop_table('maintenance_parts_used')
+    op.drop_index(op.f('ix_job_parts_organization_id'), table_name='job_parts')
+    op.drop_index(op.f('ix_job_parts_id'), table_name='job_parts')
+    op.drop_index('idx_job_parts_used_at', table_name='job_parts')
+    op.drop_index('idx_job_parts_org_status', table_name='job_parts')
+    op.drop_index('idx_job_parts_org_product', table_name='job_parts')
+    op.drop_table('job_parts')
+    op.drop_index(op.f('ix_installation_tasks_task_number'), table_name='installation_tasks')
+    op.drop_index(op.f('ix_installation_tasks_organization_id'), table_name='installation_tasks')
+    op.drop_index(op.f('ix_installation_tasks_id'), table_name='installation_tasks')
+    op.drop_index('idx_installation_task_technician', table_name='installation_tasks')
+    op.drop_index('idx_installation_task_status', table_name='installation_tasks')
+    op.drop_index('idx_installation_task_sequence', table_name='installation_tasks')
+    op.drop_index('idx_installation_task_org_job', table_name='installation_tasks')
+    op.drop_index('idx_installation_task_created_at', table_name='installation_tasks')
+    op.drop_table('installation_tasks')
+    op.drop_index(op.f('ix_event_reminders_id'), table_name='event_reminders')
+    op.drop_table('event_reminders')
+    op.drop_index(op.f('ix_event_attendees_id'), table_name='event_attendees')
+    op.drop_table('event_attendees')
+    op.drop_index(op.f('ix_completion_records_organization_id'), table_name='completion_records')
+    op.drop_index(op.f('ix_completion_records_id'), table_name='completion_records')
+    op.drop_index('idx_completion_record_status', table_name='completion_records')
+    op.drop_index('idx_completion_record_org_job', table_name='completion_records')
+    op.drop_index('idx_completion_record_follow_up', table_name='completion_records')
+    op.drop_index('idx_completion_record_feedback_sent', table_name='completion_records')
+    op.drop_index('idx_completion_record_completion_date', table_name='completion_records')
+    op.drop_index('idx_completion_record_completed_by', table_name='completion_records')
+    op.drop_table('completion_records')
     op.drop_index(op.f('ix_approval_history_organization_id'), table_name='approval_history')
     op.drop_index(op.f('ix_approval_history_id'), table_name='approval_history')
     op.drop_index('idx_approval_history_org_performer', table_name='approval_history')
@@ -8988,6 +10580,14 @@ def downgrade() -> None:
     op.drop_index('idx_approval_attachment_org_uploader', table_name='approval_attachments')
     op.drop_index('idx_approval_attachment_org_approval', table_name='approval_attachments')
     op.drop_table('approval_attachments')
+    op.drop_index(op.f('ix_task_time_logs_id'), table_name='task_time_logs')
+    op.drop_table('task_time_logs')
+    op.drop_index(op.f('ix_task_reminders_id'), table_name='task_reminders')
+    op.drop_table('task_reminders')
+    op.drop_index(op.f('ix_task_comments_id'), table_name='task_comments')
+    op.drop_table('task_comments')
+    op.drop_index(op.f('ix_task_attachments_id'), table_name='task_attachments')
+    op.drop_table('task_attachments')
     op.drop_index(op.f('ix_stock_journal_entries_organization_id'), table_name='stock_journal_entries')
     op.drop_index(op.f('ix_stock_journal_entries_id'), table_name='stock_journal_entries')
     op.drop_table('stock_journal_entries')
@@ -9002,24 +10602,54 @@ def downgrade() -> None:
     op.drop_index('idx_shipment_items_org_shipment', table_name='shipment_items')
     op.drop_index('idx_shipment_items_org_product', table_name='shipment_items')
     op.drop_table('shipment_items')
-    op.drop_index(op.f('ix_sales_voucher_items_id'), table_name='sales_voucher_items')
-    op.drop_table('sales_voucher_items')
-    op.drop_index(op.f('ix_sales_returns_voucher_number'), table_name='sales_returns')
-    op.drop_index(op.f('ix_sales_returns_organization_id'), table_name='sales_returns')
-    op.drop_index(op.f('ix_sales_returns_id'), table_name='sales_returns')
-    op.drop_index('idx_sr_org_date', table_name='sales_returns')
-    op.drop_index('idx_sr_org_customer', table_name='sales_returns')
-    op.drop_table('sales_returns')
-    op.drop_index(op.f('ix_purchase_voucher_items_id'), table_name='purchase_voucher_items')
-    op.drop_table('purchase_voucher_items')
-    op.drop_index(op.f('ix_purchase_returns_voucher_number'), table_name='purchase_returns')
-    op.drop_index(op.f('ix_purchase_returns_organization_id'), table_name='purchase_returns')
-    op.drop_index(op.f('ix_purchase_returns_id'), table_name='purchase_returns')
-    op.drop_index('idx_pr_org_vendor', table_name='purchase_returns')
-    op.drop_index('idx_pr_org_date', table_name='purchase_returns')
-    op.drop_table('purchase_returns')
+    op.drop_index(op.f('ix_sales_vouchers_voucher_type'), table_name='sales_vouchers')
+    op.drop_index(op.f('ix_sales_vouchers_voucher_number'), table_name='sales_vouchers')
+    op.drop_index(op.f('ix_sales_vouchers_organization_id'), table_name='sales_vouchers')
+    op.drop_index(op.f('ix_sales_vouchers_id'), table_name='sales_vouchers')
+    op.drop_index('idx_sv_org_so', table_name='sales_vouchers')
+    op.drop_index('idx_sv_org_date', table_name='sales_vouchers')
+    op.drop_index('idx_sv_org_customer', table_name='sales_vouchers')
+    op.drop_index('idx_sv_org_challan', table_name='sales_vouchers')
+    op.drop_table('sales_vouchers')
+    op.drop_index(op.f('ix_purchase_vouchers_voucher_number'), table_name='purchase_vouchers')
+    op.drop_index(op.f('ix_purchase_vouchers_organization_id'), table_name='purchase_vouchers')
+    op.drop_index(op.f('ix_purchase_vouchers_id'), table_name='purchase_vouchers')
+    op.drop_index('idx_pv_org_vendor', table_name='purchase_vouchers')
+    op.drop_index('idx_pv_org_po', table_name='purchase_vouchers')
+    op.drop_index('idx_pv_org_grn', table_name='purchase_vouchers')
+    op.drop_index('idx_pv_org_date', table_name='purchase_vouchers')
+    op.drop_table('purchase_vouchers')
+    op.drop_index(op.f('ix_purchase_requisition_items_requisition_id'), table_name='purchase_requisition_items')
+    op.drop_index(op.f('ix_purchase_requisition_items_item_code'), table_name='purchase_requisition_items')
+    op.drop_index(op.f('ix_purchase_requisition_items_id'), table_name='purchase_requisition_items')
+    op.drop_table('purchase_requisition_items')
+    op.drop_index(op.f('ix_project_time_logs_organization_id'), table_name='project_time_logs')
+    op.drop_index(op.f('ix_project_time_logs_id'), table_name='project_time_logs')
+    op.drop_index('idx_timelog_org_user', table_name='project_time_logs')
+    op.drop_index('idx_timelog_org_project', table_name='project_time_logs')
+    op.drop_index('idx_timelog_org_date', table_name='project_time_logs')
+    op.drop_index('idx_timelog_org_billable', table_name='project_time_logs')
+    op.drop_table('project_time_logs')
     op.drop_index(op.f('ix_production_entry_items_id'), table_name='production_entry_items')
     op.drop_table('production_entry_items')
+    op.drop_index(op.f('ix_order_workflow_history_id'), table_name='order_workflow_history')
+    op.drop_index('idx_workflow_history_order', table_name='order_workflow_history')
+    op.drop_index('idx_workflow_history_changed_at', table_name='order_workflow_history')
+    op.drop_table('order_workflow_history')
+    op.drop_index(op.f('ix_order_items_id'), table_name='order_items')
+    op.drop_index('idx_order_item_product', table_name='order_items')
+    op.drop_index('idx_order_item_order', table_name='order_items')
+    op.drop_table('order_items')
+    op.drop_index(op.f('ix_opportunity_products_organization_id'), table_name='opportunity_products')
+    op.drop_index(op.f('ix_opportunity_products_id'), table_name='opportunity_products')
+    op.drop_index('idx_opportunity_product_org_opp', table_name='opportunity_products')
+    op.drop_table('opportunity_products')
+    op.drop_index(op.f('ix_opportunity_activities_organization_id'), table_name='opportunity_activities')
+    op.drop_index(op.f('ix_opportunity_activities_id'), table_name='opportunity_activities')
+    op.drop_index('idx_opportunity_activity_type', table_name='opportunity_activities')
+    op.drop_index('idx_opportunity_activity_org_opp', table_name='opportunity_activities')
+    op.drop_index('idx_opportunity_activity_date', table_name='opportunity_activities')
+    op.drop_table('opportunity_activities')
     op.drop_index(op.f('ix_material_receipt_items_id'), table_name='material_receipt_items')
     op.drop_table('material_receipt_items')
     op.drop_index(op.f('ix_material_issue_items_id'), table_name='material_issue_items')
@@ -9033,36 +10663,32 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_manufacturing_journal_byproducts_organization_id'), table_name='manufacturing_journal_byproducts')
     op.drop_index(op.f('ix_manufacturing_journal_byproducts_id'), table_name='manufacturing_journal_byproducts')
     op.drop_table('manufacturing_journal_byproducts')
-    op.drop_index(op.f('ix_maintenance_parts_used_organization_id'), table_name='maintenance_parts_used')
-    op.drop_index(op.f('ix_maintenance_parts_used_id'), table_name='maintenance_parts_used')
-    op.drop_index('idx_maint_parts_org_record', table_name='maintenance_parts_used')
-    op.drop_index('idx_maint_parts_org_product', table_name='maintenance_parts_used')
-    op.drop_table('maintenance_parts_used')
-    op.drop_index(op.f('ix_job_parts_organization_id'), table_name='job_parts')
-    op.drop_index(op.f('ix_job_parts_id'), table_name='job_parts')
-    op.drop_index('idx_job_parts_used_at', table_name='job_parts')
-    op.drop_index('idx_job_parts_org_status', table_name='job_parts')
-    op.drop_index('idx_job_parts_org_product', table_name='job_parts')
-    op.drop_table('job_parts')
+    op.drop_index(op.f('ix_maintenance_records_organization_id'), table_name='maintenance_records')
+    op.drop_index(op.f('ix_maintenance_records_id'), table_name='maintenance_records')
+    op.drop_index('idx_maint_rec_org_type', table_name='maintenance_records')
+    op.drop_index('idx_maint_rec_org_status', table_name='maintenance_records')
+    op.drop_index('idx_maint_rec_org_date', table_name='maintenance_records')
+    op.drop_index('idx_maint_rec_org_asset', table_name='maintenance_records')
+    op.drop_table('maintenance_records')
     op.drop_index(op.f('ix_job_card_supplied_materials_organization_id'), table_name='job_card_supplied_materials')
     op.drop_index(op.f('ix_job_card_supplied_materials_id'), table_name='job_card_supplied_materials')
     op.drop_table('job_card_supplied_materials')
     op.drop_index(op.f('ix_job_card_received_outputs_organization_id'), table_name='job_card_received_outputs')
     op.drop_index(op.f('ix_job_card_received_outputs_id'), table_name='job_card_received_outputs')
     op.drop_table('job_card_received_outputs')
-    op.drop_index(op.f('ix_installation_tasks_task_number'), table_name='installation_tasks')
-    op.drop_index(op.f('ix_installation_tasks_organization_id'), table_name='installation_tasks')
-    op.drop_index(op.f('ix_installation_tasks_id'), table_name='installation_tasks')
-    op.drop_index('idx_installation_task_technician', table_name='installation_tasks')
-    op.drop_index('idx_installation_task_status', table_name='installation_tasks')
-    op.drop_index('idx_installation_task_sequence', table_name='installation_tasks')
-    op.drop_index('idx_installation_task_org_job', table_name='installation_tasks')
-    op.drop_index('idx_installation_task_created_at', table_name='installation_tasks')
-    op.drop_table('installation_tasks')
-    op.drop_index(op.f('ix_event_reminders_id'), table_name='event_reminders')
-    op.drop_table('event_reminders')
-    op.drop_index(op.f('ix_event_attendees_id'), table_name='event_attendees')
-    op.drop_table('event_attendees')
+    op.drop_index(op.f('ix_installation_jobs_organization_id'), table_name='installation_jobs')
+    op.drop_index(op.f('ix_installation_jobs_job_number'), table_name='installation_jobs')
+    op.drop_index(op.f('ix_installation_jobs_id'), table_name='installation_jobs')
+    op.drop_index('idx_installation_job_scheduled_date', table_name='installation_jobs')
+    op.drop_index('idx_installation_job_priority', table_name='installation_jobs')
+    op.drop_index('idx_installation_job_org_technician', table_name='installation_jobs')
+    op.drop_index('idx_installation_job_org_status', table_name='installation_jobs')
+    op.drop_index('idx_installation_job_org_customer', table_name='installation_jobs')
+    op.drop_index('idx_installation_job_dispatch_order', table_name='installation_jobs')
+    op.drop_index('idx_installation_job_created_at', table_name='installation_jobs')
+    op.drop_table('installation_jobs')
+    op.drop_index(op.f('ix_goods_receipt_note_items_id'), table_name='goods_receipt_note_items')
+    op.drop_table('goods_receipt_note_items')
     op.drop_index(op.f('ix_email_attachments_id'), table_name='email_attachments')
     op.drop_index(op.f('ix_email_attachments_email_id'), table_name='email_attachments')
     op.drop_index('idx_email_attachment_hash', table_name='email_attachments')
@@ -9079,15 +10705,35 @@ def downgrade() -> None:
     op.drop_index('idx_email_analytics_opened', table_name='email_analytics')
     op.drop_index('idx_email_analytics_bounced', table_name='email_analytics')
     op.drop_table('email_analytics')
-    op.drop_index(op.f('ix_completion_records_organization_id'), table_name='completion_records')
-    op.drop_index(op.f('ix_completion_records_id'), table_name='completion_records')
-    op.drop_index('idx_completion_record_status', table_name='completion_records')
-    op.drop_index('idx_completion_record_org_job', table_name='completion_records')
-    op.drop_index('idx_completion_record_follow_up', table_name='completion_records')
-    op.drop_index('idx_completion_record_feedback_sent', table_name='completion_records')
-    op.drop_index('idx_completion_record_completion_date', table_name='completion_records')
-    op.drop_index('idx_completion_record_completed_by', table_name='completion_records')
-    op.drop_table('completion_records')
+    op.drop_index(op.f('ix_dispatch_items_id'), table_name='dispatch_items')
+    op.drop_index('idx_dispatch_item_status', table_name='dispatch_items')
+    op.drop_index('idx_dispatch_item_product', table_name='dispatch_items')
+    op.drop_index('idx_dispatch_item_order', table_name='dispatch_items')
+    op.drop_table('dispatch_items')
+    op.drop_index(op.f('ix_delivery_challan_items_id'), table_name='delivery_challan_items')
+    op.drop_table('delivery_challan_items')
+    op.drop_index(op.f('ix_commissions_sales_person_id'), table_name='commissions')
+    op.drop_index(op.f('ix_commissions_organization_id'), table_name='commissions')
+    op.drop_index(op.f('ix_commissions_opportunity_id'), table_name='commissions')
+    op.drop_index(op.f('ix_commissions_lead_id'), table_name='commissions')
+    op.drop_index(op.f('ix_commissions_id'), table_name='commissions')
+    op.drop_index(op.f('ix_commissions_commission_date'), table_name='commissions')
+    op.drop_index('idx_commission_payment_status', table_name='commissions')
+    op.drop_index('idx_commission_org_person', table_name='commissions')
+    op.drop_table('commissions')
+    op.drop_index(op.f('ix_chatbot_messages_organization_id'), table_name='chatbot_messages')
+    op.drop_index(op.f('ix_chatbot_messages_id'), table_name='chatbot_messages')
+    op.drop_index('idx_chatbot_message_type', table_name='chatbot_messages')
+    op.drop_index('idx_chatbot_message_org_conversation', table_name='chatbot_messages')
+    op.drop_index('idx_chatbot_message_created', table_name='chatbot_messages')
+    op.drop_table('chatbot_messages')
+    op.drop_index(op.f('ix_calendar_events_title'), table_name='calendar_events')
+    op.drop_index(op.f('ix_calendar_events_start_datetime'), table_name='calendar_events')
+    op.drop_index(op.f('ix_calendar_events_id'), table_name='calendar_events')
+    op.drop_index(op.f('ix_calendar_events_google_event_id'), table_name='calendar_events')
+    op.drop_index(op.f('ix_calendar_events_external_id'), table_name='calendar_events')
+    op.drop_index(op.f('ix_calendar_events_end_datetime'), table_name='calendar_events')
+    op.drop_table('calendar_events')
     op.drop_index(op.f('ix_approval_requests_organization_id'), table_name='approval_requests')
     op.drop_index(op.f('ix_approval_requests_id'), table_name='approval_requests')
     op.drop_index(op.f('ix_approval_requests_entity_type'), table_name='approval_requests')
@@ -9113,14 +10759,48 @@ def downgrade() -> None:
     op.drop_index('idx_workflow_step_execution_status', table_name='workflow_step_executions_automation')
     op.drop_index('idx_workflow_step_execution_assignee', table_name='workflow_step_executions_automation')
     op.drop_table('workflow_step_executions_automation')
-    op.drop_index(op.f('ix_task_time_logs_id'), table_name='task_time_logs')
-    op.drop_table('task_time_logs')
-    op.drop_index(op.f('ix_task_reminders_id'), table_name='task_reminders')
-    op.drop_table('task_reminders')
-    op.drop_index(op.f('ix_task_comments_id'), table_name='task_comments')
-    op.drop_table('task_comments')
-    op.drop_index(op.f('ix_task_attachments_id'), table_name='task_attachments')
-    op.drop_table('task_attachments')
+    op.drop_index(op.f('ix_website_pages_organization_id'), table_name='website_pages')
+    op.drop_index(op.f('ix_website_pages_id'), table_name='website_pages')
+    op.drop_index('idx_website_page_type', table_name='website_pages')
+    op.drop_index('idx_website_page_published', table_name='website_pages')
+    op.drop_index('idx_website_page_org_project', table_name='website_pages')
+    op.drop_index('idx_website_page_order', table_name='website_pages')
+    op.drop_table('website_pages')
+    op.drop_index(op.f('ix_website_maintenance_logs_organization_id'), table_name='website_maintenance_logs')
+    op.drop_index(op.f('ix_website_maintenance_logs_id'), table_name='website_maintenance_logs')
+    op.drop_index('idx_website_maintenance_log_type', table_name='website_maintenance_logs')
+    op.drop_index('idx_website_maintenance_log_status', table_name='website_maintenance_logs')
+    op.drop_index('idx_website_maintenance_log_org_project', table_name='website_maintenance_logs')
+    op.drop_index('idx_website_maintenance_log_created', table_name='website_maintenance_logs')
+    op.drop_index('idx_website_maintenance_log_automated', table_name='website_maintenance_logs')
+    op.drop_table('website_maintenance_logs')
+    op.drop_index(op.f('ix_website_deployments_organization_id'), table_name='website_deployments')
+    op.drop_index(op.f('ix_website_deployments_id'), table_name='website_deployments')
+    op.drop_index('idx_website_deployment_status', table_name='website_deployments')
+    op.drop_index('idx_website_deployment_org_project', table_name='website_deployments')
+    op.drop_index('idx_website_deployment_created', table_name='website_deployments')
+    op.drop_table('website_deployments')
+    op.drop_index(op.f('ix_vendor_quotation_items_rfq_item_id'), table_name='vendor_quotation_items')
+    op.drop_index(op.f('ix_vendor_quotation_items_quotation_id'), table_name='vendor_quotation_items')
+    op.drop_index(op.f('ix_vendor_quotation_items_id'), table_name='vendor_quotation_items')
+    op.drop_table('vendor_quotation_items')
+    op.drop_index(op.f('ix_ticket_history_organization_id'), table_name='ticket_history')
+    op.drop_index(op.f('ix_ticket_history_id'), table_name='ticket_history')
+    op.drop_index('idx_ticket_history_user', table_name='ticket_history')
+    op.drop_index('idx_ticket_history_org_ticket', table_name='ticket_history')
+    op.drop_index('idx_ticket_history_created_at', table_name='ticket_history')
+    op.drop_index('idx_ticket_history_action', table_name='ticket_history')
+    op.drop_table('ticket_history')
+    op.drop_index(op.f('ix_ticket_attachments_organization_id'), table_name='ticket_attachments')
+    op.drop_index(op.f('ix_ticket_attachments_id'), table_name='ticket_attachments')
+    op.drop_index('idx_ticket_attachment_uploaded_by', table_name='ticket_attachments')
+    op.drop_index('idx_ticket_attachment_type', table_name='ticket_attachments')
+    op.drop_index('idx_ticket_attachment_org_ticket', table_name='ticket_attachments')
+    op.drop_table('ticket_attachments')
+    op.drop_index(op.f('ix_tasks_title'), table_name='tasks')
+    op.drop_index(op.f('ix_tasks_id'), table_name='tasks')
+    op.drop_index(op.f('ix_tasks_external_id'), table_name='tasks')
+    op.drop_table('tasks')
     op.drop_index(op.f('ix_stock_movements_warehouse_id'), table_name='stock_movements')
     op.drop_index(op.f('ix_stock_movements_to_location_id'), table_name='stock_movements')
     op.drop_index(op.f('ix_stock_movements_source_document_type'), table_name='stock_movements')
@@ -9151,6 +10831,16 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_stock_adjustment_items_batch_id'), table_name='stock_adjustment_items')
     op.drop_index(op.f('ix_stock_adjustment_items_adjustment_id'), table_name='stock_adjustment_items')
     op.drop_table('stock_adjustment_items')
+    op.drop_index(op.f('ix_sla_tracking_organization_id'), table_name='sla_tracking')
+    op.drop_index(op.f('ix_sla_tracking_id'), table_name='sla_tracking')
+    op.drop_index('idx_sla_tracking_response_status', table_name='sla_tracking')
+    op.drop_index('idx_sla_tracking_response_deadline', table_name='sla_tracking')
+    op.drop_index('idx_sla_tracking_resolution_status', table_name='sla_tracking')
+    op.drop_index('idx_sla_tracking_resolution_deadline', table_name='sla_tracking')
+    op.drop_index('idx_sla_tracking_policy', table_name='sla_tracking')
+    op.drop_index('idx_sla_tracking_org_ticket', table_name='sla_tracking')
+    op.drop_index('idx_sla_tracking_escalation', table_name='sla_tracking')
+    op.drop_table('sla_tracking')
     op.drop_index(op.f('ix_shipments_organization_id'), table_name='shipments')
     op.drop_index(op.f('ix_shipments_id'), table_name='shipments')
     op.drop_index('idx_shipment_org_tracking', table_name='shipments')
@@ -9158,34 +10848,42 @@ def downgrade() -> None:
     op.drop_index('idx_shipment_org_pickup_date', table_name='shipments')
     op.drop_index('idx_shipment_org_carrier', table_name='shipments')
     op.drop_table('shipments')
-    op.drop_index(op.f('ix_sales_vouchers_voucher_type'), table_name='sales_vouchers')
-    op.drop_index(op.f('ix_sales_vouchers_voucher_number'), table_name='sales_vouchers')
-    op.drop_index(op.f('ix_sales_vouchers_organization_id'), table_name='sales_vouchers')
-    op.drop_index(op.f('ix_sales_vouchers_id'), table_name='sales_vouchers')
-    op.drop_index('idx_sv_org_so', table_name='sales_vouchers')
-    op.drop_index('idx_sv_org_date', table_name='sales_vouchers')
-    op.drop_index('idx_sv_org_customer', table_name='sales_vouchers')
-    op.drop_index('idx_sv_org_challan', table_name='sales_vouchers')
-    op.drop_table('sales_vouchers')
-    op.drop_index(op.f('ix_purchase_vouchers_voucher_number'), table_name='purchase_vouchers')
-    op.drop_index(op.f('ix_purchase_vouchers_organization_id'), table_name='purchase_vouchers')
-    op.drop_index(op.f('ix_purchase_vouchers_id'), table_name='purchase_vouchers')
-    op.drop_index('idx_pv_org_vendor', table_name='purchase_vouchers')
-    op.drop_index('idx_pv_org_po', table_name='purchase_vouchers')
-    op.drop_index('idx_pv_org_grn', table_name='purchase_vouchers')
-    op.drop_index('idx_pv_org_date', table_name='purchase_vouchers')
-    op.drop_table('purchase_vouchers')
-    op.drop_index(op.f('ix_purchase_requisition_items_requisition_id'), table_name='purchase_requisition_items')
-    op.drop_index(op.f('ix_purchase_requisition_items_item_code'), table_name='purchase_requisition_items')
-    op.drop_index(op.f('ix_purchase_requisition_items_id'), table_name='purchase_requisition_items')
-    op.drop_table('purchase_requisition_items')
-    op.drop_index(op.f('ix_project_time_logs_organization_id'), table_name='project_time_logs')
-    op.drop_index(op.f('ix_project_time_logs_id'), table_name='project_time_logs')
-    op.drop_index('idx_timelog_org_user', table_name='project_time_logs')
-    op.drop_index('idx_timelog_org_project', table_name='project_time_logs')
-    op.drop_index('idx_timelog_org_date', table_name='project_time_logs')
-    op.drop_index('idx_timelog_org_billable', table_name='project_time_logs')
-    op.drop_table('project_time_logs')
+    op.drop_index(op.f('ix_sales_order_items_id'), table_name='sales_order_items')
+    op.drop_table('sales_order_items')
+    op.drop_index(op.f('ix_quotation_items_id'), table_name='quotation_items')
+    op.drop_table('quotation_items')
+    op.drop_index(op.f('ix_purchase_requisitions_requisition_number'), table_name='purchase_requisitions')
+    op.drop_index(op.f('ix_purchase_requisitions_requisition_date'), table_name='purchase_requisitions')
+    op.drop_index(op.f('ix_purchase_requisitions_required_date'), table_name='purchase_requisitions')
+    op.drop_index(op.f('ix_purchase_requisitions_purchase_order_id'), table_name='purchase_requisitions')
+    op.drop_index(op.f('ix_purchase_requisitions_organization_id'), table_name='purchase_requisitions')
+    op.drop_index(op.f('ix_purchase_requisitions_id'), table_name='purchase_requisitions')
+    op.drop_index(op.f('ix_purchase_requisitions_approval_status'), table_name='purchase_requisitions')
+    op.drop_index('idx_pr_required_date', table_name='purchase_requisitions')
+    op.drop_index('idx_pr_org_status', table_name='purchase_requisitions')
+    op.drop_table('purchase_requisitions')
+    op.drop_index(op.f('ix_purchase_order_items_id'), table_name='purchase_order_items')
+    op.drop_table('purchase_order_items')
+    op.drop_index(op.f('ix_project_resources_organization_id'), table_name='project_resources')
+    op.drop_index(op.f('ix_project_resources_id'), table_name='project_resources')
+    op.drop_index('idx_resource_org_user', table_name='project_resources')
+    op.drop_index('idx_resource_org_type', table_name='project_resources')
+    op.drop_index('idx_resource_org_project', table_name='project_resources')
+    op.drop_table('project_resources')
+    op.drop_index(op.f('ix_project_milestones_organization_id'), table_name='project_milestones')
+    op.drop_index(op.f('ix_project_milestones_id'), table_name='project_milestones')
+    op.drop_index('idx_milestone_org_target_date', table_name='project_milestones')
+    op.drop_index('idx_milestone_org_status', table_name='project_milestones')
+    op.drop_index('idx_milestone_org_project', table_name='project_milestones')
+    op.drop_table('project_milestones')
+    op.drop_index(op.f('ix_project_documents_organization_id'), table_name='project_documents')
+    op.drop_index(op.f('ix_project_documents_id'), table_name='project_documents')
+    op.drop_index('idx_document_org_type', table_name='project_documents')
+    op.drop_index('idx_document_org_public', table_name='project_documents')
+    op.drop_index('idx_document_org_project', table_name='project_documents')
+    op.drop_table('project_documents')
+    op.drop_index(op.f('ix_proforma_invoice_items_id'), table_name='proforma_invoice_items')
+    op.drop_table('proforma_invoice_items')
     op.drop_index(op.f('ix_production_entries_voucher_number'), table_name='production_entries')
     op.drop_index(op.f('ix_production_entries_organization_id'), table_name='production_entries')
     op.drop_index(op.f('ix_production_entries_id'), table_name='production_entries')
@@ -9204,16 +10902,26 @@ def downgrade() -> None:
     op.drop_index('idx_serial_warranty', table_name='product_serials')
     op.drop_index('idx_serial_status', table_name='product_serials')
     op.drop_table('product_serials')
-    op.drop_index(op.f('ix_opportunity_products_organization_id'), table_name='opportunity_products')
-    op.drop_index(op.f('ix_opportunity_products_id'), table_name='opportunity_products')
-    op.drop_index('idx_opportunity_product_org_opp', table_name='opportunity_products')
-    op.drop_table('opportunity_products')
-    op.drop_index(op.f('ix_opportunity_activities_organization_id'), table_name='opportunity_activities')
-    op.drop_index(op.f('ix_opportunity_activities_id'), table_name='opportunity_activities')
-    op.drop_index('idx_opportunity_activity_type', table_name='opportunity_activities')
-    op.drop_index('idx_opportunity_activity_org_opp', table_name='opportunity_activities')
-    op.drop_index('idx_opportunity_activity_date', table_name='opportunity_activities')
-    op.drop_table('opportunity_activities')
+    op.drop_index(op.f('ix_orders_organization_id'), table_name='orders')
+    op.drop_index(op.f('ix_orders_order_number'), table_name='orders')
+    op.drop_index(op.f('ix_orders_id'), table_name='orders')
+    op.drop_index('idx_order_org_status', table_name='orders')
+    op.drop_index('idx_order_org_stage', table_name='orders')
+    op.drop_index('idx_order_org_date', table_name='orders')
+    op.drop_index('idx_order_org_customer', table_name='orders')
+    op.drop_table('orders')
+    op.drop_index(op.f('ix_opportunities_stage'), table_name='opportunities')
+    op.drop_index(op.f('ix_opportunities_source'), table_name='opportunities')
+    op.drop_index(op.f('ix_opportunities_organization_id'), table_name='opportunities')
+    op.drop_index(op.f('ix_opportunities_opportunity_number'), table_name='opportunities')
+    op.drop_index(op.f('ix_opportunities_name'), table_name='opportunities')
+    op.drop_index(op.f('ix_opportunities_id'), table_name='opportunities')
+    op.drop_index('idx_opportunity_probability', table_name='opportunities')
+    op.drop_index('idx_opportunity_org_stage', table_name='opportunities')
+    op.drop_index('idx_opportunity_org_assigned', table_name='opportunities')
+    op.drop_index('idx_opportunity_close_date', table_name='opportunities')
+    op.drop_index('idx_opportunity_amount', table_name='opportunities')
+    op.drop_table('opportunities')
     op.drop_index(op.f('ix_material_receipt_vouchers_voucher_number'), table_name='material_receipt_vouchers')
     op.drop_index(op.f('ix_material_receipt_vouchers_organization_id'), table_name='material_receipt_vouchers')
     op.drop_index(op.f('ix_material_receipt_vouchers_id'), table_name='material_receipt_vouchers')
@@ -9235,13 +10943,19 @@ def downgrade() -> None:
     op.drop_index('idx_mjv_org_date', table_name='manufacturing_journal_vouchers')
     op.drop_index('idx_mjv_org_bom', table_name='manufacturing_journal_vouchers')
     op.drop_table('manufacturing_journal_vouchers')
-    op.drop_index(op.f('ix_maintenance_records_organization_id'), table_name='maintenance_records')
-    op.drop_index(op.f('ix_maintenance_records_id'), table_name='maintenance_records')
-    op.drop_index('idx_maint_rec_org_type', table_name='maintenance_records')
-    op.drop_index('idx_maint_rec_org_status', table_name='maintenance_records')
-    op.drop_index('idx_maint_rec_org_date', table_name='maintenance_records')
-    op.drop_index('idx_maint_rec_org_asset', table_name='maintenance_records')
-    op.drop_table('maintenance_records')
+    op.drop_index(op.f('ix_maintenance_schedules_organization_id'), table_name='maintenance_schedules')
+    op.drop_index(op.f('ix_maintenance_schedules_id'), table_name='maintenance_schedules')
+    op.drop_index('idx_maint_sched_org_type', table_name='maintenance_schedules')
+    op.drop_index('idx_maint_sched_org_due', table_name='maintenance_schedules')
+    op.drop_index('idx_maint_sched_org_asset', table_name='maintenance_schedules')
+    op.drop_index('idx_maint_sched_org_active', table_name='maintenance_schedules')
+    op.drop_table('maintenance_schedules')
+    op.drop_index(op.f('ix_lead_activities_organization_id'), table_name='lead_activities')
+    op.drop_index(op.f('ix_lead_activities_id'), table_name='lead_activities')
+    op.drop_index('idx_lead_activity_type', table_name='lead_activities')
+    op.drop_index('idx_lead_activity_org_lead', table_name='lead_activities')
+    op.drop_index('idx_lead_activity_date', table_name='lead_activities')
+    op.drop_table('lead_activities')
     op.drop_index(op.f('ix_job_card_vouchers_voucher_number'), table_name='job_card_vouchers')
     op.drop_index(op.f('ix_job_card_vouchers_organization_id'), table_name='job_card_vouchers')
     op.drop_index(op.f('ix_job_card_vouchers_id'), table_name='job_card_vouchers')
@@ -9250,19 +10964,13 @@ def downgrade() -> None:
     op.drop_index('idx_jcv_org_mo', table_name='job_card_vouchers')
     op.drop_index('idx_jcv_org_date', table_name='job_card_vouchers')
     op.drop_table('job_card_vouchers')
-    op.drop_index(op.f('ix_installation_jobs_organization_id'), table_name='installation_jobs')
-    op.drop_index(op.f('ix_installation_jobs_job_number'), table_name='installation_jobs')
-    op.drop_index(op.f('ix_installation_jobs_id'), table_name='installation_jobs')
-    op.drop_index('idx_installation_job_scheduled_date', table_name='installation_jobs')
-    op.drop_index('idx_installation_job_priority', table_name='installation_jobs')
-    op.drop_index('idx_installation_job_org_technician', table_name='installation_jobs')
-    op.drop_index('idx_installation_job_org_status', table_name='installation_jobs')
-    op.drop_index('idx_installation_job_org_customer', table_name='installation_jobs')
-    op.drop_index('idx_installation_job_dispatch_order', table_name='installation_jobs')
-    op.drop_index('idx_installation_job_created_at', table_name='installation_jobs')
-    op.drop_table('installation_jobs')
-    op.drop_index(op.f('ix_goods_receipt_note_items_id'), table_name='goods_receipt_note_items')
-    op.drop_table('goods_receipt_note_items')
+    op.drop_index(op.f('ix_goods_receipt_notes_voucher_number'), table_name='goods_receipt_notes')
+    op.drop_index(op.f('ix_goods_receipt_notes_organization_id'), table_name='goods_receipt_notes')
+    op.drop_index(op.f('ix_goods_receipt_notes_id'), table_name='goods_receipt_notes')
+    op.drop_index('idx_grn_org_vendor', table_name='goods_receipt_notes')
+    op.drop_index('idx_grn_org_po', table_name='goods_receipt_notes')
+    op.drop_index('idx_grn_org_date', table_name='goods_receipt_notes')
+    op.drop_table('goods_receipt_notes')
     op.drop_index(op.f('ix_exhibition_prospects_organization_id'), table_name='exhibition_prospects')
     op.drop_index(op.f('ix_exhibition_prospects_id'), table_name='exhibition_prospects')
     op.drop_index('idx_exhibition_prospect_status', table_name='exhibition_prospects')
@@ -9287,266 +10995,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_emails_account_id'), table_name='emails')
     op.drop_index('idx_email_subject_text', table_name='emails')
     op.drop_index('idx_email_status_received', table_name='emails')
+    op.drop_index('idx_email_org_from_received', table_name='emails')
     op.drop_index('idx_email_org_account', table_name='emails')
-    op.drop_index('idx_email_from_received', table_name='emails')
     op.drop_table('emails')
-    op.drop_index(op.f('ix_dispatch_items_id'), table_name='dispatch_items')
-    op.drop_index('idx_dispatch_item_status', table_name='dispatch_items')
-    op.drop_index('idx_dispatch_item_product', table_name='dispatch_items')
-    op.drop_index('idx_dispatch_item_order', table_name='dispatch_items')
-    op.drop_table('dispatch_items')
-    op.drop_index(op.f('ix_delivery_challan_items_id'), table_name='delivery_challan_items')
-    op.drop_table('delivery_challan_items')
-    op.drop_index(op.f('ix_chatbot_messages_organization_id'), table_name='chatbot_messages')
-    op.drop_index(op.f('ix_chatbot_messages_id'), table_name='chatbot_messages')
-    op.drop_index('idx_chatbot_message_type', table_name='chatbot_messages')
-    op.drop_index('idx_chatbot_message_org_conversation', table_name='chatbot_messages')
-    op.drop_index('idx_chatbot_message_created', table_name='chatbot_messages')
-    op.drop_table('chatbot_messages')
-    op.drop_index(op.f('ix_calendar_events_title'), table_name='calendar_events')
-    op.drop_index(op.f('ix_calendar_events_start_datetime'), table_name='calendar_events')
-    op.drop_index(op.f('ix_calendar_events_id'), table_name='calendar_events')
-    op.drop_index(op.f('ix_calendar_events_google_event_id'), table_name='calendar_events')
-    op.drop_index(op.f('ix_calendar_events_external_id'), table_name='calendar_events')
-    op.drop_index(op.f('ix_calendar_events_end_datetime'), table_name='calendar_events')
-    op.drop_table('calendar_events')
-    op.drop_index(op.f('ix_batch_locations_stock_location_id'), table_name='batch_locations')
-    op.drop_index(op.f('ix_batch_locations_id'), table_name='batch_locations')
-    op.drop_index(op.f('ix_batch_locations_batch_id'), table_name='batch_locations')
-    op.drop_table('batch_locations')
-    op.drop_index(op.f('ix_workflow_instances_automation_workflow_template_id'), table_name='workflow_instances_automation')
-    op.drop_index(op.f('ix_workflow_instances_automation_status'), table_name='workflow_instances_automation')
-    op.drop_index(op.f('ix_workflow_instances_automation_reference_type'), table_name='workflow_instances_automation')
-    op.drop_index(op.f('ix_workflow_instances_automation_reference_id'), table_name='workflow_instances_automation')
-    op.drop_index(op.f('ix_workflow_instances_automation_organization_id'), table_name='workflow_instances_automation')
-    op.drop_index(op.f('ix_workflow_instances_automation_instance_name'), table_name='workflow_instances_automation')
-    op.drop_index(op.f('ix_workflow_instances_automation_id'), table_name='workflow_instances_automation')
-    op.drop_index(op.f('ix_workflow_instances_automation_current_step_id'), table_name='workflow_instances_automation')
-    op.drop_index('idx_workflow_instance_template', table_name='workflow_instances_automation')
-    op.drop_index('idx_workflow_instance_reference', table_name='workflow_instances_automation')
-    op.drop_index('idx_workflow_instance_org_status', table_name='workflow_instances_automation')
-    op.drop_table('workflow_instances_automation')
-    op.drop_index(op.f('ix_workflow_instances_reference_number'), table_name='workflow_instances')
-    op.drop_index(op.f('ix_workflow_instances_organization_id'), table_name='workflow_instances')
-    op.drop_index(op.f('ix_workflow_instances_id'), table_name='workflow_instances')
-    op.drop_index('idx_workflow_instance_org_triggered', table_name='workflow_instances')
-    op.drop_index('idx_workflow_instance_org_template', table_name='workflow_instances')
-    op.drop_index('idx_workflow_instance_org_status', table_name='workflow_instances')
-    op.drop_index('idx_workflow_instance_org_entity', table_name='workflow_instances')
-    op.drop_table('workflow_instances')
-    op.drop_index(op.f('ix_vendor_quotation_items_rfq_item_id'), table_name='vendor_quotation_items')
-    op.drop_index(op.f('ix_vendor_quotation_items_quotation_id'), table_name='vendor_quotation_items')
-    op.drop_index(op.f('ix_vendor_quotation_items_id'), table_name='vendor_quotation_items')
-    op.drop_table('vendor_quotation_items')
-    op.drop_index(op.f('ix_training_enrollments_session_id'), table_name='training_enrollments')
-    op.drop_index(op.f('ix_training_enrollments_program_id'), table_name='training_enrollments')
-    op.drop_index(op.f('ix_training_enrollments_organization_id'), table_name='training_enrollments')
-    op.drop_index(op.f('ix_training_enrollments_id'), table_name='training_enrollments')
-    op.drop_index(op.f('ix_training_enrollments_employee_id'), table_name='training_enrollments')
-    op.drop_index('idx_training_enrollment_status', table_name='training_enrollments')
-    op.drop_index('idx_training_enrollment_org_employee', table_name='training_enrollments')
-    op.drop_table('training_enrollments')
-    op.drop_index(op.f('ix_ticket_history_organization_id'), table_name='ticket_history')
-    op.drop_index(op.f('ix_ticket_history_id'), table_name='ticket_history')
-    op.drop_index('idx_ticket_history_user', table_name='ticket_history')
-    op.drop_index('idx_ticket_history_org_ticket', table_name='ticket_history')
-    op.drop_index('idx_ticket_history_created_at', table_name='ticket_history')
-    op.drop_index('idx_ticket_history_action', table_name='ticket_history')
-    op.drop_table('ticket_history')
-    op.drop_index(op.f('ix_ticket_attachments_organization_id'), table_name='ticket_attachments')
-    op.drop_index(op.f('ix_ticket_attachments_id'), table_name='ticket_attachments')
-    op.drop_index('idx_ticket_attachment_uploaded_by', table_name='ticket_attachments')
-    op.drop_index('idx_ticket_attachment_type', table_name='ticket_attachments')
-    op.drop_index('idx_ticket_attachment_org_ticket', table_name='ticket_attachments')
-    op.drop_table('ticket_attachments')
-    op.drop_index(op.f('ix_tasks_title'), table_name='tasks')
-    op.drop_index(op.f('ix_tasks_id'), table_name='tasks')
-    op.drop_index(op.f('ix_tasks_external_id'), table_name='tasks')
-    op.drop_table('tasks')
-    op.drop_index(op.f('ix_sla_tracking_organization_id'), table_name='sla_tracking')
-    op.drop_index(op.f('ix_sla_tracking_id'), table_name='sla_tracking')
-    op.drop_index('idx_sla_tracking_response_status', table_name='sla_tracking')
-    op.drop_index('idx_sla_tracking_response_deadline', table_name='sla_tracking')
-    op.drop_index('idx_sla_tracking_resolution_status', table_name='sla_tracking')
-    op.drop_index('idx_sla_tracking_resolution_deadline', table_name='sla_tracking')
-    op.drop_index('idx_sla_tracking_policy', table_name='sla_tracking')
-    op.drop_index('idx_sla_tracking_org_ticket', table_name='sla_tracking')
-    op.drop_index('idx_sla_tracking_escalation', table_name='sla_tracking')
-    op.drop_table('sla_tracking')
-    op.drop_index(op.f('ix_sales_order_items_id'), table_name='sales_order_items')
-    op.drop_table('sales_order_items')
-    op.drop_index(op.f('ix_quotation_items_id'), table_name='quotation_items')
-    op.drop_table('quotation_items')
-    op.drop_index(op.f('ix_purchase_requisitions_requisition_number'), table_name='purchase_requisitions')
-    op.drop_index(op.f('ix_purchase_requisitions_requisition_date'), table_name='purchase_requisitions')
-    op.drop_index(op.f('ix_purchase_requisitions_required_date'), table_name='purchase_requisitions')
-    op.drop_index(op.f('ix_purchase_requisitions_purchase_order_id'), table_name='purchase_requisitions')
-    op.drop_index(op.f('ix_purchase_requisitions_organization_id'), table_name='purchase_requisitions')
-    op.drop_index(op.f('ix_purchase_requisitions_id'), table_name='purchase_requisitions')
-    op.drop_index(op.f('ix_purchase_requisitions_approval_status'), table_name='purchase_requisitions')
-    op.drop_index('idx_pr_required_date', table_name='purchase_requisitions')
-    op.drop_index('idx_pr_org_status', table_name='purchase_requisitions')
-    op.drop_table('purchase_requisitions')
-    op.drop_index(op.f('ix_purchase_order_items_id'), table_name='purchase_order_items')
-    op.drop_table('purchase_order_items')
-    op.drop_index(op.f('ix_promotion_redemptions_organization_id'), table_name='promotion_redemptions')
-    op.drop_index(op.f('ix_promotion_redemptions_id'), table_name='promotion_redemptions')
-    op.drop_index('idx_promotion_redemption_org_promotion', table_name='promotion_redemptions')
-    op.drop_index('idx_promotion_redemption_date', table_name='promotion_redemptions')
-    op.drop_index('idx_promotion_redemption_customer', table_name='promotion_redemptions')
-    op.drop_table('promotion_redemptions')
-    op.drop_index(op.f('ix_project_resources_organization_id'), table_name='project_resources')
-    op.drop_index(op.f('ix_project_resources_id'), table_name='project_resources')
-    op.drop_index('idx_resource_org_user', table_name='project_resources')
-    op.drop_index('idx_resource_org_type', table_name='project_resources')
-    op.drop_index('idx_resource_org_project', table_name='project_resources')
-    op.drop_table('project_resources')
-    op.drop_index(op.f('ix_project_milestones_organization_id'), table_name='project_milestones')
-    op.drop_index(op.f('ix_project_milestones_id'), table_name='project_milestones')
-    op.drop_index('idx_milestone_org_target_date', table_name='project_milestones')
-    op.drop_index('idx_milestone_org_status', table_name='project_milestones')
-    op.drop_index('idx_milestone_org_project', table_name='project_milestones')
-    op.drop_table('project_milestones')
-    op.drop_index(op.f('ix_project_documents_organization_id'), table_name='project_documents')
-    op.drop_index(op.f('ix_project_documents_id'), table_name='project_documents')
-    op.drop_index('idx_document_org_type', table_name='project_documents')
-    op.drop_index('idx_document_org_public', table_name='project_documents')
-    op.drop_index('idx_document_org_project', table_name='project_documents')
-    op.drop_table('project_documents')
-    op.drop_index(op.f('ix_proforma_invoice_items_id'), table_name='proforma_invoice_items')
-    op.drop_table('proforma_invoice_items')
-    op.drop_index(op.f('ix_product_batches_product_tracking_id'), table_name='product_batches')
-    op.drop_index(op.f('ix_product_batches_organization_id'), table_name='product_batches')
-    op.drop_index(op.f('ix_product_batches_id'), table_name='product_batches')
-    op.drop_index(op.f('ix_product_batches_expiry_date'), table_name='product_batches')
-    op.drop_index(op.f('ix_product_batches_batch_number'), table_name='product_batches')
-    op.drop_index('idx_batch_expiry', table_name='product_batches')
-    op.drop_index('idx_batch_active', table_name='product_batches')
-    op.drop_table('product_batches')
-    op.drop_index(op.f('ix_payslips_salary_structure_id'), table_name='payslips')
-    op.drop_index(op.f('ix_payslips_payslip_number'), table_name='payslips')
-    op.drop_index(op.f('ix_payslips_payroll_period_id'), table_name='payslips')
-    op.drop_index(op.f('ix_payslips_organization_id'), table_name='payslips')
-    op.drop_index(op.f('ix_payslips_id'), table_name='payslips')
-    op.drop_index(op.f('ix_payslips_employee_id'), table_name='payslips')
-    op.drop_index('idx_payslip_status', table_name='payslips')
-    op.drop_index('idx_payslip_period', table_name='payslips')
-    op.drop_index('idx_payslip_org_employee', table_name='payslips')
-    op.drop_table('payslips')
-    op.drop_index(op.f('ix_payroll_lines_payroll_run_id'), table_name='payroll_lines')
-    op.drop_index(op.f('ix_payroll_lines_organization_id'), table_name='payroll_lines')
-    op.drop_index(op.f('ix_payroll_lines_id'), table_name='payroll_lines')
-    op.drop_index(op.f('ix_payroll_lines_employee_id'), table_name='payroll_lines')
-    op.drop_index(op.f('ix_payroll_lines_component_id'), table_name='payroll_lines')
-    op.drop_index(op.f('ix_payroll_lines_chart_account_id'), table_name='payroll_lines')
-    op.drop_index('idx_payroll_line_org_run', table_name='payroll_lines')
-    op.drop_index('idx_payroll_line_gl_entry', table_name='payroll_lines')
-    op.drop_index('idx_payroll_line_employee', table_name='payroll_lines')
-    op.drop_index('idx_payroll_line_component', table_name='payroll_lines')
-    op.drop_index('idx_payroll_line_account', table_name='payroll_lines')
-    op.drop_table('payroll_lines')
-    op.drop_index(op.f('ix_payment_records_reference_id'), table_name='payment_records')
-    op.drop_index(op.f('ix_payment_records_payment_number'), table_name='payment_records')
-    op.drop_index(op.f('ix_payment_records_payment_date'), table_name='payment_records')
-    op.drop_index(op.f('ix_payment_records_organization_id'), table_name='payment_records')
-    op.drop_index(op.f('ix_payment_records_id'), table_name='payment_records')
-    op.drop_index('idx_pr_reference', table_name='payment_records')
-    op.drop_index('idx_pr_org_date', table_name='payment_records')
-    op.drop_table('payment_records')
-    op.drop_index(op.f('ix_opportunities_stage'), table_name='opportunities')
-    op.drop_index(op.f('ix_opportunities_source'), table_name='opportunities')
-    op.drop_index(op.f('ix_opportunities_organization_id'), table_name='opportunities')
-    op.drop_index(op.f('ix_opportunities_opportunity_number'), table_name='opportunities')
-    op.drop_index(op.f('ix_opportunities_name'), table_name='opportunities')
-    op.drop_index(op.f('ix_opportunities_id'), table_name='opportunities')
-    op.drop_index('idx_opportunity_probability', table_name='opportunities')
-    op.drop_index('idx_opportunity_org_stage', table_name='opportunities')
-    op.drop_index('idx_opportunity_org_assigned', table_name='opportunities')
-    op.drop_index('idx_opportunity_close_date', table_name='opportunities')
-    op.drop_index('idx_opportunity_amount', table_name='opportunities')
-    op.drop_table('opportunities')
-    op.drop_index(op.f('ix_manufacturing_orders_voucher_number'), table_name='manufacturing_orders')
-    op.drop_index(op.f('ix_manufacturing_orders_organization_id'), table_name='manufacturing_orders')
-    op.drop_index(op.f('ix_manufacturing_orders_id'), table_name='manufacturing_orders')
-    op.drop_index('idx_mo_org_status', table_name='manufacturing_orders')
-    op.drop_index('idx_mo_org_date', table_name='manufacturing_orders')
-    op.drop_index('idx_mo_org_bom', table_name='manufacturing_orders')
-    op.drop_table('manufacturing_orders')
-    op.drop_index(op.f('ix_maintenance_schedules_organization_id'), table_name='maintenance_schedules')
-    op.drop_index(op.f('ix_maintenance_schedules_id'), table_name='maintenance_schedules')
-    op.drop_index('idx_maint_sched_org_type', table_name='maintenance_schedules')
-    op.drop_index('idx_maint_sched_org_due', table_name='maintenance_schedules')
-    op.drop_index('idx_maint_sched_org_asset', table_name='maintenance_schedules')
-    op.drop_index('idx_maint_sched_org_active', table_name='maintenance_schedules')
-    op.drop_table('maintenance_schedules')
-    op.drop_index(op.f('ix_lead_activities_organization_id'), table_name='lead_activities')
-    op.drop_index(op.f('ix_lead_activities_id'), table_name='lead_activities')
-    op.drop_index('idx_lead_activity_type', table_name='lead_activities')
-    op.drop_index('idx_lead_activity_org_lead', table_name='lead_activities')
-    op.drop_index('idx_lead_activity_date', table_name='lead_activities')
-    op.drop_table('lead_activities')
-    op.drop_index(op.f('ix_job_offers_organization_id'), table_name='job_offers')
-    op.drop_index(op.f('ix_job_offers_job_application_id'), table_name='job_offers')
-    op.drop_index(op.f('ix_job_offers_id'), table_name='job_offers')
-    op.drop_index('idx_job_offer_org_status', table_name='job_offers')
-    op.drop_index('idx_job_offer_dates', table_name='job_offers')
-    op.drop_index('idx_job_offer_application', table_name='job_offers')
-    op.drop_table('job_offers')
-    op.drop_index(op.f('ix_interviews_organization_id'), table_name='interviews')
-    op.drop_index(op.f('ix_interviews_job_application_id'), table_name='interviews')
-    op.drop_index(op.f('ix_interviews_id'), table_name='interviews')
-    op.drop_index('idx_interview_status', table_name='interviews')
-    op.drop_index('idx_interview_org_date', table_name='interviews')
-    op.drop_index('idx_interview_interviewer', table_name='interviews')
-    op.drop_table('interviews')
-    op.drop_index(op.f('ix_integration_sync_records_organization_id'), table_name='integration_sync_records')
-    op.drop_index(op.f('ix_integration_sync_records_local_id'), table_name='integration_sync_records')
-    op.drop_index(op.f('ix_integration_sync_records_id'), table_name='integration_sync_records')
-    op.drop_index(op.f('ix_integration_sync_records_external_id'), table_name='integration_sync_records')
-    op.drop_index(op.f('ix_integration_sync_records_entity_type'), table_name='integration_sync_records')
-    op.drop_index('idx_sync_record_org_status', table_name='integration_sync_records')
-    op.drop_index('idx_sync_record_org_local', table_name='integration_sync_records')
-    op.drop_index('idx_sync_record_org_job', table_name='integration_sync_records')
-    op.drop_index('idx_sync_record_org_external', table_name='integration_sync_records')
-    op.drop_index('idx_sync_record_org_entity', table_name='integration_sync_records')
-    op.drop_table('integration_sync_records')
-    op.drop_index(op.f('ix_goods_receipt_notes_voucher_number'), table_name='goods_receipt_notes')
-    op.drop_index(op.f('ix_goods_receipt_notes_organization_id'), table_name='goods_receipt_notes')
-    op.drop_index(op.f('ix_goods_receipt_notes_id'), table_name='goods_receipt_notes')
-    op.drop_index('idx_grn_org_vendor', table_name='goods_receipt_notes')
-    op.drop_index('idx_grn_org_po', table_name='goods_receipt_notes')
-    op.drop_index('idx_grn_org_date', table_name='goods_receipt_notes')
-    op.drop_table('goods_receipt_notes')
-    op.drop_index(op.f('ix_freight_rates_organization_id'), table_name='freight_rates')
-    op.drop_index(op.f('ix_freight_rates_id'), table_name='freight_rates')
-    op.drop_index('idx_freight_rate_org_route', table_name='freight_rates')
-    op.drop_index('idx_freight_rate_org_effective', table_name='freight_rates')
-    op.drop_index('idx_freight_rate_org_carrier', table_name='freight_rates')
-    op.drop_index('idx_freight_rate_org_active', table_name='freight_rates')
-    op.drop_table('freight_rates')
-    op.drop_index(op.f('ix_freight_cost_analysis_organization_id'), table_name='freight_cost_analysis')
-    op.drop_index(op.f('ix_freight_cost_analysis_id'), table_name='freight_cost_analysis')
-    op.drop_index('idx_freight_analysis_org_route', table_name='freight_cost_analysis')
-    op.drop_index('idx_freight_analysis_org_period', table_name='freight_cost_analysis')
-    op.drop_index('idx_freight_analysis_org_carrier', table_name='freight_cost_analysis')
-    op.drop_table('freight_cost_analysis')
-    op.drop_index(op.f('ix_email_threads_vendor_id'), table_name='email_threads')
-    op.drop_index(op.f('ix_email_threads_thread_id'), table_name='email_threads')
-    op.drop_index(op.f('ix_email_threads_subject'), table_name='email_threads')
-    op.drop_index(op.f('ix_email_threads_organization_id'), table_name='email_threads')
-    op.drop_index(op.f('ix_email_threads_id'), table_name='email_threads')
-    op.drop_index(op.f('ix_email_threads_customer_id'), table_name='email_threads')
-    op.drop_index(op.f('ix_email_threads_account_id'), table_name='email_threads')
-    op.drop_index('idx_email_thread_status', table_name='email_threads')
-    op.drop_index('idx_email_thread_participants', table_name='email_threads', postgresql_using='gin')
-    op.drop_index('idx_email_thread_org_account', table_name='email_threads')
-    op.drop_index('idx_email_thread_last_activity', table_name='email_threads')
-    op.drop_table('email_threads')
-    op.drop_index(op.f('ix_email_sync_logs_id'), table_name='email_sync_logs')
-    op.drop_index(op.f('ix_email_sync_logs_account_id'), table_name='email_sync_logs')
-    op.drop_index('idx_email_sync_log_status', table_name='email_sync_logs')
-    op.drop_index('idx_email_sync_log_account_started', table_name='email_sync_logs')
-    op.drop_table('email_sync_logs')
     op.drop_index(op.f('ix_dispatch_orders_organization_id'), table_name='dispatch_orders')
     op.drop_index(op.f('ix_dispatch_orders_order_number'), table_name='dispatch_orders')
     op.drop_index(op.f('ix_dispatch_orders_id'), table_name='dispatch_orders')
@@ -9593,6 +11044,300 @@ def downgrade() -> None:
     op.drop_index('idx_chatbot_conversation_escalated', table_name='chatbot_conversations')
     op.drop_index('idx_chatbot_conversation_channel', table_name='chatbot_conversations')
     op.drop_table('chatbot_conversations')
+    op.drop_index(op.f('ix_bom_alternate_components_organization_id'), table_name='bom_alternate_components')
+    op.drop_index(op.f('ix_bom_alternate_components_id'), table_name='bom_alternate_components')
+    op.drop_index('idx_bom_alt_org_primary', table_name='bom_alternate_components')
+    op.drop_index('idx_bom_alt_org_item', table_name='bom_alternate_components')
+    op.drop_table('bom_alternate_components')
+    op.drop_index(op.f('ix_batch_locations_stock_location_id'), table_name='batch_locations')
+    op.drop_index(op.f('ix_batch_locations_id'), table_name='batch_locations')
+    op.drop_index(op.f('ix_batch_locations_batch_id'), table_name='batch_locations')
+    op.drop_table('batch_locations')
+    op.drop_index(op.f('ix_workflow_instances_automation_workflow_template_id'), table_name='workflow_instances_automation')
+    op.drop_index(op.f('ix_workflow_instances_automation_status'), table_name='workflow_instances_automation')
+    op.drop_index(op.f('ix_workflow_instances_automation_reference_type'), table_name='workflow_instances_automation')
+    op.drop_index(op.f('ix_workflow_instances_automation_reference_id'), table_name='workflow_instances_automation')
+    op.drop_index(op.f('ix_workflow_instances_automation_organization_id'), table_name='workflow_instances_automation')
+    op.drop_index(op.f('ix_workflow_instances_automation_instance_name'), table_name='workflow_instances_automation')
+    op.drop_index(op.f('ix_workflow_instances_automation_id'), table_name='workflow_instances_automation')
+    op.drop_index(op.f('ix_workflow_instances_automation_current_step_id'), table_name='workflow_instances_automation')
+    op.drop_index('idx_workflow_instance_template', table_name='workflow_instances_automation')
+    op.drop_index('idx_workflow_instance_reference', table_name='workflow_instances_automation')
+    op.drop_index('idx_workflow_instance_org_status', table_name='workflow_instances_automation')
+    op.drop_table('workflow_instances_automation')
+    op.drop_index(op.f('ix_workflow_instances_reference_number'), table_name='workflow_instances')
+    op.drop_index(op.f('ix_workflow_instances_organization_id'), table_name='workflow_instances')
+    op.drop_index(op.f('ix_workflow_instances_id'), table_name='workflow_instances')
+    op.drop_index('idx_workflow_instance_org_triggered', table_name='workflow_instances')
+    op.drop_index('idx_workflow_instance_org_template', table_name='workflow_instances')
+    op.drop_index('idx_workflow_instance_org_status', table_name='workflow_instances')
+    op.drop_index('idx_workflow_instance_org_entity', table_name='workflow_instances')
+    op.drop_table('workflow_instances')
+    op.drop_index(op.f('ix_website_projects_project_name'), table_name='website_projects')
+    op.drop_index(op.f('ix_website_projects_organization_id'), table_name='website_projects')
+    op.drop_index(op.f('ix_website_projects_id'), table_name='website_projects')
+    op.drop_index('idx_website_project_org_type', table_name='website_projects')
+    op.drop_index('idx_website_project_org_status', table_name='website_projects')
+    op.drop_index('idx_website_project_customer', table_name='website_projects')
+    op.drop_index('idx_website_project_created_at', table_name='website_projects')
+    op.drop_table('website_projects')
+    op.drop_index(op.f('ix_vendor_rfqs_vendor_id'), table_name='vendor_rfqs')
+    op.drop_index(op.f('ix_vendor_rfqs_rfq_id'), table_name='vendor_rfqs')
+    op.drop_index(op.f('ix_vendor_rfqs_invited_date'), table_name='vendor_rfqs')
+    op.drop_index(op.f('ix_vendor_rfqs_id'), table_name='vendor_rfqs')
+    op.drop_index('idx_vendor_rfq_response', table_name='vendor_rfqs')
+    op.drop_table('vendor_rfqs')
+    op.drop_index(op.f('ix_vendor_quotations_vendor_id'), table_name='vendor_quotations')
+    op.drop_index(op.f('ix_vendor_quotations_rfq_id'), table_name='vendor_quotations')
+    op.drop_index(op.f('ix_vendor_quotations_quotation_number'), table_name='vendor_quotations')
+    op.drop_index(op.f('ix_vendor_quotations_quotation_date'), table_name='vendor_quotations')
+    op.drop_index(op.f('ix_vendor_quotations_organization_id'), table_name='vendor_quotations')
+    op.drop_index(op.f('ix_vendor_quotations_id'), table_name='vendor_quotations')
+    op.drop_index('idx_quotation_selected', table_name='vendor_quotations')
+    op.drop_index('idx_quotation_rfq_vendor', table_name='vendor_quotations')
+    op.drop_table('vendor_quotations')
+    op.drop_index(op.f('ix_vendor_files_organization_id'), table_name='vendor_files')
+    op.drop_index(op.f('ix_vendor_files_id'), table_name='vendor_files')
+    op.drop_index('idx_vendor_file_org_vendor', table_name='vendor_files')
+    op.drop_table('vendor_files')
+    op.drop_index(op.f('ix_vendor_evaluations_vendor_id'), table_name='vendor_evaluations')
+    op.drop_index(op.f('ix_vendor_evaluations_organization_id'), table_name='vendor_evaluations')
+    op.drop_index(op.f('ix_vendor_evaluations_id'), table_name='vendor_evaluations')
+    op.drop_index(op.f('ix_vendor_evaluations_evaluation_date'), table_name='vendor_evaluations')
+    op.drop_index('idx_vendor_eval_rating', table_name='vendor_evaluations')
+    op.drop_index('idx_vendor_eval_org_date', table_name='vendor_evaluations')
+    op.drop_table('vendor_evaluations')
+    op.drop_index(op.f('ix_training_enrollments_session_id'), table_name='training_enrollments')
+    op.drop_index(op.f('ix_training_enrollments_program_id'), table_name='training_enrollments')
+    op.drop_index(op.f('ix_training_enrollments_organization_id'), table_name='training_enrollments')
+    op.drop_index(op.f('ix_training_enrollments_id'), table_name='training_enrollments')
+    op.drop_index(op.f('ix_training_enrollments_employee_id'), table_name='training_enrollments')
+    op.drop_index('idx_training_enrollment_status', table_name='training_enrollments')
+    op.drop_index('idx_training_enrollment_org_employee', table_name='training_enrollments')
+    op.drop_table('training_enrollments')
+    op.drop_index(op.f('ix_tickets_ticket_number'), table_name='tickets')
+    op.drop_index(op.f('ix_tickets_organization_id'), table_name='tickets')
+    op.drop_index(op.f('ix_tickets_id'), table_name='tickets')
+    op.drop_index('idx_ticket_org_type', table_name='tickets')
+    op.drop_index('idx_ticket_org_status', table_name='tickets')
+    op.drop_index('idx_ticket_org_priority', table_name='tickets')
+    op.drop_index('idx_ticket_org_customer', table_name='tickets')
+    op.drop_index('idx_ticket_org_assigned', table_name='tickets')
+    op.drop_index('idx_ticket_due_date', table_name='tickets')
+    op.drop_index('idx_ticket_created_at', table_name='tickets')
+    op.drop_table('tickets')
+    op.drop_index(op.f('ix_sales_orders_voucher_number'), table_name='sales_orders')
+    op.drop_index(op.f('ix_sales_orders_organization_id'), table_name='sales_orders')
+    op.drop_index(op.f('ix_sales_orders_id'), table_name='sales_orders')
+    op.drop_index('idx_so_org_status', table_name='sales_orders')
+    op.drop_index('idx_so_org_date', table_name='sales_orders')
+    op.drop_index('idx_so_org_customer', table_name='sales_orders')
+    op.drop_table('sales_orders')
+    op.drop_index(op.f('ix_quotations_voucher_number'), table_name='quotations')
+    op.drop_index(op.f('ix_quotations_organization_id'), table_name='quotations')
+    op.drop_index(op.f('ix_quotations_id'), table_name='quotations')
+    op.drop_index('idx_quotation_org_date', table_name='quotations')
+    op.drop_index('idx_quotation_org_customer', table_name='quotations')
+    op.drop_table('quotations')
+    op.drop_index(op.f('ix_purchase_orders_voucher_number'), table_name='purchase_orders')
+    op.drop_index(op.f('ix_purchase_orders_organization_id'), table_name='purchase_orders')
+    op.drop_index(op.f('ix_purchase_orders_id'), table_name='purchase_orders')
+    op.drop_index('idx_po_org_vendor', table_name='purchase_orders')
+    op.drop_index('idx_po_org_status', table_name='purchase_orders')
+    op.drop_index('idx_po_org_date', table_name='purchase_orders')
+    op.drop_table('purchase_orders')
+    op.drop_index(op.f('ix_promotion_redemptions_organization_id'), table_name='promotion_redemptions')
+    op.drop_index(op.f('ix_promotion_redemptions_id'), table_name='promotion_redemptions')
+    op.drop_index('idx_promotion_redemption_org_promotion', table_name='promotion_redemptions')
+    op.drop_index('idx_promotion_redemption_date', table_name='promotion_redemptions')
+    op.drop_index('idx_promotion_redemption_customer', table_name='promotion_redemptions')
+    op.drop_table('promotion_redemptions')
+    op.drop_index(op.f('ix_projects_project_code'), table_name='projects')
+    op.drop_index(op.f('ix_projects_organization_id'), table_name='projects')
+    op.drop_index(op.f('ix_projects_name'), table_name='projects')
+    op.drop_index(op.f('ix_projects_id'), table_name='projects')
+    op.drop_index(op.f('ix_projects_company_id'), table_name='projects')
+    op.drop_index('idx_project_org_type', table_name='projects')
+    op.drop_index('idx_project_org_status', table_name='projects')
+    op.drop_index('idx_project_org_manager', table_name='projects')
+    op.drop_index('idx_project_org_client', table_name='projects')
+    op.drop_table('projects')
+    op.drop_index(op.f('ix_proforma_invoices_voucher_number'), table_name='proforma_invoices')
+    op.drop_index(op.f('ix_proforma_invoices_organization_id'), table_name='proforma_invoices')
+    op.drop_index(op.f('ix_proforma_invoices_id'), table_name='proforma_invoices')
+    op.drop_index('idx_pi_org_date', table_name='proforma_invoices')
+    op.drop_index('idx_pi_org_customer', table_name='proforma_invoices')
+    op.drop_table('proforma_invoices')
+    op.drop_index(op.f('ix_product_batches_product_tracking_id'), table_name='product_batches')
+    op.drop_index(op.f('ix_product_batches_organization_id'), table_name='product_batches')
+    op.drop_index(op.f('ix_product_batches_id'), table_name='product_batches')
+    op.drop_index(op.f('ix_product_batches_expiry_date'), table_name='product_batches')
+    op.drop_index(op.f('ix_product_batches_batch_number'), table_name='product_batches')
+    op.drop_index('idx_batch_expiry', table_name='product_batches')
+    op.drop_index('idx_batch_active', table_name='product_batches')
+    op.drop_table('product_batches')
+    op.drop_index(op.f('ix_payslips_salary_structure_id'), table_name='payslips')
+    op.drop_index(op.f('ix_payslips_payslip_number'), table_name='payslips')
+    op.drop_index(op.f('ix_payslips_payroll_period_id'), table_name='payslips')
+    op.drop_index(op.f('ix_payslips_organization_id'), table_name='payslips')
+    op.drop_index(op.f('ix_payslips_id'), table_name='payslips')
+    op.drop_index(op.f('ix_payslips_employee_id'), table_name='payslips')
+    op.drop_index('idx_payslip_status', table_name='payslips')
+    op.drop_index('idx_payslip_period', table_name='payslips')
+    op.drop_index('idx_payslip_org_employee', table_name='payslips')
+    op.drop_table('payslips')
+    op.drop_index(op.f('ix_payroll_lines_payroll_run_id'), table_name='payroll_lines')
+    op.drop_index(op.f('ix_payroll_lines_organization_id'), table_name='payroll_lines')
+    op.drop_index(op.f('ix_payroll_lines_id'), table_name='payroll_lines')
+    op.drop_index(op.f('ix_payroll_lines_employee_id'), table_name='payroll_lines')
+    op.drop_index(op.f('ix_payroll_lines_component_id'), table_name='payroll_lines')
+    op.drop_index(op.f('ix_payroll_lines_chart_account_id'), table_name='payroll_lines')
+    op.drop_index('idx_payroll_line_org_run', table_name='payroll_lines')
+    op.drop_index('idx_payroll_line_gl_entry', table_name='payroll_lines')
+    op.drop_index('idx_payroll_line_employee', table_name='payroll_lines')
+    op.drop_index('idx_payroll_line_component', table_name='payroll_lines')
+    op.drop_index('idx_payroll_line_account', table_name='payroll_lines')
+    op.drop_table('payroll_lines')
+    op.drop_index(op.f('ix_payment_records_reference_id'), table_name='payment_records')
+    op.drop_index(op.f('ix_payment_records_payment_number'), table_name='payment_records')
+    op.drop_index(op.f('ix_payment_records_payment_date'), table_name='payment_records')
+    op.drop_index(op.f('ix_payment_records_organization_id'), table_name='payment_records')
+    op.drop_index(op.f('ix_payment_records_id'), table_name='payment_records')
+    op.drop_index('idx_pr_reference', table_name='payment_records')
+    op.drop_index('idx_pr_org_date', table_name='payment_records')
+    op.drop_table('payment_records')
+    op.drop_index(op.f('ix_non_sales_credit_note_items_id'), table_name='non_sales_credit_note_items')
+    op.drop_table('non_sales_credit_note_items')
+    op.drop_index(op.f('ix_marketing_list_contacts_organization_id'), table_name='marketing_list_contacts')
+    op.drop_index(op.f('ix_marketing_list_contacts_id'), table_name='marketing_list_contacts')
+    op.drop_index(op.f('ix_marketing_list_contacts_email'), table_name='marketing_list_contacts')
+    op.drop_index('idx_marketing_list_contact_subscribed', table_name='marketing_list_contacts')
+    op.drop_index('idx_marketing_list_contact_org_list', table_name='marketing_list_contacts')
+    op.drop_index('idx_marketing_list_contact_email', table_name='marketing_list_contacts')
+    op.drop_table('marketing_list_contacts')
+    op.drop_index(op.f('ix_manufacturing_orders_voucher_number'), table_name='manufacturing_orders')
+    op.drop_index(op.f('ix_manufacturing_orders_organization_id'), table_name='manufacturing_orders')
+    op.drop_index(op.f('ix_manufacturing_orders_id'), table_name='manufacturing_orders')
+    op.drop_index('idx_mo_org_status', table_name='manufacturing_orders')
+    op.drop_index('idx_mo_org_date', table_name='manufacturing_orders')
+    op.drop_index('idx_mo_org_bom', table_name='manufacturing_orders')
+    op.drop_table('manufacturing_orders')
+    op.drop_index(op.f('ix_leads_status'), table_name='leads')
+    op.drop_index(op.f('ix_leads_source'), table_name='leads')
+    op.drop_index(op.f('ix_leads_organization_id'), table_name='leads')
+    op.drop_index(op.f('ix_leads_lead_number'), table_name='leads')
+    op.drop_index(op.f('ix_leads_id'), table_name='leads')
+    op.drop_index(op.f('ix_leads_email'), table_name='leads')
+    op.drop_index(op.f('ix_leads_company'), table_name='leads')
+    op.drop_index('idx_lead_score', table_name='leads')
+    op.drop_index('idx_lead_qualified', table_name='leads')
+    op.drop_index('idx_lead_org_status', table_name='leads')
+    op.drop_index('idx_lead_org_source', table_name='leads')
+    op.drop_index('idx_lead_org_assigned', table_name='leads')
+    op.drop_index('idx_lead_company', table_name='leads')
+    op.drop_table('leads')
+    op.drop_index(op.f('ix_job_offers_organization_id'), table_name='job_offers')
+    op.drop_index(op.f('ix_job_offers_job_application_id'), table_name='job_offers')
+    op.drop_index(op.f('ix_job_offers_id'), table_name='job_offers')
+    op.drop_index('idx_job_offer_org_status', table_name='job_offers')
+    op.drop_index('idx_job_offer_dates', table_name='job_offers')
+    op.drop_index('idx_job_offer_application', table_name='job_offers')
+    op.drop_table('job_offers')
+    op.drop_index(op.f('ix_interviews_organization_id'), table_name='interviews')
+    op.drop_index(op.f('ix_interviews_job_application_id'), table_name='interviews')
+    op.drop_index(op.f('ix_interviews_id'), table_name='interviews')
+    op.drop_index('idx_interview_status', table_name='interviews')
+    op.drop_index('idx_interview_org_date', table_name='interviews')
+    op.drop_index('idx_interview_interviewer', table_name='interviews')
+    op.drop_table('interviews')
+    op.drop_index(op.f('ix_integration_webhook_events_webhook_id'), table_name='integration_webhook_events')
+    op.drop_index(op.f('ix_integration_webhook_events_received_at'), table_name='integration_webhook_events')
+    op.drop_index(op.f('ix_integration_webhook_events_organization_id'), table_name='integration_webhook_events')
+    op.drop_index(op.f('ix_integration_webhook_events_id'), table_name='integration_webhook_events')
+    op.drop_index(op.f('ix_integration_webhook_events_event_type'), table_name='integration_webhook_events')
+    op.drop_index(op.f('ix_integration_webhook_events_event_id'), table_name='integration_webhook_events')
+    op.drop_index('idx_webhook_event_type', table_name='integration_webhook_events')
+    op.drop_index('idx_webhook_event_processed', table_name='integration_webhook_events')
+    op.drop_index('idx_webhook_event_org_webhook', table_name='integration_webhook_events')
+    op.drop_table('integration_webhook_events')
+    op.drop_index(op.f('ix_integration_sync_records_organization_id'), table_name='integration_sync_records')
+    op.drop_index(op.f('ix_integration_sync_records_local_id'), table_name='integration_sync_records')
+    op.drop_index(op.f('ix_integration_sync_records_id'), table_name='integration_sync_records')
+    op.drop_index(op.f('ix_integration_sync_records_external_id'), table_name='integration_sync_records')
+    op.drop_index(op.f('ix_integration_sync_records_entity_type'), table_name='integration_sync_records')
+    op.drop_index('idx_sync_record_org_status', table_name='integration_sync_records')
+    op.drop_index('idx_sync_record_org_local', table_name='integration_sync_records')
+    op.drop_index('idx_sync_record_org_job', table_name='integration_sync_records')
+    op.drop_index('idx_sync_record_org_external', table_name='integration_sync_records')
+    op.drop_index('idx_sync_record_org_entity', table_name='integration_sync_records')
+    op.drop_table('integration_sync_records')
+    op.drop_index(op.f('ix_freight_rates_organization_id'), table_name='freight_rates')
+    op.drop_index(op.f('ix_freight_rates_id'), table_name='freight_rates')
+    op.drop_index(op.f('ix_freight_rates_freight_expense_account_id'), table_name='freight_rates')
+    op.drop_index('idx_freight_rate_org_route', table_name='freight_rates')
+    op.drop_index('idx_freight_rate_org_effective', table_name='freight_rates')
+    op.drop_index('idx_freight_rate_org_carrier', table_name='freight_rates')
+    op.drop_index('idx_freight_rate_org_active', table_name='freight_rates')
+    op.drop_table('freight_rates')
+    op.drop_index(op.f('ix_freight_cost_analysis_organization_id'), table_name='freight_cost_analysis')
+    op.drop_index(op.f('ix_freight_cost_analysis_id'), table_name='freight_cost_analysis')
+    op.drop_index('idx_freight_analysis_org_route', table_name='freight_cost_analysis')
+    op.drop_index('idx_freight_analysis_org_period', table_name='freight_cost_analysis')
+    op.drop_index('idx_freight_analysis_org_carrier', table_name='freight_cost_analysis')
+    op.drop_table('freight_cost_analysis')
+    op.drop_index(op.f('ix_email_threads_vendor_id'), table_name='email_threads')
+    op.drop_index(op.f('ix_email_threads_thread_id'), table_name='email_threads')
+    op.drop_index(op.f('ix_email_threads_subject'), table_name='email_threads')
+    op.drop_index(op.f('ix_email_threads_status'), table_name='email_threads')
+    op.drop_index(op.f('ix_email_threads_organization_id'), table_name='email_threads')
+    op.drop_index(op.f('ix_email_threads_id'), table_name='email_threads')
+    op.drop_index(op.f('ix_email_threads_customer_id'), table_name='email_threads')
+    op.drop_index(op.f('ix_email_threads_account_id'), table_name='email_threads')
+    op.drop_index('idx_email_thread_status', table_name='email_threads')
+    op.drop_index('idx_email_thread_participants', table_name='email_threads', postgresql_using='gin')
+    op.drop_index('idx_email_thread_org_account', table_name='email_threads')
+    op.drop_index('idx_email_thread_last_activity', table_name='email_threads')
+    op.drop_table('email_threads')
+    op.drop_index(op.f('ix_email_sync_logs_id'), table_name='email_sync_logs')
+    op.drop_index(op.f('ix_email_sync_logs_account_id'), table_name='email_sync_logs')
+    op.drop_index('idx_email_sync_log_status', table_name='email_sync_logs')
+    op.drop_index('idx_email_sync_log_account_started', table_name='email_sync_logs')
+    op.drop_table('email_sync_logs')
+    op.drop_index(op.f('ix_debit_notes_voucher_number'), table_name='debit_notes')
+    op.drop_index(op.f('ix_debit_notes_organization_id'), table_name='debit_notes')
+    op.drop_index(op.f('ix_debit_notes_id'), table_name='debit_notes')
+    op.drop_index('idx_dn_org_vendor', table_name='debit_notes')
+    op.drop_index('idx_dn_org_date', table_name='debit_notes')
+    op.drop_index('idx_dn_org_customer', table_name='debit_notes')
+    op.drop_table('debit_notes')
+    op.drop_index(op.f('ix_customer_segments_organization_id'), table_name='customer_segments')
+    op.drop_index(op.f('ix_customer_segments_id'), table_name='customer_segments')
+    op.drop_index('idx_customer_segment_org_customer', table_name='customer_segments')
+    op.drop_index('idx_customer_segment_name_active', table_name='customer_segments')
+    op.drop_index('idx_customer_segment_assigned_date', table_name='customer_segments')
+    op.drop_table('customer_segments')
+    op.drop_index(op.f('ix_customer_interactions_organization_id'), table_name='customer_interactions')
+    op.drop_index(op.f('ix_customer_interactions_id'), table_name='customer_interactions')
+    op.drop_index('idx_customer_interaction_type_status', table_name='customer_interactions')
+    op.drop_index('idx_customer_interaction_org_customer', table_name='customer_interactions')
+    op.drop_index('idx_customer_interaction_date', table_name='customer_interactions')
+    op.drop_table('customer_interactions')
+    op.drop_index(op.f('ix_customer_files_organization_id'), table_name='customer_files')
+    op.drop_index(op.f('ix_customer_files_id'), table_name='customer_files')
+    op.drop_index('idx_customer_file_org_customer', table_name='customer_files')
+    op.drop_table('customer_files')
+    op.drop_index(op.f('ix_customer_analytics_organization_id'), table_name='customer_analytics')
+    op.drop_index(op.f('ix_customer_analytics_id'), table_name='customer_analytics')
+    op.drop_index(op.f('ix_customer_analytics_customer_id'), table_name='customer_analytics')
+    op.drop_index('idx_customer_analytics_org', table_name='customer_analytics')
+    op.drop_table('customer_analytics')
+    op.drop_index(op.f('ix_credit_notes_voucher_number'), table_name='credit_notes')
+    op.drop_index(op.f('ix_credit_notes_organization_id'), table_name='credit_notes')
+    op.drop_index(op.f('ix_credit_notes_id'), table_name='credit_notes')
+    op.drop_index('idx_cn_org_vendor', table_name='credit_notes')
+    op.drop_index('idx_cn_org_date', table_name='credit_notes')
+    op.drop_index('idx_cn_org_customer', table_name='credit_notes')
+    op.drop_table('credit_notes')
     op.drop_index(op.f('ix_categories_parent_category_id'), table_name='categories')
     op.drop_index(op.f('ix_categories_organization_id'), table_name='categories')
     op.drop_index(op.f('ix_categories_name'), table_name='categories')
@@ -9609,6 +11354,12 @@ def downgrade() -> None:
     op.drop_index('idx_card_scan_status', table_name='business_card_scans')
     op.drop_index('idx_card_scan_event', table_name='business_card_scans')
     op.drop_table('business_card_scans')
+    op.drop_index(op.f('ix_bom_revisions_organization_id'), table_name='bom_revisions')
+    op.drop_index(op.f('ix_bom_revisions_id'), table_name='bom_revisions')
+    op.drop_index('idx_bom_rev_status', table_name='bom_revisions')
+    op.drop_index('idx_bom_rev_org_date', table_name='bom_revisions')
+    op.drop_index('idx_bom_rev_org_bom', table_name='bom_revisions')
+    op.drop_table('bom_revisions')
     op.drop_index(op.f('ix_bom_components_organization_id'), table_name='bom_components')
     op.drop_index(op.f('ix_bom_components_id'), table_name='bom_components')
     op.drop_index('idx_bom_comp_org_item', table_name='bom_components')
@@ -9621,6 +11372,50 @@ def downgrade() -> None:
     op.drop_index('idx_recon_status', table_name='bank_reconciliations')
     op.drop_index('idx_recon_org_date', table_name='bank_reconciliations')
     op.drop_table('bank_reconciliations')
+    op.drop_index(op.f('ix_assets_organization_id'), table_name='assets')
+    op.drop_index(op.f('ix_assets_id'), table_name='assets')
+    op.drop_index('idx_asset_org_status', table_name='assets')
+    op.drop_index('idx_asset_org_location', table_name='assets')
+    op.drop_index('idx_asset_org_created', table_name='assets')
+    op.drop_index('idx_asset_org_category', table_name='assets')
+    op.drop_table('assets')
+    op.drop_index(op.f('ix_analytics_summaries_summary_type'), table_name='analytics_summaries')
+    op.drop_index(op.f('ix_analytics_summaries_summary_date'), table_name='analytics_summaries')
+    op.drop_index(op.f('ix_analytics_summaries_organization_id'), table_name='analytics_summaries')
+    op.drop_index(op.f('ix_analytics_summaries_id'), table_name='analytics_summaries')
+    op.drop_index('idx_analytics_summary_technician', table_name='analytics_summaries')
+    op.drop_index('idx_analytics_summary_org_type_date', table_name='analytics_summaries')
+    op.drop_index('idx_analytics_summary_customer', table_name='analytics_summaries')
+    op.drop_table('analytics_summaries')
+    op.drop_index(op.f('ix_accounts_receivable_organization_id'), table_name='accounts_receivable')
+    op.drop_index(op.f('ix_accounts_receivable_invoice_number'), table_name='accounts_receivable')
+    op.drop_index(op.f('ix_accounts_receivable_id'), table_name='accounts_receivable')
+    op.drop_index(op.f('ix_accounts_receivable_customer_id'), table_name='accounts_receivable')
+    op.drop_index('idx_ar_status', table_name='accounts_receivable')
+    op.drop_index('idx_ar_org_customer', table_name='accounts_receivable')
+    op.drop_table('accounts_receivable')
+    op.drop_index(op.f('ix_accounts_payable_vendor_id'), table_name='accounts_payable')
+    op.drop_index(op.f('ix_accounts_payable_organization_id'), table_name='accounts_payable')
+    op.drop_index(op.f('ix_accounts_payable_invoice_number'), table_name='accounts_payable')
+    op.drop_index(op.f('ix_accounts_payable_id'), table_name='accounts_payable')
+    op.drop_index('idx_ap_status', table_name='accounts_payable')
+    op.drop_index('idx_ap_org_vendor', table_name='accounts_payable')
+    op.drop_table('accounts_payable')
+    op.drop_index(op.f('ix_ab_test_results_variant_id'), table_name='ab_test_results')
+    op.drop_index(op.f('ix_ab_test_results_session_id'), table_name='ab_test_results')
+    op.drop_index(op.f('ix_ab_test_results_recorded_at'), table_name='ab_test_results')
+    op.drop_index(op.f('ix_ab_test_results_id'), table_name='ab_test_results')
+    op.drop_index(op.f('ix_ab_test_results_experiment_id'), table_name='ab_test_results')
+    op.drop_index('idx_result_recorded_at', table_name='ab_test_results')
+    op.drop_index('idx_result_experiment_variant', table_name='ab_test_results')
+    op.drop_table('ab_test_results')
+    op.drop_index(op.f('ix_ab_test_assignments_user_id'), table_name='ab_test_assignments')
+    op.drop_index(op.f('ix_ab_test_assignments_session_id'), table_name='ab_test_assignments')
+    op.drop_index(op.f('ix_ab_test_assignments_id'), table_name='ab_test_assignments')
+    op.drop_index(op.f('ix_ab_test_assignments_experiment_id'), table_name='ab_test_assignments')
+    op.drop_index('idx_assignment_experiment_user', table_name='ab_test_assignments')
+    op.drop_index('idx_assignment_experiment_session', table_name='ab_test_assignments')
+    op.drop_table('ab_test_assignments')
     op.drop_index(op.f('ix_workflow_steps_automation_workflow_template_id'), table_name='workflow_steps_automation')
     op.drop_index(op.f('ix_workflow_steps_automation_step_type'), table_name='workflow_steps_automation')
     op.drop_index(op.f('ix_workflow_steps_automation_step_order'), table_name='workflow_steps_automation')
@@ -9666,32 +11461,14 @@ def downgrade() -> None:
     op.drop_index('idx_voucher_approval_org', table_name='voucher_approvals')
     op.drop_index('idx_voucher_approval_current', table_name='voucher_approvals')
     op.drop_table('voucher_approvals')
-    op.drop_index(op.f('ix_vendor_rfqs_vendor_id'), table_name='vendor_rfqs')
-    op.drop_index(op.f('ix_vendor_rfqs_rfq_id'), table_name='vendor_rfqs')
-    op.drop_index(op.f('ix_vendor_rfqs_invited_date'), table_name='vendor_rfqs')
-    op.drop_index(op.f('ix_vendor_rfqs_id'), table_name='vendor_rfqs')
-    op.drop_index('idx_vendor_rfq_response', table_name='vendor_rfqs')
-    op.drop_table('vendor_rfqs')
-    op.drop_index(op.f('ix_vendor_quotations_vendor_id'), table_name='vendor_quotations')
-    op.drop_index(op.f('ix_vendor_quotations_rfq_id'), table_name='vendor_quotations')
-    op.drop_index(op.f('ix_vendor_quotations_quotation_number'), table_name='vendor_quotations')
-    op.drop_index(op.f('ix_vendor_quotations_quotation_date'), table_name='vendor_quotations')
-    op.drop_index(op.f('ix_vendor_quotations_organization_id'), table_name='vendor_quotations')
-    op.drop_index(op.f('ix_vendor_quotations_id'), table_name='vendor_quotations')
-    op.drop_index('idx_quotation_selected', table_name='vendor_quotations')
-    op.drop_index('idx_quotation_rfq_vendor', table_name='vendor_quotations')
-    op.drop_table('vendor_quotations')
-    op.drop_index(op.f('ix_vendor_files_organization_id'), table_name='vendor_files')
-    op.drop_index(op.f('ix_vendor_files_id'), table_name='vendor_files')
-    op.drop_index('idx_vendor_file_org_vendor', table_name='vendor_files')
-    op.drop_table('vendor_files')
-    op.drop_index(op.f('ix_vendor_evaluations_vendor_id'), table_name='vendor_evaluations')
-    op.drop_index(op.f('ix_vendor_evaluations_organization_id'), table_name='vendor_evaluations')
-    op.drop_index(op.f('ix_vendor_evaluations_id'), table_name='vendor_evaluations')
-    op.drop_index(op.f('ix_vendor_evaluations_evaluation_date'), table_name='vendor_evaluations')
-    op.drop_index('idx_vendor_eval_rating', table_name='vendor_evaluations')
-    op.drop_index('idx_vendor_eval_org_date', table_name='vendor_evaluations')
-    op.drop_table('vendor_evaluations')
+    op.drop_index(op.f('ix_vendors_payable_account_id'), table_name='vendors')
+    op.drop_index(op.f('ix_vendors_organization_id'), table_name='vendors')
+    op.drop_index(op.f('ix_vendors_name'), table_name='vendors')
+    op.drop_index(op.f('ix_vendors_id'), table_name='vendors')
+    op.drop_index(op.f('ix_vendors_company_id'), table_name='vendors')
+    op.drop_index('idx_vendor_org_name', table_name='vendors')
+    op.drop_index('idx_vendor_org_active', table_name='vendors')
+    op.drop_table('vendors')
     op.drop_index(op.f('ix_user_organization_roles_organization_id'), table_name='user_organization_roles')
     op.drop_index(op.f('ix_user_organization_roles_id'), table_name='user_organization_roles')
     op.drop_index('idx_user_org_role_user', table_name='user_organization_roles')
@@ -9705,17 +11482,6 @@ def downgrade() -> None:
     op.drop_index('idx_training_session_status', table_name='training_sessions')
     op.drop_index('idx_training_session_org_dates', table_name='training_sessions')
     op.drop_table('training_sessions')
-    op.drop_index(op.f('ix_tickets_ticket_number'), table_name='tickets')
-    op.drop_index(op.f('ix_tickets_organization_id'), table_name='tickets')
-    op.drop_index(op.f('ix_tickets_id'), table_name='tickets')
-    op.drop_index('idx_ticket_org_type', table_name='tickets')
-    op.drop_index('idx_ticket_org_status', table_name='tickets')
-    op.drop_index('idx_ticket_org_priority', table_name='tickets')
-    op.drop_index('idx_ticket_org_customer', table_name='tickets')
-    op.drop_index('idx_ticket_org_assigned', table_name='tickets')
-    op.drop_index('idx_ticket_due_date', table_name='tickets')
-    op.drop_index('idx_ticket_created_at', table_name='tickets')
-    op.drop_table('tickets')
     op.drop_index(op.f('ix_task_project_members_id'), table_name='task_project_members')
     op.drop_table('task_project_members')
     op.drop_index(op.f('ix_tally_sync_items_tally_reference'), table_name='tally_sync_items')
@@ -9738,6 +11504,34 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_tally_ledger_mappings_chart_of_accounts_id'), table_name='tally_ledger_mappings')
     op.drop_index('idx_tally_ledger_name', table_name='tally_ledger_mappings')
     op.drop_table('tally_ledger_mappings')
+    op.drop_index(op.f('ix_streaming_metrics_window_start'), table_name='streaming_metrics')
+    op.drop_index(op.f('ix_streaming_metrics_organization_id'), table_name='streaming_metrics')
+    op.drop_index(op.f('ix_streaming_metrics_metric_name'), table_name='streaming_metrics')
+    op.drop_index(op.f('ix_streaming_metrics_id'), table_name='streaming_metrics')
+    op.drop_index('idx_metric_window', table_name='streaming_metrics')
+    op.drop_index('idx_metric_org_name', table_name='streaming_metrics')
+    op.drop_index('idx_metric_name_window', table_name='streaming_metrics')
+    op.drop_table('streaming_metrics')
+    op.drop_index(op.f('ix_streaming_events_processed'), table_name='streaming_events')
+    op.drop_index(op.f('ix_streaming_events_organization_id'), table_name='streaming_events')
+    op.drop_index(op.f('ix_streaming_events_id'), table_name='streaming_events')
+    op.drop_index(op.f('ix_streaming_events_event_type'), table_name='streaming_events')
+    op.drop_index(op.f('ix_streaming_events_event_timestamp'), table_name='streaming_events')
+    op.drop_index(op.f('ix_streaming_events_data_source_id'), table_name='streaming_events')
+    op.drop_index('idx_event_timestamp', table_name='streaming_events')
+    op.drop_index('idx_event_source_type', table_name='streaming_events')
+    op.drop_index('idx_event_processed', table_name='streaming_events')
+    op.drop_table('streaming_events')
+    op.drop_index(op.f('ix_streaming_alerts_triggered_at'), table_name='streaming_alerts')
+    op.drop_index(op.f('ix_streaming_alerts_status'), table_name='streaming_alerts')
+    op.drop_index(op.f('ix_streaming_alerts_severity'), table_name='streaming_alerts')
+    op.drop_index(op.f('ix_streaming_alerts_organization_id'), table_name='streaming_alerts')
+    op.drop_index(op.f('ix_streaming_alerts_id'), table_name='streaming_alerts')
+    op.drop_index(op.f('ix_streaming_alerts_alert_type'), table_name='streaming_alerts')
+    op.drop_index('idx_alert_triggered', table_name='streaming_alerts')
+    op.drop_index('idx_alert_severity', table_name='streaming_alerts')
+    op.drop_index('idx_alert_org_status', table_name='streaming_alerts')
+    op.drop_table('streaming_alerts')
     op.drop_index(op.f('ix_stock_organization_id'), table_name='stock')
     op.drop_index(op.f('ix_stock_id'), table_name='stock')
     op.drop_index('idx_stock_org_product', table_name='stock')
@@ -9749,13 +11543,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_scenario_analysis_financial_model_id'), table_name='scenario_analysis')
     op.drop_index('idx_scenario_org_type', table_name='scenario_analysis')
     op.drop_table('scenario_analysis')
-    op.drop_index(op.f('ix_sales_orders_voucher_number'), table_name='sales_orders')
-    op.drop_index(op.f('ix_sales_orders_organization_id'), table_name='sales_orders')
-    op.drop_index(op.f('ix_sales_orders_id'), table_name='sales_orders')
-    op.drop_index('idx_so_org_status', table_name='sales_orders')
-    op.drop_index('idx_so_org_date', table_name='sales_orders')
-    op.drop_index('idx_so_org_customer', table_name='sales_orders')
-    op.drop_table('sales_orders')
     op.drop_index(op.f('ix_salary_structures_organization_id'), table_name='salary_structures')
     op.drop_index(op.f('ix_salary_structures_id'), table_name='salary_structures')
     op.drop_index(op.f('ix_salary_structures_employee_id'), table_name='salary_structures')
@@ -9797,19 +11584,6 @@ def downgrade() -> None:
     op.drop_index('idx_rate_limit_rule_org_api_key', table_name='rate_limit_rules')
     op.drop_index('idx_rate_limit_rule_org_active', table_name='rate_limit_rules')
     op.drop_table('rate_limit_rules')
-    op.drop_index(op.f('ix_quotations_voucher_number'), table_name='quotations')
-    op.drop_index(op.f('ix_quotations_organization_id'), table_name='quotations')
-    op.drop_index(op.f('ix_quotations_id'), table_name='quotations')
-    op.drop_index('idx_quotation_org_date', table_name='quotations')
-    op.drop_index('idx_quotation_org_customer', table_name='quotations')
-    op.drop_table('quotations')
-    op.drop_index(op.f('ix_purchase_orders_voucher_number'), table_name='purchase_orders')
-    op.drop_index(op.f('ix_purchase_orders_organization_id'), table_name='purchase_orders')
-    op.drop_index(op.f('ix_purchase_orders_id'), table_name='purchase_orders')
-    op.drop_index('idx_po_org_vendor', table_name='purchase_orders')
-    op.drop_index('idx_po_org_status', table_name='purchase_orders')
-    op.drop_index('idx_po_org_date', table_name='purchase_orders')
-    op.drop_table('purchase_orders')
     op.drop_index(op.f('ix_promotions_promotion_type'), table_name='promotions')
     op.drop_index(op.f('ix_promotions_promotion_code'), table_name='promotions')
     op.drop_index(op.f('ix_promotions_organization_id'), table_name='promotions')
@@ -9820,22 +11594,6 @@ def downgrade() -> None:
     op.drop_index('idx_promotion_org_type', table_name='promotions')
     op.drop_index('idx_promotion_org_active', table_name='promotions')
     op.drop_table('promotions')
-    op.drop_index(op.f('ix_projects_project_code'), table_name='projects')
-    op.drop_index(op.f('ix_projects_organization_id'), table_name='projects')
-    op.drop_index(op.f('ix_projects_name'), table_name='projects')
-    op.drop_index(op.f('ix_projects_id'), table_name='projects')
-    op.drop_index(op.f('ix_projects_company_id'), table_name='projects')
-    op.drop_index('idx_project_org_type', table_name='projects')
-    op.drop_index('idx_project_org_status', table_name='projects')
-    op.drop_index('idx_project_org_manager', table_name='projects')
-    op.drop_index('idx_project_org_client', table_name='projects')
-    op.drop_table('projects')
-    op.drop_index(op.f('ix_proforma_invoices_voucher_number'), table_name='proforma_invoices')
-    op.drop_index(op.f('ix_proforma_invoices_organization_id'), table_name='proforma_invoices')
-    op.drop_index(op.f('ix_proforma_invoices_id'), table_name='proforma_invoices')
-    op.drop_index('idx_pi_org_date', table_name='proforma_invoices')
-    op.drop_index('idx_pi_org_customer', table_name='proforma_invoices')
-    op.drop_table('proforma_invoices')
     op.drop_index(op.f('ix_product_tracking_product_id'), table_name='product_tracking')
     op.drop_index(op.f('ix_product_tracking_id'), table_name='product_tracking')
     op.drop_table('product_tracking')
@@ -9852,6 +11610,18 @@ def downgrade() -> None:
     op.drop_index('idx_prediction_result_org_context', table_name='prediction_results')
     op.drop_index('idx_prediction_result_entity', table_name='prediction_results')
     op.drop_table('prediction_results')
+    op.drop_index(op.f('ix_prediction_history_prediction_timestamp'), table_name='prediction_history')
+    op.drop_index(op.f('ix_prediction_history_organization_id'), table_name='prediction_history')
+    op.drop_index(op.f('ix_prediction_history_model_id'), table_name='prediction_history')
+    op.drop_index(op.f('ix_prediction_history_id'), table_name='prediction_history')
+    op.drop_index('idx_prediction_history_org_timestamp', table_name='prediction_history')
+    op.drop_index('idx_prediction_history_model_timestamp', table_name='prediction_history')
+    op.drop_table('prediction_history')
+    op.drop_index(op.f('ix_prediction_explanations_prediction_id'), table_name='prediction_explanations')
+    op.drop_index(op.f('ix_prediction_explanations_organization_id'), table_name='prediction_explanations')
+    op.drop_index(op.f('ix_prediction_explanations_model_explainability_id'), table_name='prediction_explanations')
+    op.drop_index(op.f('ix_prediction_explanations_id'), table_name='prediction_explanations')
+    op.drop_table('prediction_explanations')
     op.drop_index(op.f('ix_performance_reviews_reviewer_id'), table_name='performance_reviews')
     op.drop_index(op.f('ix_performance_reviews_organization_id'), table_name='performance_reviews')
     op.drop_index(op.f('ix_performance_reviews_id'), table_name='performance_reviews')
@@ -9896,6 +11666,13 @@ def downgrade() -> None:
     op.drop_index('idx_notification_log_org_status', table_name='notification_logs')
     op.drop_index('idx_notification_log_org_channel', table_name='notification_logs')
     op.drop_table('notification_logs')
+    op.drop_index(op.f('ix_non_sales_credit_notes_voucher_number'), table_name='non_sales_credit_notes')
+    op.drop_index(op.f('ix_non_sales_credit_notes_organization_id'), table_name='non_sales_credit_notes')
+    op.drop_index(op.f('ix_non_sales_credit_notes_id'), table_name='non_sales_credit_notes')
+    op.drop_index(op.f('ix_non_sales_credit_notes_chart_account_id'), table_name='non_sales_credit_notes')
+    op.drop_index('idx_nscn_org_date', table_name='non_sales_credit_notes')
+    op.drop_index('idx_nscn_chart_account', table_name='non_sales_credit_notes')
+    op.drop_table('non_sales_credit_notes')
     op.drop_index(op.f('ix_model_performance_metrics_organization_id'), table_name='model_performance_metrics')
     op.drop_index(op.f('ix_model_performance_metrics_model_id'), table_name='model_performance_metrics')
     op.drop_index(op.f('ix_model_performance_metrics_metric_name'), table_name='model_performance_metrics')
@@ -9918,6 +11695,13 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_ml_predictions_id'), table_name='ml_predictions')
     op.drop_index('idx_prediction_model_date', table_name='ml_predictions')
     op.drop_table('ml_predictions')
+    op.drop_index(op.f('ix_ml_model_trainings_training_name'), table_name='ml_model_trainings')
+    op.drop_index(op.f('ix_ml_model_trainings_status'), table_name='ml_model_trainings')
+    op.drop_index(op.f('ix_ml_model_trainings_organization_id'), table_name='ml_model_trainings')
+    op.drop_index(op.f('ix_ml_model_trainings_id'), table_name='ml_model_trainings')
+    op.drop_index(op.f('ix_ml_model_trainings_framework'), table_name='ml_model_trainings')
+    op.drop_index(op.f('ix_ml_model_trainings_algorithm_config_id'), table_name='ml_model_trainings')
+    op.drop_table('ml_model_trainings')
     op.drop_index(op.f('ix_migration_logs_organization_id'), table_name='migration_logs')
     op.drop_index(op.f('ix_migration_logs_migration_job_id'), table_name='migration_logs')
     op.drop_index(op.f('ix_migration_logs_id'), table_name='migration_logs')
@@ -9946,13 +11730,6 @@ def downgrade() -> None:
     op.drop_index('idx_tax_code_rate', table_name='master_tax_codes')
     op.drop_index('idx_tax_code_org_type_active', table_name='master_tax_codes')
     op.drop_table('master_tax_codes')
-    op.drop_index(op.f('ix_marketing_list_contacts_organization_id'), table_name='marketing_list_contacts')
-    op.drop_index(op.f('ix_marketing_list_contacts_id'), table_name='marketing_list_contacts')
-    op.drop_index(op.f('ix_marketing_list_contacts_email'), table_name='marketing_list_contacts')
-    op.drop_index('idx_marketing_list_contact_subscribed', table_name='marketing_list_contacts')
-    op.drop_index('idx_marketing_list_contact_org_list', table_name='marketing_list_contacts')
-    op.drop_index('idx_marketing_list_contact_email', table_name='marketing_list_contacts')
-    op.drop_table('marketing_list_contacts')
     op.drop_index(op.f('ix_mail_accounts_user_id'), table_name='mail_accounts')
     op.drop_index(op.f('ix_mail_accounts_organization_id'), table_name='mail_accounts')
     op.drop_index(op.f('ix_mail_accounts_id'), table_name='mail_accounts')
@@ -9961,6 +11738,13 @@ def downgrade() -> None:
     op.drop_index('idx_mail_account_org_user', table_name='mail_accounts')
     op.drop_index('idx_mail_account_last_sync', table_name='mail_accounts')
     op.drop_table('mail_accounts')
+    op.drop_index(op.f('ix_live_predictions_prediction_type'), table_name='live_predictions')
+    op.drop_index(op.f('ix_live_predictions_predicted_at'), table_name='live_predictions')
+    op.drop_index(op.f('ix_live_predictions_organization_id'), table_name='live_predictions')
+    op.drop_index(op.f('ix_live_predictions_id'), table_name='live_predictions')
+    op.drop_index('idx_live_pred_timestamp', table_name='live_predictions')
+    op.drop_index('idx_live_pred_org_type', table_name='live_predictions')
+    op.drop_table('live_predictions')
     op.drop_index(op.f('ix_leave_applications_organization_id'), table_name='leave_applications')
     op.drop_index(op.f('ix_leave_applications_leave_type_id'), table_name='leave_applications')
     op.drop_index(op.f('ix_leave_applications_id'), table_name='leave_applications')
@@ -9974,20 +11758,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_learning_path_programs_id'), table_name='learning_path_programs')
     op.drop_index('idx_learning_path_program_sequence', table_name='learning_path_programs')
     op.drop_table('learning_path_programs')
-    op.drop_index(op.f('ix_leads_status'), table_name='leads')
-    op.drop_index(op.f('ix_leads_source'), table_name='leads')
-    op.drop_index(op.f('ix_leads_organization_id'), table_name='leads')
-    op.drop_index(op.f('ix_leads_lead_number'), table_name='leads')
-    op.drop_index(op.f('ix_leads_id'), table_name='leads')
-    op.drop_index(op.f('ix_leads_email'), table_name='leads')
-    op.drop_index(op.f('ix_leads_company'), table_name='leads')
-    op.drop_index('idx_lead_score', table_name='leads')
-    op.drop_index('idx_lead_qualified', table_name='leads')
-    op.drop_index('idx_lead_org_status', table_name='leads')
-    op.drop_index('idx_lead_org_source', table_name='leads')
-    op.drop_index('idx_lead_org_assigned', table_name='leads')
-    op.drop_index('idx_lead_company', table_name='leads')
-    op.drop_table('leads')
     op.drop_index(op.f('ix_journal_vouchers_voucher_number'), table_name='journal_vouchers')
     op.drop_index(op.f('ix_journal_vouchers_organization_id'), table_name='journal_vouchers')
     op.drop_index(op.f('ix_journal_vouchers_id'), table_name='journal_vouchers')
@@ -10020,16 +11790,23 @@ def downgrade() -> None:
     op.drop_index('idx_inventory_transaction_org_date', table_name='inventory_transactions')
     op.drop_index('idx_inventory_transaction_created_at', table_name='inventory_transactions')
     op.drop_table('inventory_transactions')
+    op.drop_index(op.f('ix_inventory_alerts_status'), table_name='inventory_alerts')
+    op.drop_index(op.f('ix_inventory_alerts_product_id'), table_name='inventory_alerts')
     op.drop_index(op.f('ix_inventory_alerts_organization_id'), table_name='inventory_alerts')
     op.drop_index(op.f('ix_inventory_alerts_id'), table_name='inventory_alerts')
-    op.drop_index('idx_inventory_alert_type', table_name='inventory_alerts')
+    op.drop_index(op.f('ix_inventory_alerts_alert_type'), table_name='inventory_alerts')
     op.drop_index('idx_inventory_alert_org_status', table_name='inventory_alerts')
     op.drop_index('idx_inventory_alert_org_product', table_name='inventory_alerts')
-    op.drop_index('idx_inventory_alert_org_priority', table_name='inventory_alerts')
-    op.drop_index('idx_inventory_alert_created_at', table_name='inventory_alerts')
+    op.drop_index('idx_alert_org_type_status', table_name='inventory_alerts')
     op.drop_table('inventory_alerts')
     op.drop_index(op.f('ix_inter_department_voucher_items_id'), table_name='inter_department_voucher_items')
     op.drop_table('inter_department_voucher_items')
+    op.drop_index(op.f('ix_integration_webhooks_organization_id'), table_name='integration_webhooks')
+    op.drop_index(op.f('ix_integration_webhooks_integration_id'), table_name='integration_webhooks')
+    op.drop_index(op.f('ix_integration_webhooks_id'), table_name='integration_webhooks')
+    op.drop_index('idx_webhook_org_integration', table_name='integration_webhooks')
+    op.drop_index('idx_webhook_active', table_name='integration_webhooks')
+    op.drop_table('integration_webhooks')
     op.drop_index(op.f('ix_integration_sync_jobs_organization_id'), table_name='integration_sync_jobs')
     op.drop_index(op.f('ix_integration_sync_jobs_job_type'), table_name='integration_sync_jobs')
     op.drop_index(op.f('ix_integration_sync_jobs_id'), table_name='integration_sync_jobs')
@@ -10045,6 +11822,16 @@ def downgrade() -> None:
     op.drop_index('idx_integration_schedule_org_integration', table_name='integration_schedules')
     op.drop_index('idx_integration_schedule_org_active', table_name='integration_schedules')
     op.drop_table('integration_schedules')
+    op.drop_index(op.f('ix_integration_messages_organization_id'), table_name='integration_messages')
+    op.drop_index(op.f('ix_integration_messages_integration_id'), table_name='integration_messages')
+    op.drop_index(op.f('ix_integration_messages_id'), table_name='integration_messages')
+    op.drop_index(op.f('ix_integration_messages_external_id'), table_name='integration_messages')
+    op.drop_index(op.f('ix_integration_messages_created_at'), table_name='integration_messages')
+    op.drop_index('idx_message_status', table_name='integration_messages')
+    op.drop_index('idx_message_org_integration', table_name='integration_messages')
+    op.drop_index('idx_message_external_id', table_name='integration_messages')
+    op.drop_index('idx_message_created', table_name='integration_messages')
+    op.drop_table('integration_messages')
     op.drop_index(op.f('ix_integration_mappings_organization_id'), table_name='integration_mappings')
     op.drop_index(op.f('ix_integration_mappings_id'), table_name='integration_mappings')
     op.drop_index(op.f('ix_integration_mappings_entity_type'), table_name='integration_mappings')
@@ -10077,6 +11864,16 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_forecast_versions_financial_forecast_id'), table_name='forecast_versions')
     op.drop_index('idx_forecast_version_current', table_name='forecast_versions')
     op.drop_table('forecast_versions')
+    op.drop_index(op.f('ix_expense_accounts_parent_account_id'), table_name='expense_accounts')
+    op.drop_index(op.f('ix_expense_accounts_organization_id'), table_name='expense_accounts')
+    op.drop_index(op.f('ix_expense_accounts_id'), table_name='expense_accounts')
+    op.drop_index(op.f('ix_expense_accounts_coa_account_id'), table_name='expense_accounts')
+    op.drop_index(op.f('ix_expense_accounts_category'), table_name='expense_accounts')
+    op.drop_index(op.f('ix_expense_accounts_account_name'), table_name='expense_accounts')
+    op.drop_index(op.f('ix_expense_accounts_account_code'), table_name='expense_accounts')
+    op.drop_index('idx_expense_account_org_category', table_name='expense_accounts')
+    op.drop_index('idx_expense_account_org_active', table_name='expense_accounts')
+    op.drop_table('expense_accounts')
     op.drop_index(op.f('ix_exhibition_events_organization_id'), table_name='exhibition_events')
     op.drop_index(op.f('ix_exhibition_events_id'), table_name='exhibition_events')
     op.drop_index('idx_exhibition_event_org_status', table_name='exhibition_events')
@@ -10111,13 +11908,6 @@ def downgrade() -> None:
     op.drop_index('idx_employee_learning_path_status', table_name='employee_learning_paths')
     op.drop_index('idx_employee_learning_path_org_employee', table_name='employee_learning_paths')
     op.drop_table('employee_learning_paths')
-    op.drop_index(op.f('ix_debit_notes_voucher_number'), table_name='debit_notes')
-    op.drop_index(op.f('ix_debit_notes_organization_id'), table_name='debit_notes')
-    op.drop_index(op.f('ix_debit_notes_id'), table_name='debit_notes')
-    op.drop_index('idx_dn_org_vendor', table_name='debit_notes')
-    op.drop_index('idx_dn_org_date', table_name='debit_notes')
-    op.drop_index('idx_dn_org_customer', table_name='debit_notes')
-    op.drop_table('debit_notes')
     op.drop_index(op.f('ix_dcf_models_organization_id'), table_name='dcf_models')
     op.drop_index(op.f('ix_dcf_models_id'), table_name='dcf_models')
     op.drop_index(op.f('ix_dcf_models_financial_model_id'), table_name='dcf_models')
@@ -10130,34 +11920,14 @@ def downgrade() -> None:
     op.drop_index('idx_transformation_rule_org_entity', table_name='data_transformation_rules')
     op.drop_index('idx_transformation_rule_org_active', table_name='data_transformation_rules')
     op.drop_table('data_transformation_rules')
-    op.drop_index(op.f('ix_customer_segments_organization_id'), table_name='customer_segments')
-    op.drop_index(op.f('ix_customer_segments_id'), table_name='customer_segments')
-    op.drop_index('idx_customer_segment_org_customer', table_name='customer_segments')
-    op.drop_index('idx_customer_segment_name_active', table_name='customer_segments')
-    op.drop_index('idx_customer_segment_assigned_date', table_name='customer_segments')
-    op.drop_table('customer_segments')
-    op.drop_index(op.f('ix_customer_interactions_organization_id'), table_name='customer_interactions')
-    op.drop_index(op.f('ix_customer_interactions_id'), table_name='customer_interactions')
-    op.drop_index('idx_customer_interaction_type_status', table_name='customer_interactions')
-    op.drop_index('idx_customer_interaction_org_customer', table_name='customer_interactions')
-    op.drop_index('idx_customer_interaction_date', table_name='customer_interactions')
-    op.drop_table('customer_interactions')
-    op.drop_index(op.f('ix_customer_files_organization_id'), table_name='customer_files')
-    op.drop_index(op.f('ix_customer_files_id'), table_name='customer_files')
-    op.drop_index('idx_customer_file_org_customer', table_name='customer_files')
-    op.drop_table('customer_files')
-    op.drop_index(op.f('ix_customer_analytics_organization_id'), table_name='customer_analytics')
-    op.drop_index(op.f('ix_customer_analytics_id'), table_name='customer_analytics')
-    op.drop_index(op.f('ix_customer_analytics_customer_id'), table_name='customer_analytics')
-    op.drop_index('idx_customer_analytics_org', table_name='customer_analytics')
-    op.drop_table('customer_analytics')
-    op.drop_index(op.f('ix_credit_notes_voucher_number'), table_name='credit_notes')
-    op.drop_index(op.f('ix_credit_notes_organization_id'), table_name='credit_notes')
-    op.drop_index(op.f('ix_credit_notes_id'), table_name='credit_notes')
-    op.drop_index('idx_cn_org_vendor', table_name='credit_notes')
-    op.drop_index('idx_cn_org_date', table_name='credit_notes')
-    op.drop_index('idx_cn_org_customer', table_name='credit_notes')
-    op.drop_table('credit_notes')
+    op.drop_index(op.f('ix_customers_receivable_account_id'), table_name='customers')
+    op.drop_index(op.f('ix_customers_organization_id'), table_name='customers')
+    op.drop_index(op.f('ix_customers_name'), table_name='customers')
+    op.drop_index(op.f('ix_customers_id'), table_name='customers')
+    op.drop_index(op.f('ix_customers_company_id'), table_name='customers')
+    op.drop_index('idx_customer_org_name', table_name='customers')
+    op.drop_index('idx_customer_org_active', table_name='customers')
+    op.drop_table('customers')
     op.drop_index(op.f('ix_contra_vouchers_voucher_number'), table_name='contra_vouchers')
     op.drop_index(op.f('ix_contra_vouchers_organization_id'), table_name='contra_vouchers')
     op.drop_index(op.f('ix_contra_vouchers_id'), table_name='contra_vouchers')
@@ -10200,6 +11970,10 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_bank_accounts_account_number'), table_name='bank_accounts')
     op.drop_index('idx_bank_org_active', table_name='bank_accounts')
     op.drop_table('bank_accounts')
+    op.drop_index(op.f('ix_automl_model_candidates_organization_id'), table_name='automl_model_candidates')
+    op.drop_index(op.f('ix_automl_model_candidates_id'), table_name='automl_model_candidates')
+    op.drop_index(op.f('ix_automl_model_candidates_automl_run_id'), table_name='automl_model_candidates')
+    op.drop_table('automl_model_candidates')
     op.drop_index(op.f('ix_attendance_records_organization_id'), table_name='attendance_records')
     op.drop_index(op.f('ix_attendance_records_id'), table_name='attendance_records')
     op.drop_index(op.f('ix_attendance_records_employee_id'), table_name='attendance_records')
@@ -10207,13 +11981,6 @@ def downgrade() -> None:
     op.drop_index('idx_attendance_record_status', table_name='attendance_records')
     op.drop_index('idx_attendance_record_org_date', table_name='attendance_records')
     op.drop_table('attendance_records')
-    op.drop_index(op.f('ix_assets_organization_id'), table_name='assets')
-    op.drop_index(op.f('ix_assets_id'), table_name='assets')
-    op.drop_index('idx_asset_org_status', table_name='assets')
-    op.drop_index('idx_asset_org_location', table_name='assets')
-    op.drop_index('idx_asset_org_created', table_name='assets')
-    op.drop_index('idx_asset_org_category', table_name='assets')
-    op.drop_table('assets')
     op.drop_index(op.f('ix_api_usage_logs_timestamp'), table_name='api_usage_logs')
     op.drop_index(op.f('ix_api_usage_logs_status_code'), table_name='api_usage_logs')
     op.drop_index(op.f('ix_api_usage_logs_request_ip'), table_name='api_usage_logs')
@@ -10248,14 +12015,14 @@ def downgrade() -> None:
     op.drop_index('idx_anomaly_detection_org_severity', table_name='anomaly_detections')
     op.drop_index('idx_anomaly_detection_org_detected', table_name='anomaly_detections')
     op.drop_table('anomaly_detections')
-    op.drop_index(op.f('ix_analytics_summaries_summary_type'), table_name='analytics_summaries')
-    op.drop_index(op.f('ix_analytics_summaries_summary_date'), table_name='analytics_summaries')
-    op.drop_index(op.f('ix_analytics_summaries_organization_id'), table_name='analytics_summaries')
-    op.drop_index(op.f('ix_analytics_summaries_id'), table_name='analytics_summaries')
-    op.drop_index('idx_analytics_summary_technician', table_name='analytics_summaries')
-    op.drop_index('idx_analytics_summary_org_type_date', table_name='analytics_summaries')
-    op.drop_index('idx_analytics_summary_customer', table_name='analytics_summaries')
-    op.drop_table('analytics_summaries')
+    op.drop_index(op.f('ix_anomaly_detection_results_organization_id'), table_name='anomaly_detection_results')
+    op.drop_index(op.f('ix_anomaly_detection_results_id'), table_name='anomaly_detection_results')
+    op.drop_index(op.f('ix_anomaly_detection_results_detected_at'), table_name='anomaly_detection_results')
+    op.drop_index(op.f('ix_anomaly_detection_results_anomaly_model_id'), table_name='anomaly_detection_results')
+    op.drop_index('idx_anomaly_result_severity', table_name='anomaly_detection_results')
+    op.drop_index('idx_anomaly_result_resolved', table_name='anomaly_detection_results')
+    op.drop_index('idx_anomaly_result_org_detected', table_name='anomaly_detection_results')
+    op.drop_table('anomaly_detection_results')
     op.drop_index(op.f('ix_ai_insights_organization_id'), table_name='ai_insights')
     op.drop_index(op.f('ix_ai_insights_insight_type'), table_name='ai_insights')
     op.drop_index(op.f('ix_ai_insights_id'), table_name='ai_insights')
@@ -10266,20 +12033,10 @@ def downgrade() -> None:
     op.drop_index('idx_ai_insight_org_category', table_name='ai_insights')
     op.drop_index('idx_ai_insight_org_active', table_name='ai_insights')
     op.drop_table('ai_insights')
-    op.drop_index(op.f('ix_accounts_receivable_organization_id'), table_name='accounts_receivable')
-    op.drop_index(op.f('ix_accounts_receivable_invoice_number'), table_name='accounts_receivable')
-    op.drop_index(op.f('ix_accounts_receivable_id'), table_name='accounts_receivable')
-    op.drop_index(op.f('ix_accounts_receivable_customer_id'), table_name='accounts_receivable')
-    op.drop_index('idx_ar_status', table_name='accounts_receivable')
-    op.drop_index('idx_ar_org_customer', table_name='accounts_receivable')
-    op.drop_table('accounts_receivable')
-    op.drop_index(op.f('ix_accounts_payable_vendor_id'), table_name='accounts_payable')
-    op.drop_index(op.f('ix_accounts_payable_organization_id'), table_name='accounts_payable')
-    op.drop_index(op.f('ix_accounts_payable_invoice_number'), table_name='accounts_payable')
-    op.drop_index(op.f('ix_accounts_payable_id'), table_name='accounts_payable')
-    op.drop_index('idx_ap_status', table_name='accounts_payable')
-    op.drop_index('idx_ap_org_vendor', table_name='accounts_payable')
-    op.drop_table('accounts_payable')
+    op.drop_index(op.f('ix_ab_test_variants_id'), table_name='ab_test_variants')
+    op.drop_index(op.f('ix_ab_test_variants_experiment_id'), table_name='ab_test_variants')
+    op.drop_index('idx_variant_experiment', table_name='ab_test_variants')
+    op.drop_table('ab_test_variants')
     op.drop_index(op.f('ix_workflow_templates_advanced_organization_id'), table_name='workflow_templates_advanced')
     op.drop_index(op.f('ix_workflow_templates_advanced_name'), table_name='workflow_templates_advanced')
     op.drop_index(op.f('ix_workflow_templates_advanced_id'), table_name='workflow_templates_advanced')
@@ -10305,17 +12062,9 @@ def downgrade() -> None:
     op.drop_index('idx_webhook_org_status', table_name='webhooks')
     op.drop_index('idx_webhook_org_events', table_name='webhooks')
     op.drop_table('webhooks')
-    op.drop_index(op.f('ix_vendors_organization_id'), table_name='vendors')
-    op.drop_index(op.f('ix_vendors_name'), table_name='vendors')
-    op.drop_index(op.f('ix_vendors_id'), table_name='vendors')
-    op.drop_index(op.f('ix_vendors_company_id'), table_name='vendors')
-    op.drop_index('idx_vendor_org_name', table_name='vendors')
-    op.drop_index('idx_vendor_org_active', table_name='vendors')
-    op.drop_table('vendors')
-    op.drop_index(op.f('ix_user_service_roles_organization_id'), table_name='user_service_roles')
+    op.drop_index(op.f('ix_user_service_roles_user_id'), table_name='user_service_roles')
+    op.drop_index(op.f('ix_user_service_roles_role_id'), table_name='user_service_roles')
     op.drop_index(op.f('ix_user_service_roles_id'), table_name='user_service_roles')
-    op.drop_index('idx_user_service_role_user', table_name='user_service_roles')
-    op.drop_index('idx_user_service_role_role', table_name='user_service_roles')
     op.drop_index('idx_user_service_role_active', table_name='user_service_roles')
     op.drop_table('user_service_roles')
     op.drop_index(op.f('ix_user_email_tokens_user_id'), table_name='user_email_tokens')
@@ -10388,16 +12137,16 @@ def downgrade() -> None:
     op.drop_index('idx_survey_template_org_type', table_name='survey_templates')
     op.drop_index('idx_survey_template_active', table_name='survey_templates')
     op.drop_table('survey_templates')
+    op.drop_index(op.f('ix_streaming_data_sources_status'), table_name='streaming_data_sources')
+    op.drop_index(op.f('ix_streaming_data_sources_organization_id'), table_name='streaming_data_sources')
+    op.drop_index(op.f('ix_streaming_data_sources_id'), table_name='streaming_data_sources')
+    op.drop_index('idx_stream_source_org_status', table_name='streaming_data_sources')
+    op.drop_table('streaming_data_sources')
     op.drop_index(op.f('ix_stock_locations_warehouse_id'), table_name='stock_locations')
     op.drop_index(op.f('ix_stock_locations_parent_location_id'), table_name='stock_locations')
     op.drop_index(op.f('ix_stock_locations_location_code'), table_name='stock_locations')
     op.drop_index(op.f('ix_stock_locations_id'), table_name='stock_locations')
     op.drop_table('stock_locations')
-    op.drop_index(op.f('ix_snappymail_configs_user_id'), table_name='snappymail_configs')
-    op.drop_index(op.f('ix_snappymail_configs_id'), table_name='snappymail_configs')
-    op.drop_index(op.f('ix_snappymail_configs_email'), table_name='snappymail_configs')
-    op.drop_index('idx_snappymail_config_email', table_name='snappymail_configs')
-    op.drop_table('snappymail_configs')
     op.drop_index(op.f('ix_sla_policies_organization_id'), table_name='sla_policies')
     op.drop_index(op.f('ix_sla_policies_id'), table_name='sla_policies')
     op.drop_index('idx_sla_policy_ticket_type', table_name='sla_policies')
@@ -10411,10 +12160,9 @@ def downgrade() -> None:
     op.drop_index('idx_skill_org_type', table_name='skills')
     op.drop_index('idx_skill_active', table_name='skills')
     op.drop_table('skills')
-    op.drop_index(op.f('ix_service_role_permissions_organization_id'), table_name='service_role_permissions')
+    op.drop_index(op.f('ix_service_role_permissions_role_id'), table_name='service_role_permissions')
+    op.drop_index(op.f('ix_service_role_permissions_permission_id'), table_name='service_role_permissions')
     op.drop_index(op.f('ix_service_role_permissions_id'), table_name='service_role_permissions')
-    op.drop_index('idx_service_role_permission_role', table_name='service_role_permissions')
-    op.drop_index('idx_service_role_permission_permission', table_name='service_role_permissions')
     op.drop_table('service_role_permissions')
     op.drop_index(op.f('ix_seo_meta_tags_page_path'), table_name='seo_meta_tags')
     op.drop_index(op.f('ix_seo_meta_tags_organization_id'), table_name='seo_meta_tags')
@@ -10461,6 +12209,32 @@ def downgrade() -> None:
     op.drop_index('idx_product_org_hsn', table_name='products')
     op.drop_index('idx_product_org_active', table_name='products')
     op.drop_table('products')
+    op.drop_index(op.f('ix_predictive_models_organization_id'), table_name='predictive_models')
+    op.drop_index(op.f('ix_predictive_models_model_type'), table_name='predictive_models')
+    op.drop_index(op.f('ix_predictive_models_model_name'), table_name='predictive_models')
+    op.drop_index(op.f('ix_predictive_models_id'), table_name='predictive_models')
+    op.drop_index('idx_predictive_model_org_type', table_name='predictive_models')
+    op.drop_index('idx_predictive_model_active', table_name='predictive_models')
+    op.drop_table('predictive_models')
+    op.drop_index(op.f('ix_plugin_installations_plugin_id'), table_name='plugin_installations')
+    op.drop_index(op.f('ix_plugin_installations_organization_id'), table_name='plugin_installations')
+    op.drop_index(op.f('ix_plugin_installations_id'), table_name='plugin_installations')
+    op.drop_index('idx_installation_org_plugin', table_name='plugin_installations')
+    op.drop_table('plugin_installations')
+    op.drop_index(op.f('ix_plugin_hooks_plugin_id'), table_name='plugin_hooks')
+    op.drop_index(op.f('ix_plugin_hooks_id'), table_name='plugin_hooks')
+    op.drop_index(op.f('ix_plugin_hooks_hook_name'), table_name='plugin_hooks')
+    op.drop_index('idx_hook_plugin_event', table_name='plugin_hooks')
+    op.drop_index('idx_hook_name', table_name='plugin_hooks')
+    op.drop_table('plugin_hooks')
+    op.drop_index(op.f('ix_plan_entitlements_submodule_id'), table_name='plan_entitlements')
+    op.drop_index(op.f('ix_plan_entitlements_plan_id'), table_name='plan_entitlements')
+    op.drop_index(op.f('ix_plan_entitlements_module_id'), table_name='plan_entitlements')
+    op.drop_index(op.f('ix_plan_entitlements_id'), table_name='plan_entitlements')
+    op.drop_index('idx_plan_entitlements_submodule', table_name='plan_entitlements')
+    op.drop_index('idx_plan_entitlements_plan', table_name='plan_entitlements')
+    op.drop_index('idx_plan_entitlements_module', table_name='plan_entitlements')
+    op.drop_table('plan_entitlements')
     op.drop_index(op.f('ix_payroll_settings_organization_id'), table_name='payroll_settings')
     op.drop_index(op.f('ix_payroll_settings_id'), table_name='payroll_settings')
     op.drop_table('payroll_settings')
@@ -10478,6 +12252,16 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_organization_approval_settings_id'), table_name='organization_approval_settings')
     op.drop_index('idx_approval_settings_model', table_name='organization_approval_settings')
     op.drop_table('organization_approval_settings')
+    op.drop_index(op.f('ix_org_subentitlements_submodule_id'), table_name='org_subentitlements')
+    op.drop_index(op.f('ix_org_subentitlements_org_id'), table_name='org_subentitlements')
+    op.drop_index(op.f('ix_org_subentitlements_module_id'), table_name='org_subentitlements')
+    op.drop_index(op.f('ix_org_subentitlements_id'), table_name='org_subentitlements')
+    op.drop_index('idx_org_subentitlements_submodule', table_name='org_subentitlements')
+    op.drop_index('idx_org_subentitlements_org_module_sub', table_name='org_subentitlements')
+    op.drop_index('idx_org_subentitlements_org_module', table_name='org_subentitlements')
+    op.drop_index('idx_org_subentitlements_org', table_name='org_subentitlements')
+    op.drop_index('idx_org_subentitlements_module', table_name='org_subentitlements')
+    op.drop_table('org_subentitlements')
     op.drop_index(op.f('ix_oauth_states_user_id'), table_name='oauth_states')
     op.drop_index(op.f('ix_oauth_states_state'), table_name='oauth_states')
     op.drop_index(op.f('ix_oauth_states_organization_id'), table_name='oauth_states')
@@ -10489,12 +12273,25 @@ def downgrade() -> None:
     op.drop_index('idx_notification_template_org_type', table_name='notification_templates')
     op.drop_index('idx_notification_template_org_channel', table_name='notification_templates')
     op.drop_table('notification_templates')
+    op.drop_index(op.f('ix_model_explainability_scope'), table_name='model_explainability')
+    op.drop_index(op.f('ix_model_explainability_organization_id'), table_name='model_explainability')
+    op.drop_index(op.f('ix_model_explainability_model_name'), table_name='model_explainability')
+    op.drop_index(op.f('ix_model_explainability_model_id'), table_name='model_explainability')
+    op.drop_index(op.f('ix_model_explainability_method'), table_name='model_explainability')
+    op.drop_index(op.f('ix_model_explainability_id'), table_name='model_explainability')
+    op.drop_table('model_explainability')
     op.drop_index(op.f('ix_ml_forecast_models_organization_id'), table_name='ml_forecast_models')
     op.drop_index(op.f('ix_ml_forecast_models_model_type'), table_name='ml_forecast_models')
     op.drop_index(op.f('ix_ml_forecast_models_id'), table_name='ml_forecast_models')
     op.drop_index('idx_ml_model_org_type', table_name='ml_forecast_models')
     op.drop_index('idx_ml_model_active_prod', table_name='ml_forecast_models')
     op.drop_table('ml_forecast_models')
+    op.drop_index(op.f('ix_ml_algorithm_configs_organization_id'), table_name='ml_algorithm_configs')
+    op.drop_index(op.f('ix_ml_algorithm_configs_id'), table_name='ml_algorithm_configs')
+    op.drop_index(op.f('ix_ml_algorithm_configs_framework'), table_name='ml_algorithm_configs')
+    op.drop_index(op.f('ix_ml_algorithm_configs_config_name'), table_name='ml_algorithm_configs')
+    op.drop_index(op.f('ix_ml_algorithm_configs_category'), table_name='ml_algorithm_configs')
+    op.drop_table('ml_algorithm_configs')
     op.drop_index(op.f('ix_migration_jobs_organization_id'), table_name='migration_jobs')
     op.drop_index(op.f('ix_migration_jobs_id'), table_name='migration_jobs')
     op.drop_index(op.f('ix_migration_jobs_created_by'), table_name='migration_jobs')
@@ -10507,6 +12304,15 @@ def downgrade() -> None:
     op.drop_index('idx_marketing_list_org_type', table_name='marketing_lists')
     op.drop_index('idx_marketing_list_active', table_name='marketing_lists')
     op.drop_table('marketing_lists')
+    op.drop_index(op.f('ix_ledger_entries_voucher_type'), table_name='ledger_entries')
+    op.drop_index(op.f('ix_ledger_entries_voucher_number'), table_name='ledger_entries')
+    op.drop_index(op.f('ix_ledger_entries_organization_id'), table_name='ledger_entries')
+    op.drop_index(op.f('ix_ledger_entries_id'), table_name='ledger_entries')
+    op.drop_index(op.f('ix_ledger_entries_date'), table_name='ledger_entries')
+    op.drop_index(op.f('ix_ledger_entries_account_id'), table_name='ledger_entries')
+    op.drop_index('idx_ledger_org_date', table_name='ledger_entries')
+    op.drop_index('idx_ledger_org_account', table_name='ledger_entries')
+    op.drop_table('ledger_entries')
     op.drop_index(op.f('ix_learning_paths_path_name'), table_name='learning_paths')
     op.drop_index(op.f('ix_learning_paths_organization_id'), table_name='learning_paths')
     op.drop_index(op.f('ix_learning_paths_id'), table_name='learning_paths')
@@ -10534,6 +12340,13 @@ def downgrade() -> None:
     op.drop_index('idx_idv_org_from_dept', table_name='inter_department_vouchers')
     op.drop_index('idx_idv_org_date', table_name='inter_department_vouchers')
     op.drop_table('inter_department_vouchers')
+    op.drop_index(op.f('ix_integrations_status'), table_name='integrations')
+    op.drop_index(op.f('ix_integrations_provider'), table_name='integrations')
+    op.drop_index(op.f('ix_integrations_organization_id'), table_name='integrations')
+    op.drop_index(op.f('ix_integrations_id'), table_name='integrations')
+    op.drop_index('idx_integration_org_status', table_name='integrations')
+    op.drop_index('idx_integration_org_provider', table_name='integrations')
+    op.drop_table('integrations')
     op.drop_index(op.f('ix_google_calendar_integrations_id'), table_name='google_calendar_integrations')
     op.drop_table('google_calendar_integrations')
     op.drop_index(op.f('ix_financial_statements_statement_type'), table_name='financial_statements')
@@ -10582,6 +12395,26 @@ def downgrade() -> None:
     op.drop_index('idx_integration_org_status', table_name='external_integrations')
     op.drop_index('idx_integration_org_provider', table_name='external_integrations')
     op.drop_table('external_integrations')
+    op.drop_index(op.f('ix_external_data_sources_source_name'), table_name='external_data_sources')
+    op.drop_index(op.f('ix_external_data_sources_organization_id'), table_name='external_data_sources')
+    op.drop_index(op.f('ix_external_data_sources_id'), table_name='external_data_sources')
+    op.drop_index('idx_external_data_source_org_type', table_name='external_data_sources')
+    op.drop_index('idx_external_data_source_active', table_name='external_data_sources')
+    op.drop_table('external_data_sources')
+    op.drop_index(op.f('ix_explainability_reports_report_name'), table_name='explainability_reports')
+    op.drop_index(op.f('ix_explainability_reports_organization_id'), table_name='explainability_reports')
+    op.drop_index(op.f('ix_explainability_reports_id'), table_name='explainability_reports')
+    op.drop_table('explainability_reports')
+    op.drop_index(op.f('ix_entitlement_events_org_id'), table_name='entitlement_events')
+    op.drop_index(op.f('ix_entitlement_events_id'), table_name='entitlement_events')
+    op.drop_index(op.f('ix_entitlement_events_event_type'), table_name='entitlement_events')
+    op.drop_index(op.f('ix_entitlement_events_created_at'), table_name='entitlement_events')
+    op.drop_index(op.f('ix_entitlement_events_actor_user_id'), table_name='entitlement_events')
+    op.drop_index('idx_entitlement_events_type', table_name='entitlement_events')
+    op.drop_index('idx_entitlement_events_org', table_name='entitlement_events')
+    op.drop_index('idx_entitlement_events_created', table_name='entitlement_events')
+    op.drop_index('idx_entitlement_events_actor', table_name='entitlement_events')
+    op.drop_table('entitlement_events')
     op.drop_index(op.f('ix_employee_profiles_user_id'), table_name='employee_profiles')
     op.drop_index(op.f('ix_employee_profiles_organization_id'), table_name='employee_profiles')
     op.drop_index(op.f('ix_employee_profiles_id'), table_name='employee_profiles')
@@ -10603,13 +12436,6 @@ def downgrade() -> None:
     op.drop_index('idx_email_sends_provider_status', table_name='email_sends')
     op.drop_index('idx_email_sends_org_type', table_name='email_sends')
     op.drop_table('email_sends')
-    op.drop_index(op.f('ix_customers_organization_id'), table_name='customers')
-    op.drop_index(op.f('ix_customers_name'), table_name='customers')
-    op.drop_index(op.f('ix_customers_id'), table_name='customers')
-    op.drop_index(op.f('ix_customers_company_id'), table_name='customers')
-    op.drop_index('idx_customer_org_name', table_name='customers')
-    op.drop_index('idx_customer_org_active', table_name='customers')
-    op.drop_table('customers')
     op.drop_index(op.f('ix_cost_centers_parent_cost_center_id'), table_name='cost_centers')
     op.drop_index(op.f('ix_cost_centers_organization_id'), table_name='cost_centers')
     op.drop_index(op.f('ix_cost_centers_id'), table_name='cost_centers')
@@ -10671,6 +12497,12 @@ def downgrade() -> None:
     op.drop_index('idx_business_rule_org_category', table_name='business_rules')
     op.drop_index('idx_business_rule_active', table_name='business_rules')
     op.drop_table('business_rules')
+    op.drop_index(op.f('ix_automl_runs_task_type'), table_name='automl_runs')
+    op.drop_index(op.f('ix_automl_runs_status'), table_name='automl_runs')
+    op.drop_index(op.f('ix_automl_runs_run_name'), table_name='automl_runs')
+    op.drop_index(op.f('ix_automl_runs_organization_id'), table_name='automl_runs')
+    op.drop_index(op.f('ix_automl_runs_id'), table_name='automl_runs')
+    op.drop_table('automl_runs')
     op.drop_index(op.f('ix_automation_workflows_workflow_type'), table_name='automation_workflows')
     op.drop_index(op.f('ix_automation_workflows_workflow_name'), table_name='automation_workflows')
     op.drop_index(op.f('ix_automation_workflows_organization_id'), table_name='automation_workflows')
@@ -10688,11 +12520,36 @@ def downgrade() -> None:
     op.drop_index('idx_insight_org_type', table_name='automated_insights')
     op.drop_index('idx_insight_importance', table_name='automated_insights')
     op.drop_table('automated_insights')
+    op.drop_index(op.f('ix_audit_logs_enhanced_user_id'), table_name='audit_logs_enhanced')
+    op.drop_index(op.f('ix_audit_logs_enhanced_timestamp'), table_name='audit_logs_enhanced')
+    op.drop_index(op.f('ix_audit_logs_enhanced_organization_id'), table_name='audit_logs_enhanced')
+    op.drop_index(op.f('ix_audit_logs_enhanced_id'), table_name='audit_logs_enhanced')
+    op.drop_index(op.f('ix_audit_logs_enhanced_entity_type'), table_name='audit_logs_enhanced')
+    op.drop_index(op.f('ix_audit_logs_enhanced_entity_id'), table_name='audit_logs_enhanced')
+    op.drop_index(op.f('ix_audit_logs_enhanced_action'), table_name='audit_logs_enhanced')
+    op.drop_index('idx_audit_user_timestamp', table_name='audit_logs_enhanced')
+    op.drop_index('idx_audit_org_timestamp', table_name='audit_logs_enhanced')
+    op.drop_index('idx_audit_org_entity', table_name='audit_logs_enhanced')
+    op.drop_index('idx_audit_org_action', table_name='audit_logs_enhanced')
+    op.drop_index('idx_audit_automation', table_name='audit_logs_enhanced')
+    op.drop_index('idx_audit_ai_agent', table_name='audit_logs_enhanced')
+    op.drop_index('idx_audit_actor', table_name='audit_logs_enhanced')
+    op.drop_table('audit_logs_enhanced')
     op.drop_index(op.f('ix_audit_logs_organization_id'), table_name='audit_logs')
     op.drop_index(op.f('ix_audit_logs_id'), table_name='audit_logs')
     op.drop_index('idx_audit_org_timestamp', table_name='audit_logs')
     op.drop_index('idx_audit_org_table_action', table_name='audit_logs')
     op.drop_table('audit_logs')
+    op.drop_index(op.f('ix_audit_log_views_organization_id'), table_name='audit_log_views')
+    op.drop_index(op.f('ix_audit_log_views_id'), table_name='audit_log_views')
+    op.drop_index('idx_audit_view_user', table_name='audit_log_views')
+    op.drop_index('idx_audit_view_org', table_name='audit_log_views')
+    op.drop_table('audit_log_views')
+    op.drop_index(op.f('ix_audit_log_exports_organization_id'), table_name='audit_log_exports')
+    op.drop_index(op.f('ix_audit_log_exports_id'), table_name='audit_log_exports')
+    op.drop_index('idx_audit_export_user', table_name='audit_log_exports')
+    op.drop_index('idx_audit_export_org_status', table_name='audit_log_exports')
+    op.drop_table('audit_log_exports')
     op.drop_index(op.f('ix_api_keys_organization_id'), table_name='api_keys')
     op.drop_index(op.f('ix_api_keys_key_prefix'), table_name='api_keys')
     op.drop_index(op.f('ix_api_keys_key_name'), table_name='api_keys')
@@ -10703,6 +12560,13 @@ def downgrade() -> None:
     op.drop_index('idx_api_key_org_status', table_name='api_keys')
     op.drop_index('idx_api_key_org_access_level', table_name='api_keys')
     op.drop_table('api_keys')
+    op.drop_index(op.f('ix_anomaly_detection_models_organization_id'), table_name='anomaly_detection_models')
+    op.drop_index(op.f('ix_anomaly_detection_models_id'), table_name='anomaly_detection_models')
+    op.drop_index(op.f('ix_anomaly_detection_models_detection_name'), table_name='anomaly_detection_models')
+    op.drop_index(op.f('ix_anomaly_detection_models_anomaly_type'), table_name='anomaly_detection_models')
+    op.drop_index('idx_anomaly_model_org_type', table_name='anomaly_detection_models')
+    op.drop_index('idx_anomaly_model_active', table_name='anomaly_detection_models')
+    op.drop_table('anomaly_detection_models')
     op.drop_index(op.f('ix_analytics_integrations_organization_id'), table_name='analytics_integrations')
     op.drop_index(op.f('ix_analytics_integrations_id'), table_name='analytics_integrations')
     op.drop_index('idx_analytics_org_provider', table_name='analytics_integrations')
@@ -10715,6 +12579,25 @@ def downgrade() -> None:
     op.drop_index('idx_ai_model_org_type', table_name='ai_models')
     op.drop_index('idx_ai_model_org_status', table_name='ai_models')
     op.drop_table('ai_models')
+    op.drop_index(op.f('ix_ai_agent_interactions_user_id'), table_name='ai_agent_interactions')
+    op.drop_index(op.f('ix_ai_agent_interactions_session_id'), table_name='ai_agent_interactions')
+    op.drop_index(op.f('ix_ai_agent_interactions_organization_id'), table_name='ai_agent_interactions')
+    op.drop_index(op.f('ix_ai_agent_interactions_id'), table_name='ai_agent_interactions')
+    op.drop_index(op.f('ix_ai_agent_interactions_agent_id'), table_name='ai_agent_interactions')
+    op.drop_index('idx_ai_interaction_session', table_name='ai_agent_interactions')
+    op.drop_index('idx_ai_interaction_org_agent', table_name='ai_agent_interactions')
+    op.drop_index('idx_ai_interaction_created', table_name='ai_agent_interactions')
+    op.drop_table('ai_agent_interactions')
+    op.drop_index(op.f('ix_ai_agent_capabilities_id'), table_name='ai_agent_capabilities')
+    op.drop_index(op.f('ix_ai_agent_capabilities_agent_id'), table_name='ai_agent_capabilities')
+    op.drop_index('idx_ai_capability_agent', table_name='ai_agent_capabilities')
+    op.drop_table('ai_agent_capabilities')
+    op.drop_index(op.f('ix_ab_test_experiments_status'), table_name='ab_test_experiments')
+    op.drop_index(op.f('ix_ab_test_experiments_organization_id'), table_name='ab_test_experiments')
+    op.drop_index(op.f('ix_ab_test_experiments_id'), table_name='ab_test_experiments')
+    op.drop_index('idx_ab_test_org_status', table_name='ab_test_experiments')
+    op.drop_index('idx_ab_test_dates', table_name='ab_test_experiments')
+    op.drop_table('ab_test_experiments')
     op.drop_index(op.f('ix_warehouses_warehouse_code'), table_name='warehouses')
     op.drop_index(op.f('ix_warehouses_organization_id'), table_name='warehouses')
     op.drop_index(op.f('ix_warehouses_id'), table_name='warehouses')
@@ -10760,6 +12643,13 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_tally_configuration_organization_id'), table_name='tally_configuration')
     op.drop_index(op.f('ix_tally_configuration_id'), table_name='tally_configuration')
     op.drop_table('tally_configuration')
+    op.drop_index(op.f('ix_submodules_submodule_key'), table_name='submodules')
+    op.drop_index(op.f('ix_submodules_module_id'), table_name='submodules')
+    op.drop_index(op.f('ix_submodules_id'), table_name='submodules')
+    op.drop_index('idx_submodules_module', table_name='submodules')
+    op.drop_index('idx_submodules_key', table_name='submodules')
+    op.drop_index('idx_submodules_active', table_name='submodules')
+    op.drop_table('submodules')
     op.drop_index(op.f('ix_stock_adjustments_status'), table_name='stock_adjustments')
     op.drop_index(op.f('ix_stock_adjustments_organization_id'), table_name='stock_adjustments')
     op.drop_index(op.f('ix_stock_adjustments_id'), table_name='stock_adjustments')
@@ -10779,6 +12669,7 @@ def downgrade() -> None:
     op.drop_index('idx_sitemap_active', table_name='sitemap_entries')
     op.drop_table('sitemap_entries')
     op.drop_index(op.f('ix_service_roles_organization_id'), table_name='service_roles')
+    op.drop_index(op.f('ix_service_roles_name'), table_name='service_roles')
     op.drop_index(op.f('ix_service_roles_id'), table_name='service_roles')
     op.drop_index('idx_service_role_org_active', table_name='service_roles')
     op.drop_table('service_roles')
@@ -10811,6 +12702,14 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_purchase_analytics_id'), table_name='purchase_analytics')
     op.drop_index('idx_purchase_analytics_org_date', table_name='purchase_analytics')
     op.drop_table('purchase_analytics')
+    op.drop_index(op.f('ix_plugins_slug'), table_name='plugins')
+    op.drop_index(op.f('ix_plugins_organization_id'), table_name='plugins')
+    op.drop_index(op.f('ix_plugins_name'), table_name='plugins')
+    op.drop_index(op.f('ix_plugins_id'), table_name='plugins')
+    op.drop_index('idx_plugin_status', table_name='plugins')
+    op.drop_index('idx_plugin_scope', table_name='plugins')
+    op.drop_index('idx_plugin_org_type', table_name='plugins')
+    op.drop_table('plugins')
     op.drop_index(op.f('ix_payment_terms_organization_id'), table_name='payment_terms')
     op.drop_index(op.f('ix_payment_terms_id'), table_name='payment_terms')
     op.drop_index('idx_payment_term_org_name', table_name='payment_terms')
@@ -10826,10 +12725,22 @@ def downgrade() -> None:
     op.drop_index('idx_organization_settings_organization_id', table_name='organization_settings')
     op.drop_index('idx_organization_settings_mail_1_level_up', table_name='organization_settings')
     op.drop_table('organization_settings')
+    op.drop_index(op.f('ix_org_entitlements_org_id'), table_name='org_entitlements')
+    op.drop_index(op.f('ix_org_entitlements_module_id'), table_name='org_entitlements')
+    op.drop_index(op.f('ix_org_entitlements_id'), table_name='org_entitlements')
+    op.drop_index('idx_org_entitlements_status', table_name='org_entitlements')
+    op.drop_index('idx_org_entitlements_org_module', table_name='org_entitlements')
+    op.drop_index('idx_org_entitlements_org', table_name='org_entitlements')
+    op.drop_index('idx_org_entitlements_module', table_name='org_entitlements')
+    op.drop_table('org_entitlements')
     op.drop_index(op.f('ix_notification_preferences_organization_id'), table_name='notification_preferences')
     op.drop_index(op.f('ix_notification_preferences_id'), table_name='notification_preferences')
     op.drop_index('idx_notification_pref_org_subject', table_name='notification_preferences')
     op.drop_table('notification_preferences')
+    op.drop_index(op.f('ix_ledger_summaries_summary_date'), table_name='ledger_summaries')
+    op.drop_index(op.f('ix_ledger_summaries_organization_id'), table_name='ledger_summaries')
+    op.drop_index(op.f('ix_ledger_summaries_id'), table_name='ledger_summaries')
+    op.drop_table('ledger_summaries')
     op.drop_index(op.f('ix_leave_types_organization_id'), table_name='leave_types')
     op.drop_index(op.f('ix_leave_types_id'), table_name='leave_types')
     op.drop_index('idx_leave_type_org_active', table_name='leave_types')
@@ -10857,6 +12768,12 @@ def downgrade() -> None:
     op.drop_index('idx_api_endpoint_org_public', table_name='api_endpoints')
     op.drop_index('idx_api_endpoint_org_deprecated', table_name='api_endpoints')
     op.drop_table('api_endpoints')
+    op.drop_index(op.f('ix_ai_agents_organization_id'), table_name='ai_agents')
+    op.drop_index(op.f('ix_ai_agents_name'), table_name='ai_agents')
+    op.drop_index(op.f('ix_ai_agents_id'), table_name='ai_agents')
+    op.drop_index('idx_ai_agent_status', table_name='ai_agents')
+    op.drop_index('idx_ai_agent_org_type', table_name='ai_agents')
+    op.drop_table('ai_agents')
     op.drop_index(op.f('ix_voucher_format_templates_id'), table_name='voucher_format_templates')
     op.drop_index('idx_voucher_format_template_system', table_name='voucher_format_templates')
     op.drop_index('idx_voucher_format_template_active', table_name='voucher_format_templates')
@@ -10865,19 +12782,35 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_service_permissions_module'), table_name='service_permissions')
     op.drop_index(op.f('ix_service_permissions_id'), table_name='service_permissions')
     op.drop_index(op.f('ix_service_permissions_action'), table_name='service_permissions')
-    op.drop_index('idx_service_permission_module_action', table_name='service_permissions')
+    op.drop_index('idx_service_permission_module', table_name='service_permissions')
     op.drop_table('service_permissions')
+    op.drop_index(op.f('ix_plugin_registry_slug'), table_name='plugin_registry')
+    op.drop_index(op.f('ix_plugin_registry_id'), table_name='plugin_registry')
+    op.drop_index(op.f('ix_plugin_registry_category'), table_name='plugin_registry')
+    op.drop_index('idx_registry_verified', table_name='plugin_registry')
+    op.drop_index('idx_registry_category', table_name='plugin_registry')
+    op.drop_table('plugin_registry')
     op.drop_index(op.f('ix_platform_users_id'), table_name='platform_users')
     op.drop_index(op.f('ix_platform_users_email'), table_name='platform_users')
     op.drop_index('idx_platform_user_email', table_name='platform_users')
     op.drop_index('idx_platform_user_active', table_name='platform_users')
     op.drop_table('platform_users')
+    op.drop_index(op.f('ix_plans_plan_key'), table_name='plans')
+    op.drop_index(op.f('ix_plans_id'), table_name='plans')
+    op.drop_index('idx_plans_key', table_name='plans')
+    op.drop_index('idx_plans_active', table_name='plans')
+    op.drop_table('plans')
     op.drop_index(op.f('ix_organizations_subdomain'), table_name='organizations')
     op.drop_index(op.f('ix_organizations_org_code'), table_name='organizations')
     op.drop_index(op.f('ix_organizations_name'), table_name='organizations')
     op.drop_index(op.f('ix_organizations_id'), table_name='organizations')
     op.drop_index('idx_org_status_subdomain', table_name='organizations')
     op.drop_table('organizations')
+    op.drop_index(op.f('ix_modules_module_key'), table_name='modules')
+    op.drop_index(op.f('ix_modules_id'), table_name='modules')
+    op.drop_index('idx_modules_key', table_name='modules')
+    op.drop_index('idx_modules_active', table_name='modules')
+    op.drop_table('modules')
     op.drop_index(op.f('ix_migration_templates_id'), table_name='migration_templates')
     op.drop_index('idx_migration_template_source_data', table_name='migration_templates')
     op.drop_index('idx_migration_template_active', table_name='migration_templates')

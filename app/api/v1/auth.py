@@ -1,7 +1,9 @@
 # app/api/v1/auth.py
 
+# app/api/v1/auth.py
+
 import logging
-from typing import Optional
+from typing import Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,7 +67,7 @@ async def login(
     # Check if password is 6-digit OTP (for admin reset flow)
     if len(password) == 6 and password.isdigit():
         otp_service = OTPService(db)
-        otp_valid, _ = await otp_service.verify_otp(email, password, "admin_password_reset")
+        otp_valid, message = await otp_service.verify_otp(email, password, "admin_password_reset")
         if otp_valid:
             # OTP valid - force password change on success
             user.force_password_reset = True
@@ -73,10 +75,10 @@ async def login(
             await db.commit()
             # Proceed to login with OTP as temp auth
         else:
-            logger.info(f"[LOGIN:FAILED] Invalid OTP for {email}")
+            logger.info(f"[LOGIN:FAILED] Invalid OTP for {email}: {message}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid OTP",
+                detail=message,
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -149,7 +151,6 @@ async def login(
         user_id=user.id,
         changes={
             "event_type": "LOGIN",
-            "action": "SUCCESS",
             "user_email": user.email,
             "user_role": user_role,
             "organization_id": organization_id,

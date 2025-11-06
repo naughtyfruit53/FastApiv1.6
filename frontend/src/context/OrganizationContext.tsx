@@ -1,3 +1,5 @@
+// frontend/src/context/OrganizationContext.tsx
+
 /**
  * Organization Context - Manages current organization context
  * 
@@ -48,7 +50,7 @@ interface OrganizationContextType {
   refreshOrganization: () => Promise<void>;
 }
 
-const OrganizationContext = createContext<OrganizationContextType>({
+export const OrganizationContext = createContext<OrganizationContextType>({  // NEW: Changed to named export 'export const OrganizationContext' to match import in hooks
   organizationId: null,
   organizationName: null,
   loading: true,
@@ -207,4 +209,4 @@ export const useOrganization = (): OrganizationContextType => {
   return context;
 };
 
-export default OrganizationContext;
+// Removed 'export default OrganizationContext;' as it's now named export

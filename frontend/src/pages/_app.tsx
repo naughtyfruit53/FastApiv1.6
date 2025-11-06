@@ -14,6 +14,7 @@ import { AuthProvider } from "../context/AuthContext";
 import { CompanyProvider } from "../context/CompanyContext"; // Updated import
 import { EmailProvider } from "../context/EmailContext"; // Added import for EmailProvider
 import { PermissionProvider } from "../context/PermissionContext";  // Added import for PermissionProvider
+import { OrganizationProvider } from "../context/OrganizationContext";  // NEW: Added import for OrganizationProvider to fix undefined context error
 import { useState, useEffect } from "react"; // Added import for useState and useEffect
 import Head from 'next/head';  // Added import for Head to handle meta tags
 import AppLayout from "../components/AppLayout"; // Global layout with MegaMenu
@@ -181,34 +182,36 @@ function MyApp({ Component, pageProps }: AppProps) {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />  {/* Updated for iOS safe area support */}
       </Head>
       <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <PermissionProvider>
-            <CompanyProvider>
-              <EmailProvider>
-                <ThemeProvider theme={theme}>
-                  <CssBaseline />
-                  <ClientOnly>
-                    {/* Global AppLayout wraps all pages and conditionally shows MegaMenu */}
-                    <AppLayout>
-                      {getLayout(<Component {...pageProps} />)}
-                    </AppLayout>
-                    <ToastContainer
-                      position="top-right"
-                      autoClose={5000}
-                      hideProgressBar={false}
-                      newestOnTop={false}
-                      closeOnClick
-                      rtl={false}
-                      pauseOnFocusLoss
-                      draggable
-                      pauseOnHover
-                    />
-                  </ClientOnly>
-                </ThemeProvider>
-              </EmailProvider>
-            </CompanyProvider>
-          </PermissionProvider>
-        </QueryClientProvider>
+        <OrganizationProvider>  {/* NEW: Wrapped with OrganizationProvider to provide context */}
+          <QueryClientProvider client={queryClient}>
+            <PermissionProvider>
+              <CompanyProvider>
+                <EmailProvider>
+                  <ThemeProvider theme={theme}>
+                    <CssBaseline />
+                    <ClientOnly>
+                      {/* Global AppLayout wraps all pages and conditionally shows MegaMenu */}
+                      <AppLayout>
+                        {getLayout(<Component {...pageProps} />)}
+                      </AppLayout>
+                      <ToastContainer
+                        position="top-right"
+                        autoClose={5000}
+                        hideProgressBar={false}
+                        newestOnTop={false}
+                        closeOnClick
+                        rtl={false}
+                        pauseOnFocusLoss
+                        draggable
+                        pauseOnHover
+                      />
+                    </ClientOnly>
+                  </ThemeProvider>
+                </EmailProvider>
+              </CompanyProvider>
+            </PermissionProvider>
+          </QueryClientProvider>
+        </OrganizationProvider>
       </AuthProvider>
     </>
   );

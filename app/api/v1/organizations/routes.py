@@ -41,7 +41,7 @@ from app.core.modules_registry import get_default_enabled_modules
 
 # Import for entitlements endpoint
 from app.services.entitlement_service import EntitlementService
-from app.schemas.entitlement_schemas import AppEntitlementsResponse
+from app.schemas.entitlement_schemas import AppEntitlementsResponse, AppModuleEntitlement  # NEW: Added AppModuleEntitlement import to fix "name 'AppModuleEntitlement' is not defined" error
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["organizations"])

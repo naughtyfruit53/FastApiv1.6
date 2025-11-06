@@ -11,6 +11,7 @@ from app.models.system_models import OTPVerification
 from app.core.security import get_password_hash, verify_password
 from app.services.system_email_service import system_email_service  # Import for sending email
 from app.services.whatsapp_service import whatsapp_service  # Import for sending WhatsApp
+from sqlalchemy import select  # NEW: Import for select
 
 logger = logging.getLogger(__name__)
 
@@ -87,8 +88,8 @@ class OTPService:
             logger.error(f"❌ Failed to generate OTP for {email}: {e}")
             return False, None
     
-    async def verify_otp(self, email: str, otp: str, purpose: str = "login", return_data: bool = False) -> Union[bool, Tuple[bool, Dict[str, Any]]]:
-        """Verify OTP"""
+    async def verify_otp(self, email: str, otp: str, purpose: str = "login") -> Tuple[bool, str]:
+        """Verify OTP, always return (valid, message)"""
         try:
             # Find latest OTP record
             otp_record = (await self.db.execute(
@@ -102,7 +103,7 @@ class OTPService:
             
             if not otp_record:
                 logger.warning(f"⚠️ No valid OTP found for {email} ({purpose})")
-                return False if not return_data else (False, {})
+                return False, "No valid OTP found or OTP expired"
             
             # Verify hashed OTP
             if not verify_password(otp, otp_record.otp_hash):
@@ -111,7 +112,7 @@ class OTPService:
                     otp_record.is_used = True  # Mark as used after max attempts
                 await self.db.commit()
                 logger.warning(f"⚠️ Invalid OTP attempt for {email} ({purpose}), attempts: {otp_record.attempts}")
-                return False if not return_data else (False, {})
+                return False, "Invalid OTP"
             
             # Mark as used
             otp_record.is_used = True
@@ -119,8 +120,8 @@ class OTPService:
             await self.db.commit()
             
             logger.info(f"✅ OTP verified successfully for {email} ({purpose})")
-            return True if not return_data else (True, {})
+            return True, "OTP verified successfully"
             
         except Exception as e:
             logger.error(f"❌ Failed to verify OTP for {email}: {e}")
-            return False if not return_data else (False, {})
+            return False, "Verification failed due to an error"

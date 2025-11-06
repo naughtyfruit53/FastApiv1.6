@@ -104,7 +104,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "vendors",  # Added to fix "Submodule 'vendors' not found in module 'erp'"
         "customers"  # Added for consistency with vendors
     ],
-    'MANUFACTURING': [
+    ModuleName.MANUFACTURING.value: [
         "bom",
         "mrp",
         "production_planning",
@@ -113,18 +113,13 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "material_receipt",
         "shop_floor",
         "quality",
-        "reports"
-    ],
-    'FINANCE': [
-        "salary_structure",
-        "salary_components",
-        "payslips",
-        "deductions",
-        "bonuses",
-        "tax_calculation",
-        "statutory_compliance",
-        "payroll_reports",
-        "bank_transfer"
+        "reports",
+        "work_orders",
+        "quality_control",
+        "job_work",
+        "material_requisition",
+        "production_reports",
+        "capacity_planning"
     ],
     'SERVICE': [
         "tickets",
@@ -156,7 +151,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "streaming_dashboard"
     ],
     # Add new modules for missing ones
-    'INVENTORY': [  # Make inventory a top-level module
+    ModuleName.INVENTORY.value: [  # Make inventory a top-level module
         "stock",
         "locations",
         "bins",
@@ -165,23 +160,12 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
         "low_stock",
         "pending_orders"
     ],
-    'PRODUCT': [  # Add product as top-level module
+    ModuleName.PRODUCT.value: [  # Add product as top-level module
         "categories",
         "units",
         "details",
         "pricing",
         "images"
-    ],
-    ModuleName.MANUFACTURING.value: [
-        "production_planning",
-        "work_orders",
-        "bom",
-        "quality_control",
-        "job_work",
-        "material_requisition",
-        "production_reports",
-        "capacity_planning",
-        "shop_floor",
     ],
     ModuleName.PROCUREMENT.value: [
         "purchase_orders",

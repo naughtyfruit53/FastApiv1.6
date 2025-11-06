@@ -33,13 +33,26 @@ import { ACCESS_TOKEN_KEY } from '../constants/auth';
  * Hook for comprehensive permission checking across all 3 layers
  */
 export function usePermissionCheck() {
-  // Layer 1: Tenant Context
-  const orgContext = useContext(OrganizationContext);
-  const { organizationId } = orgContext || { organizationId: null };
+  // Layer 1: Tenant - NEW: Defensive check for undefined context object
+  let orgContext;
+  if (typeof OrganizationContext === 'undefined') {
+    console.error('[usePermissionCheck] OrganizationContext is undefined. Check imports and file paths. Using fallback null organizationId.');
+    orgContext = null; // Fallback to prevent crash
+  } else {
+    orgContext = useContext(OrganizationContext);
+  }
+  const organizationId = orgContext?.organizationId ?? null;
 
-  // Layer 3: RBAC
-  const authContext = useContext(AuthContext);
-  const { user, userPermissions } = authContext || { user: null, userPermissions: null };
+  // Layer 3: RBAC - NEW: Defensive check for undefined context object
+  let authContext;
+  if (typeof AuthContext === 'undefined') {
+    console.error('[usePermissionCheck] AuthContext is undefined. Check imports and file paths. Using fallback null user.');
+    authContext = null; // Fallback to prevent crash
+  } else {
+    authContext = useContext(AuthContext);
+  }
+  const user = authContext?.user ?? null;
+  const userPermissions = authContext?.userPermissions ?? null;
 
   // Layer 2: Entitlements
   const token = typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
@@ -242,7 +255,7 @@ export function usePermissionCheck() {
   // ============================================================================
 
   const isLoading = useMemo(() => {
-    return entitlementsLoading || authContext?.loading;
+    return entitlementsLoading || (authContext?.loading ?? true);  // NEW: Fallback to true if authContext undefined
   }, [entitlementsLoading, authContext?.loading]);
 
   const isReady = useMemo(() => {

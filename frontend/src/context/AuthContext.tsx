@@ -1,4 +1,5 @@
-// src/context/AuthContext.tsx
+// frontend/src/context/AuthContext.tsx
+
 import React, {
   createContext,
   useContext,
@@ -38,7 +39,7 @@ interface AuthContextType {
   refreshPermissions: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);  // NEW: Changed to exported const to fix undefined context in imports
 
 export function AuthProvider({ children }: { children: ReactNode }): any {
   const [user, setUser] = useState<User | null>(null);
@@ -206,17 +207,21 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       // Compute fallback
       const fallback = computeRoleBasedPermissions(user);
       
+      // Ensure submodules are objects
+      const safePermissionsSubmodules = permissionsData.submodules || {};  
+      const safeFallbackSubmodules = fallback.submodules || {};  
+      
       // Merge fetched with fallback
       const mergedPermissions = [...new Set([...fallback.permissions, ...(permissionsData.permissions || [])])];
       const mergedModules = [...new Set([...fallback.modules, ...(permissionsData.modules || [])])];
       const mergedSubmodules: Record<string, string[]> = {};
       
       // Merge submodules
-      const allKeys = new Set([...Object.keys(fallback.submodules), ...Object.keys(permissionsData.submodules || {})]);
+      const allKeys = new Set([...Object.keys(safeFallbackSubmodules), ...Object.keys(safePermissionsSubmodules)]);
       allKeys.forEach(key => {
         mergedSubmodules[key] = [...new Set([
-          ...(fallback.submodules[key] || []),
-          ...(permissionsData.submodules[key] || [])
+          ...(safeFallbackSubmodules[key] || []),
+          ...(safePermissionsSubmodules[key] || [])
         ])];
       });
 

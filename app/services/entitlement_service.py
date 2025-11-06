@@ -17,6 +17,7 @@ from app.schemas.entitlement_schemas import (
     AppEntitlementsResponse, AppModuleEntitlement, EntitlementChanges
 )
 from sqlalchemy import func  # Import for func.lower
+from sqlalchemy.exc import IntegrityError  # NEW: Import for error handling
 
 # Import modules_registry to get full list
 from app.core.modules_registry import get_all_modules
@@ -612,10 +613,22 @@ class EntitlementService:
                     sort_order=0,
                     is_active=True
                 )
-                self.db.add(module)
-                await self.db.flush()
-                created_count += 1
-                logger.info(f"Created module: {normalized_module}")
+                try:
+                    self.db.add(module)
+                    await self.db.flush()
+                    await self.db.refresh(module)
+                    created_count += 1
+                    logger.info(f"Created module: {normalized_module}")
+                except IntegrityError as e:
+                    logger.warning(f"Skipping duplicate module {normalized_module}: {e}")
+                    await self.db.rollback()
+                    # Re-query to get the existing one
+                    module_result = await self.db.execute(
+                        select(Module).where(func.lower(Module.module_key) == normalized_module)
+                    )
+                    module = module_result.scalar_one_or_none()
+                    if not module:
+                        raise  # If still not found, raise
             
             # Seed submodules
             for sub_name in submodules:
@@ -628,20 +641,27 @@ class EntitlementService:
                         )
                     )
                 )
-                if not sub_result.scalar_one_or_none():
-                    submodule = Submodule(
-                        module_id=module.id,
-                        submodule_key=normalized_sub,
-                        display_name=sub_name,
-                        description=f"{sub_name} submodule",
-                        menu_path=f"/{normalized_module}/{normalized_sub}",
-                        permission_key=f"{normalized_module}_{normalized_sub}",
-                        sort_order=0,
-                        is_active=True
-                    )
+                if sub_result.scalar_one_or_none():
+                    continue  # Skip if exists
+                
+                submodule = Submodule(
+                    module_id=module.id,
+                    submodule_key=normalized_sub,
+                    display_name=sub_name,
+                    description=f"{sub_name} submodule",
+                    menu_path=f"/{normalized_module}/{normalized_sub}",
+                    permission_key=f"{normalized_module}_{normalized_sub}",
+                    sort_order=0,
+                    is_active=True
+                )
+                try:
                     self.db.add(submodule)
+                    await self.db.flush()
                     created_count += 1
                     logger.info(f"Created submodule: {normalized_sub} for module {normalized_module}")
+                except IntegrityError as e:
+                    logger.warning(f"Skipping duplicate submodule {normalized_sub} for module {normalized_module}: {e}")
+                    await self.db.rollback()
         
         await self.db.commit()
         logger.info(f"Seeded {created_count} modules/submodules")

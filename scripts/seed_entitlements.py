@@ -92,7 +92,7 @@ def seed_modules(session: Session):
 
 
 def seed_submodules(session: Session, submodules_by_module: dict):
-    """Seed submodules using UPSERT"""
+    """Seed submodules using UPSERT with do_nothing on conflict"""
     print("Seeding submodules...")
     
     # Get module IDs
@@ -113,20 +113,15 @@ def seed_submodules(session: Session, submodules_by_module: dict):
             }
             
             stmt = insert(Submodule).values(**data)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=['module_id', 'submodule_key'],
-                set_={
-                    'display_name': stmt.excluded.display_name,
-                    'menu_path': stmt.excluded.menu_path,
-                    'permission_key': stmt.excluded.permission_key,
-                    'sort_order': stmt.excluded.sort_order,
-                }
+            stmt = stmt.on_conflict_do_nothing(
+                index_elements=['module_id', 'submodule_key']
             )
-            session.execute(stmt)
-            total_count += 1
+            result = session.execute(stmt)
+            if result.rowcount > 0:
+                total_count += 1
     
     session.commit()
-    print(f"✓ Seeded {total_count} submodules across {len(submodules_by_module)} modules")
+    print(f"✓ Seeded {total_count} new submodules across {len(submodules_by_module)} modules (skipped existing)")
 
 
 def main():
