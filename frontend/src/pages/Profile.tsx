@@ -16,6 +16,7 @@ import { passwordService } from "../services/authService";
 import { useAuth } from "../context/AuthContext";
 import { getDisplayRole } from "../types/user.types";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 const ProfilePage: React.FC = () => {
   const { user, loading } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
@@ -27,7 +28,9 @@ const ProfilePage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container
+      <ProtectedPage moduleKey="user" action="read">
+      rotectedPage moduleKey="user" action="read">
+        ontainer
         maxWidth="md"
         sx={{ mt: 4, display: "flex", justifyContent: "center" }}
       >
@@ -182,7 +185,7 @@ const ProfilePage: React.FC = () => {
         </Box>
       </Paper>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default ProfilePage;

@@ -29,6 +29,7 @@ import {
 import axios from "axios";
 import { formatCurrency } from "../utils/currencyUtils";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface AgingBucket {
@@ -81,7 +82,9 @@ const CustomerAgingPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <ProtectedPage moduleKey="finance" action="read">
+      rotectedPage moduleKey="finance" action="read">
+        ox display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
       </Box>
     );
@@ -272,7 +275,7 @@ const CustomerAgingPage: React.FC = () => {
         </Grid>
       </Grid>
     </Box>
+    </ProtectedPage>
   );
 };
-
 export default CustomerAgingPage;

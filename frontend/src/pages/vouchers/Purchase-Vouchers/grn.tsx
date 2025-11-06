@@ -43,6 +43,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 const GoodsReceiptNotePage: React.FC = () => {
   const { isOrgContextReady } = useAuth();
   const router = useRouter();
@@ -973,16 +974,18 @@ const GoodsReceiptNotePage: React.FC = () => {
 
     if (isLoading) {
     return (
-      <Container>
+      <ProtectedPage moduleKey="procurement" action="write">
+        <Container>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
       </Container>
+      </ProtectedPage>
     );
   }
-
   return (
-    <>
+    <ProtectedPage moduleKey="procurement" action="write">
+      
       <VoucherLayout
         voucherType={config.voucherTitle}
         voucherTitle={config.voucherTitle}
@@ -1081,7 +1084,7 @@ const GoodsReceiptNotePage: React.FC = () => {
         onPrint={handleGeneratePDF}
       />
     </>
+    </ProtectedPage>
   );
 };
-
 export default GoodsReceiptNotePage;

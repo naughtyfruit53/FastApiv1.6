@@ -14,9 +14,11 @@ import {
 } from '@mui/icons-material';
 import DashboardLayout from '../components/DashboardLayout';
 
+import { ProtectedPage } from '../components/ProtectedPage';
 const BankReconciliationPage: React.FC = () => {
   return (
-    <DashboardLayout
+    <ProtectedPage moduleKey="finance" action="read">
+      ashboardLayout
       title="Bank Reconciliation"
       subtitle="Reconcile bank statements with accounting records"
     >
@@ -54,7 +56,7 @@ const BankReconciliationPage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
-
 export default BankReconciliationPage;

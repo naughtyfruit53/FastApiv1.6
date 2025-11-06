@@ -43,6 +43,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import VoucherLayout from "../../../components/VoucherLayout";
 import { procurementService } from "../../../services/procurementService";
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface RFQItem {
   item_code: string;
   item_name: string;
@@ -249,7 +250,8 @@ const RFQPage: React.FC = () => {
     }
   };
   return (
-    <VoucherLayout
+    <ProtectedPage moduleKey="finance" action="write">
+      
       title="Request for Quotation (RFQ)"
       description="Manage procurement requests and vendor quotations"
     >

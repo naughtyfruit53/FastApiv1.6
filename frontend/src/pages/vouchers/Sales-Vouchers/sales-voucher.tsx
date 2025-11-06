@@ -52,6 +52,7 @@ import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntit
 import { formatCurrency } from "../../../utils/currencyUtils";
 import Link from 'next/link';
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 const SalesVoucherPage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
   const router = useRouter();
@@ -798,7 +799,8 @@ const handleCancelConflict = () => {
   if (isLoading || companyLoading) {
   
   return (
-      <Container>
+      <ProtectedPage moduleKey="sales" action="write">
+      >
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
@@ -844,7 +846,7 @@ const handleCancelConflict = () => {
         voucherType="Sales Voucher"
       />
     </>
+    </ProtectedPage>
   );
 };
-
 export default SalesVoucherPage;

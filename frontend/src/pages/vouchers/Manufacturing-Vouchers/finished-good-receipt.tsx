@@ -2,6 +2,7 @@ import React from 'react';
 import {Typography, Container, Box, Alert, Grid, Card, CardContent, Chip} from '@mui/material';
 import { CheckCircle, Schedule, Build, Inventory } from '@mui/icons-material';
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 const FinishedGoodsReceipt: React.FC = () => {
   // Empty array - production orders to be loaded from API
   const recentProduction: any[] = [];
@@ -20,7 +21,8 @@ const FinishedGoodsReceipt: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg">
+    <ProtectedPage moduleKey="manufacturing" action="write">
+       maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Typography variant="h4" gutterBottom>
           Finished Goods Receipt
@@ -156,7 +158,7 @@ const FinishedGoodsReceipt: React.FC = () => {
         </Box>
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default FinishedGoodsReceipt;

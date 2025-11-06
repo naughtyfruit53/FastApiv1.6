@@ -32,6 +32,7 @@ import api from '../lib/api';
 import { useRouter } from 'next/router';
 import { formatCurrency } from "../utils/currencyUtils";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 interface VendorBill {
   id: number;
   voucher_number: string;
@@ -140,15 +141,17 @@ const AccountsPayablePage: React.FC = () => {
 
   if (loading) {
     return (
-      <DashboardLayout
+      <ProtectedPage moduleKey="finance" action="read">
+      rotectedPage moduleKey="finance" action="read">
+        ashboardLayout
         title="Accounts Payable"
         subtitle="Manage vendor bills and payables"
       >
         <LinearProgress />
       </DashboardLayout>
+      </ProtectedPage>
     );
   }
-
   return (
     <DashboardLayout
       title="Accounts Payable"
@@ -320,7 +323,7 @@ const AccountsPayablePage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
-
 export default AccountsPayablePage;

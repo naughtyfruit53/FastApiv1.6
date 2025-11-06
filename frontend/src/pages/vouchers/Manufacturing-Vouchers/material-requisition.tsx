@@ -26,6 +26,7 @@ import api from "../../../lib/api";
 import { getProducts } from "../../../services/masterService";
 import VoucherContextMenu from "../../../components/VoucherContextMenu";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface MaterialIssueItem {
   product_id: number;
   quantity: number;
@@ -263,7 +264,8 @@ const MaterialRequisition: React.FC = () => {
     setValue(`items.${index}.total_amount`, total);
   };
   return (
-    <Container maxWidth="xl">
+    <ProtectedPage moduleKey="manufacturing" action="write">
+       maxWidth="xl">
       <Grid container spacing={3}>
         {/* Left Panel - Issue List */}
         <Grid size={5}>
@@ -665,6 +667,7 @@ const MaterialRequisition: React.FC = () => {
         }}
       />
     </Container>
+    </ProtectedPage>
   );
 };
 export default MaterialRequisition;

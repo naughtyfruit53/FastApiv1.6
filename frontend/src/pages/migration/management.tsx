@@ -46,6 +46,7 @@ import { useRouter } from "next/router";
 import MigrationWizard from "../../components/MigrationWizard";
 import IntegrationDashboard from "../../components/IntegrationDashboard";
 import axios from "axios";
+import { ProtectedPage } from '../../components/ProtectedPage';
 interface MigrationJob {
   id: number;
   job_name: string;
@@ -148,7 +149,8 @@ const MigrationManagement: React.FC = () => {
   };
   if (!isSuperAdmin) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <ProtectedPage moduleKey="admin" action="write">
+      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
           Access denied. Only super administrators can access migration
           management.
@@ -477,6 +479,7 @@ const MigrationManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
 export default MigrationManagement;

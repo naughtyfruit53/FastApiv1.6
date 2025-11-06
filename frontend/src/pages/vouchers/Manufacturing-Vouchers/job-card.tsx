@@ -36,6 +36,7 @@ import { Add, Remove, Save, Cancel, ExpandMore } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../lib/api";
 import { getProducts, getVendors } from "../../../services/masterService";
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface JobCardSuppliedMaterial {
   product_id: number;
   quantity_supplied: number;
@@ -361,7 +362,8 @@ export default function JobCardVoucher() {
 
     if (isLoading) {
     return (
-      <Container>
+      <ProtectedPage moduleKey="manufacturing" action="write">
+        <Container>
         <Box
           display="flex"
           justifyContent="center"
@@ -371,10 +373,12 @@ export default function JobCardVoucher() {
           <CircularProgress />
         </Box>
       </Container>
+      </ProtectedPage>
     );
   }
   return (
-    <Container maxWidth="xl">
+    <ProtectedPage moduleKey="manufacturing" action="write">
+       maxWidth="xl">
       <Typography variant="h4" component="h1" gutterBottom>
         Job Card Vouchers
       </Typography>

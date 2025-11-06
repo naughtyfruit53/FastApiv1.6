@@ -40,6 +40,7 @@ import { reportsService } from "../services/reportsService"; // Updated to use n
 import ExportPrintToolbar from "../components/ExportPrintToolbar";
 import { canAccessLedger } from "../types/user.types";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -247,7 +248,8 @@ const ReportsPage: React.FC = () => {
       },
     ];
     return (
-      <Grid container spacing={3}>
+      <ProtectedPage moduleKey="reports" action="read">
+      rid container spacing={3}>
         {cards.map((card, index) => (
           <Grid
             key={index}
@@ -1243,7 +1245,7 @@ const ReportsPage: React.FC = () => {
         </TabPanel>
       </Paper>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default ReportsPage;

@@ -32,6 +32,8 @@ import {
   getVoucherConfig,
   getVoucherStyles,
 } from "../../../utils/voucherUtils";
+import { ProtectedPage } from '../../../components/ProtectedPage';
+
 const CreditNotePage: React.FC = () => {
   const config = getVoucherConfig("credit-note");
   const voucherStyles = getVoucherStyles();
@@ -161,7 +163,8 @@ const CreditNotePage: React.FC = () => {
     setPendingDate(null);
   };
   return (
-    <Container maxWidth="xl" sx={{ py: 2 }}>
+    <ProtectedPage moduleKey="finance" action="write">
+      <Container maxWidth="xl" sx={{ py: 2 }}>
       <Grid container spacing={3}>
         {/* Left side - Voucher List (40%) */}
         <Grid size={{ xs: 12, md: 5 }}>
@@ -463,6 +466,7 @@ const CreditNotePage: React.FC = () => {
         voucherType="Credit Note"
       />
     </Container>
+    </ProtectedPage>
   );
 };
 export default CreditNotePage;

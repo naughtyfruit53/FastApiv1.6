@@ -31,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import aiService, { AIAnalyticsDashboard, AIModel } from '../services/aiService';
 
+import { ProtectedPage } from '../components/ProtectedPage';
 const AIAnalyticsPage: React.FC = () => {
   const [dashboard, setDashboard] = useState<AIAnalyticsDashboard | null>(null);
   const [models, setModels] = useState<AIModel[]>([]);
@@ -59,12 +60,14 @@ const AIAnalyticsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+      <ProtectedPage moduleKey="ai" action="read">
+      rotectedPage moduleKey="ai" action="read">
+        ox sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
         <CircularProgress />
       </Box>
+      </ProtectedPage>
     );
   }
-
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -202,7 +205,7 @@ const AIAnalyticsPage: React.FC = () => {
         </Box>
       </Paper>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default AIAnalyticsPage;

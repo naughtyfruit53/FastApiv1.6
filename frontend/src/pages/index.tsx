@@ -2,6 +2,7 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 const Home = () => {
   const router = useRouter();
   useEffect(() => {

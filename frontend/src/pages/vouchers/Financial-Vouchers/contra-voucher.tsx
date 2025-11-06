@@ -32,6 +32,8 @@ import {
   getVoucherStyles,
   parseRateField,
 } from "../../../utils/voucherUtils";
+import { ProtectedPage } from '../../../components/ProtectedPage';
+
 const ContraVoucher: React.FC = () => {
   const config = getVoucherConfig("contra-voucher");
   const voucherStyles = getVoucherStyles();
@@ -485,20 +487,22 @@ const ContraVoucher: React.FC = () => {
 
     if (isLoading) {
     return (
-      <Container>
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="400px"
-        >
-          <CircularProgress />
-        </Box>
-      </Container>
+      <ProtectedPage moduleKey="finance" action="write">
+        <Container>
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            minHeight="400px"
+          >
+            <CircularProgress />
+          </Box>
+        </Container>
+      </ProtectedPage>
     );
   }
   return (
-    <>
+    <ProtectedPage moduleKey="finance" action="write">
       <VoucherLayout
         voucherType="Contra Vouchers"
         voucherTitle="Contra Voucher"
@@ -549,7 +553,7 @@ const ContraVoucher: React.FC = () => {
         onProceedAnyway={handleProceedAnyway}
         voucherType="Contra Voucher"
       />
-    </>
+    </ProtectedPage>
   );
 };
 export default ContraVoucher;

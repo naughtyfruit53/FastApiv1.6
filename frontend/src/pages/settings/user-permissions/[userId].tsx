@@ -42,6 +42,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { getDisplayRole } from "../../../types/user.types";
 import { Module, MODULE_DISPLAY_NAMES, Action } from "../../../types/rbac.types";
 
+import { ProtectedPage } from '../../components/ProtectedPage';
 interface User {
   id: number;
   email: string;
@@ -158,7 +159,8 @@ const UserPermissionsPage: React.FC = () => {
 
   if (userLoading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <ProtectedPage moduleKey="admin" action="write">
+      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
           <CircularProgress />
         </Box>
@@ -344,7 +346,7 @@ const UserPermissionsPage: React.FC = () => {
         </TabPanel>
       </Paper>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default UserPermissionsPage;

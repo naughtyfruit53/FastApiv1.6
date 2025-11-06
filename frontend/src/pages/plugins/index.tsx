@@ -41,6 +41,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
+import { ProtectedPage } from '../../components/ProtectedPage';
 interface Plugin {
   id: number;
   name: string;
@@ -147,7 +148,8 @@ const PluginsPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <ProtectedPage moduleKey="admin" action="read">
+      ontainer maxWidth="xl" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Plugin Management</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
@@ -337,7 +339,7 @@ const PluginsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default PluginsPage;

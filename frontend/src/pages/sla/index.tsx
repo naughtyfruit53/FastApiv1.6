@@ -36,6 +36,7 @@ import {
   Policy,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ProtectedPage } from '../../components/ProtectedPage';
 import {
   slaService,
   SLAPolicy,
@@ -212,7 +213,8 @@ const SLAManagement: React.FC = () => {
       return null;
     }
     return (
-      <Grid container spacing={3}>
+      <ProtectedPage moduleKey="service" action="read">
+      rid container spacing={3}>
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -727,6 +729,7 @@ const SLAManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
 export default SLAManagement;

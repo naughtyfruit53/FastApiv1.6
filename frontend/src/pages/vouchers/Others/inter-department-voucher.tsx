@@ -7,6 +7,7 @@ import VoucherLayout from '../../../components/VoucherLayout';
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
 import api from '../../../utils/api';
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface InterDepartmentVoucherItem {
   id?: number;
   product: string;
@@ -213,7 +214,8 @@ const InterDepartmentVoucherPage: React.FC = () => {
     setPendingDate(null);
   };
   return (
-    <>
+    <ProtectedPage moduleKey="finance" action="write">
+      
       <VoucherLayout
       title="Inter Department Voucher"
       voucherData={voucherData || defaultVoucherData}
@@ -287,7 +289,7 @@ const InterDepartmentVoucherPage: React.FC = () => {
         voucherType="Inter-Department Voucher"
       />
     </>
+    </ProtectedPage>
   );
 };
-
 export default InterDepartmentVoucherPage;

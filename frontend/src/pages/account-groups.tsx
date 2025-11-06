@@ -14,9 +14,11 @@ import {
 } from '@mui/icons-material';
 import DashboardLayout from '../components/DashboardLayout';
 
+import { ProtectedPage } from '../components/ProtectedPage';
 const AccountGroupsPage: React.FC = () => {
   return (
-    <DashboardLayout
+    <ProtectedPage moduleKey="finance" action="read">
+      ashboardLayout
       title="Account Groups"
       subtitle="Organize accounts into logical groups"
     >
@@ -54,7 +56,7 @@ const AccountGroupsPage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
-
 export default AccountGroupsPage;
