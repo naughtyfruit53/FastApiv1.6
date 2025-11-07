@@ -712,10 +712,10 @@ async def activate_license(
     org_data: OrganizationCreate,
     admin_data: UserCreate,  # Data for org_super_admin
     db: Session = Depends(get_db),
-    current_user: PlatformUser = Depends(get_current_active_user)  # Both super_admin and platform_admin
+    current_user: PlatformUser = Depends(get_current_active_user)  # Both super_admin and app_admin
 ):
     """Activate license: create organization and org_super_admin"""
-    if current_user.role not in ["super_admin", "platform_admin"]:
+    if current_user.role not in ["super_admin", "app_admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only app super admin or app admin can activate licenses"

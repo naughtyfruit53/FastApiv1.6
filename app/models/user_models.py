@@ -23,7 +23,7 @@ class PlatformUser(Base):
 
     # User details
     full_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    role: Mapped[str] = mapped_column(String, nullable=False, default="super_admin") # super_admin, platform_admin
+    role: Mapped[str] = mapped_column(String, nullable=False, default="super_admin") # super_admin, app_admin
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Temporary master password support
