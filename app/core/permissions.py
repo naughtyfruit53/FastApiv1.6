@@ -245,23 +245,23 @@ class PermissionChecker:
             Permission.SUPER_ADMIN,
             Permission.PLATFORM_ADMIN,
             Permission.MANAGE_USERS,  # For platform users
-            Permission.CREATE_USERS,  # For creating platform admins
+            Permission.CREATE_USERS,  # For creating app_admins and super_admins
             Permission.RESET_ANY_PASSWORD,
             Permission.RESET_ANY_DATA,
             Permission.MANAGE_ORGANIZATIONS,
             Permission.VIEW_ORGANIZATIONS,
             Permission.CREATE_ORGANIZATIONS,
             Permission.DELETE_ORGANIZATIONS,
-            Permission.RESET_ANY_DATA,
             Permission.VIEW_ALL_AUDIT_LOGS,
+            Permission.FACTORY_RESET,  # Only super_admin can factory reset
         ],
-        'platform_admin': [
+        'app_admin': [
             Permission.PLATFORM_ADMIN,
             Permission.MANAGE_ORGANIZATIONS,
             Permission.CREATE_ORGANIZATIONS,
             Permission.VIEW_ORGANIZATIONS,
-            Permission.RESET_ANY_PASSWORD,  # For org passwords
             Permission.VIEW_AUDIT_LOGS,
+            # Note: app_admin CANNOT: manage platform admins, reset app/org data, factory reset
         ],
     }
     

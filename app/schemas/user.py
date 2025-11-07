@@ -12,15 +12,19 @@ from enum import Enum
 
 class UserRole(str, Enum):
     """
-    NEW ROLE SYSTEM - Only 4 org-wide roles:
+    NEW ROLE SYSTEM:
+    Platform-level roles (no organization):
+    - SUPER_ADMIN: Full platform rights, can create/manage app_admins and other super_admins
+    - APP_ADMIN: All platform rights except manage platform admins or reset app/org data
+    
+    Organization-level roles (4 org-wide roles):
     - ORG_ADMIN: Full access based on entitlement only (no RBAC). Can create all roles including Management.
     - MANAGEMENT: Full owner-like access via RBAC (except Org Admin creation). Can assign/edit module access.
     - MANAGER: Module-level access assigned at creation/management. Selected modules only.
     - EXECUTIVE: Submodule-level access based on reporting manager's modules. Can be upgraded.
-    
-    Note: SUPER_ADMIN is platform-level only, not organization-level.
     """
     SUPER_ADMIN = "super_admin"  # Platform-level only
+    APP_ADMIN = "app_admin"      # Platform-level only
     ORG_ADMIN = "org_admin"      # Organization owner, entitlement-based access
     MANAGEMENT = "management"    # Full RBAC access, manages managers/executives
     MANAGER = "manager"          # Module-level access
@@ -31,8 +35,13 @@ class EmailLogin(BaseModel):
     password: str
 
 class PlatformUserRole(str, Enum):
+    """
+    Platform-level roles for the SaaS application.
+    - SUPER_ADMIN: Full platform rights, can create/manage app_admins and other super_admins
+    - APP_ADMIN: All rights except manage platform admins or reset app/org data
+    """
     SUPER_ADMIN = "super_admin"
-    PLATFORM_ADMIN = "platform_admin"
+    APP_ADMIN = "app_admin"
 
 
 # User schemas
@@ -157,7 +166,7 @@ class TokenData(BaseModel):
 class PlatformUserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
-    role: PlatformUserRole = PlatformUserRole.PLATFORM_ADMIN
+    role: PlatformUserRole = PlatformUserRole.APP_ADMIN
     is_active: bool = True
 
 

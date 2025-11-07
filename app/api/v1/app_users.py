@@ -80,12 +80,12 @@ async def create_app_user(
                 detail="App-level users must have super_admin or app_admin role"
             )
         
-        # Permission check: Only SUPER_ADMIN can create APP_ADMIN accounts
-        # APP_ADMIN users cannot create other accounts
-        if user_data.role == UserRole.APP_ADMIN and current_user.role != UserRole.SUPER_ADMIN.value:
+        # Permission check: Only SUPER_ADMIN can create/manage platform admins
+        # APP_ADMIN users cannot create any platform-level accounts
+        if current_user.role != UserRole.SUPER_ADMIN.value:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only super admins can create app admin accounts"
+                detail="Only super admins can create platform-level users (super_admin or app_admin)"
             )
         
         # Check if email already exists
@@ -202,7 +202,7 @@ async def get_app_user(
     user = db.query(User).filter(
         User.id == user_id,
         User.organization_id.is_(None),
-        User.is_super_admin == True
+        User.role.in_([UserRole.SUPER_ADMIN.value, UserRole.APP_ADMIN.value])
     ).first()
     
     if not user:
@@ -220,12 +220,20 @@ async def update_app_user(
     db: Session = Depends(get_db),
     auth: tuple = Depends(require_access("app_users", "read"))
 ):
-    """Update app user"""
+    """Update app user - Only super_admin can modify platform-level users"""
     current_user, _ = auth  # App-level users have no organization
+    
+    # Permission check: Only SUPER_ADMIN can update platform admins
+    if current_user.role != UserRole.SUPER_ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super admins can update platform-level users"
+        )
+    
     user = db.query(User).filter(
         User.id == user_id,
         User.organization_id.is_(None),
-        User.is_super_admin == True
+        User.role.in_([UserRole.SUPER_ADMIN.value, UserRole.APP_ADMIN.value])
     ).first()
     
     if not user:
@@ -253,11 +261,11 @@ async def update_app_user(
         if 'email' in update_data and 'username' not in update_data:
             update_data['username'] = update_data['email'].split("@")[0]
         
-        # Ensure role remains super_admin for app users
-        if 'role' in update_data and update_data['role'] != UserRole.SUPER_ADMIN:
+        # Validate role changes - only super_admin and app_admin are valid
+        if 'role' in update_data and update_data['role'] not in [UserRole.SUPER_ADMIN.value, UserRole.APP_ADMIN.value]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="App-level users must maintain super_admin role"
+                detail="App-level users must have super_admin or app_admin role"
             )
         
         for field, value in update_data.items():
@@ -285,12 +293,20 @@ async def delete_app_user(
     db: Session = Depends(get_db),
     auth: tuple = Depends(require_access("app_users", "read"))
 ):
-    """Delete app user"""
+    """Delete app user - Only super_admin can delete platform-level users"""
     current_user, _ = auth  # App-level users have no organization
+    
+    # Permission check: Only SUPER_ADMIN can delete platform admins
+    if current_user.role != UserRole.SUPER_ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super admins can delete platform-level users"
+        )
+    
     user = db.query(User).filter(
         User.id == user_id,
         User.organization_id.is_(None),
-        User.is_super_admin == True
+        User.role.in_([UserRole.SUPER_ADMIN.value, UserRole.APP_ADMIN.value])
     ).first()
     
     if not user:
