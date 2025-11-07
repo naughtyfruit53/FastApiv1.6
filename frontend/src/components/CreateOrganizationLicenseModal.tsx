@@ -131,9 +131,7 @@ const CreateOrganizationLicenseModal: React.FC<
   const [success, setSuccess] = useState<any | null>(null);
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
   const [licenseActivationOpen, setLicenseActivationOpen] = useState(false);
-  const [activationPeriod, setActivationPeriod] = useState<
-    "month" | "year" | "perpetual"
-  >("year");
+  const [activationPeriod, setActivationPeriod] = useState<string>("trial_7"); // Default to 7-day trial
   const [selectedModules, setSelectedModules] = useState<{ [key: string]: boolean }>({
     crm: true,
     erp: true,
@@ -763,12 +761,15 @@ const CreateOrganizationLicenseModal: React.FC<
               label="License Period"
               onChange={(e) =>
                 setActivationPeriod(
-                  e.target.value as "month" | "year" | "perpetual",
+                  e.target.value as string,
                 )
               }
             >
-              <MenuItem value="month">1 Month</MenuItem>
-              <MenuItem value="year">1 Year</MenuItem>
+              <MenuItem value="trial_7">Trial (7 Days)</MenuItem>
+              <MenuItem value="trial_15">Trial (15 Days)</MenuItem>
+              <MenuItem value="month_1">1 Month</MenuItem>
+              <MenuItem value="month_3">3 Months</MenuItem>
+              <MenuItem value="year_1">1 Year</MenuItem>
               <MenuItem value="perpetual">Perpetual</MenuItem>
             </Select>
           </FormControl>

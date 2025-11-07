@@ -99,6 +99,10 @@ class OrganizationLicenseCreate(BaseModel):
 
 
 class OrganizationLicenseResponse(BaseModel):
+    organization_name: str
+    subdomain: str
+    superadmin_email: str
+    temp_password: str
     license_type: str
     license_status: str = Field(..., description="Derived status: 'active' or 'trial'")
     license_issued_date: Optional[datetime] = None

@@ -387,6 +387,10 @@ class OrganizationService:
                 raise HTTPException(status_code=500, detail=f"License created but email failed: {error}")
             
             return OrganizationLicenseResponse(
+                organization_name=organization.name,
+                subdomain=organization.subdomain,
+                superadmin_email=organization.primary_email,
+                temp_password=temp_password,
                 license_type=organization.license_type,
                 license_issued_date=organization.license_issued_date,
                 license_expiry_date=organization.license_expiry_date,
