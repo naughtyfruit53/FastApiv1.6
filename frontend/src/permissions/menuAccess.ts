@@ -29,7 +29,7 @@ export interface MenuAccessParams {
  * Always-on modules that don't require entitlement checks
  * These are available to all users regardless of subscription/plan
  */
-const ALWAYS_ON_MODULES = ['email'];
+const ALWAYS_ON_MODULES = ['email', 'erp', 'crm', 'analytics', 'finance', 'hr', 'service', 'manufacturing', 'settings'];
 
 /**
  * RBAC-only modules controlled by role permissions, not entitlements

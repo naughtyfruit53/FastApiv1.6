@@ -72,7 +72,7 @@ const BankAccounts: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/erp/bank-accounts", {
+      const response = await axios.get("http://127.0.0.1:8000/api/v1/erp/bank-accounts", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBankAccounts(response.data);
@@ -104,7 +104,7 @@ const BankAccounts: React.FC = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `/api/v1/erp/bank-accounts/${accountId}`,
+        `http://127.0.0.1:8000/api/v1/erp/bank-accounts/${accountId}`,
         {
           is_default: true,
         },

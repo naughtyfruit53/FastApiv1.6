@@ -6,11 +6,13 @@ from sqlalchemy.orm import selectinload, joinedload
 from typing import List, Optional, Dict, Tuple, Any
 from datetime import datetime
 import logging
+import json  # Add for handling permissions list
 
 from app.models.entitlement_models import (
     Module, Submodule, OrgEntitlement, OrgSubentitlement, EntitlementEvent, ModuleStatusEnum
 )
 from app.models.user_models import Organization, User
+from app.models.rbac_models import UserModulePermission
 from app.schemas.entitlement_schemas import (
     ModuleResponse, SubmoduleResponse, ModuleEntitlementResponse, SubmoduleEntitlementResponse,
     OrgEntitlementsResponse, UpdateEntitlementsRequest, UpdateEntitlementsResponse,
@@ -391,9 +393,8 @@ class EntitlementService:
             'VOUCHER': 'ERP',
             'STOCK': 'ERP',
             'BOM': 'MANUFACTURING',
-            'SETTINGS': 'ERP',  # NEW: Auto-enable settings if ERP enabled
-            'LEDGER': 'FINANCE',  # NEW: Auto-enable ledger if FINANCE enabled
-            'INVENTORY': 'ERP'  # NEW: Auto-enable inventory if ERP enabled
+            'FINANCE': 'ERP',
+            'LEDGER': 'FINANCE',
         }
 
         migrated = False
@@ -558,7 +559,7 @@ class EntitlementService:
             submodule = submodule_result.scalar_one_or_none()
             if not submodule:
                 logger.warning(f"Submodule not found: {normalized_submodule_key} in module {normalized_module_key}")
-                # NEW: Instead of denying, assume enabled if submodule not defined
+                # NEW: Assume enabled if submodule not defined
                 logger.warning(f"Assuming submodule {normalized_submodule_key} enabled since not found in DB")
                 return True, org_ent.status, None
 
@@ -860,9 +861,6 @@ class EntitlementService:
         Returns:
             Dictionary with counts of permissions revoked and restored
         """
-        from app.models.rbac_models import UserModulePermission
-        from app.models.user_models import User
-        
         revoked_count = 0
         restored_count = 0
         
@@ -1081,3 +1079,42 @@ class EntitlementService:
         
         logger.info(f"✅ Initialized {len(created_entitlements)} entitlements for org {org_id}")
         return created_entitlements
+
+    async def grant_rbac_permissions(self, org_id: int):
+        """Grant RBAC permissions for enabled modules to org_admin"""
+        # Get org_admin user (assuming ID 2 from logs)
+        result = await self.db.execute(
+            select(User).where(User.id == 2)  # Adjust for your user ID
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            logger.warning(f"User not found for RBAC grant in org {org_id}")
+            return
+
+        # Get enabled modules
+        org_result = await self.db.execute(
+            select(Organization).where(Organization.id == org_id)
+        )
+        org = org_result.scalar_one_or_none()
+        if not org:
+            return
+
+        enabled_modules = [key.lower() for key, value in org.enabled_modules.items() if value]
+
+        # Current permissions
+        current_permissions = user.permissions or []
+
+        # Add module.* for each enabled module if not present
+        updated = False
+        for module_key in enabled_modules:
+            wildcard_perm = f"{module_key}.*"
+            if wildcard_perm not in current_permissions:
+                current_permissions.append(wildcard_perm)
+                updated = True
+                logger.info(f"Granted {wildcard_perm} to org_admin in org {org_id}")
+
+        if updated:
+            user.permissions = current_permissions
+            await self.db.commit()
+            await self.db.refresh(user)
+            logger.info(f"Updated permissions for org_admin in org {org_id}")

@@ -4,19 +4,21 @@
  * React hooks for accessing and managing entitlements
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  fetchEntitlements,
-  AppEntitlementsResponse,
-} from '../services/entitlementsApi';
+import axios from 'axios';
 
 export function useEntitlements(orgId: number | undefined, token: string | undefined) {
-  const shouldFetch = token !== undefined;
+  const shouldFetch = token !== undefined && orgId !== undefined;
 
   const { data, error, isLoading } = useQuery({
-    queryKey: ['entitlements'],
-    queryFn: () => fetchEntitlements(token!),
+    queryKey: ['entitlements', orgId],
+    queryFn: async () => {
+      const res = await axios.get('/api/v1/orgs/entitlements', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return res.data;
+    },
     enabled: shouldFetch,
     staleTime: 60000, // 1 minute
     refetchOnWindowFocus: false,
@@ -29,13 +31,18 @@ export function useEntitlements(orgId: number | undefined, token: string | undef
     },
   });
 
-  // Check if module is entitled
+  // Check if module is entitled (enabled or trial)
   const isModuleEnabled = useCallback(
     (moduleKey: string): boolean => {
-      if (!data) return false;
-      const module = data.entitlements[moduleKey.toLowerCase()];
+      const ent = data?.entitlements ?? {};
+      const module = ent[moduleKey.toLowerCase()];
       if (!module) return false;
-      return module.status === 'enabled' || module.status === 'trial';
+      if (module.status === 'enabled') return true;
+      if (module.status === 'trial') {
+        const expires = module.trial_expires_at ? new Date(module.trial_expires_at) : null;
+        return !expires || expires > new Date();
+      }
+      return false;
     },
     [data]
   );
@@ -43,26 +50,20 @@ export function useEntitlements(orgId: number | undefined, token: string | undef
   // Check if submodule is entitled
   const isSubmoduleEnabled = useCallback(
     (moduleKey: string, submoduleKey: string): boolean => {
-      if (!data) return false;
-      const module = data.entitlements[moduleKey.toLowerCase()];
+      const ent = data?.entitlements ?? {};
+      const module = ent[moduleKey.toLowerCase()];
       if (!module) return false;
-      if (module.status !== 'enabled' && module.status !== 'trial') return false;
-      
-      // If no submodule entry, default to enabled
-      if (!module.submodules || !(submoduleKey in module.submodules)) {
-        return true;
-      }
-      
-      return module.submodules[submoduleKey] === true;
+      if (!isModuleEnabled(moduleKey)) return false;
+      return module.submodules?.[submoduleKey] ?? true;
     },
-    [data]
+    [data, isModuleEnabled]
   );
 
   // Get module status
   const getModuleStatus = useCallback(
     (moduleKey: string): 'enabled' | 'disabled' | 'trial' | 'unknown' => {
-      if (!data) return 'unknown';
-      const module = data.entitlements[moduleKey.toLowerCase()];
+      const ent = data?.entitlements ?? {};
+      const module = ent[moduleKey.toLowerCase()];
       return module?.status || 'unknown';
     },
     [data]
@@ -71,8 +72,8 @@ export function useEntitlements(orgId: number | undefined, token: string | undef
   // Check if module is in trial
   const isModuleTrial = useCallback(
     (moduleKey: string): boolean => {
-      if (!data) return false;
-      const module = data.entitlements[moduleKey.toLowerCase()];
+      const ent = data?.entitlements ?? {};
+      const module = ent[moduleKey.toLowerCase()];
       return module?.status === 'trial';
     },
     [data]
@@ -81,18 +82,15 @@ export function useEntitlements(orgId: number | undefined, token: string | undef
   // Get trial expiry date
   const getTrialExpiry = useCallback(
     (moduleKey: string): Date | null => {
-      if (!data) return null;
-      const module = data.entitlements[moduleKey.toLowerCase()];
-      if (module?.status === 'trial' && module.trial_expires_at) {
-        return new Date(module.trial_expires_at);
-      }
-      return null;
+      const ent = data?.entitlements ?? {};
+      const module = ent[moduleKey.toLowerCase()];
+      return module?.trial_expires_at ? new Date(module.trial_expires_at) : null;
     },
     [data]
   );
 
   return {
-    entitlements: data?.entitlements,
+    entitlements: data,
     isLoading,
     error,
     isModuleEnabled,

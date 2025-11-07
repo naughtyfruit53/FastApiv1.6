@@ -131,7 +131,7 @@ export function getAccessibleModules(
  * Check if module is always-on (doesn't require entitlement)
  */
 export function isAlwaysOnModule(moduleKey: string): boolean {
-  return ALWAYS_ON_MODULES.has(moduleKey.toLowerCase());
+  return ALWAYS_ON_MODULES.has(moduleKey.toLowerCase()) || moduleKey.toLowerCase() === 'masters';
 }
 
 /**
@@ -156,6 +156,11 @@ export function isModuleEntitled(
   moduleKey: string
 ): boolean {
   if (!entitlements) return false;
+
+  if (!entitlements.entitlements) {
+    console.warn(`[isModuleEntitled] Entitlements object missing 'entitlements' property for module: ${moduleKey}`);
+    return false;
+  }
 
   // Always-on modules are always entitled
   if (isAlwaysOnModule(moduleKey)) {
@@ -183,6 +188,11 @@ export function isSubmoduleEntitled(
 ): boolean {
   if (!entitlements) return false;
 
+  if (!entitlements.entitlements) {
+    console.warn(`[isSubmoduleEntitled] Entitlements object missing 'entitlements' property for module: ${moduleKey}`);
+    return false;
+  }
+
   // First check if module is entitled
   if (!isModuleEntitled(entitlements, moduleKey)) {
     return false;
@@ -208,6 +218,11 @@ export function getModuleStatus(
 ): ModuleStatus {
   if (!entitlements) return ModuleStatus.UNKNOWN;
 
+  if (!entitlements.entitlements) {
+    console.warn(`[getModuleStatus] Entitlements object missing 'entitlements' property for module: ${moduleKey}`);
+    return ModuleStatus.UNKNOWN;
+  }
+
   if (isAlwaysOnModule(moduleKey)) {
     return ModuleStatus.ENABLED;
   }
@@ -229,6 +244,11 @@ export function isModuleTrial(
 ): boolean {
   if (!entitlements) return false;
 
+  if (!entitlements.entitlements) {
+    console.warn(`[isModuleTrial] Entitlements object missing 'entitlements' property for module: ${moduleKey}`);
+    return false;
+  }
+
   const module = entitlements.entitlements[moduleKey.toLowerCase()];
   return module?.status === ModuleStatus.TRIAL;
 }
@@ -241,6 +261,11 @@ export function getTrialExpiry(
   moduleKey: string
 ): Date | null {
   if (!entitlements) return null;
+
+  if (!entitlements.entitlements) {
+    console.warn(`[getTrialExpiry] Entitlements object missing 'entitlements' property for module: ${moduleKey}`);
+    return null;
+  }
 
   const module = entitlements.entitlements[moduleKey.toLowerCase()];
   if (module?.status === ModuleStatus.TRIAL && module.trial_expires_at) {
@@ -256,7 +281,12 @@ export function getTrialExpiry(
 export function getEntitledModules(
   entitlements: OrgEntitlements | null
 ): Set<string> {
-  if (!entitlements) return new Set();
+  if (!entitlements || !entitlements.entitlements) {
+    if (entitlements) {
+      console.warn(`[getEntitledModules] Entitlements object missing 'entitlements' property`);
+    }
+    return new Set();
+  }
 
   const modules = new Set<string>();
 
@@ -270,7 +300,7 @@ export function getEntitledModules(
 }
 
 // ============================================================================
-// COMBINED CHECKING (All 3 Layers)
+// COMBINED CHECKING (All Layers)
 // ============================================================================
 
 /**

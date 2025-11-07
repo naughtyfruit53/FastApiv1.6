@@ -1,5 +1,10 @@
 # app/models/user_models.py
 
+"""
+User Models
+Defines models for users, organizations, and companies
+"""
+
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -125,7 +130,7 @@ class Organization(Base):
         "Integration": True,
         "AI_Analytics": True,
         "Streaming_Analytics": True,
-        "AB_Testing": True,
+        "AB_Test": True,
         "Website_Agent": True,
         "Email": True,
         "Calendar": True,
@@ -421,6 +426,7 @@ class Organization(Base):
     # RBAC relationships
     service_roles: Mapped[List["ServiceRole"]] = relationship(
         "ServiceRole",
+        primaryjoin="Organization.id == ServiceRole.organization_id",
         back_populates="organization"
     )
 
@@ -470,6 +476,7 @@ class User(Base):
     # manager: Module-level access assigned at creation/management
     # executive: Submodule-level access based on reporting manager's modules
     role: Mapped[str] = mapped_column(String, nullable=False, default="executive") # org_admin, management, manager, executive (super_admin for platform-level only)
+    role_id = Column(Integer, ForeignKey('roles.id'), nullable=True)
     department: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     designation: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     employee_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -658,6 +665,8 @@ class User(Base):
         foreign_keys="UserServiceRole.user_id",
         back_populates="user"
     )
+
+    role_obj = relationship("Role", back_populates="users")
 
     __table_args__ = (
         # Unique email per organization

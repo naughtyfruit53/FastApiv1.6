@@ -1,4 +1,5 @@
 // frontend/src/components/MegaMenu.tsx
+
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import {

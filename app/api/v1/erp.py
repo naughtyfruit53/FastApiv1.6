@@ -1,5 +1,9 @@
 # app/api/v1/erp.py
 
+"""
+ERP API endpoints
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -113,7 +117,8 @@ async def get_chart_of_accounts(
     # Order by account code
     stmt = stmt.order_by(ChartOfAccounts.account_code)
     
-    result = await db.execute(stmt.offset(skip).limit(limit))
+    stmt = stmt.offset(skip).limit(limit)
+    result = await db.execute(stmt)
     accounts = result.scalars().all()
     return accounts
 

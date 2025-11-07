@@ -20,6 +20,52 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/orgs", tags=["entitlements"])
 
 
+@router.get("/entitlements", response_model=AppEntitlementsResponse)
+async def get_current_app_entitlements(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get effective entitlements for the current organization (app use, cached).
+    
+    **Requires:** Authenticated user
+    
+    Returns a map of module_key to entitlement status and submodules.
+    This endpoint is optimized for frontend use and cached with TTL.
+    """
+    org_id = current_user.organization_id
+    
+    # Check cache first
+    cache_key = f"entitlements:org:{org_id}"
+    cached_result = await cache_manager.get(cache_key) if hasattr(cache_manager, 'get') else None
+    
+    if cached_result:
+        logger.debug(f"Returning cached entitlements for org {org_id}")
+        return cached_result
+    
+    try:
+        service = EntitlementService(db)
+        entitlements = await service.get_app_entitlements(org_id)
+        
+        # Cache the result (TTL: 5 minutes)
+        if hasattr(cache_manager, 'set'):
+            await cache_manager.set(cache_key, entitlements, ttl=300)
+        
+        return entitlements
+    except ValueError as ve:
+        logger.warning(f"Validation error fetching entitlements: {ve}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(ve)
+        )
+    except Exception as e:
+        logger.error(f"Error fetching app entitlements for org {org_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch organization entitlements"
+        )
+
+
 @router.get("/{org_id}/entitlements", response_model=AppEntitlementsResponse)
 async def get_app_entitlements(
     org_id: int,
@@ -27,9 +73,9 @@ async def get_app_entitlements(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Get effective entitlements for an organization (app use, cached).
+    Get effective entitlements for a specific organization (app use, cached).
     
-    **Requires:** Authenticated user with access to the organization
+    **Requires:** Authenticated super_admin or access to the organization
     
     Returns a map of module_key to entitlement status and submodules.
     This endpoint is optimized for frontend use and cached with TTL.
@@ -62,6 +108,12 @@ async def get_app_entitlements(
             await cache_manager.set(cache_key, entitlements, ttl=300)
         
         return entitlements
+    except ValueError as ve:
+        logger.warning(f"Validation error fetching entitlements: {ve}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(ve)
+        )
     except Exception as e:
         logger.error(f"Error fetching app entitlements for org {org_id}: {e}", exc_info=True)
         raise HTTPException(
