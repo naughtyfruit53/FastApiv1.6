@@ -14,7 +14,8 @@ import adminService from "../../services/adminService";
 import MetricCard from "../../components/MetricCard";
 import DashboardLayout from "../../components/DashboardLayout";
 import ModernLoading from "../../components/ModernLoading";
-import { ProtectedPage } from "../../components/ProtectedPage";
+// Removed ProtectedPage import and usage as per user request to keep super admin dashboard outside of tenant/entitlement/RBAC checks
+
 interface AppStatistics {
   total_licenses_issued: number;
   active_organizations: number;
@@ -205,149 +206,145 @@ const AppSuperAdminDashboard: React.FC = () => {
         )
       : 0;
   return (
-    <ProtectedPage
-      customCheck={(pc) => pc.checkIsSuperAdmin()}  // NEW: Simplified check to use checkIsSuperAdmin directly, bypassing tenant/entitlement layers for super admin
-      accessDeniedMessage="This dashboard is only accessible to super administrators."
+    // Removed ProtectedPage wrapper as super admin dashboard should bypass tenant/entitlement/RBAC checks
+    <DashboardLayout
+      title="Super Admin Dashboard"
+      subtitle="Monitor platform-wide metrics and system health"
     >
-      <DashboardLayout
-        title="Super Admin Dashboard"
-        subtitle="Monitor platform-wide metrics and system health"
-      >
-      <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
-        {statsCards.map((stat, index) => (
-          <MetricCard
-            key={index}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            color={stat.color}
-            description={stat.description}
-            trend={stat.trend}
-          />
-        ))}
-      </Box>
-      <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
-        <Paper className="modern-card" sx={{ p: 3 }}>
-          <Typography variant="h6" className="modern-card-title" gutterBottom>
-            License Plan Distribution
-          </Typography>
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-            {Object.entries(statistics.plan_breakdown).map(([plan, count]) => (
-              <Chip
-                key={plan}
-                label={`${plan}: ${count}`}
-                color={plan === "trial" ? "warning" : "primary"}
-                variant="filled"
-                sx={{
-                  fontWeight: 500,
-                  "&.MuiChip-colorPrimary": {
-                    backgroundColor: "var(--primary-600)",
-                    color: "white",
-                  },
-                  "&.MuiChip-colorWarning": {
-                    backgroundColor: "var(--warning-500)",
-                    color: "white",
-                  },
-                }}
-              />
-            ))}
-          </Box>
-        </Paper>
-        <Paper className="modern-card" sx={{ p: 3 }}>
-          <Typography variant="h6" className="modern-card-title" gutterBottom>
-            System Status
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-            <Security sx={{ color: "var(--success-600)", mr: 1 }} />
-            <Typography>
-              Status:{" "}
-              <Chip
-                label={statistics.system_health.status}
-                color={
-                  statistics.system_health.status === "healthy"
-                    ? "success"
-                    : "error"
-                }
-                size="small"
-                variant="filled"
-                sx={{
-                  fontWeight: 500,
-                  "&.MuiChip-colorSuccess": {
-                    backgroundColor: "var(--success-600)",
-                    color: "white",
-                  },
-                  "&.MuiChip-colorError": {
-                    backgroundColor: "var(--error-600)",
-                    color: "white",
-                  },
-                }}
-              />
-            </Typography>
-          </Box>
-          <Typography variant="body2" color="textSecondary">
-            Last updated: {new Date(statistics.generated_at).toLocaleString()}
-          </Typography>
-        </Paper>
-      </Box>
-      <Paper className="modern-card" sx={{ p: 4 }}>
-        <Typography
-          variant="h6"
-          className="modern-card-title"
-          gutterBottom
-          sx={{ mb: 3 }}
-        >
-          Platform Growth Overview
+    <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
+      {statsCards.map((stat, index) => (
+        <MetricCard
+          key={index}
+          title={stat.title}
+          value={stat.value}
+          icon={stat.icon}
+          color={stat.color}
+          description={stat.description}
+          trend={stat.trend}
+        />
+      ))}
+    </Box>
+    <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
+      <Paper className="modern-card" sx={{ p: 3 }}>
+        <Typography variant="h6" className="modern-card-title" gutterBottom>
+          License Plan Distribution
         </Typography>
-        <Box className="modern-grid cols-3">
-          <Box sx={{ textAlign: "center" }}>
-            <Typography
-              variant="h3"
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+          {Object.entries(statistics.plan_breakdown).map(([plan, count]) => (
+            <Chip
+              key={plan}
+              label={`${plan}: ${count}`}
+              color={plan === "trial" ? "warning" : "primary"}
+              variant="filled"
               sx={{
-                color: "var(--primary-600)",
-                fontWeight: 700,
-                mb: 1,
+                fontWeight: 500,
+                "&.MuiChip-colorPrimary": {
+                  backgroundColor: "var(--primary-600)",
+                  color: "white",
+                },
+                "&.MuiChip-colorWarning": {
+                  backgroundColor: "var(--warning-500)",
+                  color: "white",
+                },
               }}
-            >
-              {statistics.total_licenses_issued}
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Total Organizations
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: "center" }}>
-            <Typography
-              variant="h3"
-              sx={{
-                color: "var(--secondary-600)",
-                fontWeight: 700,
-                mb: 1,
-              }}
-            >
-              {statistics.total_active_users}
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Platform Users
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: "center" }}>
-            <Typography
-              variant="h3"
-              sx={{
-                color: "var(--success-600)",
-                fontWeight: 700,
-                mb: 1,
-              }}
-            >
-              {activationRate}%
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Activation Rate
-            </Typography>
-          </Box>
+            />
+          ))}
         </Box>
       </Paper>
-    </DashboardLayout>
-    </ProtectedPage>
+      <Paper className="modern-card" sx={{ p: 3 }}>
+        <Typography variant="h6" className="modern-card-title" gutterBottom>
+          System Status
+        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+          <Security sx={{ color: "var(--success-600)", mr: 1 }} />
+          <Typography>
+            Status:{" "}
+            <Chip
+              label={statistics.system_health.status}
+              color={
+                statistics.system_health.status === "healthy"
+                  ? "success"
+                  : "error"
+              }
+              size="small"
+              variant="filled"
+              sx={{
+                fontWeight: 500,
+                "&.MuiChip-colorSuccess": {
+                  backgroundColor: "var(--success-600)",
+                  color: "white",
+                },
+                "&.MuiChip-colorError": {
+                  backgroundColor: "var(--error-600)",
+                  color: "white",
+                },
+              }}
+            />
+          </Typography>
+        </Box>
+        <Typography variant="body2" color="textSecondary">
+          Last updated: {new Date(statistics.generated_at).toLocaleString()}
+        </Typography>
+      </Paper>
+    </Box>
+    <Paper className="modern-card" sx={{ p: 4 }}>
+      <Typography
+        variant="h6"
+        className="modern-card-title"
+        gutterBottom
+        sx={{ mb: 3 }}
+      >
+        Platform Growth Overview
+      </Typography>
+      <Box className="modern-grid cols-3">
+        <Box sx={{ textAlign: "center" }}>
+          <Typography
+            variant="h3"
+            sx={{
+              color: "var(--primary-600)",
+              fontWeight: 700,
+              mb: 1,
+            }}
+          >
+            {statistics.total_licenses_issued}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Total Organizations
+          </Typography>
+        </Box>
+        <Box sx={{ textAlign: "center" }}>
+          <Typography
+            variant="h3"
+            sx={{
+              color: "var(--secondary-600)",
+              fontWeight: 700,
+              mb: 1,
+            }}
+          >
+            {statistics.total_active_users}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Platform Users
+          </Typography>
+        </Box>
+        <Box sx={{ textAlign: "center" }}>
+          <Typography
+            variant="h3"
+            sx={{
+              color: "var(--success-600)",
+              fontWeight: 700,
+              mb: 1,
+            }}
+          >
+            {activationRate}%
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Activation Rate
+          </Typography>
+        </Box>
+      </Box>
+    </Paper>
+  </DashboardLayout>
   );
 };
 export default AppSuperAdminDashboard;
