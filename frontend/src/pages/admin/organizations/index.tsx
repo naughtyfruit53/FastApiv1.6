@@ -40,7 +40,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { ProtectedPage } from '../../components/ProtectedPage';
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface Organization {
   id: number;
   name: string;
