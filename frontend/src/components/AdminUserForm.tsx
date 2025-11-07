@@ -16,7 +16,7 @@ const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
     email: "",
     full_name: "",
-    role: "platform_admin",
+    role: "app_admin",
   });
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +52,8 @@ const AdminUserForm: React.FC<AdminUserFormProps> = ({ onSubmit }) => {
             setFormData((prev) => ({ ...prev, role: e.target.value }))
           }
         >
-          <MenuItem value="platform_admin">Platform Admin</MenuItem>
+          <MenuItem value="super_admin">Super Admin</MenuItem>
+          <MenuItem value="app_admin">App Admin</MenuItem>
         </Select>
       </FormControl>
       <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
