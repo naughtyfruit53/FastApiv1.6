@@ -26,6 +26,7 @@ import {
   MenuItem,
   Container,
   Alert,
+  CircularProgress,
   Divider,
   FormGroup,
   FormControlLabel,
@@ -46,6 +47,7 @@ import {
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { organizationService } from "../../services/organizationService";
+import adminService from "../../services/adminService";  // Import admin service for super admin
 import { useAuth } from "../../context/AuthContext";
 import { getDisplayRole, canManageUsers, canResetPasswords } from "../../types/user.types";
 import AddUserDialog from "../../components/AddUserDialog";
@@ -103,39 +105,53 @@ const UserManagement: React.FC = () => {
   console.log("UserManagement.tsx - Display Role:", displayRole);
   console.log("UserManagement.tsx - Can Manage Users:", canManage);
 
-  // Get current organization ID from auth context
+  // Get current organization (super_admin has null)
   const currentOrgId = user?.organization_id;
+  const isSuperAdmin = user?.is_super_admin || false;
 
-  // Real API calls using organization-scoped endpoints
+  // Fetch users: super_admin fetches all app users; org admins fetch org users
   const { data: users, isLoading: usersLoading, error: usersError } = useQuery<User[]>({
-    queryKey: ["organization-users", currentOrgId],
-    queryFn: () => organizationService.getOrganizationUsers(currentOrgId!),
-    enabled: canManage && !!currentOrgId,
+    queryKey: ["users", currentOrgId],
+    queryFn: async () => {
+      if (isSuperAdmin && !currentOrgId) {
+        // Super admin: fetch all app users
+        return adminService.getAllUsers();  // Assume adminService.getAllUsers() fetches all platform users
+      } else if (currentOrgId) {
+        // Org admin: fetch org users
+        return organizationService.getOrganizationUsers(currentOrgId);
+      } else {
+        throw new Error("Invalid user context");
+      }
+    },
+    enabled: canManage,
   });
 
+  // Mutations: use org-scoped for org admins, platform for super_admin
   const createUserMutation = useMutation({
-    mutationFn: (userData: any) =>
-      organizationService.createUserInOrganization(currentOrgId!, userData),
+    mutationFn: (userData: any) => {
+      if (isSuperAdmin && !currentOrgId) {
+        return adminService.createUser(userData);  // Assume adminService.createUser for platform users
+      } else {
+        return organizationService.createUserInOrganization(currentOrgId!, userData);
+      }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["organization-users", currentOrgId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["users", currentOrgId] });
       setCreateDialogOpen(false);
       resetForm();
     },
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ userId, userData }: { userId: number; userData: any }) =>
-      organizationService.updateUserInOrganization(
-        currentOrgId!,
-        userId,
-        userData,
-      ),
+    mutationFn: ({ userId, userData }: { userId: number; userData: any }) => {
+      if (isSuperAdmin && !currentOrgId) {
+        return adminService.updateUser(userId, userData);  // Assume adminService.updateUser
+      } else {
+        return organizationService.updateUserInOrganization(currentOrgId!, userId, userData);
+      }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["organization-users", currentOrgId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["users", currentOrgId] });
       setEditDialogOpen(false);
       setSelectedUser(null);
       resetForm();
@@ -144,34 +160,38 @@ const UserManagement: React.FC = () => {
 
   const userActionMutation = useMutation({
     mutationFn: ({ userId, action }: { userId: number; action: string }) => {
-      switch (action) {
-        case "delete":
-          return organizationService.deleteUserFromOrganization(
-            currentOrgId!,
-            userId,
-          );
-        case "activate":
-          return organizationService.updateUserInOrganization(
-            currentOrgId!,
-            userId,
-            { is_active: true }
-          );
-        case "deactivate":
-          return organizationService.updateUserInOrganization(
-            currentOrgId!,
-            userId,
-            { is_active: false }
-          );
-        case "reset":
-          return organizationService.resetUserPassword(currentOrgId!, userId);
-        default:
-          throw new Error("Invalid action");
+      if (isSuperAdmin && !currentOrgId) {
+        // Super admin actions on platform users
+        switch (action) {
+          case "delete":
+            return adminService.deleteUser(userId);
+          case "activate":
+            return adminService.updateUser(userId, { is_active: true });
+          case "deactivate":
+            return adminService.updateUser(userId, { is_active: false });
+          case "reset":
+            return adminService.resetUserPassword(userId);
+          default:
+            throw new Error("Invalid action");
+        }
+      } else {
+        // Org admin actions
+        switch (action) {
+          case "delete":
+            return organizationService.deleteUserFromOrganization(currentOrgId!, userId);
+          case "activate":
+            return organizationService.updateUserInOrganization(currentOrgId!, userId, { is_active: true });
+          case "deactivate":
+            return organizationService.updateUserInOrganization(currentOrgId!, userId, { is_active: false });
+          case "reset":
+            return organizationService.resetUserPassword(currentOrgId!, userId);
+          default:
+            throw new Error("Invalid action");
+        }
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["organization-users", currentOrgId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["users", currentOrgId] });
       setActionDialogOpen(false);
       setSelectedUser(null);
       setActionType(null);
@@ -181,13 +201,14 @@ const UserManagement: React.FC = () => {
     },
   });
 
-  // Ensure we have a valid organization ID
-  if (!currentOrgId) {
+  // Title based on context
+  const pageTitle = isSuperAdmin && !currentOrgId ? "App User Management" : "Organization User Management";
+
+  // If loading or no context, show appropriate message
+  if (usersLoading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          Organization context not available. Please refresh the page.
-        </Alert>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'center' }}>
+        <CircularProgress />
       </Container>
     );
   }
@@ -199,6 +220,17 @@ const UserManagement: React.FC = () => {
         <Alert severity="error">
           You don&apos;t have permission to manage users. Only organization
           administrators can manage users.
+        </Alert>
+      </Container>
+    );
+  }
+
+  // If no org context and not super admin, show error
+  if (!isSuperAdmin && !currentOrgId) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error">
+          Organization context not available. Please refresh the page.
         </Alert>
       </Container>
     );
@@ -338,16 +370,11 @@ const UserManagement: React.FC = () => {
         >
           <Box>
             <Typography variant="h4" component="h1">
-              User Management
+              {pageTitle}
             </Typography>
           <Typography variant="subtitle1" color="text.secondary">
-            Managing users for{" "}
-            {user?.is_super_admin
-              ? "all organizations"
-              : "your organization"}
-            {currentOrgId > 0 &&
-              !user?.is_super_admin &&
-              ` (ID: ${currentOrgId})`}
+            Managing {isSuperAdmin && !currentOrgId ? "platform" : "organization"} users
+            {currentOrgId ? ` (ID: ${currentOrgId})` : ""}
           </Typography>
         </Box>
         <Button
