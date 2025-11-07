@@ -250,7 +250,6 @@ class RBACService:
                 return existing
         
         assignment = UserRole(
-            organization_id=user.organization_id,
             user_id=user_id,
             role_id=role_id,
             assigned_by_id=assigned_by_id

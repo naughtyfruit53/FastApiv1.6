@@ -14,8 +14,6 @@ import {
   Box,
   Typography,
 } from '@mui/material';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { toast } from 'react-toastify';
 import {
   MODULE_BUNDLES,
   getSelectedBundlesFromModules,
@@ -26,7 +24,10 @@ import {
   updateOrgEntitlements,
   UpdateEntitlementsRequest,
 } from '../services/entitlementsApi';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import { useInvalidateEntitlements } from '../hooks/useEntitlements';
+import { useAuth } from '../context/AuthContext';  // Add this import for auth context
 
 interface ModuleSelectionModalProps {
   open: boolean;
@@ -35,6 +36,8 @@ interface ModuleSelectionModalProps {
   orgName?: string;
   token?: string; // Auth token for API calls (optional, fallback to localStorage)
   isSuperAdmin?: boolean; // Whether the current user is a super admin
+  selectedModules?: { [key: string]: boolean }; // For creation mode
+  onChange?: (modules: { [key: string]: boolean }) => void; // For creation mode
 }
 
 const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
@@ -44,13 +47,17 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
   orgName,
   token: propToken,
   isSuperAdmin = false,
+  selectedModules: propSelectedModules,
+  onChange,
 }) => {
+  const { user } = useAuth();  // Get user from auth context
+  const effectiveIsSuperAdmin = isSuperAdmin || user?.is_super_admin || false;  // Use prop or context
   const [selectedBundles, setSelectedBundles] = useState<Set<string>>(new Set());
   const { invalidateEntitlements } = useInvalidateEntitlements();
-  const localToken = localStorage.getItem('access_token') || ''; // Fallback if no prop token
+  const localToken = typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : '';  // Safe check
   const authToken = propToken || localToken;
 
-  // Fetch current entitlements
+  // Fetch current entitlements if orgId provided (edit mode)
   const { data: entitlementsData, isLoading, isError } = useQuery({
     queryKey: ['admin-entitlements', orgId],
     queryFn: () => {
@@ -63,9 +70,14 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
     },
   });
 
-  // Initialize selected bundles from current entitlements
+  // Initialize selected bundles
   useEffect(() => {
-    if (entitlementsData) {
+    if (propSelectedModules) {
+      // Creation mode: use prop modules
+      const bundles = getSelectedBundlesFromModules(Object.keys(propSelectedModules).filter(key => propSelectedModules[key]));
+      setSelectedBundles(new Set(bundles));
+    } else if (entitlementsData) {
+      // Edit mode: use fetched data
       const enabledModules = entitlementsData.entitlements
         .filter((ent) => ent.status === 'enabled' || ent.status === 'trial')
         .map((ent) => ent.module_key);
@@ -73,9 +85,9 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
       const bundles = getSelectedBundlesFromModules(enabledModules);
       setSelectedBundles(new Set(bundles));
     }
-  }, [entitlementsData]);
+  }, [entitlementsData, propSelectedModules]);
 
-  // Update mutation
+  // Update mutation (only for edit mode)
   const updateMutation = useMutation({
     mutationFn: async (request: UpdateEntitlementsRequest) => {
       if (!orgId || !authToken) throw new Error('Missing orgId or token');
@@ -101,9 +113,32 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
       newSelected.add(bundleKey);
     }
     setSelectedBundles(newSelected);
+    
+    // If in creation mode, update parent state
+    if (onChange) {
+      // Convert bundles back to modules
+      const newModules: { [key: string]: boolean } = {};
+      newSelected.forEach(bundle => {
+        MODULE_BUNDLES.find(b => b.key === bundle)?.modules.forEach(mod => {
+          newModules[mod] = true;
+        });
+      });
+      onChange(newModules);
+    }
   };
 
   const handleSave = () => {
+    if (!effectiveIsSuperAdmin) {
+      toast.warn('Only super admins can save module changes');
+      return;
+    }
+    
+    if (onChange) {
+      // Creation mode: changes already propagated via toggle
+      onClose();
+      return;
+    }
+    
     if (!entitlementsData) {
       toast.warn('Cannot save: Current module data not loaded');
       return;
@@ -142,7 +177,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
   };
 
   // Computed property for checkbox disabled state
-  const isCheckboxDisabled = !isSuperAdmin || isLoading || updateMutation.isPending;
+  const isCheckboxDisabled = !effectiveIsSuperAdmin || isLoading || updateMutation.isPending;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -150,7 +185,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
         Module Bundle Selection {orgName ? `- ${orgName}` : ''}
       </DialogTitle>
       <DialogContent>
-        {!isSuperAdmin && (
+        {!effectiveIsSuperAdmin && (
           <Alert severity="warning" sx={{ mb: 2 }}>
             <Typography variant="body2" fontWeight="bold" sx={{ mb: 0.5 }}>
               Super Admin Access Required
@@ -178,7 +213,7 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
         ) : null}
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {isSuperAdmin 
+          {effectiveIsSuperAdmin 
             ? 'Select the module bundles to enable for this organization. Each bundle activates multiple related modules.'
             : 'View the current module bundles for this organization. Only super admins can modify module entitlements.'
           }
@@ -210,9 +245,9 @@ const ModuleSelectionModal: React.FC<ModuleSelectionModalProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={updateMutation.isPending}>
-          {isSuperAdmin ? 'Cancel' : 'Close'}
+          {effectiveIsSuperAdmin ? 'Cancel' : 'Close'}
         </Button>
-        {isSuperAdmin && (
+        {effectiveIsSuperAdmin && (
           <Button
             onClick={handleSave}
             variant="contained"

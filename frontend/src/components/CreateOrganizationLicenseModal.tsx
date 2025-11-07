@@ -25,6 +25,7 @@ import { useForm } from "react-hook-form";
 import { organizationService } from "../services/organizationService"; // Adjust if needed
 import { usePincodeLookup } from "../hooks/usePincodeLookup";
 import ModuleSelectionModal from './ModuleSelectionModal'; // Import reusable modal
+import { useAuth } from "../context/AuthContext";  // Add this import
 
 interface CreateOrganizationLicenseModalProps {
   open: boolean;
@@ -124,6 +125,7 @@ const stateToCodeMap: { [key: string]: string } = {
 const CreateOrganizationLicenseModal: React.FC<
   CreateOrganizationLicenseModalProps
 > = ({ open, onClose, onSuccess }) => {
+  const { user } = useAuth();  // Add this to get user context
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<any | null>(null);
@@ -162,6 +164,7 @@ const CreateOrganizationLicenseModal: React.FC<
   } = usePincodeLookup();
   const pin_code = watch("pin_code");
   const state = watch("state");
+  const state_code = watch("state_code");
   // Auto-populate city, state, and state_code when pin code changes
   useEffect(() => {
     if (pin_code && pin_code.length === 6 && /^\d{6}$/.test(pin_code)) {
@@ -173,18 +176,21 @@ const CreateOrganizationLicenseModal: React.FC<
     if (pincodeData) {
       setValue("city", pincodeData.city, { shouldValidate: true });
       setValue("state", pincodeData.state, { shouldValidate: true });
-      setValue("state_code", pincodeData.state_code, { shouldValidate: true });
+      setValue("state_code", pincodeData.state_code || stateToCodeMap[pincodeData.state.trim()] || '', { shouldValidate: true });
     }
   }, [pincodeData, setValue]);
-  // Auto-populate state_code when state changes
+  // Enhanced state change handler: always set state_code if missing
   useEffect(() => {
-    if (state) {
-      const code = stateToCodeMap[state];
+    if (state && !state_code) {
+      const trimmedState = state.trim();
+      const code = stateToCodeMap[trimmedState];
       if (code) {
         setValue("state_code", code, { shouldValidate: true });
+      } else {
+        setError(`No state code found for "${trimmedState}". Please select a valid state.`);
       }
     }
-  }, [state, setValue]);
+  }, [state, state_code, setValue]);
   const handleClose = () => {
     reset();
     setError(null);
@@ -202,11 +208,22 @@ const CreateOrganizationLicenseModal: React.FC<
       timestamp: new Date().toISOString(),
       note: "Organization context managed by backend session",
     });
-    // Validate required fields that might not be caught by form validation
-    if (!data.state) {
-      setError("Please select a state");
-      setLoading(false);
-      return;
+    // Enhanced validation before submission
+    if (!data.state_code) {
+      if (data.state) {
+        const code = stateToCodeMap[data.state.trim()];
+        if (code) {
+          data.state_code = code;
+        } else {
+          setError("Invalid state selected - no matching state code found.");
+          setLoading(false);
+          return;
+        }
+      } else {
+        setError("State and state code are required.");
+        setLoading(false);
+        return;
+      }
     }
     // Prepare the data for submission
     const submissionData = {
@@ -587,7 +604,7 @@ const CreateOrganizationLicenseModal: React.FC<
                           label="State"
                           value={watch("state") || ""}
                           onChange={(e) =>
-                            setValue("state", e.target.value, {
+                            setValue("state", e.target.value as string, {
                               shouldValidate: true,
                             })
                           }
@@ -723,6 +740,7 @@ const CreateOrganizationLicenseModal: React.FC<
         onClose={() => setModuleDialogOpen(false)}
         selectedModules={selectedModules}
         onChange={setSelectedModules}
+        isSuperAdmin={user?.is_super_admin}  // Add this prop
       />
       {/* License Activation Dialog */}
       <Dialog

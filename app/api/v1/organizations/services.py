@@ -36,6 +36,45 @@ def generate_subdomain(name: str) -> str:
         subdomain = f"{subdomain}-{secrets.choice(string.ascii_lowercase + string.digits) * (3 - len(subdomain))}"
     return subdomain
 
+# State to GST state code mapping (same as frontend)
+state_to_code_map = {
+    "Andhra Pradesh": "37",
+    "Arunachal Pradesh": "12",
+    "Assam": "18",
+    "Bihar": "10",
+    "Chhattisgarh": "22",
+    "Goa": "30",
+    "Gujarat": "24",
+    "Haryana": "06",
+    "Himachal Pradesh": "02",
+    "Jammu and Kashmir": "01",
+    "Jharkhand": "20",
+    "Karnataka": "29",
+    "Kerala": "32",
+    "Madhya Pradesh": "23",
+    "Maharashtra": "27",
+    "Manipur": "14",
+    "Meghalaya": "17",
+    "Mizoram": "15",
+    "Nagaland": "13",
+    "Odisha": "21",
+    "Punjab": "03",
+    "Rajasthan": "08",
+    "Sikkim": "11",
+    "Tamil Nadu": "33",
+    "Telangana": "36",
+    "Tripura": "16",
+    "Uttar Pradesh": "09",
+    "Uttarakhand": "05",
+    "West Bengal": "19",
+    "Andaman and Nicobar Islands": "35",
+    "Chandigarh": "04",
+    "Dadra and Nagar Haveli and Daman and Diu": "26",
+    "Lakshadweep": "31",
+    "Delhi": "07",
+    "Puducherry": "34",
+    "Ladakh": "38",
+}
 
 class OrganizationService:
     """Business logic for organization management"""
@@ -217,6 +256,17 @@ class OrganizationService:
                             detail=f"Invalid module '{module}'. Valid modules: {', '.join(valid_modules)}"
                         )
             
+            # Set state_code if missing and state provided
+            if license_data.state and not license_data.state_code:
+                state_code = state_to_code_map.get(license_data.state.strip())
+                if state_code:
+                    license_data.state_code = state_code
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"No state code found for state '{license_data.state}'. Please provide state_code manually."
+                    )
+            
             organization = Organization(
                 name=license_data.organization_name,
                 subdomain=subdomain,
@@ -234,7 +284,8 @@ class OrganizationService:
                 license_type=license_data.license_type,
                 license_issued_date=datetime.utcnow(),
                 license_expiry_date=datetime.utcnow() + timedelta(days=30) if license_data.license_duration_months else None,
-                license_duration_months=license_data.license_duration_months
+                license_duration_months=license_data.license_duration_months,
+                state_code=license_data.state_code  # Ensure it's set
             )
             db.add(organization)
             await db.flush()
@@ -281,15 +332,15 @@ class OrganizationService:
             
             result = await db.execute(select(ServiceRole).filter_by(
                 organization_id=organization.id,
-                name='admin'
+                name='org_admin'
             ))
             admin_role = result.scalars().first()
             if admin_role:
                 await rbac_service.assign_role_to_user(super_admin_user.id, admin_role.id)
-                logger.info(f"Successfully assigned admin role to user {super_admin_user.email}")
+                logger.info(f"Successfully assigned org_admin role to user {super_admin_user.email}")
             else:
-                logger.error(f"Admin role not found after initialization for org {organization.id}")
-                raise HTTPException(status_code=500, detail="Failed to initialize RBAC roles properly")
+                logger.error(f"Org Admin role not found after initialization for org {organization.id}")
+                raise HTTPException(status_code=500, detail=f"Organization Admin role not found after initialization for org {organization.id}")
             
             # Setup comprehensive RBAC for org_admin - grant full module access
             try:
@@ -301,7 +352,7 @@ class OrganizationService:
                 )
                 logger.info(f"Granted full module access to org_admin {super_admin_user.email}")
             except Exception as rbac_error:
-                logger.warning(f"RBAC setup warning for org_admin {super_admin_user.id}: {rbac_error}")
+                logger.warning(f"RBAC setup warning for org {organization.id}: {rbac_error}")
             
             # Initialize entitlements for the new organization
             try:
@@ -338,7 +389,8 @@ class OrganizationService:
             return OrganizationLicenseResponse(
                 license_type=organization.license_type,
                 license_issued_date=organization.license_issued_date,
-                license_expiry_date=organization.license_expiry_date
+                license_expiry_date=organization.license_expiry_date,
+                license_status=organization.status  # Add this derived status
             )
         except HTTPException:
             raise
