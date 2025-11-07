@@ -139,7 +139,9 @@ async def create_company(
     
     try:
         # Validate and set organization_id in data
-        data = TenantQueryFilter.validate_organization_data(company.model_dump(), current_user)
+        current_user, org_id = auth
+        data = company.model_dump()
+        data['organization_id'] = org_id
         
         # Get organization to check limits
         stmt = select(Organization).where(Organization.id == data['organization_id'])
@@ -425,7 +427,7 @@ async def import_companies_excel(
             message=f"Import completed successfully. {created_count} companies created, {updated_count} updated.",
             total_processed=len(records),
             created=created_count,
-            updated=updated_count,
+            updated=created_count,
             errors=errors
         )
         

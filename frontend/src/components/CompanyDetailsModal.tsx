@@ -1,3 +1,4 @@
+// frontend/src/components/CompanyDetailsModal.tsx
 'use client'; // Added 'use client' for client-side hooks
 
 import React, { useState, useEffect } from "react";
@@ -429,16 +430,6 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
                       }}
                     />
                   </Grid>
-
-                  {/* Removed Alert for pincode auto-population as per request */}
-
-                  {pincodeError && (
-                    <Grid item xs={12}>
-                      <Alert severity="warning" sx={{ mt: 1 }}>
-                        {pincodeError}
-                      </Alert>
-                    </Grid>
-                  )}
 
                   <Grid item xs={12} sm={6}>
                     <TextField

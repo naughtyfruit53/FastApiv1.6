@@ -19,6 +19,7 @@ import { useState, useEffect } from "react"; // Added import for useState and us
 import Head from 'next/head';  // Added import for Head to handle meta tags
 import AppLayout from "../components/AppLayout"; // Global layout with MegaMenu
 // Removed ChatbotNavigator import as it may be causing the undefined component error
+import CompanySetupGuard from "../components/CompanySetupGuard";  // NEW: Import CompanySetupGuard
 
 // Create modern theme using our design system
 const theme = createTheme({
@@ -192,7 +193,9 @@ function MyApp({ Component, pageProps }: AppProps) {
                     <ClientOnly>
                       {/* Global AppLayout wraps all pages and conditionally shows MegaMenu */}
                       <AppLayout>
-                        {getLayout(<Component {...pageProps} />)}
+                        <CompanySetupGuard>  {/* NEW: Wrapped with CompanySetupGuard to show modal on login if company details missing */}
+                          {getLayout(<Component {...pageProps} />)}
+                        </CompanySetupGuard>
                       </AppLayout>
                       <ToastContainer
                         position="top-right"

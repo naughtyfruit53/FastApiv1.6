@@ -1,4 +1,3 @@
-# app/services/rbac_permissions.py
 """
 Comprehensive Permission Definitions for RBAC System
 Defines all default permissions for modules and submodules
@@ -27,7 +26,7 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
     for module in get_all_modules():
         # Module-level permissions
         for action_key, action_name in basic_actions:
-            name = f"{module.lower()}_{action_key}"
+            name = f"{module.lower()}.{action_key}"  # CHANGED: Use dot (.) instead of underscore (_) for consistency with frontend checks and error messages
             display_name = f"{action_name} {module.capitalize()}"
             description = f"{action_name} access in {module.capitalize()} module"
             permissions.append((name, display_name, description, module.lower(), action_key))
@@ -36,7 +35,7 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
         submodules = get_module_submodules(module)
         for sub in submodules:
             for action_key, action_name in basic_actions:
-                name = f"{module.lower()}_{sub}_{action_key}"
+                name = f"{module.lower()}.{sub}.{action_key}"  # CHANGED: Use dot (.) format
                 display_name = f"{action_name} {sub.capitalize()} in {module.capitalize()}"
                 description = f"{action_name} access to {sub.capitalize()} in {module.capitalize()}"
                 permissions.append((name, display_name, description, f"{module.lower()}_{sub}", action_key))
@@ -44,14 +43,14 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
     # Add specific permissions not covered by the loop
     # Settings module
     permissions.append((
-        "settings_view",
+        "settings.view",
         "View Settings",
         "View organization settings",
         "settings",
         "view"
     ))
     permissions.append((
-        "settings_update",
+        "settings.update",
         "Update Settings",
         "Update organization settings",
         "settings",
@@ -60,14 +59,14 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
     
     # Admin module
     permissions.append((
-        "admin_view",
+        "admin.view",
         "View Admin Panel",
         "Access to admin dashboard",
         "admin",
         "view"
     ))
     permissions.append((
-        "admin_manage",
+        "admin.manage",
         "Manage Admin",
         "Full admin management access",
         "admin",
@@ -76,14 +75,14 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
     
     # Email module
     permissions.append((
-        "email_view",
+        "email.view",
         "View Email",
         "Access to email inbox and views",
         "email",
         "view"
     ))
     permissions.append((
-        "email_compose",
+        "email.compose",
         "Compose Email",
         "Create and send emails",
         "email",
@@ -92,11 +91,20 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
     
     # Add more specific permissions as needed from menu requirements
     permissions.append((
-        "crm_admin",
+        "crm.admin",
         "CRM Admin Access",
         "Administrative access to CRM module",
         "crm",
         "admin"
+    ))
+    
+    # NEW: Add dashboard permission to fix 'dashboard.read' denial
+    permissions.append((
+        "dashboard.read",
+        "Read Dashboard",
+        "Access to view and read dashboard data",
+        "dashboard",
+        "read"
     ))
     
     return permissions
@@ -114,8 +122,8 @@ def get_default_role_permissions() -> dict[str, list[str]]:  # CHANGED Dict[str,
         "management": all_permissions,  # NEW: Added management with full access
         "manager": [
             p for p in all_permissions 
-            if not p.startswith("admin_") 
-            and not p.startswith("settings_") 
+            if not p.startswith("admin.")  # CHANGED: Use dot format
+            and not p.startswith("settings.") 
             and "delete" not in p  # No delete for managers
         ],
         "support": [
@@ -128,5 +136,5 @@ def get_default_role_permissions() -> dict[str, list[str]]:  # CHANGED Dict[str,
             if "read" in p or "view" in p
         ],
         # Explicitly add permissions for org_admin role
-        "org_admin": all_permissions + ["settings_view", "settings_update"],
+        "org_admin": all_permissions + ["settings.view", "settings.update", "dashboard.read"],  # NEW: Explicitly add dashboard.read
     }

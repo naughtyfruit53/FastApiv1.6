@@ -137,9 +137,12 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     }
     const permUnderscore = `${module}_${action}`;
     const permColon = `${module}:${action}`;
-    const hasPerm = permissions.includes(permUnderscore) || permissions.includes(permColon);
+    const permDot = `${module}.${action}`;  // NEW: Added dot format to match backend convention
+    const hasPerm = permissions.includes(permUnderscore) || 
+                    permissions.includes(permColon) || 
+                    permissions.includes(permDot);
     
-    console.log(`Checking permission: ${permUnderscore} or ${permColon} - Result: ${hasPerm} (isSuperAdmin: ${isSuperAdmin})`);
+    console.log(`Checking permission: ${permUnderscore} or ${permColon} or ${permDot} - Result: ${hasPerm} (isSuperAdmin: ${isSuperAdmin})`);
     
     return hasPerm;
   }, [permissions, isSuperAdmin]);
@@ -147,7 +150,7 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
   /**
    * Check if user has any of the specified permissions
    * STRICT ENFORCEMENT: No bypass for super admins
-   * @param permissionList - Array of permission strings (e.g., ['voucher_read', 'voucher_create'])
+   * @param permissionList - Array of permission strings (e.g., ['voucher.read', 'voucher.create'])
    * @returns true if user has at least one of the explicit permissions
    */
   const hasAnyPermission = useCallback((permissionList: string[]): boolean => {
@@ -156,7 +159,7 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     }
     return permissionList.some(permission => {
       // Support both formats in list
-      const [module, action] = permission.split(/[_:]/); // split on _ or :
+      const [module, action] = permission.split(/[_:.]/); // NEW: Added dot (.) to splitter regex
       return hasPermission(module, action);
     });
   }, [hasPermission, isSuperAdmin]);
@@ -172,7 +175,7 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
       return true;
     }
     return permissionList.every(permission => {
-      const [module, action] = permission.split(/[_:]/);
+      const [module, action] = permission.split(/[_:.]/); // NEW: Added dot (.) to splitter regex
       return hasPermission(module, action);
     });
   }, [hasPermission, isSuperAdmin]);
@@ -242,7 +245,7 @@ export function withPermission<P extends object>(
         <div style={{ padding: '20px', textAlign: 'center' }}>
           <h2>Access Denied</h2>
           <p>You don't have permission to access this resource.</p>
-          <p>Required permission: <code>{module}_{action}</code></p>
+          <p>Required permission: <code>{module}.{action}</code></p>  {/* CHANGED: Use dot format in message */}
           <p>Please contact your administrator to request access.</p>
         </div>
       );
@@ -252,4 +255,4 @@ export function withPermission<P extends object>(
   };
 }
 
-export default PermissionContext;
+export default PermissionProvider;
