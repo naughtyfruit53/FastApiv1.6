@@ -281,15 +281,15 @@ class PermissionChecker:
         # Extract attributes consistently for both ORM and Pydantic
         role = platform_user.role.lower() if hasattr(platform_user, 'role') else ''
         is_super_admin = getattr(platform_user, 'is_super_admin', False)
-        user_type = type(platform_user).__name__
         user_id = getattr(platform_user, 'id', 'None')
         email = getattr(platform_user, 'email', 'None')
         organization_id = getattr(platform_user, 'organization_id', 'None')
         
-        logger.info(f"Permission check for {permission}: user_type={user_type}, id={user_id}, email={email}, role={role}, is_super_admin={is_super_admin}, organization_id={organization_id}")
+        logger.info(f"Permission check for {permission}: id={user_id}, email={email}, role={role}, is_super_admin={is_super_admin}, organization_id={organization_id}")
 
-        # For organization users (User or UserInDB)
-        if user_type in ['User', 'UserInDB']:
+        # Use attribute check instead of type name for robustness
+        if hasattr(platform_user, 'organization_id') and platform_user.organization_id is not None:
+            # Organization user (User or UserInDB)
             if is_super_admin or role == 'super_admin':
                 logger.info("Permission granted: Organization user is super admin")
                 return True
@@ -298,8 +298,8 @@ class PermissionChecker:
             logger.info(f"Regular permission check result: {granted}")
             return granted
         
-        # For platform users (PlatformUser or PlatformUserInDB)
-        if user_type in ['PlatformUser', 'PlatformUserInDB']:
+        else:
+            # Platform user (PlatformUser or PlatformUserInDB)
             if role == 'super_admin':
                 logger.info("Permission granted: Platform user is super admin")
                 return True
@@ -307,9 +307,6 @@ class PermissionChecker:
             granted = permission in platform_permissions
             logger.info(f"Platform permission check result: {granted}, permissions: {platform_permissions}")
             return granted
-        
-        logger.warning("Permission denied: Unknown user type")
-        return False
     
     @staticmethod
     def require_permission(

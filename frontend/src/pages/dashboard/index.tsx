@@ -7,7 +7,7 @@ import { useMobileDetection } from "../../hooks/useMobileDetection";  // Added i
 import AppSuperAdminDashboard from "./AppSuperAdminDashboard";
 import OrgDashboard from "./OrgDashboard";
 
-import { ProtectedPage } from '../components/ProtectedPage';
+import { ProtectedPage } from '../../components/ProtectedPage';
 const Dashboard: React.FC = () => {
   console.count('Render: Dashboard');
   const { productId, vendorId } = useRouter().query;  // Added to prevent unused warning if needed

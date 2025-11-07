@@ -132,6 +132,9 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
    * @returns true if user has the explicit permission
    */
   const hasPermission = useCallback((module: string, action: string): boolean => {
+    if (isSuperAdmin) {
+      return true;
+    }
     const permUnderscore = `${module}_${action}`;
     const permColon = `${module}:${action}`;
     const hasPerm = permissions.includes(permUnderscore) || permissions.includes(permColon);
@@ -148,12 +151,15 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
    * @returns true if user has at least one of the explicit permissions
    */
   const hasAnyPermission = useCallback((permissionList: string[]): boolean => {
+    if (isSuperAdmin) {
+      return true;
+    }
     return permissionList.some(permission => {
       // Support both formats in list
       const [module, action] = permission.split(/[_:]/); // split on _ or :
       return hasPermission(module, action);
     });
-  }, [hasPermission]);
+  }, [hasPermission, isSuperAdmin]);
 
   /**
    * Check if user has all of the specified permissions
@@ -162,11 +168,14 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
    * @returns true if user has all of the explicit permissions
    */
   const hasAllPermissions = useCallback((permissionList: string[]): boolean => {
+    if (isSuperAdmin) {
+      return true;
+    }
     return permissionList.every(permission => {
       const [module, action] = permission.split(/[_:]/);
       return hasPermission(module, action);
     });
-  }, [hasPermission]);
+  }, [hasPermission, isSuperAdmin]);
 
   /**
    * Manually refresh permissions

@@ -39,9 +39,7 @@ interface AuthContextType {
   refreshPermissions: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export default AuthContext;  // NEW: Changed to default export for the context to resolve undefined import issues
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);  // Changed to named export
 
 export function AuthProvider({ children }: { children: ReactNode }): any {
   const [user, setUser] = useState<User | null>(null);

@@ -22,11 +22,13 @@ import {
   canManageRole,
   validateOrgContext,
   userBelongsToOrg,
+} from '../utils/permissionHelpers';
+import {
   type UserPermissions,
   type OrgEntitlements,
   type PermissionCheck,
   EnforcementLevel,
-} from '../utils/permissionHelpers';
+} from '../constants/rbac';
 import { ACCESS_TOKEN_KEY } from '../constants/auth';
 
 /**
@@ -152,12 +154,21 @@ export function usePermissionCheck() {
 
   const checkModuleAccess = useCallback(
     (moduleKey: string, action: string = 'read'): PermissionCheck => {
-      // Layer 1: Tenant
-      if (!hasTenantContext) {
+      // Layer 1: Tenant - Allow super_admin without tenant context
+      const isSuper = checkIsSuperAdmin();
+      if (!hasTenantContext && !isSuper) {
         return {
           hasPermission: false,
           reason: 'Organization context is required',
           enforcementLevel: EnforcementLevel.TENANT,
+        };
+      }
+
+      // Full bypass for super_admin
+      if (isSuper) {
+        return {
+          hasPermission: true,
+          enforcementLevel: EnforcementLevel.RBAC,
         };
       }
 
@@ -195,7 +206,7 @@ export function usePermissionCheck() {
         enforcementLevel: EnforcementLevel.RBAC,
       };
     },
-    [hasTenantContext, userPermissions, entitlements]
+    [hasTenantContext, userPermissions, entitlements, checkIsSuperAdmin]
   );
 
   const checkSubmoduleAccess = useCallback(
@@ -204,12 +215,21 @@ export function usePermissionCheck() {
       submoduleKey: string,
       action: string = 'read'
     ): PermissionCheck => {
-      // Layer 1: Tenant
-      if (!hasTenantContext) {
+      // Layer 1: Tenant - Allow super_admin without tenant context
+      const isSuper = checkIsSuperAdmin();
+      if (!hasTenantContext && !isSuper) {
         return {
           hasPermission: false,
           reason: 'Organization context is required',
           enforcementLevel: EnforcementLevel.TENANT,
+        };
+      }
+
+      // Full bypass for super_admin
+      if (isSuper) {
+        return {
+          hasPermission: true,
+          enforcementLevel: EnforcementLevel.RBAC,
         };
       }
 
@@ -247,7 +267,7 @@ export function usePermissionCheck() {
         enforcementLevel: EnforcementLevel.RBAC,
       };
     },
-    [hasTenantContext, userPermissions, entitlements]
+    [hasTenantContext, userPermissions, entitlements, checkIsSuperAdmin]
   );
 
   // ============================================================================
@@ -259,8 +279,10 @@ export function usePermissionCheck() {
   }, [entitlementsLoading, authContext?.loading]);
 
   const isReady = useMemo(() => {
-    return !isLoading && hasTenantContext && user !== null;
-  }, [isLoading, hasTenantContext, user]);
+    // For super_admin, ready even without tenant context
+    const isSuper = checkIsSuperAdmin();
+    return !isLoading && (hasTenantContext || isSuper) && user !== null;
+  }, [isLoading, hasTenantContext, user, checkIsSuperAdmin]);
 
   // ============================================================================
   // Return API
