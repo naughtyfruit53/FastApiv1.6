@@ -38,38 +38,40 @@ const SLAComplianceAnalyticsPage: NextPage = () => {
   if (!user || !hasPermission) {
     return (
       <ProtectedPage moduleKey="service" action="read">
-      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          Access Denied: Service Reports Read permission required.
-        </Alert>
-      </Container>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Alert severity="error">
+            Access Denied: Service Reports Read permission required.
+          </Alert>
+        </Container>
+      </ProtectedPage>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{ display: "flex", alignItems: "center", gap: 2 }}
-        >
-          <Timeline color="primary" />
-          SLA Compliance Analytics
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Monitor SLA compliance rates, track breaches, and analyze service
-          level performance against defined targets.
-        </Typography>
-      </Box>
+    <ProtectedPage moduleKey="service" action="read">
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="h4"
+            component="h1"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center", gap: 2 }}
+          >
+            <Timeline color="primary" />
+            SLA Compliance Analytics
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Monitor SLA compliance rates, track breaches, and analyze service
+            level performance against defined targets.
+          </Typography>
+        </Box>
 
-      <Card>
-        <CardContent>
-          <SLAComplianceChart />
-        </CardContent>
-      </Card>
-    </Container>
+        <Card>
+          <CardContent>
+            <SLAComplianceChart />
+          </CardContent>
+        </Card>
+      </Container>
     </ProtectedPage>
   );
 };

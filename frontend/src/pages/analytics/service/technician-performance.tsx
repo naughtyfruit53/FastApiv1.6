@@ -38,38 +38,40 @@ const TechnicianPerformanceAnalyticsPage: NextPage = () => {
   if (!user || !hasPermission) {
     return (
       <ProtectedPage moduleKey="service" action="read">
-      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          Access Denied: Service Reports Read permission required.
-        </Alert>
-      </Container>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Alert severity="error">
+            Access Denied: Service Reports Read permission required.
+          </Alert>
+        </Container>
+      </ProtectedPage>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{ display: "flex", alignItems: "center", gap: 2 }}
-        >
-          <Engineering color="primary" />
-          Technician Performance Analytics
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Monitor and analyze technician performance metrics, efficiency, and
-          productivity across your service team.
-        </Typography>
-      </Box>
+    <ProtectedPage moduleKey="service" action="read">
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="h4"
+            component="h1"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center", gap: 2 }}
+          >
+            <Engineering color="primary" />
+            Technician Performance Analytics
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Monitor and analyze technician performance metrics, efficiency, and
+            productivity across your service team.
+          </Typography>
+        </Box>
 
-      <Card>
-        <CardContent>
-          <TechnicianPerformanceChart />
-        </CardContent>
-      </Card>
-    </Container>
+        <Card>
+          <CardContent>
+            <TechnicianPerformanceChart />
+          </CardContent>
+        </Card>
+      </Container>
     </ProtectedPage>
   );
 };

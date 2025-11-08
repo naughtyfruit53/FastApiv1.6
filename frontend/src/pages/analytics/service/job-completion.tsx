@@ -38,38 +38,40 @@ const JobCompletionAnalyticsPage: NextPage = () => {
   if (!user || !hasPermission) {
     return (
       <ProtectedPage moduleKey="service" action="read">
-      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          Access Denied: Service Reports Read permission required.
-        </Alert>
-      </Container>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Alert severity="error">
+            Access Denied: Service Reports Read permission required.
+          </Alert>
+        </Container>
+      </ProtectedPage>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{ display: "flex", alignItems: "center", gap: 2 }}
-        >
-          <Assignment color="primary" />
-          Job Completion Analytics
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Track job completion rates, trends, and performance metrics across
-          your service operations.
-        </Typography>
-      </Box>
+    <ProtectedPage moduleKey="service" action="read">
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="h4"
+            component="h1"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center", gap: 2 }}
+          >
+            <Assignment color="primary" />
+            Job Completion Analytics
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Track job completion rates, trends, and performance metrics across
+            your service operations.
+          </Typography>
+        </Box>
 
-      <Card>
-        <CardContent>
-          <JobCompletionChart />
-        </CardContent>
-      </Card>
-    </Container>
+        <Card>
+          <CardContent>
+            <JobCompletionChart />
+          </CardContent>
+        </Card>
+      </Container>
     </ProtectedPage>
   );
 };
