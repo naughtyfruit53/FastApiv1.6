@@ -15,7 +15,7 @@ import { Timeline } from "@mui/icons-material";
 import { useAuth } from "../../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import SLAComplianceChart from "../../../components/ServiceAnalytics/SLAComplianceChart";
-import { ProtectedPage } from '../../components/ProtectedPage';
+import { ProtectedPage } from '../../../components/ProtectedPage';
 import {
   rbacService,
   SERVICE_PERMISSIONS,

@@ -15,7 +15,7 @@ import { Assignment } from "@mui/icons-material";
 import { useAuth } from "../../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import JobCompletionChart from "../../../components/ServiceAnalytics/JobCompletionChart";
-import { ProtectedPage } from '../../components/ProtectedPage';
+import { ProtectedPage } from '../../../components/ProtectedPage';
 import {
   rbacService,
   SERVICE_PERMISSIONS,

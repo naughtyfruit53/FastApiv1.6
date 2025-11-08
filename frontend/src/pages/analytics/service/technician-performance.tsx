@@ -15,7 +15,7 @@ import { Engineering } from "@mui/icons-material";
 import { useAuth } from "../../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import TechnicianPerformanceChart from "../../../components/ServiceAnalytics/TechnicianPerformanceChart";
-import { ProtectedPage } from '../../components/ProtectedPage';
+import { ProtectedPage } from '../../../components/ProtectedPage';
 import {
   rbacService,
   SERVICE_PERMISSIONS,
