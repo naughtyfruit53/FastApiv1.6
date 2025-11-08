@@ -184,7 +184,7 @@ const VoucherSettingsPage: React.FC = () => {
   }
 
   return (
-    <ProtectedPage moduleKey="settings" action="write">
+    <ProtectedPage moduleKey="settings" action="update">
       <DashboardLayout 
         title="Voucher Settings" 
         subtitle="Configure voucher numbering and formatting"
@@ -283,57 +283,57 @@ const VoucherSettingsPage: React.FC = () => {
                     >
                       <FormControlLabel 
                         value="never" 
-                      control={<Radio />} 
-                      label={
-                        <Box>
-                          <Typography>Never</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Continuous numbering (e.g., PO/2526/00001)
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel 
-                      value="annually" 
-                      control={<Radio />} 
-                      label={
-                        <Box>
-                          <Typography>Annually</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Reset every fiscal year (e.g., PO/2526/00001)
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel 
-                      value="quarterly" 
-                      control={<Radio />} 
-                      label={
-                        <Box>
-                          <Typography>Quarterly</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Reset every quarter (e.g., PO/2526/Q1/00001)
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel 
-                      value="monthly" 
-                      control={<Radio />} 
-                      label={
-                        <Box>
-                          <Typography>Monthly</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Reset every month (e.g., PO/2526/JAN/00001)
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </RadioGroup>
-                </FormControl>
-              </CardContent>
-            </Card>
-          </Grid>
+                        control={<Radio />} 
+                        label={
+                          <Box>
+                            <Typography>Never</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Continuous numbering (e.g., PO/2526/00001)
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                      <FormControlLabel 
+                        value="annually" 
+                        control={<Radio />} 
+                        label={
+                          <Box>
+                            <Typography>Annually</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Reset every fiscal year (e.g., PO/2526/00001)
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                      <FormControlLabel 
+                        value="quarterly" 
+                        control={<Radio />} 
+                        label={
+                          <Box>
+                            <Typography>Quarterly</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Reset every quarter (e.g., PO/2526/Q1/00001)
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                      <FormControlLabel 
+                        value="monthly" 
+                        control={<Radio />} 
+                        label={
+                          <Box>
+                            <Typography>Monthly</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Reset every month (e.g., PO/2526/JAN/00001)
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </RadioGroup>
+                  </FormControl>
+                </CardContent>
+              </Card>
+            </Grid>
           ) : (
             <Grid item xs={12} md={6}>
               <Card>
@@ -362,7 +362,7 @@ const VoucherSettingsPage: React.FC = () => {
                   Voucher PDF Template Style
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  Choose a professional template style for all your voucher PDFs. Each template includes bank details and terms & conditions.
+                  Choose a professional template style for all your voucher PDFs. Choose a professional template style for all your voucher PDFs. Each template includes bank details and terms & conditions.
                 </Typography>
 
                 <Grid container spacing={2} sx={{ mt: 1 }}>

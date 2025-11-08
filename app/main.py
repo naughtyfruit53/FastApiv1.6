@@ -333,7 +333,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "Access-Control-Allow-Origin": origin,
             "Access-Control-Allow-Credentials": "true",
             "Access-Control-Allow-Methods": "*",
-            "Access-Control-Allow-Headers": request.headers.get("access-control-request-headers", "*"),
+            "Access-Control-Allow-Headers": "*",
             "Vary": "Origin",
         }
     
@@ -478,6 +478,15 @@ def include_minimal_routers():
         logger.info("PDF generation router included unconditionally")
     except Exception as e:
         logger.error(f"Failed to import pdf_generation router: {str(e)}")
+        raise  # Make it core now
+
+    # Always include voucher_format_templates router unconditionally
+    try:
+        from app.api.v1.voucher_format_templates import router as voucher_templates_router
+        routers.append((voucher_templates_router, "/api/v1", ["voucher-templates"]))
+        logger.info("Voucher format templates router included unconditionally")
+    except Exception as e:
+        logger.error(f"Failed to import voucher_format_templates router: {str(e)}")
         raise  # Make it core now
 
     # Conditionally include AI analytics router
