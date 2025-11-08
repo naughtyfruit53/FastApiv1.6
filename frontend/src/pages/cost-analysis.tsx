@@ -216,8 +216,7 @@ const CostAnalysisPage: React.FC = () => {
       low: 'success'
     };
     return (
-      <ProtectedPage moduleKey="finance" action="read">
-      hip
+      <Chip
         label={priority.toUpperCase()}
         color={colors[priority]}
         size="small"
@@ -228,247 +227,248 @@ const CostAnalysisPage: React.FC = () => {
   if (loading) {
     return (
       <ProtectedPage moduleKey="finance" action="read">
-        ashboardLayout
-        title="Cost Analysis"
-        subtitle="Analyze spending patterns and get actionable insights"
-      >
-        <LinearProgress />
-      </DashboardLayout>
+        <DashboardLayout
+          title="Cost Analysis"
+          subtitle="Analyze spending patterns and get actionable insights"
+        >
+          <LinearProgress />
+        </DashboardLayout>
       </ProtectedPage>
     );
   }
   return (
-    <DashboardLayout
-      title="Cost Analysis"
-      subtitle="AI-powered insights to optimize spending and improve budget efficiency"
-    >
-      <Grid container spacing={3}>
-        {/* Key Metrics */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <TrendingUp color="primary" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Total Spend
-                </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold">
-                {formatCurrency(metrics.totalSpend)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                Across all cost centers
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <TrendingDown color={metrics.budgetVariance > 0 ? 'error' : 'success'} sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Budget Variance
-                </Typography>
-              </Box>
-              <Typography 
-                variant="h5" 
-                fontWeight="bold"
-                color={metrics.budgetVariance > 0 ? 'error' : 'success'}
-              >
-                {metrics.budgetVariance > 0 ? '+' : ''}{metrics.budgetVariance.toFixed(1)}%
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                {metrics.budgetVariance > 0 ? 'Over' : 'Under'} budget
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <CheckCircle color="info" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Avg Utilization
-                </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold" color="info.main">
-                {metrics.averageUtilization.toFixed(1)}%
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                Budget utilized
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <Warning color="warning" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Active Insights
-                </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold" color="warning.main">
-                {insights.filter(i => i.priority === 'high').length}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                High priority items
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Smart Insights */}
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Smart Insights & Recommendations
-              </Typography>
-              <Typography variant="body2" color="textSecondary" paragraph>
-                AI-powered analysis of your spending patterns and budget performance
-              </Typography>
-
-              {insights.length === 0 ? (
-                <Alert severity="success">
-                  <Typography variant="body2">
-                    No critical issues detected. Your budget management is on track!
-                  </Typography>
-                </Alert>
-              ) : (
-                <List>
-                  {insights.map((insight, index) => (
-                    <React.Fragment key={index}>
-                      <ListItem alignItems="flex-start">
-                        <ListItemIcon>
-                          {insight.icon}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box display="flex" alignItems="center" gap={1}>
-                              <Typography variant="subtitle2">{insight.title}</Typography>
-                              {getPriorityChip(insight.priority)}
-                            </Box>
-                          }
-                          secondary={
-                            <Typography variant="body2" color="text.secondary">
-                              {insight.description}
-                            </Typography>
-                          }
-                        />
-                      </ListItem>
-                      {index < insights.length - 1 && <Divider variant="inset" component="li" />}
-                    </React.Fragment>
-                  ))}
-                </List>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Top Spenders */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Top Cost Centers
-              </Typography>
-              <Typography variant="body2" color="textSecondary" paragraph>
-                Highest spending areas
-              </Typography>
-
-              <List>
-                {metrics.topSpenders.map((cc, index) => (
-                  <ListItem key={cc.id}>
-                    <ListItemText
-                      primary={
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                          <Typography variant="body2" fontWeight="600">
-                            {index + 1}. {cc.cost_center_name}
-                          </Typography>
-                          <Typography variant="body2" fontWeight="bold" color="primary">
-                            {formatCurrency(cc.actual_amount)}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={
-                        <Box mt={0.5}>
-                          <LinearProgress
-                            variant="determinate"
-                            value={cc.budget_amount > 0 ? Math.min((cc.actual_amount / cc.budget_amount) * 100, 100) : 0}
-                            color={cc.actual_amount > cc.budget_amount ? 'error' : 'primary'}
-                          />
-                          <Typography variant="caption" color="textSecondary">
-                            {cc.budget_amount > 0 
-                              ? `${((cc.actual_amount / cc.budget_amount) * 100).toFixed(0)}% of budget`
-                              : 'No budget set'
-                            }
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Underutilized Budgets */}
-        {metrics.underutilized.length > 0 && (
-          <Grid item xs={12}>
+    <ProtectedPage moduleKey="finance" action="read">
+      <DashboardLayout
+        title="Cost Analysis"
+        subtitle="AI-powered insights to optimize spending and improve budget efficiency"
+      >
+        <Grid container spacing={3}>
+          {/* Key Metrics */}
+          <Grid item xs={12} sm={6} md={3}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Underutilized Budgets
+                <Box display="flex" alignItems="center" mb={1}>
+                  <TrendingUp color="primary" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Total Spend
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {formatCurrency(metrics.totalSpend)}
                 </Typography>
-                <Typography variant="body2" color="textSecondary" paragraph>
-                  Cost centers spending less than 50% of allocated budget
+                <Typography variant="caption" color="textSecondary">
+                  Across all cost centers
                 </Typography>
-
-                <Grid container spacing={2}>
-                  {metrics.underutilized.map((cc) => (
-                    <Grid item xs={12} sm={6} md={4} key={cc.id}>
-                      <Paper sx={{ p: 2 }}>
-                        <Typography variant="subtitle2" fontWeight="600">
-                          {cc.cost_center_name}
-                        </Typography>
-                        <Box display="flex" justifyContent="space-between" mt={1}>
-                          <Typography variant="caption" color="textSecondary">
-                            Spent: {formatCurrency(cc.actual_amount)}
-                          </Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            Budget: {formatCurrency(cc.budget_amount)}
-                          </Typography>
-                        </Box>
-                        <LinearProgress
-                          variant="determinate"
-                          value={cc.budget_amount > 0 ? (cc.actual_amount / cc.budget_amount) * 100 : 0}
-                          color="warning"
-                          sx={{ mt: 1 }}
-                        />
-                        <Typography variant="caption" color="warning.main" mt={0.5} display="block">
-                          {cc.budget_amount > 0 
-                            ? `${((cc.actual_amount / cc.budget_amount) * 100).toFixed(0)}% utilized`
-                            : 'N/A'
-                          }
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
               </CardContent>
             </Card>
           </Grid>
-        )}
-      </Grid>
-    </DashboardLayout>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <TrendingDown color={metrics.budgetVariance > 0 ? 'error' : 'success'} sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Budget Variance
+                  </Typography>
+                </Box>
+                <Typography 
+                  variant="h5" 
+                  fontWeight="bold"
+                  color={metrics.budgetVariance > 0 ? 'error' : 'success'}
+                >
+                  {metrics.budgetVariance > 0 ? '+' : ''}{metrics.budgetVariance.toFixed(1)}%
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {metrics.budgetVariance > 0 ? 'Over' : 'Under'} budget
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <CheckCircle color="info" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Avg Utilization
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold" color="info.main">
+                  {metrics.averageUtilization.toFixed(1)}%
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  Budget utilized
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <Warning color="warning" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Active Insights
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold" color="warning.main">
+                  {insights.filter(i => i.priority === 'high').length}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  High priority items
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Smart Insights */}
+          <Grid item xs={12} md={8}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Smart Insights & Recommendations
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  AI-powered analysis of your spending patterns and budget performance
+                </Typography>
+
+                {insights.length === 0 ? (
+                  <Alert severity="success">
+                    <Typography variant="body2">
+                      No critical issues detected. Your budget management is on track!
+                    </Typography>
+                  </Alert>
+                ) : (
+                  <List>
+                    {insights.map((insight, index) => (
+                      <React.Fragment key={index}>
+                        <ListItem alignItems="flex-start">
+                          <ListItemIcon>
+                            {insight.icon}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <Typography variant="subtitle2">{insight.title}</Typography>
+                                {getPriorityChip(insight.priority)}
+                              </Box>
+                            }
+                            secondary={
+                              <Typography variant="body2" color="text.secondary">
+                                {insight.description}
+                              </Typography>
+                            }
+                          />
+                        </ListItem>
+                        {index < insights.length - 1 && <Divider variant="inset" component="li" />}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Top Spenders */}
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Top Cost Centers
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  Highest spending areas
+                </Typography>
+
+                <List>
+                  {metrics.topSpenders.map((cc, index) => (
+                    <ListItem key={cc.id}>
+                      <ListItemText
+                        primary={
+                          <Box display="flex" justifyContent="space-between" alignItems="center">
+                            <Typography variant="body2" fontWeight="600">
+                              {index + 1}. {cc.cost_center_name}
+                            </Typography>
+                            <Typography variant="body2" fontWeight="bold" color="primary">
+                              {formatCurrency(cc.actual_amount)}
+                            </Typography>
+                          </Box>
+                        }
+                        secondary={
+                          <Box mt={0.5}>
+                            <LinearProgress
+                              variant="determinate"
+                              value={cc.budget_amount > 0 ? Math.min((cc.actual_amount / cc.budget_amount) * 100, 100) : 0}
+                              color={cc.actual_amount > cc.budget_amount ? 'error' : 'primary'}
+                            />
+                            <Typography variant="caption" color="textSecondary">
+                              {cc.budget_amount > 0 
+                                ? `${((cc.actual_amount / cc.budget_amount) * 100).toFixed(0)}% of budget`
+                                : 'No budget set'
+                              }
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Underutilized Budgets */}
+          {metrics.underutilized.length > 0 && (
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Underutilized Budgets
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Cost centers spending less than 50% of allocated budget
+                  </Typography>
+
+                  <Grid container spacing={2}>
+                    {metrics.underutilized.map((cc) => (
+                      <Grid item xs={12} sm={6} md={4} key={cc.id}>
+                        <Paper sx={{ p: 2 }}>
+                          <Typography variant="subtitle2" fontWeight="600">
+                            {cc.cost_center_name}
+                          </Typography>
+                          <Box display="flex" justifyContent="space-between" mt={1}>
+                            <Typography variant="caption" color="textSecondary">
+                              Spent: {formatCurrency(cc.actual_amount)}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              Budget: {formatCurrency(cc.budget_amount)}
+                            </Typography>
+                          </Box>
+                          <LinearProgress
+                            variant="determinate"
+                            value={cc.budget_amount > 0 ? (cc.actual_amount / cc.budget_amount) * 100 : 0}
+                            color="warning"
+                            sx={{ mt: 1 }}
+                          />
+                          <Typography variant="caption" color="warning.main" mt={0.5} display="block">
+                            {cc.budget_amount > 0 
+                              ? `${((cc.actual_amount / cc.budget_amount) * 100).toFixed(0)}% utilized`
+                              : 'N/A'
+                            }
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+        </Grid>
+      </DashboardLayout>
     </ProtectedPage>
   );
 };

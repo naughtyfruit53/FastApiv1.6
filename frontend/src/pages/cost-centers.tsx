@@ -276,7 +276,7 @@ const CostCenters: React.FC = () => {
 
   return (
     <ProtectedPage moduleKey="finance" action="read">
-      ox sx={{ p: 3 }}>
+      <Box sx={{ p: 3 }}>
       {/* Header */}
       <Box
         display="flex"

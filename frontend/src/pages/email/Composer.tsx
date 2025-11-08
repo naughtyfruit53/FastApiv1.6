@@ -38,7 +38,6 @@ import {
 } from '@mui/icons-material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
-import 'react-quill/dist/quill.snow.css';
 import * as emailService from '../../services/emailService';
 import { useEmail } from '../../context/EmailContext';
 import { ProtectedPage } from '../../components/ProtectedPage';
