@@ -227,7 +227,7 @@ const AIChatbotPage: React.FC = () => {
 
   return (
     <ProtectedPage moduleKey="ai" action="read">
-      ontainer maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <BotIcon fontSize="large" color="primary" />
         AI Business Assistant
@@ -260,7 +260,6 @@ const AIChatbotPage: React.FC = () => {
                     key={message.id}
                     sx={{
                       flexDirection: 'column',
-                      alignItems: message.sender === 'user' ? 'flex-end' : 'flex-start',
                       mb: 2
                     }}
                   >

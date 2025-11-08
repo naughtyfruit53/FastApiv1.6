@@ -11,7 +11,7 @@ import {
 import { useForm } from "react-hook-form";
 import adminService from "../../../services/adminService";
 
-import { ProtectedPage } from '../../../../components/ProtectedPage';
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface ResetFormData {
   target_email: string;
 }
