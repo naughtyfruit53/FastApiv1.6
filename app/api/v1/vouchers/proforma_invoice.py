@@ -82,7 +82,7 @@ async def get_next_proforma_invoice_number(
             pass
     
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "PRO", org_id, ProformaInvoice, voucher_date=date_to_use
+        db, "PI", org_id, ProformaInvoice, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")

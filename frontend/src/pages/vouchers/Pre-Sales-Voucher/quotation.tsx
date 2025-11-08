@@ -777,11 +777,10 @@ const QuotationPage: React.FC = () => {
   if (isLoading || companyLoading) {
     return (
       <ProtectedPage moduleKey="sales" action="write">
-      >
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
-      </Container>
+      </ProtectedPage>
     );
   }
 
@@ -823,7 +822,6 @@ const QuotationPage: React.FC = () => {
         voucherType="Quotation"
       />
     </>
-    </ProtectedPage>
   );
 };
 export default QuotationPage;
