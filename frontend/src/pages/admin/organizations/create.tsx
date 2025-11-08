@@ -6,7 +6,7 @@ import api from "../../../utils/api";
 import RoleGate from "../../../components/RoleGate";
 import { Alert, Snackbar, CircularProgress } from "@mui/material";
 import { useAuth } from "../../../context/AuthContext";
-import { ProtectedPage } from '../../components/ProtectedPage';
+import { ProtectedPage } from '../../../../components/ProtectedPage';
 const CreateOrganizationPage: React.FC = () => {
   const { loading } = useAuth();
   const [tempPassword, setTempPassword] = useState<string | null>(null);

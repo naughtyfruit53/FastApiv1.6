@@ -11,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import AddUserDialog from "../../../components/AddUserDialog";
 
-import { ProtectedPage } from '../../components/ProtectedPage';
+import { ProtectedPage } from '../../../../components/ProtectedPage';
 interface User {
   id: number;
   email: string;

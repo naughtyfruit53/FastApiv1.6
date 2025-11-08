@@ -11,7 +11,7 @@ import {
 import { useForm } from "react-hook-form";
 import adminService from "../../../services/adminService";
 
-import { ProtectedPage } from '../../components/ProtectedPage';
+import { ProtectedPage } from '../../../../components/ProtectedPage';
 interface ResetFormData {
   target_email: string;
 }
@@ -52,7 +52,7 @@ const ResetPassword: React.FC = () => {
           fullWidth
           sx={{ mt: 2 }}
         />
-        <Button type="submit" variant="contained" sx={{ mt: 2 }}>
+        <Button type="submit" variant="contained" sx={{ mr: 2 }}>
           Reset Password
         </Button>
       </form>

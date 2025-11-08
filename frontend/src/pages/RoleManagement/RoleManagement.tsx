@@ -29,7 +29,7 @@ import { rbacService } from "../../services/rbacService"; // Assuming rbacServic
 import { organizationService } from "../../services/organizationService";
 import { useAuth } from "../../context/AuthContext";
 
-import { ProtectedPage } from '../components/ProtectedPage';
+import { ProtectedPage } from '../../components/ProtectedPage';
 interface Role {
   id: number;
   name: string;
@@ -63,7 +63,7 @@ const RoleManagement: React.FC = () => {
     queryFn: organizationService.getCurrentOrganization,
     enabled: !!user,
   });
-  const currentOrgId = currentOrg?.id || user?.organization_id;
+  const currentOrgId = currentOrg?.id || user?.is_super_admin;
 
   if (!currentOrgId) {
     return <Alert severity="error">No organization context available for role management.</Alert>;

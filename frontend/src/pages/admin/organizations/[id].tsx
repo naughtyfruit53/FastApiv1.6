@@ -23,7 +23,7 @@ import {
   Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
-import { ProtectedPage } from '../../components/ProtectedPage';
+import { ProtectedPage } from '../../../../components/ProtectedPage';
 import api from "../../../utils/api";  // Import the axios api instance
 interface Organization {
   id: number;
