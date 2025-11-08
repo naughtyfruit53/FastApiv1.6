@@ -29,13 +29,13 @@ const ProfilePage: React.FC = () => {
   if (loading) {
     return (
       <ProtectedPage moduleKey="user" action="read">
-      rotectedPage moduleKey="user" action="read">
-        ontainer
-        maxWidth="md"
-        sx={{ mt: 4, display: "flex", justifyContent: "center" }}
-      >
-        <CircularProgress />
-      </Container>
+        <Container
+          maxWidth="md"
+          sx={{ mt: 4, display: "flex", justifyContent: "center" }}
+        >
+          <CircularProgress />
+        </Container>
+      </ProtectedPage>
     );
   }
 
@@ -87,104 +87,105 @@ const ProfilePage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Profile Settings
-        </Typography>
-
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="subtitle1">User Information</Typography>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid
-              size={{
-                xs: 12,
-                sm: 6,
-              }}
-            >
-              <TextField
-                fullWidth
-                label="Email"
-                value={user?.email || ""}
-                disabled
-              />
-            </Grid>
-            <Grid
-              size={{
-                xs: 12,
-                sm: 6,
-              }}
-            >
-              <TextField
-                fullWidth
-                label="Role"
-                value={getDisplayRole(user?.role || "", user?.is_super_admin)}
-                disabled
-              />
-            </Grid>
-          </Grid>
-        </Box>
-
-        <Box component="form" onSubmit={handleSubmit}>
-          <Typography variant="subtitle1" gutterBottom>
-            Change Password
+    <ProtectedPage moduleKey="user" action="read">
+      <Container maxWidth="md" sx={{ mt: 4 }}>
+        <Paper sx={{ p: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            Profile Settings
           </Typography>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {success}
-            </Alert>
-          )}
 
-          <Grid container spacing={2}>
-            <Grid size={12}>
-              <TextField
-                fullWidth
-                type="password"
-                label="Current Password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-              />
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="subtitle1">User Information</Typography>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <TextField
+                  fullWidth
+                  label="Email"
+                  value={user?.email || ""}
+                  disabled
+                />
+              </Grid>
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <TextField
+                  fullWidth
+                  label="Role"
+                  value={getDisplayRole(user?.role || "", user?.is_super_admin)}
+                  disabled
+                />
+              </Grid>
             </Grid>
-            <Grid size={12}>
-              <TextField
-                fullWidth
-                type="password"
-                label="New Password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-            </Grid>
-            <Grid size={12}>
-              <TextField
-                fullWidth
-                type="password"
-                label="Confirm New Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </Grid>
-          </Grid>
+          </Box>
 
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            sx={{ mt: 3 }}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? <CircularProgress size={24} /> : "Change Password"}
-          </Button>
-        </Box>
-      </Paper>
-    </Container>
+          <Box component="form" onSubmit={handleSubmit}>
+            <Typography variant="subtitle1" gutterBottom>
+              Change Password
+            </Typography>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            {success && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {success}
+              </Alert>
+            )}
+
+            <Grid container spacing={2}>
+              <Grid size={12}>
+                <TextField
+                  fullWidth
+                  type="password"
+                  label="Current Password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid size={12}>
+                <TextField
+                  fullWidth
+                  type="password"
+                  label="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid size={12}>
+                <TextField
+                  fullWidth
+                  type="password"
+                  label="Confirm New Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </Grid>
+            </Grid>
+
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              sx={{ mt: 3 }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? <CircularProgress size={24} /> : "Change Password"}
+            </Button>
+          </Box>
+        </Paper>
+      </Container>
     </ProtectedPage>
   );
 };

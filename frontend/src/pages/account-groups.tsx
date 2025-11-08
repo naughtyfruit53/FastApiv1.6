@@ -18,44 +18,44 @@ import { ProtectedPage } from '../components/ProtectedPage';
 const AccountGroupsPage: React.FC = () => {
   return (
     <ProtectedPage moduleKey="finance" action="read">
-      ashboardLayout
-      title="Account Groups"
-      subtitle="Organize accounts into logical groups"
-    >
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Alert severity="info" sx={{ mb: 3 }}>
-            This account groups module is under development. Core functionality will be available soon.
-          </Alert>
+      <DashboardLayout
+        title="Account Groups"
+        subtitle="Organize accounts into logical groups"
+      >
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Alert severity="info" sx={{ mb: 3 }}>
+              This account groups module is under development. Core functionality will be available soon.
+            </Alert>
+          </Grid>
+          
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  minHeight: 400,
+                  textAlign: 'center'
+                }}>
+                  <Business sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+                  <Typography variant="h4" gutterBottom>
+                    Account Groups
+                  </Typography>
+                  <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
+                    Organize accounts into logical groups
+                  </Typography>
+                  <Button variant="contained" disabled>
+                    Feature Coming Soon
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
-        
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                minHeight: 400,
-                textAlign: 'center'
-              }}>
-                <Business sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h4" gutterBottom>
-                  Account Groups
-                </Typography>
-                <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
-                  Organize accounts into logical groups
-                </Typography>
-                <Button variant="contained" disabled>
-                  Feature Coming Soon
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </DashboardLayout>
+      </DashboardLayout>
     </ProtectedPage>
   );
 };

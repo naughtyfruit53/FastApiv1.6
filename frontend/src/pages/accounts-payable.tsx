@@ -142,187 +142,187 @@ const AccountsPayablePage: React.FC = () => {
   if (loading) {
     return (
       <ProtectedPage moduleKey="finance" action="read">
-      rotectedPage moduleKey="finance" action="read">
-        ashboardLayout
-        title="Accounts Payable"
-        subtitle="Manage vendor bills and payables"
-      >
-        <LinearProgress />
-      </DashboardLayout>
+        <DashboardLayout
+          title="Accounts Payable"
+          subtitle="Manage vendor bills and payables"
+        >
+          <LinearProgress />
+        </DashboardLayout>
       </ProtectedPage>
     );
   }
   return (
-    <DashboardLayout
-      title="Accounts Payable"
-      subtitle="Track and manage vendor bills and payments"
-    >
-      <Grid container spacing={3}>
-        {/* Summary Cards */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <Receipt color="primary" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Total Payable
+    <ProtectedPage moduleKey="finance" action="read">
+      <DashboardLayout
+        title="Accounts Payable"
+        subtitle="Track and manage vendor bills and payments"
+      >
+        <Grid container spacing={3}>
+          {/* Summary Cards */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <Receipt color="primary" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Total Payable
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {formatCurrency(summary.totalPayable)}
                 </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold">
-                {formatCurrency(summary.totalPayable)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                {bills.filter(b => b.status !== 'paid').length} unpaid bills
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <TrendingDown color="error" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Overdue
+                <Typography variant="caption" color="textSecondary">
+                  {bills.filter(b => b.status !== 'paid').length} unpaid bills
                 </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold" color="error">
-                {formatCurrency(summary.overdue)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                Requires immediate attention
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <AccessTime color="warning" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Due This Week
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <TrendingDown color="error" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Overdue
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold" color="error">
+                  {formatCurrency(summary.overdue)}
                 </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold" color="warning.main">
-                {formatCurrency(summary.dueThisWeek)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                Next 7 days
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <TrendingUp color="info" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Due This Month
+                <Typography variant="caption" color="textSecondary">
+                  Requires immediate attention
                 </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold" color="info.main">
-                {formatCurrency(summary.dueThisMonth)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                Next 30 days
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
 
-        {/* Bills Table */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">
-                  Vendor Bills
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <AccessTime color="warning" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Due This Week
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold" color="warning.main">
+                  {formatCurrency(summary.dueThisWeek)}
                 </Typography>
-                <Button 
-                  variant="contained" 
-                  onClick={() => router.push('/vouchers/Purchase-Vouchers/purchase-voucher/')}
-                >
-                  Record New Bill
-                </Button>
-              </Box>
+                <Typography variant="caption" color="textSecondary">
+                  Next 7 days
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
 
-              <TableContainer component={Paper} variant="outlined">
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Bill No.</TableCell>
-                      <TableCell>Vendor</TableCell>
-                      <TableCell>Bill Date</TableCell>
-                      <TableCell>Due Date</TableCell>
-                      <TableCell align="right">Total</TableCell>
-                      <TableCell align="right">Paid</TableCell>
-                      <TableCell align="right">Balance</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="center">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {bills.length === 0 ? (
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <TrendingUp color="info" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Due This Month
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold" color="info.main">
+                  {formatCurrency(summary.dueThisMonth)}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  Next 30 days
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Bills Table */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6">
+                    Vendor Bills
+                  </Typography>
+                  <Button 
+                    variant="contained" 
+                    onClick={() => router.push('/vouchers/Purchase-Vouchers/purchase-voucher/')}
+                  >
+                    Record New Bill
+                  </Button>
+                </Box>
+
+                <TableContainer component={Paper} variant="outlined">
+                  <Table>
+                    <TableHead>
                       <TableRow>
-                        <TableCell colSpan={9} align="center">
-                          <Typography color="textSecondary" py={4}>
-                            No vendor bills found. Create a purchase voucher to track payables.
-                          </Typography>
-                        </TableCell>
+                        <TableCell>Bill No.</TableCell>
+                        <TableCell>Vendor</TableCell>
+                        <TableCell>Bill Date</TableCell>
+                        <TableCell>Due Date</TableCell>
+                        <TableCell align="right">Total</TableCell>
+                        <TableCell align="right">Paid</TableCell>
+                        <TableCell align="right">Balance</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell align="center">Actions</TableCell>
                       </TableRow>
-                    ) : (
-                      bills.map((bill) => (
-                        <TableRow key={bill.id} hover>
-                          <TableCell>{bill.voucher_number}</TableCell>
-                          <TableCell>{bill.vendor_name}</TableCell>
-                          <TableCell>{formatDate(bill.date)}</TableCell>
-                          <TableCell>{formatDate(bill.due_date)}</TableCell>
-                          <TableCell align="right">{formatCurrency(bill.total_amount)}</TableCell>
-                          <TableCell align="right">{formatCurrency(bill.paid_amount)}</TableCell>
-                          <TableCell align="right" fontWeight="bold">
-                            {formatCurrency(bill.total_amount - bill.paid_amount)}
-                          </TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={bill.status} 
-                              color={getStatusColor(bill.status)} 
-                              size="small" 
-                            />
-                          </TableCell>
-                          <TableCell align="center">
-                            <Tooltip title="View Bill">
-                              <IconButton size="small" onClick={() => handleViewBill(bill.id)}>
-                                <Visibility fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            {bill.status !== 'paid' && (
-                              <Tooltip title="Make Payment">
-                                <IconButton 
-                                  size="small" 
-                                  color="primary"
-                                  onClick={() => handleMakePayment(bill.id)}
-                                >
-                                  <Payment fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
+                    </TableHead>
+                    <TableBody>
+                      {bills.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} align="center">
+                            <Typography color="textSecondary" py={4}>
+                              No vendor bills found. Create a purchase voucher to track payables.
+                            </Typography>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
+                      ) : (
+                        bills.map((bill) => (
+                          <TableRow key={bill.id} hover>
+                            <TableCell>{bill.voucher_number}</TableCell>
+                            <TableCell>{bill.vendor_name}</TableCell>
+                            <TableCell>{formatDate(bill.date)}</TableCell>
+                            <TableCell>{formatDate(bill.due_date)}</TableCell>
+                            <TableCell align="right">{formatCurrency(bill.total_amount)}</TableCell>
+                            <TableCell align="right">{formatCurrency(bill.paid_amount)}</TableCell>
+                            <TableCell align="right" fontWeight="bold">
+                              {formatCurrency(bill.total_amount - bill.paid_amount)}
+                            </TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={bill.status} 
+                                color={getStatusColor(bill.status)} 
+                                size="small" 
+                              />
+                            </TableCell>
+                            <TableCell align="center">
+                              <Tooltip title="View Bill">
+                                <IconButton size="small" onClick={() => handleViewBill(bill.id)}>
+                                  <Visibility fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              {bill.status !== 'paid' && (
+                                <Tooltip title="Make Payment">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleMakePayment(bill.id)}
+                                  >
+                                    <Payment fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
-      </Grid>
-    </DashboardLayout>
+      </DashboardLayout>
     </ProtectedPage>
   );
 };

@@ -174,175 +174,177 @@ const RoleManagement: React.FC = () => {
   if (rolesError || permissionsError) {
     return (
       <ProtectedPage moduleKey="admin" action="write">
-      lert severity="error">
-        Failed to load data: {(rolesError || permissionsError)?.message}
-      </Alert>
+        <Alert severity="error">
+          Failed to load data: {(rolesError || permissionsError)?.message}
+        </Alert>
+      </ProtectedPage>
     );
   }
 
   return (
-    <Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-        <Typography variant="h6">Roles & Permissions</Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => setCreateDialogOpen(true)}
-        >
-          Create Role
-        </Button>
-      </Box>
+    <ProtectedPage moduleKey="admin" action="write">
+      <Box>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+          <Typography variant="h6">Roles & Permissions</Typography>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            Create Role
+          </Button>
+        </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Permissions</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {roles?.map((role) => (
-              <TableRow key={role.id}>
-                <TableCell>{role.display_name}</TableCell>
-                <TableCell>{role.description}</TableCell>
-                <TableCell>
-                  {role.permissions.map((perm) => (
-                    <Chip key={perm} label={perm} size="small" sx={{ m: 0.5 }} />
-                  ))}
-                </TableCell>
-                <TableCell>
-                  <IconButton onClick={() => handleEditRole(role)}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton color="error" onClick={() => handleDeleteRole(role.id)}>
-                    <Delete />
-                  </IconButton>
-                </TableCell>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Description</TableCell>
+                <TableCell>Permissions</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {roles?.map((role) => (
+                <TableRow key={role.id}>
+                  <TableCell>{role.display_name}</TableCell>
+                  <TableCell>{role.description}</TableCell>
+                  <TableCell>
+                    {role.permissions.map((perm) => (
+                      <Chip key={perm} label={perm} size="small" sx={{ m: 0.5 }} />
+                    ))}
+                  </TableCell>
+                  <TableCell>
+                    <IconButton onClick={() => handleEditRole(role)}>
+                      <Edit />
+                    </IconButton>
+                    <IconButton color="error" onClick={() => handleDeleteRole(role.id)}>
+                      <Delete />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-      {/* Create Role Dialog */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Create New Role</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Role Name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+        {/* Create Role Dialog */}
+        <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Create New Role</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Role Name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Display Name"
+                  value={formData.display_name}
+                  onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Description"
+                  multiline
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="subtitle1">Permissions</Typography>
+                <FormGroup>
+                  {permissions?.map((perm) => (
+                    <FormControlLabel
+                      key={perm.id}
+                      control={
+                        <Checkbox
+                          checked={formData.permissions.includes(perm.name)}
+                          onChange={(e) => handlePermissionToggle(perm.name, e.target.checked)}
+                        />
+                      }
+                      label={perm.display_name}
+                    />
+                  ))}
+                </FormGroup>
+              </Grid>
             </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Display Name"
-                value={formData.display_name}
-                onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="subtitle1">Permissions</Typography>
-              <FormGroup>
-                {permissions?.map((perm) => (
-                  <FormControlLabel
-                    key={perm.id}
-                    control={
-                      <Checkbox
-                        checked={formData.permissions.includes(perm.name)}
-                        onChange={(e) => handlePermissionToggle(perm.name, e.target.checked)}
-                      />
-                    }
-                    label={perm.display_name}
-                  />
-                ))}
-              </FormGroup>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreateRole} disabled={createRoleMutation.isPending}>
-            {createRoleMutation.isPending ? <CircularProgress size={24} /> : "Create"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleCreateRole} disabled={createRoleMutation.isPending}>
+              {createRoleMutation.isPending ? <CircularProgress size={24} /> : "Create"}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-      {/* Edit Role Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Edit Role</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Role Name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
+        {/* Edit Role Dialog */}
+        <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Edit Role</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Role Name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Display Name"
+                  value={formData.display_name}
+                  onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Description"
+                  multiline
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="subtitle1">Permissions</Typography>
+                <FormGroup>
+                  {permissions?.map((perm) => (
+                    <FormControlLabel
+                      key={perm.id}
+                      control={
+                        <Checkbox
+                          checked={formData.permissions.includes(perm.name)}
+                          onChange={(e) => handlePermissionToggle(perm.name, e.target.checked)}
+                        />
+                      }
+                      label={perm.display_name}
+                    />
+                  ))}
+                </FormGroup>
+              </Grid>
             </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Display Name"
-                value={formData.display_name}
-                onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="subtitle1">Permissions</Typography>
-              <FormGroup>
-                {permissions?.map((perm) => (
-                  <FormControlLabel
-                    key={perm.id}
-                    control={
-                      <Checkbox
-                        checked={formData.permissions.includes(perm.name)}
-                        onChange={(e) => handlePermissionToggle(perm.name, e.target.checked)}
-                      />
-                    }
-                    label={perm.display_name}
-                  />
-                ))}
-              </FormGroup>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleUpdateRole} disabled={updateRoleMutation.isPending}>
-            {updateRoleMutation.isPending ? <CircularProgress size={24} /> : "Update"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleUpdateRole} disabled={updateRoleMutation.isPending}>
+              {updateRoleMutation.isPending ? <CircularProgress size={24} /> : "Update"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
     </ProtectedPage>
   );
 };
