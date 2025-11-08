@@ -587,11 +587,10 @@ const handleCancelConflict = () => {
 
   return (
       <ProtectedPage moduleKey="sales" action="write">
-      >
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
-      </Container>
+      </ProtectedPage>
     );
   }
 
@@ -653,7 +652,6 @@ const handleCancelConflict = () => {
         voucherType="Delivery Challan"
       />
     </>
-    </ProtectedPage>
   );
 };
 export default DeliveryChallanPage;
