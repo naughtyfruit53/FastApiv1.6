@@ -86,10 +86,10 @@ const BudgetsPage: React.FC = () => {
   if (loading) {
     return (
       <ProtectedPage moduleKey="finance" action="read">
-      rotectedPage moduleKey="finance" action="read">
-        ox display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </ProtectedPage>
     );
   }
 
@@ -140,153 +140,154 @@ const BudgetsPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Budget Management
-        </Typography>
-        <Box display="flex" gap={2} alignItems="center">
-          <TextField
-            type="number"
-            label="Budget Year"
-            value={budgetYear}
-            onChange={(e) => setBudgetYear(parseInt(e.target.value))}
-            size="small"
-            sx={{ width: 150 }}
-          />
-          <IconButton onClick={fetchBudgetData} color="primary">
-            <Refresh />
-          </IconButton>
-          <Button startIcon={<Download />} variant="outlined">
-            Export
-          </Button>
-          <Button startIcon={<Print />} variant="outlined">
-            Print
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Summary Cards */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Total Budget
-              </Typography>
-              <Typography variant="h5" color="primary.main">
-                {formatCurrency(data.summary.total_budget)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Total Actual
-              </Typography>
-              <Typography variant="h5" color="warning.main">
-                {formatCurrency(data.summary.total_actual)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Total Variance
-              </Typography>
-              <Typography
-                variant="h5"
-                color={data.summary.total_variance > 0 ? "error.main" : "success.main"}
-              >
-                {formatCurrency(Math.abs(data.summary.total_variance))}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Variance %
-              </Typography>
-              <Typography
-                variant="h5"
-                color={data.summary.variance_percent > 0 ? "error.main" : "success.main"}
-              >
-                {data.summary.variance_percent.toFixed(2)}%
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Chart */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Budget vs Actual by Cost Center
+    <ProtectedPage moduleKey="finance" action="read">
+      <Box sx={{ p: 3 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
+            Budget Management
           </Typography>
-          <Box sx={{ height: 400 }}>
-            <Bar data={chartData} />
+          <Box display="flex" gap={2} alignItems="center">
+            <TextField
+              type="number"
+              label="Budget Year"
+              value={budgetYear}
+              onChange={(e) => setBudgetYear(parseInt(e.target.value))}
+              size="small"
+              sx={{ width: 150 }}
+            />
+            <IconButton onClick={fetchBudgetData} color="primary">
+              <Refresh />
+            </IconButton>
+            <Button startIcon={<Download />} variant="outlined">
+              Export
+            </Button>
+            <Button startIcon={<Print />} variant="outlined">
+              Print
+            </Button>
           </Box>
-        </CardContent>
-      </Card>
+        </Box>
 
-      {/* Table */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Cost Center Details
-          </Typography>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Cost Center</TableCell>
-                  <TableCell>Code</TableCell>
-                  <TableCell align="right">Budget</TableCell>
-                  <TableCell align="right">Actual</TableCell>
-                  <TableCell align="right">Variance</TableCell>
-                  <TableCell align="right">Variance %</TableCell>
-                  <TableCell align="right">Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.cost_centers.map((cc) => (
-                  <TableRow key={cc.cost_center_id}>
-                    <TableCell>{cc.cost_center_name}</TableCell>
-                    <TableCell>{cc.cost_center_code}</TableCell>
-                    <TableCell align="right">
-                      {formatCurrency(cc.budget_amount)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {formatCurrency(cc.actual_amount)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {formatCurrency(Math.abs(cc.variance))}
-                    </TableCell>
-                    <TableCell align="right">
-                      {cc.variance_percent.toFixed(2)}%
-                    </TableCell>
-                    <TableCell align="right">
-                      <Chip
-                        label={cc.status.replace("_", " ").toUpperCase()}
-                        color={getStatusColor(cc.status)}
-                        size="small"
-                      />
-                    </TableCell>
+        {/* Summary Cards */}
+        <Grid container spacing={3} mb={3}>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Budget
+                </Typography>
+                <Typography variant="h5" color="primary.main">
+                  {formatCurrency(data.summary.total_budget)}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Actual
+                </Typography>
+                <Typography variant="h5" color="warning.main">
+                  {formatCurrency(data.summary.total_actual)}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Variance
+                </Typography>
+                <Typography
+                  variant="h5"
+                  color={data.summary.total_variance > 0 ? "error.main" : "success.main"}
+                >
+                  {formatCurrency(Math.abs(data.summary.total_variance))}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Variance %
+                </Typography>
+                <Typography
+                  variant="h5"
+                  color={data.summary.variance_percent > 0 ? "error.main" : "success.main"}
+                >
+                  {data.summary.variance_percent.toFixed(2)}%
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Chart */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Budget vs Actual by Cost Center
+            </Typography>
+            <Box sx={{ height: 400 }}>
+              <Bar data={chartData} />
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Table */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Cost Center Details
+            </Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Cost Center</TableCell>
+                    <TableCell>Code</TableCell>
+                    <TableCell align="right">Budget</TableCell>
+                    <TableCell align="right">Actual</TableCell>
+                    <TableCell align="right">Variance</TableCell>
+                    <TableCell align="right">Variance %</TableCell>
+                    <TableCell align="right">Status</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-    </Box>
+                </TableHead>
+                <TableBody>
+                  {data.cost_centers.map((cc) => (
+                    <TableRow key={cc.cost_center_id}>
+                      <TableCell>{cc.cost_center_name}</TableCell>
+                      <TableCell>{cc.cost_center_code}</TableCell>
+                      <TableCell align="right">
+                        {formatCurrency(cc.budget_amount)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {formatCurrency(cc.actual_amount)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {formatCurrency(Math.abs(cc.variance))}
+                      </TableCell>
+                      <TableCell align="right">
+                        {cc.variance_percent.toFixed(2)}%
+                      </TableCell>
+                      <TableCell align="right">
+                        <Chip
+                          label={cc.status.replace("_", " ").toUpperCase()}
+                          color={getStatusColor(cc.status)}
+                          size="small"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Box>
     </ProtectedPage>
   );
 };

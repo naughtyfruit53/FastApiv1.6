@@ -84,10 +84,10 @@ const CashFlowForecastPage: React.FC = () => {
   if (loading) {
     return (
       <ProtectedPage moduleKey="finance" action="read">
-      rotectedPage moduleKey="finance" action="read">
-        ox display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </ProtectedPage>
     );
   }
 
@@ -138,101 +138,102 @@ const CashFlowForecastPage: React.FC = () => {
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ p: 3 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4" component="h1">
-            Cash Flow Forecast
-          </Typography>
-          <Box display="flex" gap={2} alignItems="center">
-            <TextField
-              type="number"
-              label="Forecast Months"
-              value={months}
-              onChange={(e) => setMonths(parseInt(e.target.value))}
-              size="small"
-              sx={{ width: 150 }}
-            />
-            <IconButton onClick={fetchForecastData} color="primary">
-              <Refresh />
-            </IconButton>
-            <Button startIcon={<Download />} variant="outlined">
-              Export
-            </Button>
-            <Button startIcon={<Print />} variant="outlined">
-              Print
-            </Button>
-          </Box>
-        </Box>
-
-        {/* Summary Cards */}
-        <Grid container spacing={3} mb={3}>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Total Projected Inflow
-                </Typography>
-                <Typography variant="h5" color="success.main">
-                  {formatCurrency(data.summary.total_projected_inflow)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Total Projected Outflow
-                </Typography>
-                <Typography variant="h5" color="error.main">
-                  {formatCurrency(data.summary.total_projected_outflow)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Net Cash Change
-                </Typography>
-                <Typography
-                  variant="h5"
-                  color={data.summary.net_cash_change >= 0 ? "success.main" : "error.main"}
-                >
-                  {formatCurrency(Math.abs(data.summary.net_cash_change))}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Projected Closing Balance
-                </Typography>
-                <Typography variant="h5" color="primary.main">
-                  {formatCurrency(data.summary.closing_balance)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Chart */}
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Cash Flow Forecast Trend
+    <ProtectedPage moduleKey="finance" action="read">
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Box sx={{ p: 3 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h4" component="h1">
+              Cash Flow Forecast
             </Typography>
-            <Box sx={{ height: 400 }}>
-              <Line data={chartData} />
+            <Box display="flex" gap={2} alignItems="center">
+              <TextField
+                type="number"
+                label="Forecast Months"
+                value={months}
+                onChange={(e) => setMonths(parseInt(e.target.value))}
+                size="small"
+                sx={{ width: 150 }}
+              />
+              <IconButton onClick={fetchForecastData} color="primary">
+                <Refresh />
+              </IconButton>
+              <Button startIcon={<Download />} variant="outlined">
+                Export
+              </Button>
+              <Button startIcon={<Print />} variant="outlined">
+                Print
+              </Button>
             </Box>
-          </CardContent>
-        </Card>
-      </Box>
-    </LocalizationProvider>
+          </Box>
+
+          {/* Summary Cards */}
+          <Grid container spacing={3} mb={3}>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Total Projected Inflow
+                  </Typography>
+                  <Typography variant="h5" color="success.main">
+                    {formatCurrency(data.summary.total_projected_inflow)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Total Projected Outflow
+                  </Typography>
+                  <Typography variant="h5" color="error.main">
+                    {formatCurrency(data.summary.total_projected_outflow)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Net Cash Change
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    color={data.summary.net_cash_change >= 0 ? "success.main" : "error.main"}
+                  >
+                    {formatCurrency(Math.abs(data.summary.net_cash_change))}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Projected Closing Balance
+                  </Typography>
+                  <Typography variant="h5" color="primary.main">
+                    {formatCurrency(data.summary.closing_balance)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Chart */}
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Cash Flow Forecast Trend
+              </Typography>
+              <Box sx={{ height: 400 }}>
+                <Line data={chartData} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+      </LocalizationProvider>
     </ProtectedPage>
   );
 };

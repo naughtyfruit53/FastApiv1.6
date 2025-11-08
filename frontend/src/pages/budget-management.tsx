@@ -162,262 +162,262 @@ const BudgetManagementPage: React.FC = () => {
   if (loading) {
     return (
       <ProtectedPage moduleKey="finance" action="read">
-      rotectedPage moduleKey="finance" action="read">
-        ashboardLayout
-        title="Budget Management"
-        subtitle="Plan and track organizational budgets"
-      >
-        <LinearProgress />
-      </DashboardLayout>
+        <DashboardLayout
+          title="Budget Management"
+          subtitle="Plan and track organizational budgets"
+        >
+          <LinearProgress />
+        </DashboardLayout>
       </ProtectedPage>
     );
   }
   return (
-    <DashboardLayout
-      title="Budget Management"
-      subtitle="Plan, allocate, and monitor budgets across departments"
-    >
-      <Grid container spacing={3}>
-        {/* Summary Cards */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <TrendingUp color="primary" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Total Budget
+    <ProtectedPage moduleKey="finance" action="read">
+      <DashboardLayout
+        title="Budget Management"
+        subtitle="Plan, allocate, and monitor budgets across departments"
+      >
+        <Grid container spacing={3}>
+          {/* Summary Cards */}
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <TrendingUp color="primary" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Total Budget
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {formatCurrency(summary.totalBudget)}
                 </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold">
-                {formatCurrency(summary.totalBudget)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                FY 2024-2025
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <CheckCircle color="success" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Allocated
+                <Typography variant="caption" color="textSecondary">
+                  FY 2024-2025
                 </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold">
-                {formatCurrency(summary.totalAllocated)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                {((summary.totalAllocated / summary.totalBudget) * 100).toFixed(1)}% of budget
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <TrendingDown color="warning" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Total Spent
-                </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold" color="warning.main">
-                {formatCurrency(summary.totalSpent)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                {summary.utilizationRate.toFixed(1)}% utilized
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={1}>
-                <Warning color="info" sx={{ mr: 1 }} />
-                <Typography color="textSecondary" variant="body2">
-                  Remaining
-                </Typography>
-              </Box>
-              <Typography variant="h5" fontWeight="bold" color="info.main">
-                {formatCurrency(summary.totalRemaining)}
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                {((summary.totalRemaining / summary.totalBudget) * 100).toFixed(1)}% available
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Budget Table */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">
-                  Budget Allocations
-                </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={() => setCreateDialogOpen(true)}
-                >
-                  Create Budget
-                </Button>
-              </Box>
-
-              <TableContainer component={Paper} variant="outlined">
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Budget Name</TableCell>
-                      <TableCell>Department</TableCell>
-                      <TableCell>Fiscal Year</TableCell>
-                      <TableCell align="right">Total Budget</TableCell>
-                      <TableCell align="right">Spent</TableCell>
-                      <TableCell align="right">Remaining</TableCell>
-                      <TableCell align="center">Utilization</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="center">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {budgets.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} align="center">
-                          <Typography color="textSecondary" py={4}>
-                            No budgets found. Create a budget to start tracking expenses.
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      budgets.map((budget) => {
-                        const utilization = budget.total_budget > 0
-                          ? (budget.spent / budget.total_budget) * 100
-                          : 0;
-                        return (
-                          <TableRow key={budget.id} hover>
-                            <TableCell>
-                              <Typography fontWeight="600">{budget.name}</Typography>
-                            </TableCell>
-                            <TableCell>{budget.department}</TableCell>
-                            <TableCell>{budget.fiscal_year}</TableCell>
-                            <TableCell align="right" fontWeight="bold">
-                              {formatCurrency(budget.total_budget)}
-                            </TableCell>
-                            <TableCell align="right">
-                              {formatCurrency(budget.spent)}
-                            </TableCell>
-                            <TableCell align="right" fontWeight="bold">
-                              {formatCurrency(budget.remaining)}
-                            </TableCell>
-                            <TableCell align="center">
-                              <Box display="flex" alignItems="center" justifyContent="center">
-                                <LinearProgress
-                                  variant="determinate"
-                                  value={Math.min(utilization, 100)}
-                                  color={getUtilizationColor(utilization)}
-                                  sx={{ width: 80, mr: 1 }}
-                                />
-                                <Typography variant="caption">
-                                  {utilization.toFixed(0)}%
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                label={budget.status}
-                                color={getStatusColor(budget.status)}
-                                size="small"
-                              />
-                            </TableCell>
-                            <TableCell align="center">
-                              <Tooltip title="View Details">
-                                <IconButton size="small">
-                                  <Visibility fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Edit">
-                                <IconButton size="small">
-                                  <Edit fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Create Budget Dialog */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create New Budget</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Budget Name"
-                value={newBudget.name}
-                onChange={(e) => setNewBudget({ ...newBudget, name: e.target.value })}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Department"
-                value={newBudget.department}
-                onChange={(e) => setNewBudget({ ...newBudget, department: e.target.value })}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Fiscal Year</InputLabel>
-                <Select
-                  value={newBudget.fiscal_year}
-                  onChange={(e) => setNewBudget({ ...newBudget, fiscal_year: e.target.value })}
-                  label="Fiscal Year"
-                >
-                  <MenuItem value="2023-2024">2023-2024</MenuItem>
-                  <MenuItem value="2024-2025">2024-2025</MenuItem>
-                  <MenuItem value="2025-2026">2025-2026</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Total Budget Amount"
-                type="number"
-                value={newBudget.total_budget}
-                onChange={(e) => setNewBudget({ ...newBudget, total_budget: parseFloat(e.target.value) || 0 })}
-                required
-              />
-            </Grid>
+              </CardContent>
+            </Card>
           </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleCreateBudget} variant="contained" disabled={!newBudget.name || !newBudget.total_budget}>
-            Create Budget
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </DashboardLayout>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <CheckCircle color="success" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Allocated
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {formatCurrency(summary.totalAllocated)}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {((summary.totalAllocated / summary.totalBudget) * 100).toFixed(1)}% of budget
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <TrendingDown color="warning" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Total Spent
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold" color="warning.main">
+                  {formatCurrency(summary.totalSpent)}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {summary.utilizationRate.toFixed(1)}% utilized
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  <Warning color="info" sx={{ mr: 1 }} />
+                  <Typography color="textSecondary" variant="body2">
+                    Remaining
+                  </Typography>
+                </Box>
+                <Typography variant="h5" fontWeight="bold" color="info.main">
+                  {formatCurrency(summary.totalRemaining)}
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  {((summary.totalRemaining / summary.totalBudget) * 100).toFixed(1)}% available
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Budget Table */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6">
+                    Budget Allocations
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={() => setCreateDialogOpen(true)}
+                  >
+                    Create Budget
+                  </Button>
+                </Box>
+
+                <TableContainer component={Paper} variant="outlined">
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Budget Name</TableCell>
+                        <TableCell>Department</TableCell>
+                        <TableCell>Fiscal Year</TableCell>
+                        <TableCell align="right">Total Budget</TableCell>
+                        <TableCell align="right">Spent</TableCell>
+                        <TableCell align="right">Remaining</TableCell>
+                        <TableCell align="center">Utilization</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell align="center">Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {budgets.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} align="center">
+                            <Typography color="textSecondary" py={4}>
+                              No budgets found. Create a budget to start tracking expenses.
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        budgets.map((budget) => {
+                          const utilization = budget.total_budget > 0
+                            ? (budget.spent / budget.total_budget) * 100
+                            : 0;
+                          return (
+                            <TableRow key={budget.id} hover>
+                              <TableCell>
+                                <Typography fontWeight="600">{budget.name}</Typography>
+                              </TableCell>
+                              <TableCell>{budget.department}</TableCell>
+                              <TableCell>{budget.fiscal_year}</TableCell>
+                              <TableCell align="right" fontWeight="bold">
+                                {formatCurrency(budget.total_budget)}
+                              </TableCell>
+                              <TableCell align="right">
+                                {formatCurrency(budget.spent)}
+                              </TableCell>
+                              <TableCell align="right" fontWeight="bold">
+                                {formatCurrency(budget.remaining)}
+                              </TableCell>
+                              <TableCell align="center">
+                                <Box display="flex" alignItems="center" justifyContent="center">
+                                  <LinearProgress
+                                    variant="determinate"
+                                    value={Math.min(utilization, 100)}
+                                    color={getUtilizationColor(utilization)}
+                                    sx={{ width: 80, mr: 1 }}
+                                  />
+                                  <Typography variant="caption">
+                                    {utilization.toFixed(0)}%
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={budget.status}
+                                  color={getStatusColor(budget.status)}
+                                  size="small"
+                                />
+                              </TableCell>
+                              <TableCell align="center">
+                                <Tooltip title="View Details">
+                                  <IconButton size="small">
+                                    <Visibility fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit">
+                                  <IconButton size="small">
+                                    <Edit fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Create Budget Dialog */}
+        <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Create New Budget</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Budget Name"
+                  value={newBudget.name}
+                  onChange={(e) => setNewBudget({ ...newBudget, name: e.target.value })}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Department"
+                  value={newBudget.department}
+                  onChange={(e) => setNewBudget({ ...newBudget, department: e.target.value })}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Fiscal Year</InputLabel>
+                  <Select
+                    value={newBudget.fiscal_year}
+                    onChange={(e) => setNewBudget({ ...newBudget, fiscal_year: e.target.value })}
+                    label="Fiscal Year"
+                  >
+                    <MenuItem value="2023-2024">2023-2024</MenuItem>
+                    <MenuItem value="2024-2025">2024-2025</MenuItem>
+                    <MenuItem value="2025-2026">2025-2026</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Total Budget Amount"
+                  type="number"
+                  value={newBudget.total_budget}
+                  onChange={(e) => setNewBudget({ ...newBudget, total_budget: parseFloat(e.target.value) || 0 })}
+                  required
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateBudget} variant="contained" disabled={!newBudget.name || !newBudget.total_budget}>
+              Create Budget
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </DashboardLayout>
     </ProtectedPage>
   );
 };
