@@ -22,6 +22,9 @@ import pytz
 # NEW: Import for entitlement check
 from app.api.deps.entitlements import require_permission_with_entitlement
 
+# NEW: Import for tenant enforcement
+from app.core.tenant import require_current_organization_id, TenantQueryMixin
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -431,7 +434,7 @@ async def create_stock_entry(
             detail="Access denied. You do not have permission to manage stock information."
         )
         
-    org_id = require_current_organization_id(current_user)
+    # Use org_id from auth dep (no redundant call)
     
     stmt = select(Product).where(Product.id == stock.product_id)
     result = await db.execute(stmt)
@@ -489,7 +492,7 @@ async def update_stock(
             detail="Access denied. You do not have permission to manage stock information."
         )
         
-    org_id = require_current_organization_id(current_user)
+    # Use org_id from auth dep (no redundant call)
         
     stmt = select(Stock).where(Stock.product_id == product_id)
     result = await db.execute(stmt)
@@ -545,7 +548,7 @@ async def adjust_stock(
             detail="Access denied. You do not have permission to manage stock information."
         )
         
-    org_id = require_current_organization_id(current_user)
+    # Use org_id from auth dep (no redundant call)
         
     stmt = select(Stock).where(Stock.product_id == product_id)
     result = await db.execute(stmt)
@@ -643,7 +646,7 @@ async def bulk_import_stock(
         if organization_id is not None and organization_id != org_id:
             logger.warning(f"[bulk_import_stock] User {current_user.email} attempted to specify different org_id: {organization_id}, ignoring")
         
-        org_id = require_current_organization_id(current_user)
+        # Use org_id from auth dep (no redundant call)
         logger.info(f"[bulk_import_stock] Regular user importing for their org_id: {org_id}")
 
     await validate_company_setup(db, org_id)
@@ -950,7 +953,7 @@ async def export_stock_excel(
     """Export stock to Excel"""
     current_user, org_id = auth
 
-    org_id = require_current_organization_id(current_user)
+    # Use org_id from auth dep (no redundant call)
     
     stmt = select(Stock).join(Product)
     

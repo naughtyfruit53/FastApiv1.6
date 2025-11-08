@@ -379,20 +379,25 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         organization_id: organization_id || vendorData.organization_id,
       };
       console.log("Submitting vendor data:", cleanData);
-      let createdVendor = null;
-      if (typeof onSave === "function") {
-        createdVendor = await onSave(cleanData);
-        console.log("Vendor saved successfully:", createdVendor);
+      let response;
+      if (initialData.id) {
+        // Update existing vendor
+        response = await api.put(`/vendors/${initialData.id}`, cleanData);
       } else {
-        console.error("onSave is not provided or not a function");
-        setFormError("Internal error: Save function not available");
-        toast.error("Internal error: Save function not available");
-        return;
+        // Create new vendor
+        response = await api.post(`/vendors`, cleanData);
       }
+      const savedVendor = response.data;
+      console.log("Vendor saved successfully:", savedVendor);
+      
+      if (typeof onSave === "function") {
+        await onSave(savedVendor);
+      }
+      
       reset();
       setLocalGstNumber("");
       onClose();
-      return createdVendor;
+      return savedVendor;
     } catch (error: any) {
       console.error("Error saving vendor:", {
         message: error.message,
