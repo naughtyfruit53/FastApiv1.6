@@ -238,149 +238,115 @@ const HelpPage: React.FC = () => {
 
   return (
     <ProtectedPage moduleKey="dashboard" action="read">
-      ashboardLayout
-      title="Help & User Guide"
-      subtitle="Comprehensive guide to using the ERP system"
-    >
-      <Grid container spacing={3}>
-        {/* Quick Links */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Quick Links
-              </Typography>
-              <List>
-                <ListItemButton component="a" href="/docs/USER_GUIDE.md" target="_blank">
-                  <Book sx={{ mr: 2 }} color="primary" />
-                  <ListItemText
-                    primary="Complete User Guide"
-                    secondary="Download full documentation"
+      <DashboardLayout
+        title="Help & User Guide"
+        subtitle="Comprehensive guide to using the ERP system"
+      >
+        <Grid container spacing={3}>
+          {/* Quick Links */}
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Quick Links
+                </Typography>
+                <List>
+                  <ListItemButton component="a" href="/docs/USER_GUIDE.md" target="_blank">
+                    <Book sx={{ mr: 2 }} color="primary" />
+                    <ListItemText
+                      primary="Complete User Guide"
+                      secondary="Download full documentation"
+                    />
+                  </ListItemButton>
+                  <Divider />
+                  <ListItemButton>
+                    <VideoLibrary sx={{ mr: 2 }} color="primary" />
+                    <ListItemText
+                      primary="Video Tutorials"
+                      secondary="Coming soon"
+                    />
+                  </ListItemButton>
+                  <Divider />
+                  <ListItemButton>
+                    <ContactSupport sx={{ mr: 2 }} color="primary" />
+                    <ListItemText
+                      primary="Contact Support"
+                      secondary="support@tritiq.com"
+                    />
+                  </ListItemButton>
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Help Content */}
+          <Grid item xs={12} md={8}>
+            <Card>
+              <CardContent>
+                <Box mb={3}>
+                  <TextField
+                    fullWidth
+                    placeholder="Search help topics..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search />
+                        </InputAdornment>
+                      )
+                    }}
                   />
-                </ListItemButton>
-                <Divider />
-                <ListItemButton>
-                  <VideoLibrary sx={{ mr: 2 }} color="primary" />
-                  <ListItemText
-                    primary="Video Tutorials"
-                    secondary="Coming soon"
-                  />
-                </ListItemButton>
-                <Divider />
-                <ListItemButton>
-                  <ContactSupport sx={{ mr: 2 }} color="primary" />
-                  <ListItemText
-                    primary="Contact Support"
-                    secondary="support@tritiq.com"
-                  />
-                </ListItemButton>
-              </List>
-            </CardContent>
-          </Card>
-
-          <Card sx={{ mt: 2 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Keyboard Shortcuts
-              </Typography>
-              <List dense>
-                <ListItem>
-                  <Typography variant="body2">
-                    <Chip label="Ctrl+S" size="small" sx={{ mr: 1 }} />
-                    Save
-                  </Typography>
-                </ListItem>
-                <ListItem>
-                  <Typography variant="body2">
-                    <Chip label="Ctrl+P" size="small" sx={{ mr: 1 }} />
-                    Print
-                  </Typography>
-                </ListItem>
-                <ListItem>
-                  <Typography variant="body2">
-                    <Chip label="Ctrl+F" size="small" sx={{ mr: 1 }} />
-                    Search
-                  </Typography>
-                </ListItem>
-                <ListItem>
-                  <Typography variant="body2">
-                    <Chip label="/" size="small" sx={{ mr: 1 }} />
-                    Focus search
-                  </Typography>
-                </ListItem>
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Help Content */}
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Box mb={3}>
-                <TextField
-                  fullWidth
-                  placeholder="Search help topics..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search />
-                      </InputAdornment>
-                    )
-                  }}
-                />
-              </Box>
-
-              <List>
-                {filteredSections.map((section) => (
-                  <React.Fragment key={section.id}>
-                    <ListItemButton onClick={() => handleSectionClick(section.id)}>
-                      <Box sx={{ mr: 2 }}>{section.icon}</Box>
-                      <ListItemText
-                        primary={
-                          <Typography variant="h6">{section.title}</Typography>
-                        }
-                        secondary={section.description}
-                      />
-                      <IconButton>
-                        {expandedSection === section.id ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-                      </IconButton>
-                    </ListItemButton>
-
-                    <Collapse in={expandedSection === section.id}>
-                      <Box sx={{ pl: 4, pr: 2, pb: 2 }}>
-                        {section.topics.map((topic, index) => (
-                          <Paper key={index} sx={{ p: 2, mb: 2 }}>
-                            <Typography variant="subtitle2" color="primary" gutterBottom>
-                              {topic.title}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              {topic.content}
-                            </Typography>
-                          </Paper>
-                        ))}
-                      </Box>
-                    </Collapse>
-
-                    <Divider />
-                  </React.Fragment>
-                ))}
-              </List>
-
-              {filteredSections.length === 0 && (
-                <Box textAlign="center" py={4}>
-                  <Typography color="textSecondary">
-                    No help topics found matching your search.
-                  </Typography>
                 </Box>
-              )}
-            </CardContent>
-          </Card>
+
+                <List>
+                  {filteredSections.map((section) => (
+                    <React.Fragment key={section.id}>
+                      <ListItemButton onClick={() => handleSectionClick(section.id)}>
+                        <Box sx={{ mr: 2 }}>{section.icon}</Box>
+                        <ListItemText
+                          primary={
+                            <Typography variant="h6">{section.title}</Typography>
+                          }
+                          secondary={section.description}
+                        />
+                        <IconButton>
+                          {expandedSection === section.id ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+                        </IconButton>
+                      </ListItemButton>
+
+                      <Collapse in={expandedSection === section.id}>
+                        <Box sx={{ pl: 4, pr: 2, pb: 2 }}>
+                          {section.topics.map((topic, index) => (
+                            <Paper key={index} sx={{ p: 2, mb: 2 }}>
+                              <Typography variant="subtitle2" color="primary" gutterBottom>
+                                {topic.title}
+                              </Typography>
+                              <Typography variant="body2" color="textSecondary">
+                                {topic.content}
+                              </Typography>
+                            </Paper>
+                          ))}
+                        </Box>
+                      </Collapse>
+
+                      <Divider />
+                    </React.Fragment>
+                  ))}
+                </List>
+
+                {filteredSections.length === 0 && (
+                  <Box textAlign="center" py={4}>
+                    <Typography color="textSecondary">
+                      No help topics found matching your search.
+                    </Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
-      </Grid>
-    </DashboardLayout>
+      </DashboardLayout>
     </ProtectedPage>
   );
 };

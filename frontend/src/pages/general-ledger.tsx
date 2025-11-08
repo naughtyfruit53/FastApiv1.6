@@ -129,7 +129,6 @@ const GeneralLedger: React.FC = () => {
       const response = await axios.get(`/api/v1/erp/general-ledger?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       setEntries(response.data);
       setTotalPages(Math.ceil(response.data.length / 50)); // Simplified pagination
       setError(null);
@@ -204,273 +203,97 @@ const GeneralLedger: React.FC = () => {
 
   return (
     <ProtectedPage moduleKey="finance" action="read">
-      ocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ p: 3 }}>
-        {/* Header */}
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-        >
-          <Typography variant="h4" component="h1">
-            General Ledger
-          </Typography>
-          <Box>
-            <Button
-              startIcon={<Add />}
-              variant="contained"
-              onClick={() => setCreateDialogOpen(true)}
-              sx={{ mr: 1 }}
-            >
-              New Entry
-            </Button>
-            <IconButton onClick={fetchEntries} color="primary">
-              <Refresh />
-            </IconButton>
-            <Button startIcon={<Download />} variant="outlined" sx={{ ml: 1 }}>
-              Export
-            </Button>
-          </Box>
-        </Box>
-
-        {/* Summary Cards */}
-        <Grid container spacing={3} mb={3}>
-          <Grid item xs={12} sm={4}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Total Debits
-                </Typography>
-                <Typography variant="h6" color="error.main">
-                  {formatCurrency(totalDebits)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Total Credits
-                </Typography>
-                <Typography variant="h6" color="success.main">
-                  {formatCurrency(totalCredits)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Difference
-                </Typography>
-                <Typography
-                  variant="h6"
-                  color={
-                    totalDebits === totalCredits
-                      ? "success.main"
-                      : "warning.main"
-                  }
-                >
-                  {formatCurrency(Math.abs(totalDebits - totalCredits))}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Filters */}
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth>
-                <InputLabel>Account</InputLabel>
-                <Select
-                  value={selectedAccount || ""}
-                  onChange={(e) =>
-                    setSelectedAccount((e.target.value as number) || null)
-                  }
-                  label="Account"
-                >
-                  <MenuItem value="">All Accounts</MenuItem>
-                  {accounts.map((account) => (
-                    <MenuItem key={account.id} value={account.id}>
-                      {account.account_code} - {account.account_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <DatePicker
-                label="Start Date"
-                value={dateFilter.start}
-                onChange={(date) =>
-                  setDateFilter((prev) => ({ ...prev, start: date }))
-                }
-                renderInput={(params) => <TextField {...params} fullWidth />}
-              />
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <DatePicker
-                label="End Date"
-                value={dateFilter.end}
-                onChange={(date) =>
-                  setDateFilter((prev) => ({ ...prev, end: date }))
-                }
-                renderInput={(params) => <TextField {...params} fullWidth />}
-              />
-            </Grid>
-            <Grid item xs={12} sm={2}>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <Box sx={{ p: 3 }}>
+          {/* Header */}
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={3}
+          >
+            <Typography variant="h4" component="h1">
+              General Ledger
+            </Typography>
+            <Box>
               <Button
-                variant="outlined"
-                startIcon={<FilterList />}
-                onClick={() => {
-                  setSelectedAccount(null);
-                  setDateFilter({ start: null, end: null });
-                }}
-                fullWidth
+                startIcon={<Add />}
+                variant="contained"
+                onClick={() => setCreateDialogOpen(true)}
+                sx={{ mr: 1 }}
               >
-                Clear
+                New Entry
               </Button>
+              <IconButton onClick={fetchEntries} color="primary">
+                <Refresh />
+              </IconButton>
+              <Button startIcon={<Download />} variant="outlined" sx={{ ml: 1 }}>
+                Export
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Summary Cards */}
+          <Grid container spacing={3} mb={3}>
+            <Grid item xs={12} sm={4}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Total Debits
+                  </Typography>
+                  <Typography variant="h6" color="error.main">
+                    {formatCurrency(totalDebits)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Total Credits
+                  </Typography>
+                  <Typography variant="h6" color="success.main">
+                    {formatCurrency(totalCredits)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Difference
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    color={
+                      totalDebits === totalCredits
+                        ? "success.main"
+                        : "warning.main"
+                    }
+                  >
+                    {formatCurrency(Math.abs(totalDebits - totalCredits))}
+                  </Typography>
+                </CardContent>
+              </Card>
             </Grid>
           </Grid>
-        </Paper>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {/* Entries Table */}
-        <Paper>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Transaction #</TableCell>
-                  <TableCell>Reference</TableCell>
-                  <TableCell>Description</TableCell>
-                  <TableCell align="right">Debit</TableCell>
-                  <TableCell align="right">Credit</TableCell>
-                  <TableCell align="right">Balance</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center">
-                      <CircularProgress />
-                    </TableCell>
-                  </TableRow>
-                ) : entries.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center">
-                      No entries found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  entries.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>
-                        {formatDate(entry.transaction_date)}
-                      </TableCell>
-                      <TableCell>{entry.transaction_number}</TableCell>
-                      <TableCell>
-                        {entry.reference_type && (
-                          <Chip
-                            label={`${entry.reference_type}${entry.reference_number ? `: ${entry.reference_number}` : ""}`}
-                            size="small"
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2">
-                            {entry.description}
-                          </Typography>
-                          {entry.narration && (
-                            <Typography variant="caption" color="textSecondary">
-                              {entry.narration}
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">
-                        {entry.debit_amount > 0
-                          ? formatCurrency(entry.debit_amount)
-                          : "-"}
-                      </TableCell>
-                      <TableCell align="right">
-                        {entry.credit_amount > 0
-                          ? formatCurrency(entry.credit_amount)
-                          : "-"}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatCurrency(entry.running_balance)}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={entry.is_reconciled ? "Reconciled" : "Pending"}
-                          color={entry.is_reconciled ? "success" : "default"}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <IconButton size="small">
-                          <Visibility />
-                        </IconButton>
-                        <IconButton size="small">
-                          <Edit />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {/* Pagination */}
-          <Box display="flex" justifyContent="center" p={2}>
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={(event, value) => setPage(value)}
-              color="primary"
-            />
-          </Box>
-        </Paper>
-
-        {/* Create Entry Dialog */}
-        <Dialog
-          open={createDialogOpen}
-          onClose={() => setCreateDialogOpen(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>Create General Ledger Entry</DialogTitle>
-          <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
+          {/* Filters */}
+          <Paper sx={{ p: 2, mb: 3 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={4}>
                 <FormControl fullWidth>
                   <InputLabel>Account</InputLabel>
                   <Select
-                    value={createData.account_id}
+                    value={selectedAccount || ""}
                     onChange={(e) =>
-                      setCreateData((prev) => ({
-                        ...prev,
-                        account_id: e.target.value as number,
-                      }))
+                      setSelectedAccount((e.target.value as number) || null)
                     }
                     label="Account"
                   >
+                    <MenuItem value="">All Accounts</MenuItem>
                     {accounts.map((account) => (
                       <MenuItem key={account.id} value={account.id}>
                         {account.account_code} - {account.account_name}
@@ -479,118 +302,294 @@ const GeneralLedger: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Transaction Number"
-                  value={createData.transaction_number}
-                  onChange={(e) =>
-                    setCreateData((prev) => ({
-                      ...prev,
-                      transaction_number: e.target.value,
-                    }))
+              <Grid item xs={12} sm={3}>
+                <DatePicker
+                  label="Start Date"
+                  value={dateFilter.start}
+                  onChange={(date) =>
+                    setDateFilter((prev) => ({ ...prev, start: date }))
                   }
-                  required
+                  renderInput={(params) => <TextField {...params} fullWidth />}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="Transaction Date"
-                  value={createData.transaction_date}
-                  onChange={(e) =>
-                    setCreateData((prev) => ({
-                      ...prev,
-                      transaction_date: e.target.value,
-                    }))
+              <Grid item xs={12} sm={3}>
+                <DatePicker
+                  label="End Date"
+                  value={dateFilter.end}
+                  onChange={(date) =>
+                    setDateFilter((prev) => ({ ...prev, end: date }))
                   }
-                  InputLabelProps={{ shrink: true }}
-                  required
+                  renderInput={(params) => <TextField {...params} fullWidth />}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
+              <Grid item xs={12} sm={2}>
+                <Button
+                  variant="outlined"
+                  startIcon={<FilterList />}
+                  onClick={() => {
+                    setSelectedAccount(null);
+                    setDateFilter({ start: null, end: null });
+                  }}
                   fullWidth
-                  label="Reference Number"
-                  value={createData.reference_number || ""}
-                  onChange={(e) =>
-                    setCreateData((prev) => ({
-                      ...prev,
-                      reference_number: e.target.value,
-                    }))
-                  }
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Debit Amount"
-                  value={createData.debit_amount}
-                  onChange={(e) =>
-                    setCreateData((prev) => ({
-                      ...prev,
-                      debit_amount: parseFloat(e.target.value) || 0,
-                    }))
-                  }
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Credit Amount"
-                  value={createData.credit_amount}
-                  onChange={(e) =>
-                    setCreateData((prev) => ({
-                      ...prev,
-                      credit_amount: parseFloat(e.target.value) || 0,
-                    }))
-                  }
-                  inputProps={{ min: 0, step: 0.01 }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Description"
-                  value={createData.description || ""}
-                  onChange={(e) =>
-                    setCreateData((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
-                  }
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  label="Narration"
-                  value={createData.narration || ""}
-                  onChange={(e) =>
-                    setCreateData((prev) => ({
-                      ...prev,
-                      narration: e.target.value,
-                    }))
-                  }
-                />
+                >
+                  Clear
+                </Button>
               </Grid>
             </Grid>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateEntry} variant="contained">
-              Create Entry
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
-    </LocalizationProvider>
+          </Paper>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          {/* Entries Table */}
+          <Paper>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Transaction #</TableCell>
+                    <TableCell>Reference</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell align="right">Debit</TableCell>
+                    <TableCell align="right">Credit</TableCell>
+                    <TableCell align="right">Balance</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align="center">
+                        <CircularProgress />
+                      </TableCell>
+                    </TableRow>
+                  ) : entries.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align="center">
+                        No entries found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    entries.map((entry) => (
+                      <TableRow key={entry.id}>
+                        <TableCell>
+                          {formatDate(entry.transaction_date)}
+                        </TableCell>
+                        <TableCell>{entry.transaction_number}</TableCell>
+                        <TableCell>
+                          {entry.reference_type && (
+                            <Chip
+                              label={`${entry.reference_type}${entry.reference_number ? `: ${entry.reference_number}` : ""}`}
+                              size="small"
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2">
+                              {entry.description}
+                            </Typography>
+                            {entry.narration && (
+                              <Typography variant="caption" color="textSecondary">
+                                {entry.narration}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right">
+                          {entry.debit_amount > 0
+                            ? formatCurrency(entry.debit_amount)
+                            : "-"}
+                        </TableCell>
+                        <TableCell align="right">
+                          {entry.credit_amount > 0
+                            ? formatCurrency(entry.credit_amount)
+                            : "-"}
+                        </TableCell>
+                        <TableCell align="right">
+                          {formatCurrency(entry.running_balance)}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={entry.is_reconciled ? "Reconciled" : "Pending"}
+                            color={entry.is_reconciled ? "success" : "default"}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton size="small">
+                            <Visibility />
+                          </IconButton>
+                          <IconButton size="small">
+                            <Edit />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {/* Pagination */}
+            <Box display="flex" justifyContent="center" p={2}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(event, value) => setPage(value)}
+                color="primary"
+              />
+            </Box>
+          </Paper>
+
+          {/* Create Entry Dialog */}
+          <Dialog
+            open={createDialogOpen}
+            onClose={() => setCreateDialogOpen(false)}
+            maxWidth="md"
+            fullWidth
+          >
+            <DialogTitle>Create General Ledger Entry</DialogTitle>
+            <DialogContent>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Account</InputLabel>
+                    <Select
+                      value={createData.account_id}
+                      onChange={(e) =>
+                        setCreateData((prev) => ({
+                          ...prev,
+                          account_id: e.target.value as number,
+                        }))
+                      }
+                      label="Account"
+                    >
+                      {accounts.map((account) => (
+                        <MenuItem key={account.id} value={account.id}>
+                          {account.account_code} - {account.account_name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Transaction Number"
+                    value={createData.transaction_number}
+                    onChange={(e) =>
+                      setCreateData((prev) => ({
+                        ...prev,
+                        transaction_number: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    label="Transaction Date"
+                    value={createData.transaction_date}
+                    onChange={(e) =>
+                      setCreateData((prev) => ({
+                        ...prev,
+                        transaction_date: e.target.value,
+                      }))
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Reference Number"
+                    value={createData.reference_number || ""}
+                    onChange={(e) =>
+                      setCreateData((prev) => ({
+                        ...prev,
+                        reference_number: e.target.value,
+                      }))
+                    }
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Debit Amount"
+                    value={createData.debit_amount}
+                    onChange={(e) =>
+                      setCreateData((prev) => ({
+                        ...prev,
+                        debit_amount: parseFloat(e.target.value) || 0,
+                      }))
+                    }
+                    inputProps={{ min: 0, step: 0.01 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Credit Amount"
+                    value={createData.credit_amount}
+                    onChange={(e) =>
+                      setCreateData((prev) => ({
+                        ...prev,
+                        credit_amount: parseFloat(e.target.value) || 0,
+                      }))
+                    }
+                    inputProps={{ min: 0, step: 0.01 }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Description"
+                    value={createData.description || ""}
+                    onChange={(e) =>
+                      setCreateData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    label="Narration"
+                    value={createData.narration || ""}
+                    onChange={(e) =>
+                      setCreateData((prev) => ({
+                        ...prev,
+                        narration: e.target.value,
+                      }))
+                    }
+                  />
+                </Grid>
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateEntry} variant="contained">
+                Create Entry
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </Box>
+      </LocalizationProvider>
     </ProtectedPage>
   );
 };

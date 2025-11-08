@@ -90,10 +90,10 @@ const ExpenseAnalysisPage: React.FC = () => {
   if (loading) {
     return (
       <ProtectedPage moduleKey="finance" action="read">
-      rotectedPage moduleKey="finance" action="read">
-        ox display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </ProtectedPage>
     );
   }
 
@@ -152,143 +152,144 @@ const ExpenseAnalysisPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Expense Analysis
-        </Typography>
-        <Box display="flex" gap={2} alignItems="center">
-          <TextField
-            type="number"
-            label="Period (Months)"
-            value={periodMonths}
-            onChange={(e) => setPeriodMonths(parseInt(e.target.value))}
-            size="small"
-            sx={{ width: 150 }}
-          />
-          <IconButton onClick={fetchExpenseData} color="primary">
-            <Refresh />
-          </IconButton>
-          <Button startIcon={<Download />} variant="outlined">
-            Export
-          </Button>
-          <Button startIcon={<Print />} variant="outlined">
-            Print
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Summary Cards */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Total Expenses
-              </Typography>
-              <Typography variant="h5" color="error.main">
-                {formatCurrency(data.summary.total_expenses)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Expense Categories
-              </Typography>
-              <Typography variant="h5">{data.summary.expense_count}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Top Expense
-              </Typography>
-              {data.summary.top_expense && (
-                <>
-                  <Typography variant="h6" noWrap>
-                    {data.summary.top_expense.account_name}
-                  </Typography>
-                  <Typography variant="body2" color="error.main">
-                    {formatCurrency(data.summary.top_expense.amount)} (
-                    {data.summary.top_expense.percentage.toFixed(1)}%)
-                  </Typography>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Charts */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Expense Distribution (Top 10)
-              </Typography>
-              <Box sx={{ height: 350 }}>
-                <Pie data={pieData} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Expense Breakdown (Top 10)
-              </Typography>
-              <Box sx={{ height: 350 }}>
-                <Bar data={barData} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Detailed Table */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            All Expenses
+    <ProtectedPage moduleKey="finance" action="read">
+      <Box sx={{ p: 3 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
+            Expense Analysis
           </Typography>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Account Code</TableCell>
-                  <TableCell>Account Name</TableCell>
-                  <TableCell>Parent Account</TableCell>
-                  <TableCell align="right">Amount</TableCell>
-                  <TableCell align="right">Percentage</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.expenses.map((expense, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{expense.account_code}</TableCell>
-                    <TableCell>{expense.account_name}</TableCell>
-                    <TableCell>{expense.parent_account}</TableCell>
-                    <TableCell align="right">
-                      {formatCurrency(expense.amount)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {expense.percentage.toFixed(2)}%
-                    </TableCell>
+          <Box display="flex" gap={2} alignItems="center">
+            <TextField
+              type="number"
+              label="Period (Months)"
+              value={periodMonths}
+              onChange={(e) => setPeriodMonths(parseInt(e.target.value))}
+              size="small"
+              sx={{ width: 150 }}
+            />
+            <IconButton onClick={fetchExpenseData} color="primary">
+              <Refresh />
+            </IconButton>
+            <Button startIcon={<Download />} variant="outlined">
+              Export
+            </Button>
+            <Button startIcon={<Print />} variant="outlined">
+              Print
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Summary Cards */}
+        <Grid container spacing={3} mb={3}>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Expenses
+                </Typography>
+                <Typography variant="h5" color="error.main">
+                  {formatCurrency(data.summary.total_expenses)}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Expense Categories
+                </Typography>
+                <Typography variant="h5">{data.summary.expense_count}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Top Expense
+                </Typography>
+                {data.summary.top_expense && (
+                  <>
+                    <Typography variant="h6" noWrap>
+                      {data.summary.top_expense.account_name}
+                    </Typography>
+                    <Typography variant="body2" color="error.main">
+                      {formatCurrency(data.summary.top_expense.amount)} (
+                      {data.summary.top_expense.percentage.toFixed(1)}%)
+                    </Typography>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Charts */}
+        <Grid container spacing={3} mb={3}>
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Expense Distribution (Top 10)
+                </Typography>
+                <Box sx={{ height: 350 }}>
+                  <Pie data={pieData} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Expense Breakdown (Top 10)
+                </Typography>
+                <Box sx={{ height: 350 }}>
+                  <Bar data={barData} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Detailed Table */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              All Expenses
+            </Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Account Code</TableCell>
+                    <TableCell>Account Name</TableCell>
+                    <TableCell>Parent Account</TableCell>
+                    <TableCell align="right">Amount</TableCell>
+                    <TableCell align="right">Percentage</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-    </Box>
+                </TableHead>
+                <TableBody>
+                  {data.expenses.map((expense, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{expense.account_code}</TableCell>
+                      <TableCell>{expense.account_name}</TableCell>
+                      <TableCell>{expense.parent_account}</TableCell>
+                      <TableCell align="right">
+                        {formatCurrency(expense.amount)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {expense.percentage.toFixed(2)}%
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Box>
     </ProtectedPage>
   );
 };

@@ -84,10 +84,10 @@ const FinancialKPIsPage: React.FC = () => {
   if (loading) {
     return (
       <ProtectedPage moduleKey="finance" action="read">
-      rotectedPage moduleKey="finance" action="read">
-        ox display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </ProtectedPage>
     );
   }
 
@@ -111,187 +111,188 @@ const FinancialKPIsPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Financial KPIs Dashboard
-        </Typography>
-        <Box display="flex" gap={2} alignItems="center">
-          <TextField
-            type="number"
-            label="Period (Months)"
-            value={periodMonths}
-            onChange={(e) => setPeriodMonths(parseInt(e.target.value))}
-            size="small"
-            sx={{ width: 150 }}
-          />
-          <IconButton onClick={fetchKPIData} color="primary">
-            <Refresh />
-          </IconButton>
-          <Button startIcon={<Download />} variant="outlined">
-            Export
-          </Button>
-          <Button startIcon={<Print />} variant="outlined">
-            Print
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Financial Ratios */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Current Ratio
-              </Typography>
-              <Typography variant="h5" color="primary.main">
-                {data.financial_ratios.current_ratio.toFixed(2)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Debt to Equity
-              </Typography>
-              <Typography variant="h5" color="warning.main">
-                {data.financial_ratios.debt_to_equity.toFixed(2)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Working Capital
-              </Typography>
-              <Typography variant="h5" color="success.main">
-                {formatCurrency(data.financial_ratios.working_capital)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Total Assets
-              </Typography>
-              <Typography variant="h5" color="info.main">
-                {formatCurrency(data.financial_ratios.total_assets)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* KPI Summary */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Total KPIs
-              </Typography>
-              <Typography variant="h5">{data.summary.total_kpis}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                On Track
-              </Typography>
-              <Typography variant="h5" color="success.main">
-                {data.summary.on_track_count}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Needs Attention
-              </Typography>
-              <Typography variant="h5" color="error.main">
-                {data.summary.needs_attention_count}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* KPI Table */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            KPI Performance
+    <ProtectedPage moduleKey="finance" action="read">
+      <Box sx={{ p: 3 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h4" component="h1">
+            Financial KPIs Dashboard
           </Typography>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>KPI Name</TableCell>
-                  <TableCell>Category</TableCell>
-                  <TableCell align="right">Value</TableCell>
-                  <TableCell align="right">Target</TableCell>
-                  <TableCell align="right">Variance %</TableCell>
-                  <TableCell>Period End</TableCell>
-                  <TableCell align="right">Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.kpis.map((kpi, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{kpi.kpi_name}</TableCell>
-                    <TableCell>
-                      <Chip label={kpi.kpi_category} size="small" />
-                    </TableCell>
-                    <TableCell align="right">{kpi.value.toFixed(2)}</TableCell>
-                    <TableCell align="right">
-                      {kpi.target ? kpi.target.toFixed(2) : "N/A"}
-                    </TableCell>
-                    <TableCell align="right">
-                      {kpi.variance !== null ? (
-                        <Box display="flex" alignItems="center" justifyContent="flex-end">
-                          {kpi.variance >= 0 ? (
-                            <TrendingUp color="success" fontSize="small" />
-                          ) : (
-                            <TrendingDown color="error" fontSize="small" />
-                          )}
-                          <Typography
-                            color={kpi.variance >= 0 ? "success.main" : "error.main"}
-                            sx={{ ml: 0.5 }}
-                          >
-                            {Math.abs(kpi.variance).toFixed(2)}%
-                          </Typography>
-                        </Box>
-                      ) : (
-                        "N/A"
-                      )}
-                    </TableCell>
-                    <TableCell>{new Date(kpi.period_end).toLocaleDateString()}</TableCell>
-                    <TableCell align="right">
-                      <Chip
-                        label={kpi.status.replace("_", " ").toUpperCase()}
-                        color={kpi.status === "on_track" ? "success" : "warning"}
-                        size="small"
-                      />
-                    </TableCell>
+          <Box display="flex" gap={2} alignItems="center">
+            <TextField
+              type="number"
+              label="Period (Months)"
+              value={periodMonths}
+              onChange={(e) => setPeriodMonths(parseInt(e.target.value))}
+              size="small"
+              sx={{ width: 150 }}
+            />
+            <IconButton onClick={fetchKPIData} color="primary">
+              <Refresh />
+            </IconButton>
+            <Button startIcon={<Download />} variant="outlined">
+              Export
+            </Button>
+            <Button startIcon={<Print />} variant="outlined">
+              Print
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Financial Ratios */}
+        <Grid container spacing={3} mb={3}>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Current Ratio
+                </Typography>
+                <Typography variant="h5" color="primary.main">
+                  {data.financial_ratios.current_ratio.toFixed(2)}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Debt to Equity
+                </Typography>
+                <Typography variant="h5" color="warning.main">
+                  {data.financial_ratios.debt_to_equity.toFixed(2)}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Working Capital
+                </Typography>
+                <Typography variant="h5" color="success.main">
+                  {formatCurrency(data.financial_ratios.working_capital)}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Assets
+                </Typography>
+                <Typography variant="h5" color="info.main">
+                  {formatCurrency(data.financial_ratios.total_assets)}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* KPI Summary */}
+        <Grid container spacing={3} mb={3}>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Total KPIs
+                </Typography>
+                <Typography variant="h5">{data.summary.total_kpis}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  On Track
+                </Typography>
+                <Typography variant="h5" color="success.main">
+                  {data.summary.on_track_count}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography color="textSecondary" gutterBottom>
+                  Needs Attention
+                </Typography>
+                <Typography variant="h5" color="error.main">
+                  {data.summary.needs_attention_count}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* KPI Table */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              KPI Performance
+            </Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>KPI Name</TableCell>
+                    <TableCell>Category</TableCell>
+                    <TableCell align="right">Value</TableCell>
+                    <TableCell align="right">Target</TableCell>
+                    <TableCell align="right">Variance %</TableCell>
+                    <TableCell>Period End</TableCell>
+                    <TableCell align="right">Status</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-    </Box>
+                </TableHead>
+                <TableBody>
+                  {data.kpis.map((kpi, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{kpi.kpi_name}</TableCell>
+                      <TableCell>
+                        <Chip label={kpi.kpi_category} size="small" />
+                      </TableCell>
+                      <TableCell align="right">{kpi.value.toFixed(2)}</TableCell>
+                      <TableCell align="right">
+                        {kpi.target ? kpi.target.toFixed(2) : "N/A"}
+                      </TableCell>
+                      <TableCell align="right">
+                        {kpi.variance !== null ? (
+                          <Box display="flex" alignItems="center" justifyContent="flex-end">
+                            {kpi.variance >= 0 ? (
+                              <TrendingUp color="success" fontSize="small" />
+                            ) : (
+                              <TrendingDown color="error" fontSize="small" />
+                            )}
+                            <Typography
+                              color={kpi.variance >= 0 ? "success.main" : "error.main"}
+                              sx={{ ml: 0.5 }}
+                            >
+                              {Math.abs(kpi.variance).toFixed(2)}%
+                            </Typography>
+                          </Box>
+                        ) : (
+                          "N/A"
+                        )}
+                      </TableCell>
+                      <TableCell>{new Date(kpi.period_end).toLocaleDateString()}</TableCell>
+                      <TableCell align="right">
+                        <Chip
+                          label={kpi.status.replace("_", " ").toUpperCase()}
+                          color={kpi.status === "on_track" ? "success" : "warning"}
+                          size="small"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Box>
     </ProtectedPage>
   );
 };

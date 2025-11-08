@@ -276,7 +276,6 @@ const FinancialReports: React.FC = () => {
     : null;
   return (
     <ProtectedPage moduleKey="finance" action="read">
-      ocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ p: 3 }}>
         {/* Header */}
         <Box
@@ -511,12 +510,6 @@ const FinancialReports: React.FC = () => {
                         Income
                       </Typography>
                       <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Account</TableCell>
-                            <TableCell align="right">Amount</TableCell>
-                          </TableRow>
-                        </TableHead>
                         <TableBody>
                           {profitLoss.income.map((item, index) => (
                             <TableRow key={index}>
@@ -548,12 +541,6 @@ const FinancialReports: React.FC = () => {
                         Expenses
                       </Typography>
                       <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Account</TableCell>
-                            <TableCell align="right">Amount</TableCell>
-                          </TableRow>
-                        </TableHead>
                         <TableBody>
                           {profitLoss.expenses.map((item, index) => (
                             <TableRow key={index}>
