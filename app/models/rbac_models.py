@@ -32,6 +32,7 @@ class Role(Base):
 
     # Relationships
     users = relationship("User", primaryjoin="Role.id == User.role_id", back_populates="role_obj")
+    role_permissions = relationship("RolePermission", back_populates="role")
 
 
 class Permission(Base):
@@ -39,7 +40,7 @@ class Permission(Base):
     __tablename__ = "permissions"
 
     id = Column(Integer, primary_key=True, index=True)
-    permission_key = Column(String(100), unique=True, index=True, nullable=False)  # e.g., 'crm.read'
+    permission_key = Column(String(100), unique=True, index=True, nullable=False)
     display_name = Column(String(100), nullable=False)
     description = Column(String(255))
     module_id = Column(Integer, ForeignKey('modules.id'), nullable=True)
@@ -139,7 +140,7 @@ class RoleModulePermission(Base):
 
 # Relationships in base models
 User.direct_permissions = relationship("UserPermission", foreign_keys="UserPermission.user_id", back_populates="user")
-Role.role_permissions = relationship("RolePermission", back_populates="role")
+
 Module.permissions = relationship("Permission", back_populates="module")
 Submodule.permissions = relationship("Permission", back_populates="submodule")
 
@@ -152,12 +153,13 @@ class ServiceRole(Base):
     description = Column(String(255))
     hierarchy_level = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
-    permissions = Column(JSON, default=list)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     organization_id = Column(Integer, ForeignKey('organizations.id'), nullable=False)
 
     organization = relationship("Organization", back_populates="service_roles")
+    permissions = relationship("ServiceRolePermission", back_populates="role")  # Added relationship
+
 
 class ServicePermission(Base):
     __tablename__ = "service_permissions"
@@ -170,6 +172,9 @@ class ServicePermission(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    module = Column(String(50), nullable=True)  # Added module column
+    action = Column(String(50), nullable=True)  # Added action column
+
 
 class ServiceRolePermission(Base):
     __tablename__ = "service_role_permissions"
@@ -180,8 +185,9 @@ class ServiceRolePermission(Base):
     granted_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
-    role = relationship("ServiceRole")
+    role = relationship("ServiceRole", back_populates="permissions")  # Added back_populates
     permission = relationship("ServicePermission")
+
 
 class UserServiceRole(Base):
     __tablename__ = "user_service_roles"
@@ -190,9 +196,9 @@ class UserServiceRole(Base):
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     service_role_id = Column(Integer, ForeignKey('service_roles.id'), nullable=False)
     assigned_at = Column(DateTime, default=datetime.utcnow)
-    assigned_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+    assigned_by_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     is_active = Column(Boolean, default=True)
 
     user = relationship("User", foreign_keys=[user_id])
-    service_role = relationship("ServiceRole")
-    assigned_by_user = relationship("User", foreign_keys=[assigned_by])
+    role = relationship("ServiceRole")  # Changed to 'role' for join(UserRole.role)
+    assigned_by_user = relationship("User", foreign_keys=[assigned_by_id])

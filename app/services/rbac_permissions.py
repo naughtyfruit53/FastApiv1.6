@@ -3,7 +3,7 @@ Comprehensive Permission Definitions for RBAC System
 Defines all default permissions for modules and submodules
 """
 
-from typing import List, Tuple, Dict  # ADDED Dict
+from typing import List, Tuple, Dict
 from app.core.modules_registry import get_all_modules, get_module_submodules
 from app.schemas.rbac import ServiceModule as Module, ServiceAction as Action
 
@@ -26,7 +26,7 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
     for module in get_all_modules():
         # Module-level permissions
         for action_key, action_name in basic_actions:
-            name = f"{module.lower()}.{action_key}"  # CHANGED: Use dot (.) instead of underscore (_) for consistency with frontend checks and error messages
+            name = f"{module.lower()}.{action_key}"  # Use dot (.) format
             display_name = f"{action_name} {module.capitalize()}"
             description = f"{action_name} access in {module.capitalize()} module"
             permissions.append((name, display_name, description, module.lower(), action_key))
@@ -35,7 +35,7 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
         submodules = get_module_submodules(module)
         for sub in submodules:
             for action_key, action_name in basic_actions:
-                name = f"{module.lower()}.{sub}.{action_key}"  # CHANGED: Use dot (.) format
+                name = f"{module.lower()}.{sub}.{action_key}"  # Use dot (.) format
                 display_name = f"{action_name} {sub.capitalize()} in {module.capitalize()}"
                 description = f"{action_name} access to {sub.capitalize()} in {module.capitalize()}"
                 permissions.append((name, display_name, description, f"{module.lower()}_{sub}", action_key))
@@ -98,7 +98,7 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
         "admin"
     ))
     
-    # NEW: Add dashboard permission to fix 'dashboard.read' denial
+    # Add dashboard permission to fix 'dashboard.read' denial
     permissions.append((
         "dashboard.read",
         "Read Dashboard",
@@ -110,7 +110,7 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
     return permissions
 
 
-def get_default_role_permissions() -> dict[str, list[str]]:  # CHANGED Dict[str, List[str]] to dict[str, list[str]]
+def get_default_role_permissions() -> Dict[str, List[str]]:
     """
     Get default permissions for each role
     Returns dict of role_name -> list of permission names
@@ -119,10 +119,10 @@ def get_default_role_permissions() -> dict[str, list[str]]:  # CHANGED Dict[str,
     
     return {
         "admin": all_permissions,  # Full access
-        "management": all_permissions,  # NEW: Added management with full access
+        "management": all_permissions,  # Added management with full access
         "manager": [
             p for p in all_permissions 
-            if not p.startswith("admin.")  # CHANGED: Use dot format
+            if not p.startswith("admin.")  # Use dot format
             and not p.startswith("settings.") 
             and "delete" not in p  # No delete for managers
         ],
@@ -136,5 +136,5 @@ def get_default_role_permissions() -> dict[str, list[str]]:  # CHANGED Dict[str,
             if "read" in p or "view" in p
         ],
         # Explicitly add permissions for org_admin role
-        "org_admin": all_permissions + ["settings.view", "settings.update", "dashboard.read"],  # NEW: Explicitly add dashboard.read
+        "org_admin": all_permissions + ["settings.view", "settings.update", "dashboard.read"],  # Explicitly add dashboard.read
     }

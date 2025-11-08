@@ -5,13 +5,12 @@ RBAC service layer for Role-based access control
 """
 
 from typing import List, Optional, Set
-from sqlalchemy import select, and_, or_, func
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.core.database import get_db
 from app.models import (
     User, ServiceRole as Role, ServicePermission as Permission, ServiceRolePermission as RolePermission, 
     UserServiceRole as UserRole, Organization
@@ -37,7 +36,7 @@ class RBACService:
         self.db.add(db_permission)
         await self.db.commit()
         await self.db.refresh(db_permission)
-        logger.info(f"Created permission: {db_permission.name}")
+        logger.info(f"Created permission: {db_permission.permission_key}")
         return db_permission
     
     async def get_permissions(self, 
@@ -67,14 +66,14 @@ class RBACService:
             if perm.module in valid_modules and perm.action in valid_actions:
                 valid_permissions.append(perm)
             else:
-                logger.warning(f"Filtering out permission with invalid module/action: {perm.name} (module={perm.module}, action={perm.action})")
+                logger.warning(f"Filtering out permission with invalid module/action: {perm.permission_key} (module={perm.module}, action={perm.action})")
         
         return valid_permissions
     
-    async def get_permission_by_name(self, name: str) -> Optional[Permission]:
-        """Get permission by name"""
+    async def get_permission_by_key(self, key: str) -> Optional[Permission]:
+        """Get permission by key"""
         result = await self.db.execute(
-            select(Permission).filter_by(name=name, is_active=True)
+            select(Permission).filter_by(permission_key=key, is_active=True)
         )
         return result.scalars().first()
     
@@ -82,7 +81,7 @@ class RBACService:
     async def create_role(self, role: RoleCreate, created_by_user_id: Optional[int] = None) -> Role:
         """Create a new role with permissions"""
         result = await self.db.execute(
-            select(Role).filter_by(organization_id=role.organization_id, name=role.name)
+            select(Role).filter_by(organization_id=role.organization_id, role_key=role.name)
         )
         existing = result.scalars().first()
         
@@ -93,6 +92,7 @@ class RBACService:
             )
         
         role_data = role.model_dump(exclude={'permission_ids'})
+        role_data['role_key'] = role_data.pop('name')  # Map name to role_key
         db_role = Role(**role_data)
         self.db.add(db_role)
         await self.db.flush()
@@ -112,7 +112,7 @@ class RBACService:
         
         await self.db.commit()
         await self.db.refresh(db_role)
-        logger.info(f"Created role: {db_role.name} for organization {db_role.organization_id}")
+        logger.info(f"Created role: {db_role.role_key} for organization {db_role.organization_id}")
         return db_role
     
     async def get_roles(self, organization_id: int, is_active: bool = True) -> List[Role]:
@@ -122,7 +122,7 @@ class RBACService:
         if is_active is not None:
             stmt = stmt.where(Role.is_active == is_active)
             
-        result = await self.db.execute(stmt.order_by(Role.name))
+        result = await self.db.execute(stmt.order_by(Role.role_key))
         return result.scalars().all()
     
     async def get_role_by_id(self, role_id: int, organization_id: Optional[int] = None) -> Optional[Role]:
@@ -156,6 +156,8 @@ class RBACService:
             raise HTTPException(status_code=404, detail="Role not found")
         
         update_data = updates.model_dump(exclude_unset=True, exclude={'permission_ids'})
+        if 'name' in update_data:
+            update_data['role_key'] = update_data.pop('name')
         for field, value in update_data.items():
             setattr(db_role, field, value)
         
@@ -180,7 +182,7 @@ class RBACService:
         
         await self.db.commit()
         await self.db.refresh(db_role)
-        logger.info(f"Updated role: {db_role.name}")
+        logger.info(f"Updated role: {db_role.role_key}")
         return db_role
     
     async def delete_role(self, role_id: int, organization_id: Optional[int] = None) -> bool:
@@ -194,19 +196,19 @@ class RBACService:
         if not db_role:
             return False
         
-        count_stmt = select(func.count('*')).select_from(UserRole).where(UserRole.role_id == role_id, UserRole.is_active == True)
+        count_stmt = select(func.count('*')).select_from(UserRole).where(UserRole.service_role_id == role_id, UserRole.is_active == True)
         count_result = await self.db.execute(count_stmt)
         active_assignments = count_result.scalar()
         
         if active_assignments > 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot delete role '{db_role.name}' as it is assigned to {active_assignments} users"
+                detail=f"Cannot delete role '{db_role.role_key}' as it is assigned to {active_assignments} users"
             )
         
         db_role.is_active = False
         await self.db.commit()
-        logger.info(f"Deleted role: {db_role.name}")
+        logger.info(f"Deleted role: {db_role.role_key}")
         return True
     
     # User Role Assignment
@@ -231,7 +233,7 @@ class RBACService:
             )
         
         existing_result = await self.db.execute(
-            select(UserRole).filter_by(user_id=user_id, role_id=role_id)
+            select(UserRole).filter_by(user_id=user_id, service_role_id=role_id)
         )
         existing = existing_result.scalars().first()
         
@@ -251,7 +253,7 @@ class RBACService:
         
         assignment = UserRole(
             user_id=user_id,
-            role_id=role_id,
+            service_role_id=role_id,
             assigned_by_id=assigned_by_id
         )
         self.db.add(assignment)
@@ -265,7 +267,7 @@ class RBACService:
         result = await self.db.execute(
             select(UserRole).filter_by(
                 user_id=user_id,
-                role_id=role_id,
+                service_role_id=role_id,
                 is_active=True
             )
         )
@@ -298,7 +300,7 @@ class RBACService:
             select(User)
             .join(UserRole)
             .where(
-                UserRole.role_id == role_id,
+                UserRole.service_role_id == role_id,
                 UserRole.is_active == True,
                 User.is_active == True
             )
@@ -329,7 +331,7 @@ class RBACService:
             role_result = await self.db.execute(
                 select(Role).filter_by(
                     organization_id=user.organization_id,
-                    name=user.role,
+                    role_key=user.role,
                     is_active=True
                 )
             )
@@ -343,7 +345,7 @@ class RBACService:
                     .join(RolePermission)
                     .where(
                         RolePermission.role_id == role_from_users_table.id,
-                        Permission.name == permission_name,
+                        Permission.permission_key == permission_name,
                         Permission.is_active == True
                     )
                 )
@@ -355,7 +357,7 @@ class RBACService:
         
         # Fallback: check through UserServiceRole assignments (explicit role assignments)
         user_roles = await self.get_user_roles(user_id)
-        logger.debug(f"User {user_id} explicit role assignments: {[role.name for role in user_roles]}")
+        logger.debug(f"User {user_id} explicit role assignments: {[role.role_key for role in user_roles]}")
         
         for role in user_roles:
             result = await self.db.execute(
@@ -363,12 +365,12 @@ class RBACService:
                 .join(RolePermission)
                 .where(
                     RolePermission.role_id == role.id,
-                    Permission.name == permission_name,
+                    Permission.permission_key == permission_name,
                     Permission.is_active == True
                 )
             )
             if result.scalars().first():
-                logger.debug(f"Granted permission '{permission_name}' to user {user_id} via explicit role assignment '{role.name}'")
+                logger.debug(f"Granted permission '{permission_name}' to user {user_id} via explicit role assignment '{role.role_key}'")
                 return True
         
         logger.debug(f"Denied permission '{permission_name}' for user {user_id} - no matching role or permission found")
@@ -385,12 +387,12 @@ class RBACService:
         permissions = set()
         if user and (user.is_super_admin or user.role in ["super_admin", "org_admin"]):
             # Grant all active permissions to super admins and org admins
-            result = await self.db.execute(select(Permission.name).where(Permission.is_active == True))
+            result = await self.db.execute(select(Permission.permission_key).where(Permission.is_active == True))
             permissions.update({row[0] for row in result.fetchall()})
             logger.debug(f"Granted all permissions to user {user_id} due to role {user.role}")
         
         result = await self.db.execute(
-            select(Permission.name)
+            select(Permission.permission_key)
             .select_from(UserRole)
             .join(UserRole.role)
             .join(Role.permissions)
@@ -448,8 +450,8 @@ class RBACService:
         default_permissions = get_comprehensive_permissions()
         
         # Batch check existing permissions
-        stmt = select(Permission.name).where(
-            Permission.name.in_([name for name, _, _, _, _ in default_permissions]),
+        stmt = select(Permission.permission_key).where(
+            Permission.permission_key.in_([name for name, _, _, _, _ in default_permissions]),
             Permission.is_active == True
         )
         result = await self.db.execute(stmt)
@@ -461,7 +463,7 @@ class RBACService:
         for name, display_name, description, module, action in default_permissions:
             if name not in existing_names:
                 to_create.append({
-                    "name": name,
+                    "permission_key": name,
                     "display_name": display_name,
                     "description": description,
                     "module": module,
@@ -476,7 +478,7 @@ class RBACService:
                 batch = to_create[i:i+batch_size]
                 # Use PostgreSQL-specific insert with on_conflict_do_nothing
                 insert_stmt = pg_insert(Permission).values(batch).on_conflict_do_nothing(
-                    index_elements=['module', 'action']  # Use the unique constraint
+                    index_elements=['permission_key']  # Use the unique constraint
                 )
                 result = await self.db.execute(insert_stmt.returning(Permission))
                 batch_created = result.scalars().all()
@@ -497,38 +499,38 @@ class RBACService:
         from app.services.rbac_permissions import get_default_role_permissions
         
         all_permissions = await self.get_permissions()
-        permission_map = {p.name: p.id for p in all_permissions}
+        permission_map = {p.permission_key: p.id for p in all_permissions}
         
         # Get comprehensive role permissions
         role_permissions_map = get_default_role_permissions()
         
         default_roles = [
             {
-                "name": RoleType.ADMIN.value,
+                "role_key": RoleType.ADMIN.value,
                 "display_name": "Admin",
                 "description": "Full access to all modules",
                 "permissions": role_permissions_map.get("admin", [])
             },
             {
-                "name": RoleType.MANAGER.value,
+                "role_key": RoleType.MANAGER.value,
                 "display_name": "Manager",
                 "description": "Module-level access",
                 "permissions": role_permissions_map.get("manager", [])
             },
             {
-                "name": RoleType.SUPPORT.value,
+                "role_key": RoleType.SUPPORT.value,
                 "display_name": "Support Agent",
                 "description": "Handle operations with limited permissions",
                 "permissions": role_permissions_map.get("support", [])
             },
             {
-                "name": RoleType.VIEWER.value,
+                "role_key": RoleType.VIEWER.value,
                 "display_name": "Viewer",
                 "description": "Read-only access to data",
                 "permissions": role_permissions_map.get("viewer", [])
             },
             {
-                "name": RoleType.ORG_ADMIN.value,
+                "role_key": RoleType.ORG_ADMIN.value,
                 "display_name": "Organization Admin",
                 "description": "Full organization management access",
                 "permissions": role_permissions_map.get("org_admin", [])  # Add if defined in rbac_permissions
@@ -536,26 +538,26 @@ class RBACService:
         ]
         
         # Batch check existing roles
-        stmt = select(Role.name).filter_by(
+        stmt = select(Role.role_key).filter_by(
             organization_id=organization_id
-        ).where(Role.name.in_([r["name"] for r in default_roles]))
+        ).where(Role.role_key.in_([r["role_key"] for r in default_roles]))
         result = await self.db.execute(stmt)
         existing_names = set(result.scalars().all())
         
         created_roles = []
         
         for role_data in default_roles:
-            if role_data["name"] not in existing_names:
+            if role_data["role_key"] not in existing_names:
                 # Filter permissions to only include those that exist
                 permission_ids = [
                     permission_map[p] for p in role_data["permissions"] 
                     if p in permission_map
                 ]
                 
-                logger.info(f"Creating role '{role_data['name']}' with {len(permission_ids)} permissions out of {len(role_data['permissions'])} requested")
+                logger.info(f"Creating role '{role_data['role_key']}' with {len(permission_ids)} permissions out of {len(role_data['permissions'])} requested")
                 
                 role_create = RoleCreate(
-                    name=role_data["name"],
+                    name=role_data["role_key"],  # Assuming schema uses name as input for key
                     display_name=role_data["display_name"],
                     description=role_data["description"],
                     organization_id=organization_id,
