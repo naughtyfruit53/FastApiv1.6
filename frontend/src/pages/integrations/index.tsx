@@ -176,7 +176,7 @@ const IntegrationsPage: React.FC = () => {
 
   return (
     <ProtectedPage moduleKey="admin" action="read">
-      ontainer maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Integrations</Typography>
         <Button

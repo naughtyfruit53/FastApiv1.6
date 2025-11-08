@@ -27,8 +27,8 @@ import {
   MenuItem,
   Alert,
 } from '@mui/material';
-import {
 import { ProtectedPage } from '@/components/ProtectedPage';
+import {
   Add,
   Edit,
   Delete,
@@ -125,8 +125,6 @@ const LocationsPage: React.FC = () => {
   );
 
   return (
-
-
     <ProtectedPage moduleKey="inventory" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -445,12 +443,7 @@ const LocationsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
-
-
     </ProtectedPage>
-
-
-  
   );
 };
 

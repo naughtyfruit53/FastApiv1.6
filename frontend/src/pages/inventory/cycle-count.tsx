@@ -29,8 +29,8 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import {
 import { ProtectedPage } from '@/components/ProtectedPage';
+import {
   Add,
   Edit,
   Visibility,
@@ -136,8 +136,6 @@ const CycleCountPage: React.FC = () => {
   };
 
   return (
-
-
     <ProtectedPage moduleKey="inventory" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
@@ -626,12 +624,7 @@ const CycleCountPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
-
-
     </ProtectedPage>
-
-
-  
   );
 };
 
