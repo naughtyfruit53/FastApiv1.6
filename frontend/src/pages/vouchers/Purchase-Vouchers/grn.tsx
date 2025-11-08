@@ -972,7 +972,7 @@ const GoodsReceiptNotePage: React.FC = () => {
 
     if (isLoading) {
     return (
-      <ProtectedPage moduleKey="procurement" action="write">
+      <ProtectedPage moduleKey="voucher" action="create">
         <Container>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
@@ -982,7 +982,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     );
   }
   return (
-    <ProtectedPage moduleKey="procurement" action="write">
+    <ProtectedPage moduleKey="voucher" action="create">
       <VoucherLayout
         voucherType={config.voucherTitle}
         voucherTitle={config.voucherTitle}
