@@ -13,9 +13,12 @@ import {
   AssignmentTurnedIn
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '@/components/ProtectedPage';
 
 const TasksAssignmentsPage: React.FC = () => {
   return (
+
+    <ProtectedPage moduleKey="tasks" action="read">
     <DashboardLayout
       title="Assignments"
       subtitle="Manage task assignments"
@@ -54,6 +57,10 @@ const TasksAssignmentsPage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+
+    </ProtectedPage>
+
+  
   );
 };
 

@@ -13,9 +13,11 @@ import {
   Chat
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '@/components/ProtectedPage';
 
 const ServiceDeskChatPage: React.FC = () => {
   return (
+    <ProtectedPage moduleKey="service" action="read">
     <DashboardLayout
       title="Chat"
       subtitle="Customer chat conversations"
@@ -54,6 +56,7 @@ const ServiceDeskChatPage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
 

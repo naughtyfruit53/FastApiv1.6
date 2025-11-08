@@ -1,0 +1,243 @@
+{
+  "title": "Admin Entitlement API Contract",
+  "version": "1.0.0",
+  "description": "API contract for managing organization entitlements (super_admin only)",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/modules",
+      "description": "List all modules and submodules in the taxonomy",
+      "auth": "super_admin",
+      "response": {
+        "type": "object",
+        "properties": {
+          "modules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {"type": "integer"},
+                "module_key": {"type": "string"},
+                "display_name": {"type": "string"},
+                "description": {"type": "string", "nullable": true},
+                "icon": {"type": "string", "nullable": true},
+                "sort_order": {"type": "integer"},
+                "is_active": {"type": "boolean"},
+                "submodules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {"type": "integer"},
+                      "submodule_key": {"type": "string"},
+                      "display_name": {"type": "string"},
+                      "description": {"type": "string", "nullable": true},
+                      "menu_path": {"type": "string", "nullable": true},
+                      "permission_key": {"type": "string", "nullable": true},
+                      "sort_order": {"type": "integer"},
+                      "is_active": {"type": "boolean"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orgs/{orgId}/entitlements",
+      "description": "Get effective entitlements for an organization",
+      "auth": "super_admin",
+      "parameters": [
+        {
+          "name": "orgId",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "response": {
+        "type": "object",
+        "properties": {
+          "org_id": {"type": "integer"},
+          "org_name": {"type": "string"},
+          "entitlements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "module_id": {"type": "integer"},
+                "module_key": {"type": "string"},
+                "module_display_name": {"type": "string"},
+                "status": {
+                  "type": "string",
+                  "enum": ["enabled", "disabled", "trial"]
+                },
+                "trial_expires_at": {"type": "string", "format": "date-time", "nullable": true},
+                "source": {"type": "string"},
+                "submodules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "submodule_id": {"type": "integer"},
+                      "submodule_key": {"type": "string"},
+                      "submodule_display_name": {"type": "string"},
+                      "enabled": {"type": "boolean"},
+                      "effective_status": {
+                        "type": "string",
+                        "enum": ["enabled", "disabled", "trial"]
+                      },
+                      "source": {"type": "string", "nullable": true}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/orgs/{orgId}/entitlements",
+      "description": "Update organization entitlements (diff-only)",
+      "auth": "super_admin",
+      "parameters": [
+        {
+          "name": "orgId",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "requestBody": {
+        "type": "object",
+        "required": ["changes", "reason"],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Reason for the entitlement change"
+          },
+          "changes": {
+            "type": "object",
+            "properties": {
+              "modules": {
+                "type": "array",
+                "description": "Module-level changes",
+                "items": {
+                  "type": "object",
+                  "required": ["module_key"],
+                  "properties": {
+                    "module_key": {"type": "string"},
+                    "status": {
+                      "type": "string",
+                      "enum": ["enabled", "disabled", "trial"],
+                      "description": "New status for the module"
+                    },
+                    "trial_expires_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true,
+                      "description": "Trial expiration date (required if status is trial)"
+                    }
+                  }
+                }
+              },
+              "submodules": {
+                "type": "array",
+                "description": "Submodule-level changes",
+                "items": {
+                  "type": "object",
+                  "required": ["module_key", "submodule_key", "enabled"],
+                  "properties": {
+                    "module_key": {"type": "string"},
+                    "submodule_key": {"type": "string"},
+                    "enabled": {"type": "boolean"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "boolean"},
+          "message": {"type": "string"},
+          "event_id": {"type": "integer"},
+          "updated_entitlements": {
+            "description": "Same structure as GET /admin/orgs/{orgId}/entitlements response"
+          }
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orgs/{orgId}/entitlements",
+      "description": "Get effective entitlements for an organization (app use, cached)",
+      "auth": "authenticated user with org access",
+      "parameters": [
+        {
+          "name": "orgId",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "response": {
+        "type": "object",
+        "properties": {
+          "org_id": {"type": "integer"},
+          "entitlements": {
+            "type": "object",
+            "description": "Map of module_key to module entitlement",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "module_key": {"type": "string"},
+                "status": {
+                  "type": "string",
+                  "enum": ["enabled", "disabled", "trial"]
+                },
+                "trial_expires_at": {"type": "string", "format": "date-time", "nullable": true},
+                "submodules": {
+                  "type": "object",
+                  "description": "Map of submodule_key to boolean (enabled/disabled)",
+                  "additionalProperties": {"type": "boolean"}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "errorResponses": [
+    {
+      "status": 401,
+      "description": "Unauthorized - missing or invalid token"
+    },
+    {
+      "status": 403,
+      "description": "Forbidden - insufficient permissions (not super_admin)",
+      "body": {
+        "detail": "Super admin access required"
+      }
+    },
+    {
+      "status": 404,
+      "description": "Organization not found",
+      "body": {
+        "detail": "Organization with id {orgId} not found"
+      }
+    },
+    {
+      "status": 422,
+      "description": "Validation error - invalid module/submodule keys or request format"
+    }
+  ]
+}

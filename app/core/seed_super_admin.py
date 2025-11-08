@@ -1,3 +1,5 @@
+# app/core/seed_super_admin.py
+
 """
 Super Admin Seeding Logic (Supabase Auth integrated)
 
@@ -10,12 +12,14 @@ This module seeds the default platform super admin user.
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import OperationalError
-from sqlalchemy import select, text
+from sqlalchemy import select, text, and_  # NEW: Added and_ import to fix "name 'and_' is not defined" error
 from app.core.database import AsyncSessionLocal, Base
 from app.models.user_models import User
 from app.schemas.user import UserRole
 from app.core.security import get_password_hash
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
+from app.services.entitlement_service import EntitlementService
+from app.models.entitlement_models import Module, Submodule
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +29,7 @@ async def seed_super_admin(db: AsyncSession = None) -> None:
     Only runs if no super admin exists in the database.
 
     - Email: naughtyfruit53@gmail.com
-    - Password: 123456 (must be changed after login)
+    - Password: Admin123! (must be changed after login)
     - organization_id: NULL (platform level)
     - role: super_admin
     - is_super_admin: True
@@ -35,7 +39,7 @@ async def seed_super_admin(db: AsyncSession = None) -> None:
         db_session = AsyncSessionLocal()
 
     super_admin_email = "naughtyfruit53@gmail.com"
-    super_admin_password = "123456"  # This should be changed after first login
+    super_admin_password = "Admin123!"  # NEW: Changed to non-6-digit-all-numeric password to avoid OTP trigger
 
     try:
         # Check for existing super admin
@@ -108,7 +112,7 @@ async def seed_super_admin(db: AsyncSession = None) -> None:
             await db_session.commit()
             await db_session.refresh(super_admin)
             logger.info(f"Successfully created platform super admin in local DB (email: {super_admin_email})")
-            logger.warning("SECURITY: Default super admin created with password '123456'. Please change this password immediately after first login!")
+            logger.warning("SECURITY: Default super admin created with password 'Admin123!'. Please change this password immediately after first login!")
 
         except Exception as e:
             # If DB creation fails, cleanup Supabase Auth user
@@ -122,6 +126,83 @@ async def seed_super_admin(db: AsyncSession = None) -> None:
             logger.error(f"Failed to create super admin in local DB: {e}")
             raise
 
+    finally:
+        if db is None:
+            await db_session.close()
+
+async def seed_modules(db: AsyncSession = None) -> None:
+    """Seed the module taxonomy with default modules and submodules."""
+    db_session = db or AsyncSessionLocal()
+    try:
+        # Default modules from EntitlementService.get_available_modules()
+        available_modules = EntitlementService.get_available_modules()
+        
+        for module_key in available_modules:
+            # Check if module exists
+            result = await db_session.execute(
+                select(Module).where(Module.module_key == module_key)
+            )
+            if not result.scalar_one_or_none():
+                module = Module(
+                    module_key=module_key,
+                    display_name=module_key.upper(),
+                    description=f"{module_key.upper()} module",
+                    is_active=True,
+                    sort_order=available_modules.index(module_key) + 1
+                )
+                db_session.add(module)
+                logger.info(f"Seeded module: {module_key}")
+
+        # Seed submodules based on frontend bundle map
+        # For each module, add submodules if defined
+        # Example: for 'crm', add 'sales', 'marketing' as submodules
+        # Adjust based on your bundle map
+        module_submodules = {
+            'crm': ['sales', 'marketing'],
+            'erp': ['master_data', 'vouchers', 'inventory', 'projects', 'tasks_calendar'],
+            'manufacturing': ['manufacturing'],
+            'finance': ['accounting', 'finance'],
+            'service': ['service'],
+            'hr': ['hr'],
+            'analytics': ['reports_analytics', 'ai_analytics'],
+        }
+
+        for module_key, subs in module_submodules.items():
+            # Get module
+            module_result = await db_session.execute(
+                select(Module).where(Module.module_key == module_key)
+            )
+            module = module_result.scalar_one_or_none()
+            if module:
+                for sub_key in subs:
+                    # Check if submodule exists
+                    sub_result = await db_session.execute(
+                        select(Submodule).where(
+                            and_(
+                                Submodule.module_id == module.id,
+                                Submodule.submodule_key == sub_key
+                            )
+                        )
+                    )
+                    if not sub_result.scalar_one_or_none():
+                        submodule = Submodule(
+                            module_id=module.id,
+                            submodule_key=sub_key,
+                            display_name=sub_key.replace('_', ' ').title(),
+                            description=f"{sub_key} submodule",
+                            is_active=True,
+                            sort_order=subs.index(sub_key) + 1
+                        )
+                        db_session.add(submodule)
+                        logger.info(f"Seeded submodule {sub_key} for module {module_key}")
+
+        await db_session.commit()
+        logger.info("Module and submodule seeding completed successfully")
+
+    except Exception as e:
+        await db_session.rollback()
+        logger.error(f"Failed to seed modules: {e}")
+        raise
     finally:
         if db is None:
             await db_session.close()
@@ -178,6 +259,11 @@ async def check_database_schema_updated(db: AsyncSession = None) -> bool:
         if db is None:
             await db_session.close()
 
+async def seed_all(db: AsyncSession = None) -> None:
+    """Seed super admin and modules"""
+    await seed_super_admin(db)
+    await seed_modules(db)
+
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(seed_super_admin())
+    asyncio.run(seed_all())

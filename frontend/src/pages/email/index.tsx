@@ -19,6 +19,7 @@ import Sidebar from '../../components/email/Sidebar';
 import EmailSelector from '../../components/email/EmailSelector';
 import OAuthLoginButton from '../../components/OAuthLoginButton';
 import { useRouter } from 'next/router';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 type View = 'inbox' | 'thread' | 'compose' | 'select-account' | 'settings' | 'search' | 'attachments';
 
@@ -224,6 +225,7 @@ const EmailModule: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="email" action="read">
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <AppBar position="static">
         <Toolbar>
@@ -270,6 +272,7 @@ const EmailModule: React.FC = () => {
         </Box>
       </Drawer>
     </Box>
+    </ProtectedPage>
   );
 };
 

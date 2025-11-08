@@ -10,9 +10,10 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
-from app.core.rbac_dependencies import check_service_permission
+from app.core.tenant import require_current_organization_id
+
 from app.models import User, Organization
 from app.models.tally_models import TallyConfiguration, TallyLedgerMapping, TallyVoucherMapping, TallySyncLog, TallyErrorLog
 from app.schemas.tally import (
@@ -31,10 +32,11 @@ router = APIRouter()
 @router.get("/permissions")
 async def get_integration_permissions(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "read")),
 ):
     """Get integration permissions for current user"""
+    current_user, organization_id = auth
+
     # Check what integrations the user can manage
     permissions = {
         "can_manage_tally": current_user.is_super_admin,  # Only super admin by default
@@ -63,10 +65,11 @@ async def grant_integration_permission(
     integration: str,
     permission_type: str,  # manage, view
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "create")),
 ):
     """Grant integration permission to user (Super Admin only)"""
+    current_user, organization_id = auth
+
     if not current_user.is_super_admin:
         raise HTTPException(
             status_code=403,
@@ -110,10 +113,11 @@ async def revoke_integration_permission(
     integration: str,
     permission_type: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "delete")),
 ):
     """Revoke integration permission from user (Super Admin only)"""
+    current_user, organization_id = auth
+
     if not current_user.is_super_admin:
         raise HTTPException(
             status_code=403,
@@ -154,10 +158,11 @@ async def revoke_integration_permission(
 @router.get("/tally/configuration", response_model=Optional[TallyConfigurationResponse])
 async def get_tally_configuration(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "read")),
 ):
     """Get Tally configuration for organization settings"""
+    current_user, organization_id = auth
+
     # Check permissions
     permissions = await get_integration_permissions_internal(current_user)
     if not permissions["can_view_tally"]:
@@ -174,10 +179,11 @@ async def get_tally_configuration(
 async def create_tally_configuration(
     config_data: TallyConfigurationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "create")),
 ):
     """Create Tally configuration in organization settings"""
+    current_user, organization_id = auth
+
     # Check permissions
     permissions = await get_integration_permissions_internal(current_user)
     if not permissions["can_manage_tally"]:
@@ -209,10 +215,11 @@ async def create_tally_configuration(
 async def update_tally_configuration(
     config_update: TallyConfigurationUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "update")),
 ):
     """Update Tally configuration in organization settings"""
+    current_user, organization_id = auth
+
     # Check permissions
     permissions = await get_integration_permissions_internal(current_user)
     if not permissions["can_manage_tally"]:
@@ -240,10 +247,11 @@ async def update_tally_configuration(
 @router.delete("/tally/configuration")
 async def delete_tally_configuration(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "delete")),
 ):
     """Delete Tally configuration from organization settings"""
+    current_user, organization_id = auth
+
     # Check permissions
     permissions = await get_integration_permissions_internal(current_user)
     if not permissions["can_manage_tally"]:
@@ -267,10 +275,11 @@ async def delete_tally_configuration(
 async def test_tally_connection(
     connection_test: TallyConnectionTest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "create")),
 ):
     """Test Tally connection from organization settings"""
+    current_user, organization_id = auth
+
     # Check permissions
     permissions = await get_integration_permissions_internal(current_user)
     if not permissions["can_manage_tally"]:
@@ -286,10 +295,11 @@ async def test_tally_connection(
 @router.get("/dashboard", response_model=IntegrationDashboardResponse)
 async def get_integrations_dashboard(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "read")),
 ):
     """Get unified integrations dashboard"""
+    current_user, organization_id = auth
+
     permissions = await get_integration_permissions_internal(current_user)
     
     # Get Tally integration status
@@ -369,10 +379,11 @@ async def get_integrations_dashboard(
 @router.get("/email/status")
 async def get_email_integration_status(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "read")),
 ):
     """Get email integration status"""
+    current_user, organization_id = auth
+
     permissions = await get_integration_permissions_internal(current_user)
     if not permissions["can_view_email"]:
         raise HTTPException(status_code=403, detail="Insufficient permissions to view email integration")
@@ -392,10 +403,11 @@ async def get_email_integration_status(
 @router.get("/calendar/status")
 async def get_calendar_integration_status(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "read")),
 ):
     """Get calendar integration status"""
+    current_user, organization_id = auth
+
     permissions = await get_integration_permissions_internal(current_user)
     if not permissions["can_view_calendar"]:
         raise HTTPException(status_code=403, detail="Insufficient permissions to view calendar integration")
@@ -414,10 +426,11 @@ async def get_calendar_integration_status(
 @router.get("/payments/status")
 async def get_payment_integration_status(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "read")),
 ):
     """Get payment integration status"""
+    current_user, organization_id = auth
+
     permissions = await get_integration_permissions_internal(current_user)
     if not permissions["can_view_payments"]:
         raise HTTPException(status_code=403, detail="Insufficient permissions to view payment integration")
@@ -436,10 +449,11 @@ async def get_payment_integration_status(
 @router.get("/zoho/status")
 async def get_zoho_integration_status(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "read")),
 ):
     """Get Zoho integration status"""
+    current_user, organization_id = auth
+
     permissions = await get_integration_permissions_internal(current_user)
     if not permissions["can_view_zoho"]:
         raise HTTPException(status_code=403, detail="Insufficient permissions to view Zoho integration")
@@ -537,10 +551,11 @@ async def get_tally_integration_health(db: Session, organization_id: int, can_vi
 async def sync_integration(
     integration_name: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "create")),
 ):
     """Manually trigger sync for an integration"""
+    current_user, organization_id = auth
+
     
     if not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Access denied")
@@ -554,10 +569,11 @@ async def sync_integration(
 async def test_integration_connection(
     integration_name: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("integration", "create")),
 ):
     """Test connection for an integration"""
+    current_user, organization_id = auth
+
     
     if not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Access denied")

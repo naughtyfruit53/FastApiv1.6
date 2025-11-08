@@ -2,9 +2,7 @@
 
 import axios from "axios";
 import { ACCESS_TOKEN_KEY, LEGACY_TOKEN_KEY } from "../constants/auth";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { getApiUrl } from "./config";
 
 /**
  * Helper function to get access token with backward compatibility
@@ -24,7 +22,7 @@ const getAccessToken = (): string | null => {
 };
 
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api/v1`,
+  baseURL: getApiUrl(), // Use centralized config to prevent URL duplication
   headers: {
     "Content-Type": "application/json",
   },

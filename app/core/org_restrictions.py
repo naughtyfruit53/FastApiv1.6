@@ -67,7 +67,7 @@ def require_current_organization_id(current_user: CurrentUser = Depends(get_curr
     """
     Require organization ID for users who need organization context.
     
-    Platform users (super_admin/platform_admin) never require organization context.
+    Platform users (super_admin/app_admin) never require organization context.
     Only organization users (non-super_admin) require valid organization_id.
     
     Args:

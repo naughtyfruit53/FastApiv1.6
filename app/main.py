@@ -5,17 +5,84 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 from app.core.config import settings as config_settings
 from app.core.database import create_tables, AsyncSessionLocal
 from app.core.seed_super_admin import seed_super_admin
 from app.db.session import SessionLocal
 from sqlalchemy import select, text
 from sqlalchemy.exc import ProgrammingError
+from app.models.entitlement_models import *  # Import to register entitlement models
+from app.services.entitlement_service import EntitlementService  # Import for seeding
+from app.models.user_models import Organization  # For org loop
 
 logger = logging.getLogger(__name__)
+
+# ForceCORSMiddleware: Inject CORS headers on ALL responses (including 500s and exceptions)
+class ForceCORSMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware that ensures CORS headers are present on all responses,
+    including error responses (4xx, 5xx) that might bypass standard CORS middleware.
+    """
+    def __init__(self, app: ASGIApp, allowed_origins: list):
+        super().__init__(app)
+        self.allowed_origins = allowed_origins
+    
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin")
+
+        # Handle OPTIONS preflight requests early to avoid route dependencies
+        if request.method == "OPTIONS":
+            if origin and origin in self.allowed_origins:
+                headers = {
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Methods": request.headers.get("access-control-request-method", "*"),
+                    "Access-Control-Allow-Headers": request.headers.get("access-control-request-headers", "*"),
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Max-Age": "86400",  # Cache preflight for 24 hours
+                    "Vary": "Origin",
+                }
+                return JSONResponse(status_code=200, content={}, headers=headers)
+        
+        # Process the request
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            # If an unhandled exception occurs, create an error response with CORS headers
+            logger.error(f"Unhandled exception in request: {exc}", exc_info=True)
+            response = JSONResponse(
+                status_code=500,
+                content={"detail": "Internal server error"}
+            )
+        
+        # Add CORS headers if origin is in allowed list
+        if origin and origin in self.allowed_origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            response.headers["Vary"] = "Origin"
+        
+        return response
+
+# Custom APIRouter to disable slash redirection
+from fastapi.routing import APIRouter as FastAPIRouter
+
+class APIRouter(FastAPIRouter):
+    def add_api_route(self, path: str, *args, **kwargs):
+        # Add without trailing slash
+        if path.endswith("/"):
+            non_slash_path = path[:-1]
+            super().add_api_route(non_slash_path, *args, **kwargs)
+            # Add redirect from slash to non-slash if needed
+        else:
+            super().add_api_route(path, *args, **kwargs)
+            slash_path = path + "/"
+            # But don't add automatic redirect
 
 # Initialize default permissions asynchronously
 async def init_default_permissions(background_tasks: BackgroundTasks):
@@ -77,6 +144,109 @@ async def init_org_roles(background_tasks: BackgroundTasks):
             logger.error(f"Error initializing organization roles: {str(e)} - skipping role init")
             await db.rollback()
 
+# Backfill default enabled_modules for organizations that have missing or empty modules
+async def init_org_modules(background_tasks: BackgroundTasks):
+    from app.models.user_models import Organization
+    from app.core.modules_registry import get_default_enabled_modules
+    async with AsyncSessionLocal() as db:
+        try:
+            orgs = (await db.execute(select(Organization))).scalars().all()
+            for org in orgs:
+                if not org.enabled_modules or len(org.enabled_modules) == 0:
+                    org.enabled_modules = get_default_enabled_modules()
+                    logger.info(f"Backfilled default enabled_modules for organization {org.id}: {org.name}")
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Error backfilling organization modules: {str(e)}")
+            await db.rollback()
+
+# Seed all modules and sync enabled_modules on startup
+async def seed_and_sync_entitlements(background_tasks: BackgroundTasks):
+    async with AsyncSessionLocal() as db:
+        try:
+            service = EntitlementService(db)
+            created = await service.seed_all_modules()
+            logger.info(f"Seeded {created} modules/submodules on startup")
+            
+            orgs = (await db.execute(select(Organization))).scalars().all()
+            for org in orgs:
+                synced = await service.sync_enabled_modules(org.id)
+                logger.info(f"Synced enabled_modules for org {org.id} on startup: {synced}")
+        except Exception as e:
+            logger.error(f"Error during startup seeding/sync: {str(e)}")
+            await db.rollback()
+
+# Auto-seed baseline data on first boot (idempotent)
+async def auto_seed_baseline_data(background_tasks: BackgroundTasks):
+    """
+    Automatically seed baseline data if database is empty.
+    This runs on application startup and is idempotent.
+    """
+    from app.models.entitlement_models import Module
+    from app.models.rbac_models import ServicePermission
+    from app.models.organization_settings import VoucherFormatTemplate
+    
+    async with AsyncSessionLocal() as db:
+        try:
+            # Check if baseline data exists
+            needs_seeding = False
+            
+            # Check for super admin
+            result = await db.execute(select(User).where(User.is_super_admin == True).limit(1))
+            if not result.scalar_one_or_none():
+                needs_seeding = True
+            
+            # Check for modules
+            if not needs_seeding:
+                result = await db.execute(select(Module).limit(1))
+                if not result.scalar_one_or_none():
+                    needs_seeding = True
+            
+            # Check for RBAC permissions
+            if not needs_seeding:
+                result = await db.execute(select(ServicePermission).limit(1))
+                if not result.scalar_one_or_none():
+                    needs_seeding = True
+            
+            # Check for voucher templates
+            if not needs_seeding:
+                result = await db.execute(
+                    select(VoucherFormatTemplate).where(
+                        VoucherFormatTemplate.is_system_template == True
+                    ).limit(1)
+                )
+                if not result.scalar_one_or_none():
+                    needs_seeding = True
+            
+            if needs_seeding:
+                logger.info("=" * 60)
+                logger.info("Baseline data not found - starting auto-seed")
+                logger.info("=" * 60)
+                
+                # Import and run the unified seeding script
+                import sys
+                from pathlib import Path
+                
+                # Add scripts directory to path
+                scripts_dir = Path(__file__).parent.parent / "scripts"
+                sys.path.insert(0, str(scripts_dir))
+                
+                try:
+                    from scripts.seed_all import run_seed_all
+                    await run_seed_all(skip_check=True)
+                    logger.info("✓ Auto-seed completed successfully")
+                except ImportError:
+                    logger.warning("Could not import seed_all script - skipping auto-seed")
+                except Exception as seed_error:
+                    logger.error(f"Error during auto-seed: {seed_error}")
+                    # Don't raise - allow app to start even if seeding fails
+            else:
+                logger.info("Baseline data exists - skipping auto-seed")
+                
+        except Exception as e:
+            logger.error(f"Error checking for baseline data: {str(e)}")
+            # Don't raise - allow app to start even if check fails
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -106,8 +276,11 @@ async def lifespan(app: FastAPI):
     
     # Schedule non-essential inits as background tasks to speed up startup
     background_tasks = BackgroundTasks()
+    background_tasks.add_task(auto_seed_baseline_data, background_tasks)  # Auto-seed baseline data if needed
     background_tasks.add_task(init_default_permissions, background_tasks)
     background_tasks.add_task(init_org_roles, background_tasks)
+    background_tasks.add_task(init_org_modules, background_tasks)
+    background_tasks.add_task(seed_and_sync_entitlements, background_tasks)  # New: Seed and sync entitlements
     
     yield
     # Shutdown
@@ -139,6 +312,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add ForceCORSMiddleware to ensure CORS headers on ALL responses (including errors)
+app.add_middleware(ForceCORSMiddleware, allowed_origins=origins)
+
+# Global exception handler to ensure JSON error responses include CORS headers
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Global exception handler that ensures all unhandled exceptions
+    return JSON responses with proper CORS headers.
+    """
+    logger.error(f"Unhandled exception in {request.method} {request.url}: {exc}", exc_info=True)
+    
+    origin = request.headers.get("origin")
+    headers = {}
+    
+    # Add CORS headers if origin is in allowed list
+    if origin and origin in origins:
+        headers = {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Vary": "Origin",
+        }
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "error": str(exc) if config_settings.DEBUG else "An unexpected error occurred"
+        },
+        headers=headers
+    )
+
 # Debug CORS configuration on startup
 @app.on_event("startup")
 async def log_cors_config():
@@ -161,6 +368,13 @@ def include_minimal_routers():
         routers.append((v1_auth.router, "/api/v1/auth", ["authentication-v1"]))
     except Exception as e:
         logger.error(f"Failed to import auth router: {str(e)}")
+        raise  # Core, so raise
+    
+    try:
+        from app.api.v1 import password as v1_password
+        routers.append((v1_password.router, "/api/v1/password", ["password"]))
+    except Exception as e:
+        logger.error(f"Failed to import password router: {str(e)}")
         raise  # Core, so raise
     
     try:
@@ -193,6 +407,13 @@ def include_minimal_routers():
         raise  # Core
     
     try:
+        from app.api.v1 import debug as v1_debug
+        routers.append((v1_debug.router, "/api/v1/debug", ["debug"]))
+        logger.info("Debug router included for RBAC troubleshooting")
+    except Exception as e:
+        logger.warning(f"Failed to import debug router: {str(e)}")  # Optional, warn only
+    
+    try:
         from app.api.v1.organizations import router as organizations_router
         routers.append((organizations_router, "/api/v1/organizations", ["organizations"]))
     except Exception as e:
@@ -200,19 +421,19 @@ def include_minimal_routers():
         raise  # Core
     
     try:
-        from app.api.companies import router as companies_router
+        from app.api.v1.companies import router as companies_router
         routers.append((companies_router, "/api/v1/companies", ["companies"]))
     except Exception as e:
         logger.error(f"Failed to import companies router: {str(e)}")
     
     try:
-        from app.api.vendors import router as vendors_router
+        from app.api.v1.vendors import router as vendors_router
         routers.append((vendors_router, "/api/v1/vendors", ["vendors"]))
     except Exception as e:
         logger.error(f"Failed to import vendors router: {str(e)}")
     
     try:
-        from app.api.customers import router as customers_router
+        from app.api.v1.customers import router as customers_router
         routers.append((customers_router, "/api/v1/customers", ["customers"]))
     except Exception as e:
         logger.error(f"Failed to import customers router: {str(e)}")
@@ -259,6 +480,15 @@ def include_minimal_routers():
         logger.error(f"Failed to import pdf_generation router: {str(e)}")
         raise  # Make it core now
 
+    # Always include voucher_format_templates router unconditionally
+    try:
+        from app.api.v1.voucher_format_templates import router as voucher_templates_router
+        routers.append((voucher_templates_router, "/api/v1", ["voucher-templates"]))
+        logger.info("Voucher format templates router included unconditionally")
+    except Exception as e:
+        logger.error(f"Failed to import voucher_format_templates router: {str(e)}")
+        raise  # Make it core now
+
     # Conditionally include AI analytics router
     if os.getenv("ENABLE_AI_ANALYTICS", "false").lower() == "true":
         try:
@@ -273,14 +503,6 @@ def include_minimal_routers():
             logger.info(f"Router included successfully at prefix: {prefix}")
         except Exception as e:
             logger.warning(f"Failed to include router at prefix {prefix}: {str(e)}")  # Warn but continue
-
-# Debug middleware for logging request headers
-@app.middleware("http")
-async def log_request_headers(request: Request, call_next):
-    logger.info(f"Request: {request.method} {request.url}")
-    logger.info(f"Headers: {dict(request.headers)}")
-    response = await call_next(request)
-    return response
 
 @app.get("/")
 async def root():

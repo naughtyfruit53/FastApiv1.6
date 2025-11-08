@@ -13,9 +13,12 @@ import {
   EventNote
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '@/components/ProtectedPage';
 
 const CalendarEventsPage: React.FC = () => {
   return (
+
+    <ProtectedPage moduleKey="calendar" action="read">
     <DashboardLayout
       title="Events"
       subtitle="Manage calendar events"
@@ -54,6 +57,10 @@ const CalendarEventsPage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+
+    </ProtectedPage>
+
+  
   );
 };
 

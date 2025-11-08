@@ -43,6 +43,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import axios from "axios";
 import { formatCurrency } from "../utils/currencyUtils";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 interface Account {
   id: number;
   account_code: string;
@@ -202,7 +203,8 @@ const GeneralLedger: React.FC = () => {
   );
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <ProtectedPage moduleKey="finance" action="read">
+      ocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ p: 3 }}>
         {/* Header */}
         <Box
@@ -589,7 +591,7 @@ const GeneralLedger: React.FC = () => {
         </Dialog>
       </Box>
     </LocalizationProvider>
+    </ProtectedPage>
   );
 };
-
 export default GeneralLedger;

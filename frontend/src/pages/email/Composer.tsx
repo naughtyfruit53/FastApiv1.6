@@ -41,6 +41,7 @@ import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
 import * as emailService from '../../services/emailService';
 import { useEmail } from '../../context/EmailContext';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
@@ -279,6 +280,7 @@ const Composer: React.FC<ComposerProps> = ({
   const selectedAccountDetails = accounts.find(acc => acc.id === effectiveSelectedAccountId);
 
   return (
+    <ProtectedPage moduleKey="email" action="read">
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <CardContent sx={{ pb: 1 }}>
@@ -600,6 +602,7 @@ const Composer: React.FC<ComposerProps> = ({
         </DialogActions>
       </Dialog>
     </Card>
+    </ProtectedPage>
   );
 };
 

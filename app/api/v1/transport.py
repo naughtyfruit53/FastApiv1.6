@@ -1,7 +1,8 @@
 # app/api/v1/transport.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
@@ -12,8 +13,7 @@ import re
 from cachetools import TTLCache
 
 from app.core.database import get_db
-from app.core.security import get_current_user, get_current_active_admin
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.transport_models import (
     Carrier, Route, FreightRate, Shipment, ShipmentTracking, ShipmentItem,
     CarrierType, RouteStatus, FreightMode, ShipmentStatus
@@ -39,34 +39,40 @@ async def get_carriers(
     carrier_type: Optional[CarrierType] = None,
     is_active: Optional[bool] = True,
     is_preferred: Optional[bool] = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    query = db.query(Carrier).filter(
-        Carrier.organization_id == current_user.organization_id
+    current_user, org_id = auth
+    
+    stmt = select(Carrier).filter(
+        Carrier.organization_id == org_id
     )
     
     if carrier_type:
-        query = query.filter(Carrier.carrier_type == carrier_type)
+        stmt = stmt.filter(Carrier.carrier_type == carrier_type)
     if is_active is not None:
-        query = query.filter(Carrier.is_active == is_active)
+        stmt = stmt.filter(Carrier.is_active == is_active)
     if is_preferred is not None:
-        query = query.filter(Carrier.is_preferred == is_preferred)
+        stmt = stmt.filter(Carrier.is_preferred == is_preferred)
     
-    carriers = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    carriers = result.scalars().all()
     return carriers
 
 @router.post("/carriers/", response_model=CarrierResponse)
 async def create_carrier(
     carrier_data: CarrierCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     # Check if carrier code already exists
-    existing_carrier = db.query(Carrier).filter(
-        Carrier.organization_id == current_user.organization_id,
+    result = await db.execute(select(Carrier).filter(
+        Carrier.organization_id == org_id,
         Carrier.carrier_code == carrier_data.carrier_code
-    ).first()
+    ))
+    existing_carrier = result.scalar_one_or_none()
     
     if existing_carrier:
         raise HTTPException(
@@ -75,27 +81,30 @@ async def create_carrier(
         )
     
     db_carrier = Carrier(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id,
         **carrier_data.dict()
     )
     
     db.add(db_carrier)
-    db.commit()
-    db.refresh(db_carrier)
+    await db.commit()
+    await db.refresh(db_carrier)
     
     return db_carrier
 
 @router.get("/carriers/{carrier_id}", response_model=CarrierResponse)
 async def get_carrier(
     carrier_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    carrier = db.query(Carrier).filter(
+    current_user, org_id = auth
+    
+    result = await db.execute(select(Carrier).filter(
         Carrier.id == carrier_id,
-        Carrier.organization_id == current_user.organization_id
-    ).first()
+        Carrier.organization_id == org_id
+    ))
+    carrier = result.scalar_one_or_none()
     
     if not carrier:
         raise HTTPException(status_code=404, detail="Carrier not found")
@@ -106,13 +115,16 @@ async def get_carrier(
 async def update_carrier(
     carrier_id: int,
     carrier_data: CarrierUpdate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
-    carrier = db.query(Carrier).filter(
+    current_user, org_id = auth
+    
+    result = await db.execute(select(Carrier).filter(
         Carrier.id == carrier_id,
-        Carrier.organization_id == current_user.organization_id
-    ).first()
+        Carrier.organization_id == org_id
+    ))
+    carrier = result.scalar_one_or_none()
     
     if not carrier:
         raise HTTPException(status_code=404, detail="Carrier not found")
@@ -120,8 +132,8 @@ async def update_carrier(
     for field, value in carrier_data.dict(exclude_unset=True).items():
         setattr(carrier, field, value)
     
-    db.commit()
-    db.refresh(carrier)
+    await db.commit()
+    await db.refresh(carrier)
     
     return carrier
 
@@ -134,45 +146,52 @@ async def get_routes(
     origin_city: Optional[str] = None,
     destination_city: Optional[str] = None,
     status: Optional[RouteStatus] = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    query = db.query(Route).filter(
-        Route.organization_id == current_user.organization_id
+    current_user, org_id = auth
+    
+    stmt = select(Route).filter(
+        Route.organization_id == org_id
     )
     
     if carrier_id:
-        query = query.filter(Route.carrier_id == carrier_id)
+        stmt = stmt.filter(Route.carrier_id == carrier_id)
     if origin_city:
-        query = query.filter(Route.origin_city.ilike(f"%{origin_city}%"))
+        stmt = stmt.filter(Route.origin_city.ilike(f"%{origin_city}%"))
     if destination_city:
-        query = query.filter(Route.destination_city.ilike(f"%{destination_city}%"))
+        stmt = stmt.filter(Route.destination_city.ilike(f"%{destination_city}%"))
     if status:
-        query = query.filter(Route.status == status)
+        stmt = stmt.filter(Route.status == status)
     
-    routes = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    routes = result.scalars().all()
     return routes
 
 @router.post("/routes/", response_model=RouteResponse)
 async def create_route(
     route_data: RouteCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     # Verify carrier exists
-    carrier = db.query(Carrier).filter(
+    result = await db.execute(select(Carrier).filter(
         Carrier.id == route_data.carrier_id,
-        Carrier.organization_id == current_user.organization_id
-    ).first()
+        Carrier.organization_id == org_id
+    ))
+    carrier = result.scalar_one_or_none()
     
     if not carrier:
         raise HTTPException(status_code=404, detail="Carrier not found")
     
     # Check if route code already exists
-    existing_route = db.query(Route).filter(
-        Route.organization_id == current_user.organization_id,
+    result = await db.execute(select(Route).filter(
+        Route.organization_id == org_id,
         Route.route_code == route_data.route_code
-    ).first()
+    ))
+    existing_route = result.scalar_one_or_none()
     
     if existing_route:
         raise HTTPException(
@@ -181,14 +200,14 @@ async def create_route(
         )
     
     db_route = Route(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id,
         **route_data.dict()
     )
     
     db.add(db_route)
-    db.commit()
-    db.refresh(db_route)
+    await db.commit()
+    await db.refresh(db_route)
     
     return db_route
 
@@ -201,67 +220,74 @@ async def get_freight_rates(
     route_id: Optional[int] = None,
     freight_mode: Optional[FreightMode] = None,
     is_active: Optional[bool] = True,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    query = db.query(FreightRate).filter(
-        FreightRate.organization_id == current_user.organization_id
+    current_user, org_id = auth
+    
+    stmt = select(FreightRate).filter(
+        FreightRate.organization_id == org_id
     )
     
     if carrier_id:
-        query = query.filter(FreightRate.carrier_id == carrier_id)
+        stmt = stmt.filter(FreightRate.carrier_id == carrier_id)
     if route_id:
-        query = query.filter(FreightRate.route_id == route_id)
+        stmt = stmt.filter(FreightRate.route_id == route_id)
     if freight_mode:
-        query = query.filter(FreightRate.freight_mode == freight_mode)
+        stmt = stmt.filter(FreightRate.freight_mode == freight_mode)
     if is_active is not None:
-        query = query.filter(FreightRate.is_active == is_active)
+        stmt = stmt.filter(FreightRate.is_active == is_active)
     
     # Filter by current date
     current_date = datetime.now()
-    query = query.filter(
+    stmt = stmt.filter(
         FreightRate.effective_date <= current_date
     ).filter(
         (FreightRate.expiry_date.is_(None)) | (FreightRate.expiry_date >= current_date)
     )
     
-    rates = query.offset(skip).limit(limit).all()
+    result = await db.execute(stmt.offset(skip).limit(limit))
+    rates = result.scalars().all()
     return rates
 
 @router.post("/freight-rates/", response_model=FreightRateResponse)
 async def create_freight_rate(
     rate_data: FreightRateCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     # Verify carrier exists
-    carrier = db.query(Carrier).filter(
+    result = await db.execute(select(Carrier).filter(
         Carrier.id == rate_data.carrier_id,
-        Carrier.organization_id == current_user.organization_id
-    ).first()
+        Carrier.organization_id == org_id
+    ))
+    carrier = result.scalar_one_or_none()
     
     if not carrier:
         raise HTTPException(status_code=404, detail="Carrier not found")
     
     # Verify route exists if specified
     if rate_data.route_id:
-        route = db.query(Route).filter(
+        result = await db.execute(select(Route).filter(
             Route.id == rate_data.route_id,
-            Route.organization_id == current_user.organization_id
-        ).first()
+            Route.organization_id == org_id
+        ))
+        route = result.scalar_one_or_none()
         
         if not route:
             raise HTTPException(status_code=404, detail="Route not found")
     
     db_rate = FreightRate(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id,
         **rate_data.dict()
     )
     
     db.add(db_rate)
-    db.commit()
-    db.refresh(db_rate)
+    await db.commit()
+    await db.refresh(db_rate)
     
     return db_rate
 
@@ -273,18 +299,19 @@ async def compare_freight_rates(
     weight_kg: float,
     volume_cbm: Optional[float] = None,
     freight_mode: Optional[FreightMode] = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     # Find applicable routes
-    route_query = db.query(Route).filter(
-        Route.organization_id == current_user.organization_id,
+    result = await db.execute(select(Route).filter(
+        Route.organization_id == org_id,
         Route.origin_city.ilike(f"%{origin_city}%"),
         Route.destination_city.ilike(f"%{destination_city}%"),
         Route.status == RouteStatus.ACTIVE
-    )
-    
-    routes = route_query.all()
+    ))
+    routes = result.scalars().all()
     
     if not routes:
         raise HTTPException(
@@ -297,8 +324,8 @@ async def compare_freight_rates(
     
     for route in routes:
         # Find applicable rates for this route
-        rate_query = db.query(FreightRate).filter(
-            FreightRate.organization_id == current_user.organization_id,
+        stmt = select(FreightRate).filter(
+            FreightRate.organization_id == org_id,
             FreightRate.route_id == route.id,
             FreightRate.is_active == True,
             FreightRate.effective_date <= current_date
@@ -307,9 +334,10 @@ async def compare_freight_rates(
         )
         
         if freight_mode:
-            rate_query = rate_query.filter(FreightRate.freight_mode == freight_mode)
+            stmt = stmt.filter(FreightRate.freight_mode == freight_mode)
         
-        rates = rate_query.all()
+        result = await db.execute(stmt)
+        rates = result.scalars().all()
         
         for rate in rates:
             # Calculate cost based on rate structure
@@ -325,7 +353,7 @@ async def compare_freight_rates(
                 if volume_cbm >= rate.minimum_volume_cbm:
                     cost = volume_cbm * rate.rate_per_cbm
                 else:
-                    rate.minimum_charge
+                    cost = rate.minimum_charge
             elif rate.rate_basis == "per_shipment":
                 cost = rate.fixed_rate
                 
@@ -384,40 +412,46 @@ async def get_shipments(
     status: Optional[ShipmentStatus] = None,
     carrier_id: Optional[int] = None,
     tracking_number: Optional[str] = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    query = db.query(Shipment).filter(
-        Shipment.organization_id == current_user.organization_id
+    current_user, org_id = auth
+    
+    stmt = select(Shipment).filter(
+        Shipment.organization_id == org_id
     )
     
     if status:
-        query = query.filter(Shipment.status == status)
+        stmt = stmt.filter(Shipment.status == status)
     if carrier_id:
-        query = query.filter(Shipment.carrier_id == carrier_id)
+        stmt = stmt.filter(Shipment.carrier_id == carrier_id)
     if tracking_number:
-        query = query.filter(Shipment.tracking_number.ilike(f"%{tracking_number}%"))
+        stmt = stmt.filter(Shipment.tracking_number.ilike(f"%{tracking_number}%"))
     
-    shipments = query.order_by(Shipment.created_at.desc()).offset(skip).limit(limit).all()
+    result = await db.execute(stmt.order_by(Shipment.created_at.desc()).offset(skip).limit(limit))
+    shipments = result.scalars().all()
     return shipments
 
 @router.post("/shipments/", response_model=ShipmentResponse)
 async def create_shipment(
     shipment_data: ShipmentCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     # Verify carrier exists
-    carrier = db.query(Carrier).filter(
+    result = await db.execute(select(Carrier).filter(
         Carrier.id == shipment_data.carrier_id,
-        Carrier.organization_id == current_user.organization_id
-    ).first()
+        Carrier.organization_id == org_id
+    ))
+    carrier = result.scalar_one_or_none()
     
     if not carrier:
         raise HTTPException(status_code=404, detail="Carrier not found")
     
     # Generate shipment number
-    shipment_number = f"SH-{datetime.now().strftime('%Y%m%d')}-{current_user.organization_id:04d}-{carrier.id:03d}"
+    shipment_number = f"SH-{datetime.now().strftime('%Y%m%d')}-{org_id:04d}-{carrier.id:03d}"
     
     # Calculate totals from items
     total_weight_kg = sum(item.quantity * item.weight_per_unit_kg for item in shipment_data.items)
@@ -425,7 +459,7 @@ async def create_shipment(
     total_pieces = sum(item.number_of_packages for item in shipment_data.items)
     
     db_shipment = Shipment(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         shipment_number=shipment_number,
         total_weight_kg=total_weight_kg,
         total_volume_cbm=total_volume_cbm,
@@ -435,42 +469,46 @@ async def create_shipment(
     )
     
     db.add(db_shipment)
-    db.flush()
+    await db.flush()
     
     # Add shipment items
     for item_data in shipment_data.items:
         total_value = item_data.quantity * item_data.unit_value
         item = ShipmentItem(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             shipment_id=db_shipment.id,
             total_value=total_value,
             **item_data.dict()
         )
         db.add(item)
     
-    db.commit()
-    db.refresh(db_shipment)
+    await db.commit()
+    await db.refresh(db_shipment)
     
     return db_shipment
 
 @router.get("/shipments/{shipment_id}/tracking")
 async def get_shipment_tracking(
     shipment_id: int,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    shipment = db.query(Shipment).filter(
+    current_user, org_id = auth
+    
+    result = await db.execute(select(Shipment).filter(
         Shipment.id == shipment_id,
-        Shipment.organization_id == current_user.organization_id
-    ).first()
+        Shipment.organization_id == org_id
+    ))
+    shipment = result.scalar_one_or_none()
     
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
     
-    tracking_events = db.query(ShipmentTracking).filter(
+    result = await db.execute(select(ShipmentTracking).filter(
         ShipmentTracking.shipment_id == shipment_id,
-        ShipmentTracking.organization_id == current_user.organization_id
-    ).order_by(ShipmentTracking.event_timestamp.desc()).all()
+        ShipmentTracking.organization_id == org_id
+    ).order_by(ShipmentTracking.event_timestamp.desc()))
+    tracking_events = result.scalars().all()
     
     return {
         "shipment_id": shipment_id,
@@ -493,19 +531,22 @@ async def add_tracking_event(
     is_exception: bool = False,
     exception_reason: Optional[str] = None,
     notes: Optional[str] = None,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
-    shipment = db.query(Shipment).filter(
+    current_user, org_id = auth
+    
+    result = await db.execute(select(Shipment).filter(
         Shipment.id == shipment_id,
-        Shipment.organization_id == current_user.organization_id
-    ).first()
+        Shipment.organization_id == org_id
+    ))
+    shipment = result.scalar_one_or_none()
     
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
     
     tracking_event = ShipmentTracking(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         shipment_id=shipment_id,
         event_timestamp=datetime.now(),
         event_type=event_type,
@@ -533,51 +574,58 @@ async def add_tracking_event(
     if status.lower() == "delivered":
         shipment.actual_delivery_date = datetime.now()
     
-    db.commit()
-    db.refresh(tracking_event)
+    await db.commit()
+    await db.refresh(tracking_event)
     
     return tracking_event
 
 # Dashboard and Analytics
 @router.get("/dashboard/summary")
 async def get_transport_dashboard_summary(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("transport", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     # Total carriers
-    total_carriers = db.query(Carrier).filter(
-        Carrier.organization_id == current_user.organization_id,
+    result = await db.execute(select(func.count(Carrier.id)).filter(
+        Carrier.organization_id == org_id,
         Carrier.is_active == True
-    ).count()
+    ))
+    total_carriers = result.scalar()
     
     # Active shipments
-    active_shipments = db.query(Shipment).filter(
-        Shipment.organization_id == current_user.organization_id,
+    result = await db.execute(select(func.count(Shipment.id)).filter(
+        Shipment.organization_id == org_id,
         Shipment.status.in_([ShipmentStatus.BOOKED, ShipmentStatus.IN_TRANSIT])
-    ).count()
+    ))
+    active_shipments = result.scalar()
     
     # Delivered this month
     start_of_month = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    delivered_this_month = db.query(Shipment).filter(
-        Shipment.organization_id == current_user.organization_id,
+    result = await db.execute(select(func.count(Shipment.id)).filter(
+        Shipment.organization_id == org_id,
         Shipment.status == ShipmentStatus.DELIVERED,
         Shipment.actual_delivery_date >= start_of_month
-    ).count()
+    ))
+    delivered_this_month = result.scalar()
     
     # Pending pickups
-    pending_pickups = db.query(Shipment).filter(
-        Shipment.organization_id == current_user.organization_id,
+    result = await db.execute(select(func.count(Shipment.id)).filter(
+        Shipment.organization_id == org_id,
         Shipment.status == ShipmentStatus.BOOKED,
         Shipment.pickup_date <= datetime.now()
-    ).count()
+    ))
+    pending_pickups = result.scalar()
     
     # Total freight cost this month
-    freight_cost_this_month = db.query(Shipment).filter(
-        Shipment.organization_id == current_user.organization_id,
+    result = await db.execute(select(Shipment).filter(
+        Shipment.organization_id == org_id,
         Shipment.created_at >= start_of_month
-    ).with_entities(Shipment.total_charges).all()
+    ))
+    freight_cost_this_month = result.scalars().all()
     
-    total_freight_cost = sum(cost[0] or 0 for cost in freight_cost_this_month)
+    total_freight_cost = sum(shipment.total_charges or 0 for shipment in freight_cost_this_month)
     
     return {
         "total_carriers": total_carriers,
@@ -589,7 +637,9 @@ async def get_transport_dashboard_summary(
 
 # Get courier list from CSV
 @router.get("/couriers", response_model=List[CourierResponse])
-async def get_couriers():
+async def get_couriers(
+    auth: tuple = Depends(require_access("transport", "read"))
+):
     if "couriers" in cache:
         return cache["couriers"]
     try:
@@ -609,7 +659,10 @@ async def get_couriers():
 
 # Upload new courier CSV
 @router.post("/couriers/upload")
-async def upload_courier_csv(file: UploadFile = File(...), current_user = Depends(get_current_active_admin)):
+async def upload_courier_csv(
+    file: UploadFile = File(...),
+    auth: tuple = Depends(require_access("transport", "create"))
+):
     try:
         content = await file.read()
         df = pd.read_csv(io.BytesIO(content))

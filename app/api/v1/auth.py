@@ -1,8 +1,10 @@
 # app/api/v1/auth.py
 
+# app/api/v1/auth.py
+
 import logging
 from typing import Optional, Union
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
@@ -23,6 +25,7 @@ from app.core.audit import create_audit_log
 from app.models.user_models import User, PlatformUser
 from app.schemas.user import UserResponse, Token, EmailLogin, LoginResponse, PlatformUserInDB, UserInDB
 from app.core.config import settings
+from app.services.otp_service import OTPService
 from pydantic import BaseModel, EmailStr
 
 logger = logging.getLogger(__name__)
@@ -38,6 +41,7 @@ async def fetch_platform_user(db: AsyncSession, email: str):
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
+    response: Response,
     email_login: Optional[EmailLogin] = Body(None),
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
@@ -60,12 +64,30 @@ async def login(
     if user:
         user = await db.merge(user)
 
+    # Check if password is 6-digit OTP (for admin reset flow)
+    if len(password) == 6 and password.isdigit():
+        otp_service = OTPService(db)
+        otp_valid, message = await otp_service.verify_otp(email, password, "admin_password_reset")
+        if otp_valid:
+            # OTP valid - force password change on success
+            user.force_password_reset = True
+            user.must_change_password = True
+            await db.commit()
+            # Proceed to login with OTP as temp auth
+        else:
+            logger.info(f"[LOGIN:FAILED] Invalid OTP for {email}: {message}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=message,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
     if not user or not verify_password(password, user.hashed_password):
         logger.info(f"[LOGIN:FAILED] Email: {email}")
         await create_audit_log(
             db=db,
-            table_name="security_events",
-            record_id=user.id if user else None,
+            entity_type="security_events",
+            entity_id=user.id if user else None,
             action="LOGIN:FAILED",
             user_id=user.id if user else None,
             changes={
@@ -123,13 +145,12 @@ async def login(
 
     await create_audit_log(
         db=db,
-        table_name="security_events",
-        record_id=user.id,
+        entity_type="security_events",
+        entity_id=user.id,
         action="LOGIN:SUCCESS",
         user_id=user.id,
         changes={
             "event_type": "LOGIN",
-            "action": "SUCCESS",
             "user_email": user.email,
             "user_role": user_role,
             "organization_id": organization_id,
@@ -141,10 +162,86 @@ async def login(
     )
 
     if isinstance(user, PlatformUser):
-        user_out = PlatformUserInDB.model_validate(user)
+        user_out = PlatformUserInDB(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            role=user.role,
+            is_active=user.is_active,
+            force_password_reset=user.force_password_reset,
+            failed_login_attempts=user.failed_login_attempts,
+            locked_until=user.locked_until,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            last_login=user.last_login
+        )
     else:
-        user_out = UserResponse.model_validate(user)
+        user_out = UserResponse(
+            id=user.id,
+            organization_id=user.organization_id,
+            email=user.email,
+            full_name=user.full_name,
+            role=user.role,
+            department=user.department,
+            designation=user.designation,
+            employee_id=user.employee_id,
+            is_active=user.is_active,
+            is_super_admin=user.is_super_admin,
+            phone=user.phone,
+            avatar_path=user.avatar_path,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            last_login=user.last_login,
+            has_stock_access=user.has_stock_access,
+            assigned_modules=user.assigned_modules,
+            reporting_manager_id=user.reporting_manager_id,
+            sub_module_permissions=user.sub_module_permissions
+        )
 
+    # Optional: Set cookies in development mode if AUTH_COOKIE_DEV is enabled
+    # Production always prefers JSON response with Authorization: Bearer
+    if settings.AUTH_COOKIE_DEV and settings.ENVIRONMENT == "development":
+        # Development cookie settings: Secure=False, SameSite=Lax
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=False,  # Allow HTTP in development
+            samesite="lax",  # Lax for development
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
+        )
+        logger.info(f"[AUTH] Cookies set for development (user: {user.email})")
+    elif settings.ENVIRONMENT == "production":
+        # Production cookie settings: Secure=True, SameSite=Lax
+        # Note: SameSite=Lax provides better CSRF protection than 'none'
+        # Use 'none' only if cross-site requests are explicitly required
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,  # Require HTTPS in production
+            samesite="lax",  # Better CSRF protection, allows same-site requests
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
+        )
+        logger.info(f"[AUTH] Production cookies set (user: {user.email})")
+
+    # Always return tokens in JSON (preferred for Authorization: Bearer in headers)
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -207,8 +304,8 @@ async def logout(
     if user:
         await create_audit_log(
             db=db,
-            table_name="security_events",
-            record_id=user.id,
+            entity_type="security_events",
+            entity_id=user.id,
             action="LOGOUT",
             user_id=user.id,
             changes={
@@ -285,11 +382,8 @@ async def get_current_user_optional(token: str = Depends(oauth2_scheme), db: Asy
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    payload = verify_token(token)
-    if not payload:
-        raise credentials_exception
-    email: str = payload.get("sub")
-    if email is None:
+    email, organization_id, user_role, user_type = verify_token(token)
+    if not email:
         raise credentials_exception
     user = await execute_with_retry(fetch_user, email=email)
     if user is None:

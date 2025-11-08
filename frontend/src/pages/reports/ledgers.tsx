@@ -25,6 +25,7 @@ import {
   FilterList
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const LedgerReportsPage: React.FC = () => {
   const [accountFilter, setAccountFilter] = React.useState('all');
@@ -81,6 +82,7 @@ const LedgerReportsPage: React.FC = () => {
   ];
 
   return (
+    <ProtectedPage moduleKey="reports" action="read">
     <DashboardLayout
       title="Ledger Reports"
       subtitle="View detailed account ledgers and transaction history"
@@ -312,6 +314,7 @@ const LedgerReportsPage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
 

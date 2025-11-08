@@ -3,7 +3,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Dict, List
 from datetime import datetime
-from enum import Enum
+import enum
 
 
 class OrganizationBase(BaseModel):
@@ -82,9 +82,9 @@ class OrganizationInDB(OrganizationBase):
 
 
 class OrganizationLicenseCreate(BaseModel):
-    license_type: str = Field(..., max_length=50)
+    license_type: str = Field("trial", max_length=50)
     license_duration_months: Optional[int] = None
-    organization_id: int
+    organization_id: Optional[int] = None
     superadmin_email: str = Field(..., max_length=255)
     primary_phone: str = Field(..., max_length=20)
     address1: str = Field(..., max_length=255)
@@ -95,16 +95,21 @@ class OrganizationLicenseCreate(BaseModel):
     organization_name: str = Field(..., max_length=100)
     max_users: int = Field(..., ge=1)
     enabled_modules: Optional[Dict] = None
+    state_code: str = Field(..., max_length=10)
 
 
 class OrganizationLicenseResponse(BaseModel):
+    organization_name: str
+    subdomain: str
+    superadmin_email: str
+    temp_password: str
     license_type: str
     license_status: str = Field(..., description="Derived status: 'active' or 'trial'")
     license_issued_date: Optional[datetime] = None
     license_expiry_date: Optional[datetime] = None
 
 
-class VoucherCounterResetPeriod(str, Enum):
+class VoucherCounterResetPeriod(str, enum.Enum):
     """Voucher counter reset period options"""
     NEVER = "never"
     MONTHLY = "monthly"
@@ -254,7 +259,7 @@ class RecentActivity(BaseModel):
     id: int
     action: str
     entity_type: str
-    entity_id: int
+    entity_id: Optional[int] = None  # Changed to Optional to allow None
     user_id: int
     organization_id: int
     description: Optional[str] = None

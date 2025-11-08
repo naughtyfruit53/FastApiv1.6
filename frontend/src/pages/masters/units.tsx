@@ -41,6 +41,8 @@ import {
   SwapHoriz,
   ExpandMore,
 } from "@mui/icons-material";
+import { ProtectedPage } from "../../components/ProtectedPage";
+
 const UnitsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [addDialog, setAddDialog] = useState(false);
@@ -198,6 +200,7 @@ const UnitsPage: React.FC = () => {
       unit.unit_type?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Box
@@ -639,6 +642,7 @@ const UnitsPage: React.FC = () => {
         </Dialog>
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default UnitsPage;

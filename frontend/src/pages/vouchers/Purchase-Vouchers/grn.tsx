@@ -43,6 +43,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 const GoodsReceiptNotePage: React.FC = () => {
   const { isOrgContextReady } = useAuth();
   const router = useRouter();
@@ -358,7 +359,6 @@ const GoodsReceiptNotePage: React.FC = () => {
           received_quantity: item.received_quantity,
           accepted_quantity: item.accepted_quantity,
           rejected_quantity: item.rejected_quantity,
-          unit: item.unit,
           unit_price: item.unit_price,
           po_item_id: item.po_item_id,
         })),
@@ -378,7 +378,6 @@ const GoodsReceiptNotePage: React.FC = () => {
           received_quantity: Number(item.received_quantity) || 0,
           accepted_quantity: Number(item.accepted_quantity) || 0,
           rejected_quantity: Number(item.rejected_quantity) || 0,
-          unit: item.unit,
           unit_price: item.unit_price,
           total_cost: Number(item.accepted_quantity) * item.unit_price,
         }));
@@ -410,7 +409,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           handleGeneratePDF(response);
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error saving voucher:", error);
       alert('Failed to save goods receipt note. Please try again.');
     }
@@ -973,16 +972,17 @@ const GoodsReceiptNotePage: React.FC = () => {
 
     if (isLoading) {
     return (
-      <Container>
+      <ProtectedPage moduleKey="voucher" action="create">
+        <Container>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
       </Container>
+      </ProtectedPage>
     );
   }
-
   return (
-    <>
+    <ProtectedPage moduleKey="voucher" action="create">
       <VoucherLayout
         voucherType={config.voucherTitle}
         voucherTitle={config.voucherTitle}
@@ -1080,7 +1080,7 @@ const GoodsReceiptNotePage: React.FC = () => {
         onDelete={handleDelete}
         onPrint={handleGeneratePDF}
       />
-    </>
+    </ProtectedPage>
   );
 };
 

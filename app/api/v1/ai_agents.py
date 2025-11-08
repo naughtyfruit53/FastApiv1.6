@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 import logging
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.ai_agents import AIAgent, AIAgentInteraction, AIAgentCapability
 
@@ -110,7 +110,7 @@ class AIAgentInteractionResponse(BaseModel):
 @router.post("/", response_model=AIAgentResponse, status_code=status.HTTP_201_CREATED)
 async def create_ai_agent(
     agent_data: AIAgentCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("ai_agents", "create")),
     db: Session = Depends(get_db)
 ):
     """
@@ -118,7 +118,7 @@ async def create_ai_agent(
     """
     try:
         agent = AIAgent(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             name=agent_data.name,
             agent_type=agent_data.agent_type,
             description=agent_data.description,
@@ -152,7 +152,7 @@ async def list_ai_agents(
     limit: int = Query(100, ge=1, le=100),
     agent_type: Optional[str] = None,
     status: Optional[str] = None,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("ai_agents", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -160,7 +160,7 @@ async def list_ai_agents(
     """
     try:
         query = db.query(AIAgent).filter(
-            AIAgent.organization_id == current_user.organization_id
+            AIAgent.organization_id == org_id
         )
         
         if agent_type:
@@ -185,7 +185,7 @@ async def list_ai_agents(
 @router.get("/{agent_id}", response_model=AIAgentResponse)
 async def get_ai_agent(
     agent_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("ai_agents", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -195,7 +195,7 @@ async def get_ai_agent(
         agent = db.query(AIAgent).filter(
             and_(
                 AIAgent.id == agent_id,
-                AIAgent.organization_id == current_user.organization_id
+                AIAgent.organization_id == org_id
             )
         ).first()
         
@@ -221,7 +221,7 @@ async def get_ai_agent(
 async def update_ai_agent(
     agent_id: int,
     agent_data: AIAgentUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("ai_agents", "update")),
     db: Session = Depends(get_db)
 ):
     """
@@ -231,7 +231,7 @@ async def update_ai_agent(
         agent = db.query(AIAgent).filter(
             and_(
                 AIAgent.id == agent_id,
-                AIAgent.organization_id == current_user.organization_id
+                AIAgent.organization_id == org_id
             )
         ).first()
         
@@ -266,7 +266,7 @@ async def update_ai_agent(
 @router.delete("/{agent_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_ai_agent(
     agent_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("ai_agents", "delete")),
     db: Session = Depends(get_db)
 ):
     """
@@ -276,7 +276,7 @@ async def delete_ai_agent(
         agent = db.query(AIAgent).filter(
             and_(
                 AIAgent.id == agent_id,
-                AIAgent.organization_id == current_user.organization_id
+                AIAgent.organization_id == org_id
             )
         ).first()
         
@@ -309,7 +309,7 @@ async def delete_ai_agent(
 @router.post("/interactions", response_model=AIAgentInteractionResponse, status_code=status.HTTP_201_CREATED)
 async def create_interaction(
     interaction_data: AIAgentInteractionCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("ai_agents", "create")),
     db: Session = Depends(get_db)
 ):
     """
@@ -320,7 +320,7 @@ async def create_interaction(
         agent = db.query(AIAgent).filter(
             and_(
                 AIAgent.id == interaction_data.agent_id,
-                AIAgent.organization_id == current_user.organization_id
+                AIAgent.organization_id == org_id
             )
         ).first()
         
@@ -331,7 +331,7 @@ async def create_interaction(
             )
         
         interaction = AIAgentInteraction(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             agent_id=interaction_data.agent_id,
             user_id=current_user.id,
             interaction_type=interaction_data.interaction_type,
@@ -383,7 +383,7 @@ async def list_interactions(
     agent_id: Optional[int] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("ai_agents", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -391,7 +391,7 @@ async def list_interactions(
     """
     try:
         query = db.query(AIAgentInteraction).filter(
-            AIAgentInteraction.organization_id == current_user.organization_id
+            AIAgentInteraction.organization_id == org_id
         )
         
         if agent_id:
@@ -412,7 +412,7 @@ async def list_interactions(
 @router.get("/statistics", response_model=Dict[str, Any])
 async def get_agent_statistics(
     agent_id: Optional[int] = None,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("ai_agents", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -420,7 +420,7 @@ async def get_agent_statistics(
     """
     try:
         query = db.query(AIAgent).filter(
-            AIAgent.organization_id == current_user.organization_id
+            AIAgent.organization_id == org_id
         )
         
         if agent_id:

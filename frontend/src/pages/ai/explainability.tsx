@@ -33,6 +33,7 @@ import {
   TrendingDown as TrendingDownIcon,
   Help as HelpIcon,
 } from '@mui/icons-material';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const AIExplainabilityPage: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState('sales-prediction');
@@ -66,6 +67,7 @@ const AIExplainabilityPage: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="ai" action="read">
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
@@ -326,6 +328,7 @@ const AIExplainabilityPage: React.FC = () => {
         </Grid>
       </Paper>
     </Container>
+    </ProtectedPage>
   );
 };
 

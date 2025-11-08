@@ -35,6 +35,7 @@ import {
   Assessment as AssessmentIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface AutoMLRun {
   id: number;
@@ -198,6 +199,7 @@ const AutoMLPage: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="analytics" action="read">
     <Box sx={{ p: 3 }}>
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h4">AutoML Dashboard</Typography>
@@ -435,6 +437,7 @@ const AutoMLPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 };
 

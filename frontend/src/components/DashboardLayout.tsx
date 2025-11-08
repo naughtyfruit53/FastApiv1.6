@@ -1,6 +1,8 @@
 // frontend/src/components/DashboardLayout.tsx
 import React from "react";
 import { Box, Typography, Container } from "@mui/material";
+import MegaMenu from "./MegaMenu";
+import { useAuth } from "../context/AuthContext";
 
 export interface DashboardLayoutProps {
   title: string;
@@ -9,6 +11,7 @@ export interface DashboardLayoutProps {
   actions?: React.ReactNode;
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
   className?: string;
+  showMegaMenu?: boolean;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({
@@ -18,83 +21,91 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   actions,
   maxWidth = "lg",
   className = "",
+  showMegaMenu = true, // Deprecated: MegaMenu is now globally mounted in AppLayout
 }) => {
+  const { user, logout } = useAuth();
+
   return (
-    <Box
-      className={`modern-dashboard ${className}`}
-      sx={{
-        opacity: 0,
-        animation: "fadeInUp 0.6s ease-out forwards",
-        "@keyframes fadeInUp": {
-          from: {
-            opacity: 0,
-            transform: "translateY(30px)",
-          },
-          to: {
-            opacity: 1,
-            transform: "translateY(0)",
-          },
-        },
-      }}
-    >
-      <Container maxWidth={maxWidth} className="modern-dashboard-container">
-        <Box
-          className="modern-dashboard-header"
-          sx={{
-            mb: 4,
-            position: "relative",
-            "&::after": {
-              content: '""',
-              position: "absolute",
-              bottom: "-16px",
-              left: 0,
-              width: "60px",
-              height: "3px",
-              background:
-                "linear-gradient(90deg, var(--primary-500), var(--primary-100))",
-              borderRadius: "2px",
+    <>
+      {/* MegaMenu is now globally mounted in AppLayout (_app.tsx) */}
+      {/* Keeping this for backward compatibility, but it won't render if already shown globally */}
+      <Box
+        className={`modern-dashboard ${className}`}
+        sx={{
+          opacity: 0,
+          animation: "fadeInUp 0.6s ease-out forwards",
+          "@keyframes fadeInUp": {
+            from: {
+              opacity: 0,
+              transform: "translateY(30px)",
             },
-          }}
-        >
+            to: {
+              opacity: 1,
+              transform: "translateY(0)",
+            },
+          },
+          mt: 2,
+        }}
+      >
+        <Container maxWidth={maxWidth} className="modern-dashboard-container">
           <Box
+            className="modern-dashboard-header"
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-              gap: 2,
+              mb: 4,
+              position: "relative",
+              "&::after": {
+                content: '""',
+                position: "absolute",
+                bottom: "-16px",
+                left: 0,
+                width: "60px",
+                height: "3px",
+                background:
+                  "linear-gradient(90deg, var(--primary-500), var(--primary-100))",
+                borderRadius: "2px",
+              },
             }}
           >
-            <Box>
-              <Typography className="modern-dashboard-title" variant="h3">
-                {title}
-              </Typography>
-              {subtitle && (
-                <Typography className="modern-dashboard-subtitle" variant="h6">
-                  {subtitle}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: 2,
+              }}
+            >
+              <Box>
+                <Typography className="modern-dashboard-title" variant="h3">
+                  {title}
                 </Typography>
-              )}
-            </Box>
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              {actions}
+                {subtitle && (
+                  <Typography className="modern-dashboard-subtitle" variant="h6">
+                    {subtitle}
+                  </Typography>
+                )}
+              </Box>
+              <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+                {actions}
+              </Box>
             </Box>
           </Box>
-        </Box>
-        <Box
-          sx={{
-            minHeight: "60vh",
-            position: "relative",
-            overflow: "visible",
-            "& > *": {
-              opacity: 0,
-              animation: "fadeInUp 0.8s ease-out 0.2s forwards",
-            },
-          }}
-        >
-          {children}
-        </Box>
-      </Container>
-    </Box>
+          <Box
+            sx={{
+              minHeight: "60vh",
+              position: "relative",
+              overflow: "visible",
+              "& > *": {
+                opacity: 0,
+                animation: "fadeInUp 0.8s ease-out 0.2s forwards",
+              },
+            }}
+          >
+            {children}
+          </Box>
+        </Container>
+      </Box>
+    </>
   );
 };
 

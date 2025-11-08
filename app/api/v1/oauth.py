@@ -13,7 +13,7 @@ from typing import List, Optional
 import traceback
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.oauth_models import UserEmailToken, OAuthProvider, TokenStatus
 from app.models.email import MailAccount, EmailAccountType, EmailSyncStatus
@@ -58,12 +58,14 @@ async def get_oauth_providers():
 async def oauth_login(
     provider: str,
     request: Request,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("oauth", "create")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Initiate OAuth2 login flow for specified provider
     """
+    current_user, org_id = auth
+    
     # Validate provider
     try:
         oauth_provider = OAuthProvider(provider.upper())
@@ -257,15 +259,17 @@ async def oauth_callback(
 
 @router.get("/tokens", response_model=List[UserEmailTokenResponse])
 async def get_user_tokens(
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("oauth", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get all OAuth tokens for current user
     """
+    current_user, org_id = auth
+    
     stmt = select(UserEmailToken).filter_by(
         user_id=current_user.id,
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     result = await db.execute(stmt)
     tokens = result.scalars().all()
@@ -306,16 +310,18 @@ async def get_user_tokens(
 @router.get("/tokens/{token_id}", response_model=UserEmailTokenWithDetails)
 async def get_token_details(
     token_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("oauth", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get detailed information about a specific token
     """
+    current_user, org_id = auth
+    
     stmt = select(UserEmailToken).filter_by(
         id=token_id,
         user_id=current_user.id,
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     result = await db.execute(stmt)
     token = result.scalars().first()
@@ -360,16 +366,18 @@ async def get_token_details(
 async def update_token(
     token_id: int,
     token_update: UserEmailTokenUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("oauth", "update")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Update token settings
     """
+    current_user, org_id = auth
+    
     stmt = select(UserEmailToken).filter_by(
         id=token_id,
         user_id=current_user.id,
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     result = await db.execute(stmt)
     token = result.scalars().first()
@@ -420,16 +428,18 @@ async def update_token(
 @router.post("/tokens/{token_id}/refresh")
 async def refresh_token(
     token_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("oauth", "update")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Manually refresh an OAuth token
     """
+    current_user, org_id = auth
+    
     stmt = select(UserEmailToken).filter_by(
         id=token_id,
         user_id=current_user.id,
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     result = await db.execute(stmt)
     token = result.scalars().first()
@@ -455,16 +465,18 @@ async def refresh_token(
 @router.delete("/tokens/{token_id}")
 async def revoke_token(
     token_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("oauth", "delete")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Revoke an OAuth token
     """
+    current_user, org_id = auth
+    
     stmt = select(UserEmailToken).filter_by(
         id=token_id,
         user_id=current_user.id,
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     result = await db.execute(stmt)
     token = result.scalars().first()
@@ -485,16 +497,18 @@ async def revoke_token(
 async def sync_emails(
     token_id: int,
     sync_request: EmailSyncRequest,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("oauth", "update")),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Trigger email sync for a specific token
     """
+    current_user, org_id = auth
+    
     stmt = select(UserEmailToken).filter_by(
         id=token_id,
         user_id=current_user.id,
-        organization_id=current_user.organization_id
+        organization_id=org_id
     )
     result = await db.execute(stmt)
     token = result.scalars().first()

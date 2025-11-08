@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
-import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
+import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
 import VoucherContextMenu from "../../../components/VoucherContextMenu";
 import VoucherLayout from "../../../components/VoucherLayout";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
@@ -48,10 +48,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form";
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance";
 import { formatCurrency } from "../../../utils/currencyUtils";
+import Link from 'next/link';
+import { organizationService } from '../../../services/organizationService';
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 const PurchaseVoucherPage: React.FC = () => {
   console.count('Render: PurchaseVoucherPage');
-  const { company, isLoading: companyLoading, error: companyError } = useCompany();
+  const { company, isLoading: companyLoading, error: companyError, refetch: refetchCompany } = useCompany();
   const router = useRouter();
   const { productId, vendorId } = router.query;
   const config = getVoucherConfig("purchase-voucher");
@@ -124,14 +127,10 @@ const PurchaseVoucherPage: React.FC = () => {
     handleView,
     handleContextMenu,
     handleCloseContextMenu,
-    handleSearch,
-    handleModalOpen,
-    handleModalClose,
     handleGeneratePDF,
     handleDelete,
     refreshMasterData,
     getAmountInWords,
-    isViewMode,
     totalRoundOff,
   } = useVoucherPage(config);
 
@@ -142,6 +141,7 @@ const PurchaseVoucherPage: React.FC = () => {
   const selectedVendorId = watch("vendor_id");
   
   const [selectedVendor, setSelectedVendor] = useState(null as any);
+  const [refetchLoading, setRefetchLoading] = useState(true);  // Local loading for refetch
   
   useEffect(() => {
     if (selectedVendorId && vendorList) {
@@ -192,6 +192,21 @@ const PurchaseVoucherPage: React.FC = () => {
       ...sortedVendors
     ];
   }, [vendorList]);
+
+  // Force invalidate and refetch company data on mount to ensure fresh state_code
+  useEffect(() => {
+    const fetchFreshData = async () => {
+      setRefetchLoading(true);
+      try {
+        await refetchCompany();
+      } catch (error) {
+        console.error('Failed to refetch company data:', error);
+      } finally {
+        setRefetchLoading(false);
+      }
+    };
+    fetchFreshData();
+  }, [refetchCompany]);
 
   const handleToggleDescription = (checked: boolean) => {
     setDescriptionEnabled(checked);
@@ -373,9 +388,9 @@ const PurchaseVoucherPage: React.FC = () => {
       date: voucher.date ? voucher.date.split('T')[0] : '',
       items: voucher.items.map((item: any) => ({
         ...item,
-        cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
-        sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
-        igst_rate: isIntrastate ? 0 : (item.gst_rate || 18),
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
       })),
     });
     if (voucher.additional_charges) {
@@ -395,9 +410,9 @@ const PurchaseVoucherPage: React.FC = () => {
       date: voucher.date ? voucher.date.split('T')[0] : '',
       items: voucher.items.map((item: any) => ({
         ...item,
-        cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
-        sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
-        igst_rate: isIntrastate ? 0 : (item.gst_rate || 18),
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
       })),
     });
     if (voucher.additional_charges) {
@@ -418,9 +433,9 @@ const PurchaseVoucherPage: React.FC = () => {
       date: voucher.date ? voucher.date.split('T')[0] : '',
       items: voucher.items.map((item: any) => ({
         ...item,
-        cgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
-        sgst_rate: isIntrastate ? (item.gst_rate || 18) / 2 : 0,
-        igst_rate: isIntrastate ? 0 : (item.gst_rate || 18),
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,
+        igst_rate: isIntrastate ? 0 : item.gst_rate,
       })),
     });
     if (voucher.additional_charges) {
@@ -501,7 +516,7 @@ const PurchaseVoucherPage: React.FC = () => {
     };
     
     fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
+  }, [watch, mode, setValue]);
 
   const onSubmit = async (data: any) => {
     if (totalRoundOff !== 0) {
@@ -638,9 +653,14 @@ const PurchaseVoucherPage: React.FC = () => {
     </Box>
   );
 
-  const formBody = (
+  const formContent = (
     <Box>
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
+      {!companyLoading && !company?.state_code && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Organization state code not set. Please set it in <Link href="/settings/company">Company Profile</Link> for accurate GST calculation.
+        </Alert>
+      )}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherFormStyles.formContainer}>
         <Grid container spacing={1}>
           <Grid size={4}>
@@ -879,13 +899,13 @@ const PurchaseVoucherPage: React.FC = () => {
     </Box>
   );
 
-  if (isLoading || companyLoading) {
+  if (isLoading || companyLoading || refetchLoading) {
     return (
-      <Container>
+      <ProtectedPage moduleKey="procurement" action="write">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
-      </Container>
+      </ProtectedPage>
     );
   }
 
@@ -906,7 +926,7 @@ const PurchaseVoucherPage: React.FC = () => {
         voucherTitle={config.voucherTitle}
         indexContent={indexContent}
         formHeader={formHeader}
-        formContent={formBody}
+        formContent={formContent}
         onShowAll={() => setShowVoucherListModal(true)}
         centerAligned={true}
         modalContent={

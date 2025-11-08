@@ -11,7 +11,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user as get_current_user  # Fixed import to use get_current_active_user as get_current_user
+from app.core.enforcement import require_access
 from app.models import User, Organization, Task, TaskProject, TaskProjectMember, TaskComment, TaskAttachment, TaskTimeLog, TaskReminder
 from app.schemas.task_schemas import (
     TaskCreate, TaskUpdate, TaskResponse, TaskWithDetails, TaskList, TaskFilter, TaskDashboardStats,
@@ -21,7 +21,6 @@ from app.schemas.task_schemas import (
     TaskTimeLogCreate, TaskTimeLogUpdate, TaskTimeLogResponse, TaskTimeLogWithDetails,
     TaskReminderCreate, TaskReminderUpdate, TaskReminderResponse, TaskReminderWithDetails
 )
-from app.services.rbac import require_permission, RBACService
 
 router = APIRouter()
 
@@ -29,11 +28,11 @@ router = APIRouter()
 @router.get("/dashboard", response_model=TaskDashboardStats)
 async def get_task_dashboard(
     company_id: Optional[int] = Query(None, description="Filter by specific company (if user has access)"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "read")),
     db: Session = Depends(get_db)
 ):
     """Get task dashboard statistics for current user's accessible companies"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -147,11 +146,11 @@ async def get_tasks(
     sort_by: str = Query("created_at", regex=r"^(created_at|updated_at|due_date|priority|title)$"),
     sort_order: str = Query("desc", regex=r"^(asc|desc)$"),
     company_id: Optional[int] = Query(None, description="Filter by specific company (if user has access)"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "read")),
     db: Session = Depends(get_db)
 ):
     """Get paginated list of tasks with filtering and sorting"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -275,7 +274,7 @@ async def get_tasks(
 @router.post("/", response_model=TaskResponse)
 async def create_task(
     task_data: TaskCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new task"""
@@ -301,7 +300,7 @@ async def create_task(
         assignee = db.query(User).filter(
             and_(
                 User.id == task_data.assigned_to,
-                User.organization_id == current_user.organization_id
+                User.organization_id == org_id
             )
         ).first()
         if not assignee:
@@ -322,7 +321,7 @@ async def create_task(
     if task_data.project_id:
         project_filters = [
             TaskProject.id == task_data.project_id,
-            TaskProject.organization_id == current_user.organization_id
+            TaskProject.organization_id == org_id
         ]
         if task_data.company_id:
             project_filters.append(TaskProject.company_id == task_data.company_id)
@@ -337,7 +336,7 @@ async def create_task(
     # Create task
     task = Task(
         **task_data.model_dump(),
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id
     )
     
@@ -350,14 +349,14 @@ async def create_task(
 @router.get("/{task_id}", response_model=TaskWithDetails)
 async def get_task(
     task_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "read")),
     db: Session = Depends(get_db)
 ):
     """Get a specific task by ID"""
     task = db.query(Task).filter(
         and_(
             Task.id == task_id,
-            Task.organization_id == current_user.organization_id
+            Task.organization_id == org_id
         )
     ).options(
         joinedload(Task.creator),
@@ -391,14 +390,14 @@ async def get_task(
 async def update_task(
     task_id: int,
     task_data: TaskUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "update")),
     db: Session = Depends(get_db)
 ):
     """Update a task"""
     task = db.query(Task).filter(
         and_(
             Task.id == task_id,
-            Task.organization_id == current_user.organization_id
+            Task.organization_id == org_id
         )
     ).first()
     
@@ -414,7 +413,7 @@ async def update_task(
             assignee = db.query(User).filter(
                 and_(
                     User.id == task_data.assigned_to,
-                    User.organization_id == current_user.organization_id
+                    User.organization_id == org_id
                 )
             ).first()
             if not assignee:
@@ -429,7 +428,7 @@ async def update_task(
             project = db.query(TaskProject).filter(
                 and_(
                     TaskProject.id == task_data.project_id,
-                    TaskProject.organization_id == current_user.organization_id
+                    TaskProject.organization_id == org_id
                 )
             ).first()
             if not project:
@@ -458,14 +457,14 @@ async def update_task(
 @router.delete("/{task_id}")
 async def delete_task(
     task_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "delete")),
     db: Session = Depends(get_db)
 ):
     """Delete a task"""
     task = db.query(Task).filter(
         and_(
             Task.id == task_id,
-            Task.organization_id == current_user.organization_id
+            Task.organization_id == org_id
         )
     ).first()
     
@@ -492,12 +491,12 @@ async def delete_task(
 # Task Projects endpoints
 @router.get("/projects/", response_model=List[TaskProjectWithDetails])
 async def get_task_projects(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "read")),
     db: Session = Depends(get_db)
 ):
     """Get all task projects for current user's organization"""
     projects = db.query(TaskProject).filter(
-        TaskProject.organization_id == current_user.organization_id
+        TaskProject.organization_id == org_id
     ).options(
         joinedload(TaskProject.creator),
         joinedload(TaskProject.tasks),
@@ -519,13 +518,13 @@ async def get_task_projects(
 @router.post("/projects/", response_model=TaskProjectResponse)
 async def create_task_project(
     project_data: TaskProjectCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new task project"""
     project = TaskProject(
         **project_data.model_dump(),
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         created_by=current_user.id
     )
     
@@ -547,14 +546,14 @@ async def create_task_project(
 @router.get("/projects/{project_id}", response_model=TaskProjectWithDetails)
 async def get_task_project(
     project_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "read")),
     db: Session = Depends(get_db)
 ):
     """Get a specific task project by ID"""
     project = db.query(TaskProject).filter(
         and_(
             TaskProject.id == project_id,
-            TaskProject.organization_id == current_user.organization_id
+            TaskProject.organization_id == org_id
         )
     ).options(
         joinedload(TaskProject.creator),
@@ -593,7 +592,7 @@ async def get_task_project(
 async def create_time_log(
     task_id: int,
     time_log_data: TaskTimeLogCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a time log entry for a task"""
@@ -601,7 +600,7 @@ async def create_time_log(
     task = db.query(Task).filter(
         and_(
             Task.id == task_id,
-            Task.organization_id == current_user.organization_id
+            Task.organization_id == org_id
         )
     ).first()
     
@@ -627,7 +626,7 @@ async def create_time_log(
 @router.get("/{task_id}/time-logs", response_model=List[TaskTimeLogWithDetails])
 async def get_task_time_logs(
     task_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("task", "read")),
     db: Session = Depends(get_db)
 ):
     """Get all time logs for a task"""
@@ -635,7 +634,7 @@ async def get_task_time_logs(
     task = db.query(Task).filter(
         and_(
             Task.id == task_id,
-            Task.organization_id == current_user.organization_id
+            Task.organization_id == org_id
         )
     ).first()
     

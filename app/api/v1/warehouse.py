@@ -12,10 +12,9 @@ from datetime import datetime, date
 from decimal import Decimal
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.core.tenant import TenantQueryMixin
-from app.core.org_restrictions import require_current_organization_id, validate_company_setup
-from app.core.rbac_dependencies import check_service_permission
+from app.core.org_restrictions import validate_company_setup
 from app.models import (
     User, Organization, Product,
     Warehouse, StockLocation, ProductTracking, WarehouseStock,
@@ -115,10 +114,11 @@ async def get_warehouses(
     is_active: Optional[bool] = None,
     search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "read")),
 ):
     """Get warehouses with filtering options"""
+    current_user, org_id = auth
+
     stmt = select(Warehouse).where(
         Warehouse.organization_id == organization_id
     )
@@ -145,10 +145,11 @@ async def get_warehouses(
 async def create_warehouse(
     warehouse_data: WarehouseCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "create")),
 ):
     """Create a new warehouse"""
+    current_user, org_id = auth
+
     # Auto-generate warehouse code if not provided
     warehouse_code = warehouse_data.warehouse_code
     if not warehouse_code:
@@ -201,10 +202,11 @@ async def create_warehouse(
 async def get_warehouse(
     warehouse_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "read")),
 ):
     """Get a specific warehouse"""
+    current_user, org_id = auth
+
     stmt = select(Warehouse).where(
         Warehouse.id == warehouse_id,
         Warehouse.organization_id == organization_id
@@ -226,10 +228,11 @@ async def update_warehouse(
     warehouse_id: int,
     warehouse_data: WarehouseUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "update")),
 ):
     """Update a warehouse"""
+    current_user, org_id = auth
+
     stmt = select(Warehouse).where(
         Warehouse.id == warehouse_id,
         Warehouse.organization_id == organization_id
@@ -264,10 +267,11 @@ async def get_stock_locations(
     limit: int = 100,
     is_active: Optional[bool] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "read")),
 ):
     """Get stock locations for a warehouse"""
+    current_user, org_id = auth
+
     # Verify warehouse exists and belongs to organization
     stmt = select(Warehouse).where(
         Warehouse.id == warehouse_id,
@@ -300,10 +304,11 @@ async def create_stock_location(
     warehouse_id: int,
     location_data: StockLocationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "create")),
 ):
     """Create a new stock location"""
+    current_user, org_id = auth
+
     # Verify warehouse exists and belongs to organization
     stmt = select(Warehouse).where(
         Warehouse.id == warehouse_id,
@@ -360,10 +365,11 @@ async def create_stock_location(
 async def get_product_tracking(
     product_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "read")),
 ):
     """Get product tracking configuration"""
+    current_user, org_id = auth
+
     # Verify product exists and belongs to organization
     stmt = select(Product).where(
         Product.id == product_id,
@@ -392,10 +398,11 @@ async def create_product_tracking(
     product_id: int,
     tracking_data: ProductTrackingCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "create")),
 ):
     """Create product tracking configuration"""
+    current_user, org_id = auth
+
     # Verify product exists and belongs to organization
     stmt = select(Product).where(
         Product.id == product_id,
@@ -455,10 +462,11 @@ async def get_warehouse_stock(
     product_id: Optional[int] = None,
     low_stock_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "read")),
 ):
     """Get warehouse stock levels"""
+    current_user, org_id = auth
+
     # Verify warehouse exists and belongs to organization
     stmt = select(Warehouse).where(
         Warehouse.id == warehouse_id,
@@ -497,10 +505,11 @@ async def get_warehouse_stock(
 @router.get("/analytics/dashboard", response_model=InventoryDashboard)
 async def get_inventory_dashboard(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "read")),
 ):
     """Get inventory dashboard analytics"""
+    current_user, org_id = auth
+
     # Total products
     stmt = select(func.count(Product.id)).where(
         Product.organization_id == organization_id,
@@ -586,10 +595,11 @@ async def get_inventory_dashboard(
 async def bulk_stock_import(
     import_data: BulkStockImport,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("warehouse", "create")),
 ):
     """Bulk import stock data"""
+    current_user, org_id = auth
+
     # Verify warehouse exists and belongs to organization
     stmt = select(Warehouse).where(
         Warehouse.id == import_data.warehouse_id,

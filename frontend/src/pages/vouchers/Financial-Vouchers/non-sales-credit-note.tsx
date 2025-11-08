@@ -34,6 +34,8 @@ import {
   getVoucherStyles,
   parseRateField,
 } from "../../../utils/voucherUtils";
+import { ProtectedPage } from '../../../components/ProtectedPage';
+
 const NonSalesCreditNote: React.FC = () => {
   const config = getVoucherConfig("non-sales-credit-note");
   const voucherStyles = getVoucherStyles();
@@ -499,20 +501,22 @@ const NonSalesCreditNote: React.FC = () => {
 
     if (isLoading) {
     return (
-      <Container>
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="400px"
-        >
-          <CircularProgress />
-        </Box>
-      </Container>
+      <ProtectedPage moduleKey="finance" action="write">
+        <Container>
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            minHeight="400px"
+          >
+            <CircularProgress />
+          </Box>
+        </Container>
+      </ProtectedPage>
     );
   }
   return (
-    <>
+    <ProtectedPage moduleKey="finance" action="write">
       <VoucherLayout
         voucherType="Non Sales Credit Notes"
         voucherTitle="Non Sales Credit Note"
@@ -570,7 +574,7 @@ const NonSalesCreditNote: React.FC = () => {
         onProceedAnyway={handleProceedAnyway}
         voucherType="Non-Sales Credit Note"
       />
-    </>
+    </ProtectedPage>
   );
 };
 export default NonSalesCreditNote;

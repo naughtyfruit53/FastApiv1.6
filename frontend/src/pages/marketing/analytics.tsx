@@ -13,9 +13,11 @@ import {
   Analytics
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const MarketingAnalyticsPage: React.FC = () => {
   return (
+    <ProtectedPage moduleKey="marketing" action="read">
     <DashboardLayout
       title="Analytics"
       subtitle="View marketing analytics and performance"
@@ -54,6 +56,8 @@ const MarketingAnalyticsPage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+  );
+    </ProtectedPage>
   );
 };
 

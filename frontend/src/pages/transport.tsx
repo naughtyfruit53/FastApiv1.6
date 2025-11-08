@@ -38,6 +38,7 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { transportService } from "../services/transportService";
+import { ProtectedPage } from '../components/ProtectedPage';
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -135,7 +136,8 @@ const TransportManagementPage: NextPage = () => {
   };
   if (!user) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <ProtectedPage moduleKey="logistics" action="read">
+      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
           Please log in to access Transport Management.
         </Alert>
@@ -755,6 +757,7 @@ const TransportManagementPage: NextPage = () => {
         </Grid>
       </TabPanel>
     </Container>
+    </ProtectedPage>
   );
 };
 export default TransportManagementPage;

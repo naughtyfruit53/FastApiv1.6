@@ -11,14 +11,20 @@ from datetime import datetime
 from dateutil import parser as date_parser
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access, TenantEnforcement
 from app.models import User
+from app.models.user_models import Organization
+from app.models.customer_models import Customer
 from app.models.vouchers.sales import SalesVoucher, SalesVoucherItem
 from app.schemas.vouchers import SalesVoucherCreate, SalesVoucherInDB, SalesVoucherUpdate
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 from app.services.pdf_generation_service import pdf_generator
+from app.utils.gst_calculator import calculate_gst_amounts
+from app.utils.voucher_gst_helper import get_state_codes_for_sales
 import logging
 import asyncio
+import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["sales-vouchers"])
@@ -31,15 +37,17 @@ async def get_sales_vouchers(
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all sales vouchers"""
+    current_user, org_id = auth
+    
     stmt = select(SalesVoucher).options(
         joinedload(SalesVoucher.customer),
         joinedload(SalesVoucher.items).joinedload(SalesVoucherItem.product)
     ).where(
-        SalesVoucher.organization_id == current_user.organization_id
+        SalesVoucher.organization_id == org_id
     )
     
     if status:
@@ -63,10 +71,12 @@ async def get_sales_vouchers(
 @router.get("/next-number", response_model=str)
 async def get_next_sales_voucher_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get the next available sales voucher number for a given date"""
+    current_user, org_id = auth
+    
     # Parse the voucher_date if provided
     date_to_use = None
     if voucher_date:
@@ -76,20 +86,22 @@ async def get_next_sales_voucher_number(
             pass
     
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "SV", current_user.organization_id, SalesVoucher, voucher_date=date_to_use
+        db, "SV", org_id, SalesVoucher, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Check if creating a voucher with the given date would create conflicts"""
+    current_user, org_id = auth
+    
     try:
         parsed_date = date_parser.parse(voucher_date)
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "SV", current_user.organization_id, SalesVoucher, parsed_date
+            db, "SV", org_id, SalesVoucher, parsed_date
         )
         return conflict_info
     except Exception as e:
@@ -103,14 +115,16 @@ async def create_sales_voucher(
     invoice: SalesVoucherCreate,
     background_tasks: BackgroundTasks,
     send_email: bool = False,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create new sales voucher"""
+    current_user, org_id = auth
+    
     try:
         invoice_data = invoice.dict(exclude={'items'})
         invoice_data['created_by'] = current_user.id
-        invoice_data['organization_id'] = current_user.organization_id
+        invoice_data['organization_id'] = org_id
         
         # Get the voucher date for numbering
         voucher_date = None
@@ -120,22 +134,32 @@ async def create_sales_voucher(
         # Generate unique voucher number if not provided or blank
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
             invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "SV", current_user.organization_id, SalesVoucher, voucher_date=voucher_date
+                db, "SV", org_id, SalesVoucher, voucher_date=voucher_date
             )
         else:
             stmt = select(SalesVoucher).where(
-                SalesVoucher.organization_id == current_user.organization_id,
+                SalesVoucher.organization_id == org_id,
                 SalesVoucher.voucher_number == invoice_data['voucher_number']
             )
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
                 invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "SV", current_user.organization_id, SalesVoucher, voucher_date=voucher_date
+                    db, "SV", org_id, SalesVoucher, voucher_date=voucher_date
                 )
         db_invoice = SalesVoucher(**invoice_data)
         db.add(db_invoice)
         await db.flush()
+        
+        # STRICT GST ENFORCEMENT: Get state codes (NO FALLBACK)
+        company_state_code, customer_state_code = await get_state_codes_for_sales(
+            db=db,
+            org_id=org_id,
+            customer_id=invoice_data.get('customer_id'),
+            voucher_type="sales voucher"
+        )
+        
+        logger.info(f"Sales Voucher GST: Company State={company_state_code}, Customer State={customer_state_code}")
         
         # Initialize sums for header
         total_amount = 0.0
@@ -164,13 +188,26 @@ async def create_sales_voucher(
                 item_dict['discount_amount'] = discount_amount
                 item_dict['taxable_amount'] = gross_amount - discount_amount
             
-            # Recalculate tax amounts if they are 0 (assuming intra-state by default; adjust if inter-state logic added later)
+            # SMART GST CALCULATION: Use company and customer state codes
             taxable = item_dict['taxable_amount']
             if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
-                half_rate = item_dict['gst_rate'] / 2 / 100
-                item_dict['cgst_amount'] = taxable * half_rate
-                item_dict['sgst_amount'] = taxable * half_rate
-                item_dict['igst_amount'] = 0.0
+                # calculate_gst_amounts will validate state codes and raise ValueError if missing
+                gst_amounts = calculate_gst_amounts(
+                    taxable_amount=taxable,
+                    gst_rate=item_dict['gst_rate'],
+                    company_state_code=company_state_code,
+                    customer_state_code=customer_state_code,
+                    organization_id=org_id,
+                    entity_id=invoice_data.get('customer_id'),
+                    entity_type='customer'
+                )
+                item_dict['cgst_amount'] = gst_amounts['cgst_amount']
+                item_dict['sgst_amount'] = gst_amounts['sgst_amount']
+                item_dict['igst_amount'] = gst_amounts['igst_amount']
+                
+                logger.debug(f"Item GST: Taxable={taxable}, Rate={item_dict['gst_rate']}%, "
+                           f"CGST={item_dict['cgst_amount']}, SGST={item_dict['sgst_amount']}, "
+                           f"IGST={item_dict['igst_amount']}")
             
             # Always calculate total_amount to ensure it's not None or incorrect
             item_dict['total_amount'] = (
@@ -234,15 +271,17 @@ async def create_sales_voucher(
 @router.get("/{invoice_id}", response_model=SalesVoucherInDB)
 async def get_sales_voucher(
     invoice_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     stmt = select(SalesVoucher).options(
         joinedload(SalesVoucher.customer),
         joinedload(SalesVoucher.items).joinedload(SalesVoucherItem.product)
     ).where(
         SalesVoucher.id == invoice_id,
-        SalesVoucher.organization_id == current_user.organization_id
+        SalesVoucher.organization_id == org_id
     )
     result = await db.execute(stmt)
     invoice = result.unique().scalar_one_or_none()
@@ -256,16 +295,18 @@ async def get_sales_voucher(
 @router.get("/{invoice_id}/pdf")
 async def generate_sales_voucher_pdf(
     invoice_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(SalesVoucher).options(
             joinedload(SalesVoucher.customer),
             joinedload(SalesVoucher.items).joinedload(SalesVoucherItem.product)
         ).where(
             SalesVoucher.id == invoice_id,
-            SalesVoucher.organization_id == current_user.organization_id
+            SalesVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         voucher = result.unique().scalar_one_or_none()
@@ -276,7 +317,7 @@ async def generate_sales_voucher_pdf(
             voucher_type="sales",
             voucher_data=voucher.__dict__,
             db=db,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             current_user=current_user
         )
         
@@ -297,13 +338,15 @@ async def generate_sales_voucher_pdf(
 async def update_sales_voucher(
     invoice_id: int,
     invoice_update: SalesVoucherUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(SalesVoucher).where(
             SalesVoucher.id == invoice_id,
-            SalesVoucher.organization_id == current_user.organization_id
+            SalesVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         invoice = result.scalar_one_or_none()
@@ -397,7 +440,7 @@ async def update_sales_voucher(
             joinedload(SalesVoucher.items).joinedload(SalesVoucherItem.product)
         ).where(
             SalesVoucher.id == invoice_id,
-            SalesVoucher.organization_id == current_user.organization_id
+            SalesVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         invoice = result.unique().scalar_one_or_none()
@@ -421,13 +464,15 @@ async def update_sales_voucher(
 @router.delete("/{invoice_id}")
 async def delete_sales_voucher(
     invoice_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(SalesVoucher).where(
             SalesVoucher.id == invoice_id,
-            SalesVoucher.organization_id == current_user.organization_id
+            SalesVoucher.organization_id == org_id
         )
         result = await db.execute(stmt)
         invoice = result.scalar_one_or_none()

@@ -74,7 +74,7 @@ const adminService = {
       return response.data.total_value;
     } catch (error) {
       console.error("Failed to fetch inventory value:", error);
-      throw error;
+      return 0;  // Return 0 on error to allow dashboard to load
     }
   },
   // Add more admin-related API calls as needed, e.g., manage licenses, organizations, etc.
@@ -107,6 +107,42 @@ const adminService = {
       return response.data;
     } catch (error) {
       console.error("Failed to reset user password:", error);
+      throw error;
+    }
+  },
+  getAllUsers: async (): Promise<any> => {
+    try {
+      const response = await api.get("/admin/users");
+      return response.data;
+    } catch (error) {
+      console.error("Failed to get all users:", error);
+      throw error;
+    }
+  },
+  createUser: async (userData: Record<string, any>): Promise<any> => {
+    try {
+      const response = await api.post("/admin/users", userData);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to create user:", error);
+      throw error;
+    }
+  },
+  updateUser: async (userId: number, userData: Record<string, any>): Promise<any> => {
+    try {
+      const response = await api.put(`/admin/users/${userId}`, userData);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to update user:", error);
+      throw error;
+    }
+  },
+  deleteUser: async (userId: number): Promise<any> => {
+    try {
+      const response = await api.delete(`/admin/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to delete user:", error);
       throw error;
     }
   },

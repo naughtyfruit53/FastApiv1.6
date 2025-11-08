@@ -28,6 +28,7 @@ import {
 import axios from 'axios';
 import { formatCurrency } from '../utils/currencyUtils';
 
+import { ProtectedPage } from '../components/ProtectedPage';
 interface Receivable {
   id: number;
   invoice_number: string;
@@ -80,12 +81,14 @@ const AccountsReceivablePage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <ProtectedPage moduleKey="finance" action="read">
+      rotectedPage moduleKey="finance" action="read">
+        ox display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
       </Box>
+      </ProtectedPage>
     );
   }
-
   return (
     <Box sx={{ p: 3 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -213,7 +216,7 @@ const AccountsReceivablePage: React.FC = () => {
         </CardContent>
       </Card>
     </Box>
+    </ProtectedPage>
   );
 };
-
 export default AccountsReceivablePage;

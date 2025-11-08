@@ -20,6 +20,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../lib/api";
 import { getProducts } from "../../../services/masterService";
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface StockJournalEntry {
   product_id: number;
   debit_quantity: number;
@@ -317,7 +318,8 @@ export default function StockJournal() {
 
     if (isLoading) {
     return (
-      <Container>
+      <ProtectedPage moduleKey="manufacturing" action="write">
+        <Container>
         <Box
           display="flex"
           justifyContent="center"
@@ -327,10 +329,12 @@ export default function StockJournal() {
           <CircularProgress />
         </Box>
       </Container>
+      </ProtectedPage>
     );
   }
   return (
-    <Container maxWidth="xl">
+    <ProtectedPage moduleKey="manufacturing" action="write">
+       maxWidth="xl">
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Stock Journals

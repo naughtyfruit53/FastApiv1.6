@@ -29,6 +29,7 @@ import { rbacService } from "../../services/rbacService"; // Assuming rbacServic
 import { organizationService } from "../../services/organizationService";
 import { useAuth } from "../../context/AuthContext";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 interface Role {
   id: number;
   name: string;
@@ -172,7 +173,8 @@ const RoleManagement: React.FC = () => {
 
   if (rolesError || permissionsError) {
     return (
-      <Alert severity="error">
+      <ProtectedPage moduleKey="admin" action="write">
+      lert severity="error">
         Failed to load data: {(rolesError || permissionsError)?.message}
       </Alert>
     );
@@ -341,7 +343,7 @@ const RoleManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 };
-
 export default RoleManagement;

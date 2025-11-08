@@ -28,6 +28,7 @@ import {
   Alert,
 } from '@mui/material';
 import {
+import { ProtectedPage } from '@/components/ProtectedPage';
   Add,
   Edit,
   Delete,
@@ -126,6 +127,9 @@ const BinManagementPage: React.FC = () => {
   );
 
   return (
+
+
+    <ProtectedPage moduleKey="inventory" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Box
@@ -474,6 +478,12 @@ const BinManagementPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

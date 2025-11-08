@@ -15,6 +15,7 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import RemoveCircleIcon from "@mui/icons-material/RemoveCircle";
+import { ProtectedPage } from "../../../components/ProtectedPage";
 
 const FinancialVouchers: React.FC = () => {
   const router = useRouter();
@@ -69,7 +70,8 @@ const FinancialVouchers: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <ProtectedPage moduleKey="finance" action="read">
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom align="center">
         Financial Vouchers
       </Typography>
@@ -114,6 +116,7 @@ const FinancialVouchers: React.FC = () => {
         ))}
       </Grid>
     </Container>
+    </ProtectedPage>
   );
 };
 

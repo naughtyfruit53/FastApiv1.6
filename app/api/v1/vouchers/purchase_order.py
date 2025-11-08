@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from io import BytesIO
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user
 from app.models import User, Product
 from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem, GoodsReceiptNote, GoodsReceiptNoteItem
@@ -14,13 +15,15 @@ from app.schemas.vouchers.purchase import PurchaseOrderCreate, PurchaseOrderInDB
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
 import logging
+from app.utils.gst_calculator import calculate_gst_amounts
+from app.utils.voucher_gst_helper import get_state_codes_for_purchase
 from datetime import timezone, datetime
 from dateutil import parser as date_parser
 import re
 from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["purchase-orders"])
+router = APIRouter(prefix="/purchase-orders", tags=["purchase-orders"])
 
 @router.get("", response_model=List[PurchaseOrderInDB])
 @router.get("/", response_model=List[PurchaseOrderInDB])
@@ -31,14 +34,16 @@ async def get_purchase_orders(
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get all purchase orders with GRN completion status for color coding"""
+    current_user, org_id = auth
+    
     stmt = select(PurchaseOrder).options(
         joinedload(PurchaseOrder.vendor),
         joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
     ).where(
-        PurchaseOrder.organization_id == current_user.organization_id
+        PurchaseOrder.organization_id == org_id
     )
     
     if status:
@@ -59,7 +64,7 @@ async def get_purchase_orders(
     for po in purchase_orders:
         grn_stmt = select(GoodsReceiptNote).where(
             GoodsReceiptNote.purchase_order_id == po.id,
-            GoodsReceiptNote.organization_id == current_user.organization_id
+            GoodsReceiptNote.organization_id == org_id
         )
         grn_result = await db.execute(grn_stmt)
         grns = grn_result.scalars().all()
@@ -100,9 +105,11 @@ async def get_purchase_orders(
 async def get_next_purchase_order_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get the next available purchase order number for a given date"""
+    current_user, org_id = auth
+    
     # Parse the voucher_date if provided
     date_to_use = None
     if voucher_date:
@@ -112,20 +119,22 @@ async def get_next_purchase_order_number(
             pass
     
     return await VoucherNumberService.generate_voucher_number_async(
-        db, "PO", current_user.organization_id, PurchaseOrder, voucher_date=date_to_use
+        db, "PO", org_id, PurchaseOrder, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Check if creating a voucher with the given date would create conflicts"""
+    current_user, org_id = auth
+    
     try:
         parsed_date = date_parser.parse(voucher_date)
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "PO", current_user.organization_id, PurchaseOrder, parsed_date
+            db, "PO", org_id, PurchaseOrder, parsed_date
         )
         return conflict_info
     except Exception as e:
@@ -140,13 +149,15 @@ async def create_purchase_order(
     background_tasks: BackgroundTasks,
     send_email: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "create"))
 ):
     """Create new purchase order"""
+    current_user, org_id = auth
+    
     try:
         invoice_data = invoice.dict(exclude={'items'})
         invoice_data['created_by'] = current_user.id
-        invoice_data['organization_id'] = current_user.organization_id
+        invoice_data['organization_id'] = org_id
         
         # Get the voucher date for numbering
         voucher_date = None
@@ -159,24 +170,24 @@ async def create_purchase_order(
         if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
             # Generate voucher number based on the entered date
             invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "PO", current_user.organization_id, PurchaseOrder, voucher_date=voucher_date
+                db, "PO", org_id, PurchaseOrder, voucher_date=voucher_date
             )
         else:
             stmt = select(PurchaseOrder).where(
-                PurchaseOrder.organization_id == current_user.organization_id,
+                PurchaseOrder.organization_id == org_id,
                 PurchaseOrder.voucher_number == invoice_data['voucher_number']
             )
             result = await db.execute(stmt)
             existing = result.scalar_one_or_none()
             if existing:
                 invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "PO", current_user.organization_id, PurchaseOrder, voucher_date=voucher_date
+                    db, "PO", org_id, PurchaseOrder, voucher_date=voucher_date
                 )
         
         product_ids = [item.product_id for item in invoice.items]
         stmt = select(Product).where(
             Product.id.in_(product_ids),
-            Product.organization_id == current_user.organization_id
+            Product.organization_id == org_id
         )
         result = await db.execute(stmt)
         products = result.scalars().all()
@@ -193,6 +204,16 @@ async def create_purchase_order(
         db_invoice = PurchaseOrder(**invoice_data)
         db.add(db_invoice)
         await db.flush()
+        
+        # STRICT GST ENFORCEMENT: Get state codes (NO FALLBACK)
+        company_state_code, vendor_state_code = await get_state_codes_for_purchase(
+            db=db,
+            org_id=org_id,
+            vendor_id=invoice_data.get('vendor_id'),
+            voucher_type="purchase order"
+        )
+        
+        logger.info(f"Purchase Order GST: Company State={company_state_code}, Vendor State={vendor_state_code}")
         
         total_amount = 0.0
         total_cgst = 0.0
@@ -218,12 +239,22 @@ async def create_purchase_order(
                 item_dict['discount_amount'] = discount_amount
                 item_dict['taxable_amount'] = gross_amount - discount_amount
             
+            # SMART GST CALCULATION: Use company and vendor state codes
             taxable = item_dict['taxable_amount']
             if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
-                half_rate = item_dict['gst_rate'] / 2 / 100
-                item_dict['cgst_amount'] = taxable * half_rate
-                item_dict['sgst_amount'] = taxable * half_rate
-                item_dict['igst_amount'] = 0.0
+                # calculate_gst_amounts will validate state codes and raise ValueError if missing
+                gst_amounts = calculate_gst_amounts(
+                    taxable_amount=taxable,
+                    gst_rate=item_dict['gst_rate'],
+                    company_state_code=company_state_code,
+                    customer_state_code=vendor_state_code,
+                    organization_id=org_id,
+                    entity_id=invoice_data.get('vendor_id'),
+                    entity_type='vendor'
+                )
+                item_dict['cgst_amount'] = gst_amounts['cgst_amount']
+                item_dict['sgst_amount'] = gst_amounts['sgst_amount']
+                item_dict['igst_amount'] = gst_amounts['igst_amount']
             
             item_dict['total_amount'] = (
                 item_dict['taxable_amount'] +
@@ -287,14 +318,16 @@ async def create_purchase_order(
 async def get_purchase_order(
     invoice_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
+    current_user, org_id = auth
+    
     stmt = select(PurchaseOrder).options(
         joinedload(PurchaseOrder.vendor),
         joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
     ).where(
         PurchaseOrder.id == invoice_id,
-        PurchaseOrder.organization_id == current_user.organization_id
+        PurchaseOrder.organization_id == org_id
     )
     result = await db.execute(stmt)
     invoice = result.unique().scalar_one_or_none()
@@ -306,7 +339,7 @@ async def get_purchase_order(
     
     grn_stmt = select(GoodsReceiptNote).where(
         GoodsReceiptNote.purchase_order_id == invoice.id,
-        GoodsReceiptNote.organization_id == current_user.organization_id
+        GoodsReceiptNote.organization_id == org_id
     )
     grn_result = await db.execute(grn_stmt)
     grns = grn_result.scalars().all()
@@ -353,15 +386,17 @@ async def get_purchase_order(
 async def generate_purchase_order_pdf(
     invoice_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(PurchaseOrder).options(
             joinedload(PurchaseOrder.vendor),
             joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
         ).where(
             PurchaseOrder.id == invoice_id,
-            PurchaseOrder.organization_id == current_user.organization_id
+            PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
         voucher = result.unique().scalar_one_or_none()
@@ -372,7 +407,7 @@ async def generate_purchase_order_pdf(
             voucher_type="purchase_orders",
             voucher_data=voucher.__dict__,
             db=db,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             current_user=current_user
         )
         
@@ -393,12 +428,14 @@ async def update_purchase_order(
     invoice_id: int,
     invoice_update: PurchaseOrderUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "update"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(PurchaseOrder).where(
             PurchaseOrder.id == invoice_id,
-            PurchaseOrder.organization_id == current_user.organization_id
+            PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
         invoice = result.scalar_one_or_none()
@@ -428,7 +465,7 @@ async def update_purchase_order(
             product_ids = [item.product_id for item in invoice_update.items]
             stmt = select(Product).where(
                 Product.id.in_(product_ids),
-                Product.organization_id == current_user.organization_id
+                Product.organization_id == org_id
             )
             result = await db.execute(stmt)
             products = result.scalars().all()
@@ -506,7 +543,7 @@ async def update_purchase_order(
             joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
         ).where(
             PurchaseOrder.id == invoice_id,
-            PurchaseOrder.organization_id == current_user.organization_id
+            PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
         invoice = result.unique().scalar_one_or_none()
@@ -531,12 +568,15 @@ async def update_purchase_order(
 async def delete_purchase_order(
     invoice_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "delete"))
 ):
+    """Delete purchase order"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(PurchaseOrder).where(
             PurchaseOrder.id == invoice_id,
-            PurchaseOrder.organization_id == current_user.organization_id
+            PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
         invoice = result.scalar_one_or_none()
@@ -571,12 +611,14 @@ async def update_purchase_order_tracking(
     tracking_number: Optional[str] = None,
     tracking_link: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "update"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(PurchaseOrder).where(
             PurchaseOrder.id == invoice_id,
-            PurchaseOrder.organization_id == current_user.organization_id
+            PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
         po = result.scalar_one_or_none()
@@ -619,12 +661,14 @@ async def update_purchase_order_tracking(
 async def get_purchase_order_tracking(
     invoice_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(PurchaseOrder).where(
             PurchaseOrder.id == invoice_id,
-            PurchaseOrder.organization_id == current_user.organization_id
+            PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
         po = result.scalar_one_or_none()
@@ -655,12 +699,14 @@ async def get_previous_discount(
     product_id: int,
     vendor_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
+    current_user, org_id = auth
+    
     try:
         stmt = select(PurchaseOrderItem).join(PurchaseOrder).where(
             PurchaseOrderItem.product_id == product_id,
-            PurchaseOrder.organization_id == current_user.organization_id
+            PurchaseOrder.organization_id == org_id
         ).order_by(PurchaseOrder.date.desc())
         
         if vendor_id:

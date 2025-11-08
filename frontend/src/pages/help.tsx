@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import DashboardLayout from '../components/DashboardLayout';
 
+import { ProtectedPage } from '../components/ProtectedPage';
 interface HelpSection {
   id: string;
   title: string;
@@ -236,7 +237,8 @@ const HelpPage: React.FC = () => {
   );
 
   return (
-    <DashboardLayout
+    <ProtectedPage moduleKey="dashboard" action="read">
+      ashboardLayout
       title="Help & User Guide"
       subtitle="Comprehensive guide to using the ERP system"
     >
@@ -379,7 +381,7 @@ const HelpPage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
-
 export default HelpPage;

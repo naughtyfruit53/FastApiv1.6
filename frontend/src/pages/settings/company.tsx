@@ -19,10 +19,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { companyService } from "../../services/authService";
 import { toast } from "react-toastify";
 import DashboardLayout from "../../components/DashboardLayout";
+import { useAuth } from "../../context/AuthContext";
+import { usePermissions } from '../../context/PermissionContext';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 const CompanyProfilePage: React.FC = () => {
+  const { user } = useAuth();  // For tenancy check if needed
+  const { hasPermission } = usePermissions();
+  const canWrite = hasPermission('settings', 'write') || user?.role === 'org_admin';  // Fallback for org_admin
+
   const queryClient = useQueryClient();
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -186,6 +192,7 @@ const CompanyProfilePage: React.FC = () => {
                           variant="outlined"
                           error={!!errors.name}
                           helperText={errors.name?.message as string}
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -200,6 +207,7 @@ const CompanyProfilePage: React.FC = () => {
                           fullWidth
                           label="Registration Number"
                           variant="outlined"
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -217,6 +225,7 @@ const CompanyProfilePage: React.FC = () => {
                           variant="outlined"
                           error={!!errors.gst_number}
                           helperText={errors.gst_number?.message as string}
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -231,6 +240,7 @@ const CompanyProfilePage: React.FC = () => {
                           fullWidth
                           label="PAN Number"
                           variant="outlined"
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -245,6 +255,7 @@ const CompanyProfilePage: React.FC = () => {
                           fullWidth
                           label="Business Type"
                           variant="outlined"
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -259,6 +270,7 @@ const CompanyProfilePage: React.FC = () => {
                           fullWidth
                           label="Industry"
                           variant="outlined"
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -278,6 +290,7 @@ const CompanyProfilePage: React.FC = () => {
                           variant="outlined"
                           error={!!errors.address1}
                           helperText={errors.address1?.message as string}
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -294,6 +307,7 @@ const CompanyProfilePage: React.FC = () => {
                           multiline
                           rows={2}
                           variant="outlined"
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -311,6 +325,7 @@ const CompanyProfilePage: React.FC = () => {
                           variant="outlined"
                           error={!!errors.city}
                           helperText={errors.city?.message as string}
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -328,6 +343,7 @@ const CompanyProfilePage: React.FC = () => {
                           variant="outlined"
                           error={!!errors.state}
                           helperText={errors.state?.message as string}
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -345,6 +361,7 @@ const CompanyProfilePage: React.FC = () => {
                           variant="outlined"
                           error={!!errors.pin_code}
                           helperText={errors.pin_code?.message as string}
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -362,6 +379,7 @@ const CompanyProfilePage: React.FC = () => {
                           variant="outlined"
                           error={!!errors.state_code}
                           helperText={errors.state_code?.message as string}
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -379,6 +397,7 @@ const CompanyProfilePage: React.FC = () => {
                           variant="outlined"
                           error={!!errors.contact_number}
                           helperText={errors.contact_number?.message as string}
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -397,6 +416,7 @@ const CompanyProfilePage: React.FC = () => {
                           variant="outlined"
                           error={!!errors.email}
                           helperText={errors.email?.message as string}
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -411,6 +431,7 @@ const CompanyProfilePage: React.FC = () => {
                           fullWidth
                           label="Website"
                           variant="outlined"
+                          disabled={!canWrite}
                         />
                       )}
                     />
@@ -425,7 +446,7 @@ const CompanyProfilePage: React.FC = () => {
                     variant="contained" 
                     startIcon={<Save />}
                     sx={{ minWidth: 120 }}
-                    disabled={updateMutation.isPending}
+                    disabled={updateMutation.isPending || !canWrite}
                   >
                     {updateMutation.isPending ? <CircularProgress size={20} /> : "Save Changes"}
                   </Button>
@@ -470,9 +491,10 @@ const CompanyProfilePage: React.FC = () => {
                   onChange={handleLogoChange}
                   style={{ display: 'none' }}
                   id="logo-upload"
+                  disabled={!canWrite}
                 />
                 <label htmlFor="logo-upload">
-                  <Button variant="outlined" component="span" startIcon={<Upload />}>
+                  <Button variant="outlined" component="span" startIcon={<Upload />} disabled={!canWrite}>
                     Select Logo
                   </Button>
                 </label>
@@ -485,7 +507,7 @@ const CompanyProfilePage: React.FC = () => {
                   variant="contained" 
                   onClick={handleUploadLogo}
                   sx={{ mt: 2 }}
-                  disabled={uploadLogoMutation.isPending}
+                  disabled={uploadLogoMutation.isPending || !canWrite}
                 >
                   {uploadLogoMutation.isPending ? <CircularProgress size={20} /> : "Upload Logo"}
                 </Button>

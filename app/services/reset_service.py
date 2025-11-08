@@ -22,7 +22,7 @@ CUSTOM_RAW_SQL_TABLES = [
     'user_email_tokens',
     'bank_accounts',
     'chart_of_accounts',
-    'snappymail_configs',
+    # 'snappymail_configs',  # Removed - SnappyMail integration discontinued
     'email_attachments',
     'emails',
     'mail_accounts',
@@ -253,13 +253,25 @@ class ResetService:
             
             # Delete business data in reverse dependency order to avoid foreign key constraints
             
-            # Delete all user_service_roles for this org
-            res_user_service_roles = await db.execute(delete(UserServiceRole).where(UserServiceRole.organization_id == organization_id))
+            # Delete all user_service_roles for this org (via ServiceRole relationship)
+            # UserServiceRole doesn't have organization_id, so we need to join through ServiceRole
+            user_service_roles_subquery = select(UserServiceRole.id).join(
+                ServiceRole, UserServiceRole.role_id == ServiceRole.id
+            ).where(ServiceRole.organization_id == organization_id)
+            res_user_service_roles = await db.execute(
+                delete(UserServiceRole).where(UserServiceRole.id.in_(user_service_roles_subquery))
+            )
             deleted_user_service_roles = res_user_service_roles.rowcount
             result["deleted"]["user_service_roles"] = deleted_user_service_roles
             
-            # Delete all service_role_permissions for this org
-            res_role_permissions = await db.execute(delete(ServiceRolePermission).where(ServiceRolePermission.organization_id == organization_id))
+            # Delete all service_role_permissions for this org (via ServiceRole relationship)
+            # ServiceRolePermission doesn't have organization_id, so we need to join through ServiceRole
+            role_permissions_subquery = select(ServiceRolePermission.id).join(
+                ServiceRole, ServiceRolePermission.role_id == ServiceRole.id
+            ).where(ServiceRole.organization_id == organization_id)
+            res_role_permissions = await db.execute(
+                delete(ServiceRolePermission).where(ServiceRolePermission.id.in_(role_permissions_subquery))
+            )
             deleted_role_permissions = res_role_permissions.rowcount
             result["deleted"]["service_role_permissions"] = deleted_role_permissions
             
@@ -315,3 +327,80 @@ class ResetService:
             await db.rollback()
             logger.error(f"Error during organization {organization_id} business data reset: {str(e)}", exc_info=True)
             raise e
+
+    @staticmethod
+    async def delete_organization(db: AsyncSession, organization_id: int) -> bool:
+        """
+        Delete an organization and all related data
+        """
+        try:
+            # Validate organization exists
+            org = await db.scalar(select(Organization).where(Organization.id == organization_id))
+            if not org:
+                raise ValueError(f"Organization with ID {organization_id} not found")
+            
+            # Delete user_service_roles via subquery
+            user_service_roles_subquery = select(UserServiceRole.id).join(
+                ServiceRole, UserServiceRole.role_id == ServiceRole.id
+            ).where(ServiceRole.organization_id == organization_id)
+            await db.execute(
+                delete(UserServiceRole).where(UserServiceRole.id.in_(user_service_roles_subquery))
+            )
+            
+            # Delete service_role_permissions via subquery
+            role_permissions_subquery = select(ServiceRolePermission.id).join(
+                ServiceRole, ServiceRolePermission.role_id == ServiceRole.id
+            ).where(ServiceRole.organization_id == organization_id)
+            await db.execute(
+                delete(ServiceRolePermission).where(ServiceRolePermission.id.in_(role_permissions_subquery))
+            )
+            
+            # Delete service_roles
+            await db.execute(delete(ServiceRole).where(ServiceRole.organization_id == organization_id))
+            
+            # Delete email notifications
+            await db.execute(delete(EmailNotification).where(EmailNotification.organization_id == organization_id))
+            
+            # Delete stock
+            await db.execute(delete(Stock).where(Stock.organization_id == organization_id))
+            
+            # Delete payment terms
+            await db.execute(delete(PaymentTerm).where(PaymentTerm.organization_id == organization_id))
+            
+            # Delete products
+            await db.execute(delete(Product).where(Product.organization_id == organization_id))
+            
+            # Delete customers
+            await db.execute(delete(Customer).where(Customer.organization_id == organization_id))
+            
+            # Delete vendors
+            await db.execute(delete(Vendor).where(Vendor.organization_id == organization_id))
+            
+            # Delete companies
+            await db.execute(delete(Company).where(Company.organization_id == organization_id))
+            
+            # Delete OTP verifications (if any linked)
+            await db.execute(delete(OTPVerification).where(OTPVerification.organization_id == organization_id))
+            
+            # Delete audit logs
+            await db.execute(delete(AuditLog).where(AuditLog.organization_id == organization_id))
+            
+            # Delete users for this org (non-super-admins)
+            await db.execute(
+                delete(User).where(
+                    User.organization_id == organization_id,
+                    User.is_super_admin == False
+                )
+            )
+            
+            # Finally delete the organization
+            await db.execute(delete(Organization).where(Organization.id == organization_id))
+            
+            await db.commit()
+            logger.info(f"Successfully deleted organization {organization_id} and all related data")
+            return True
+            
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error deleting organization {organization_id}: {str(e)}", exc_info=True)
+            raise

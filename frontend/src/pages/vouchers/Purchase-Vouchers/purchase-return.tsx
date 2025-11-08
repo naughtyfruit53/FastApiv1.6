@@ -49,6 +49,7 @@ import { useWatch } from "react-hook-form"; // Added missing import for useWatch
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance"; // Added for vendor balance display
 import { formatCurrency } from "../../../utils/currencyUtils";
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 const PurchaseReturnPage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
   const router = useRouter();
@@ -761,11 +762,11 @@ const PurchaseReturnPage: React.FC = () => {
 
   if (isLoading || companyLoading) {
     return (
-      <Container>
+      <ProtectedPage moduleKey="procurement" action="write">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
-      </Container>
+      </ProtectedPage>
     );
   }
 
@@ -809,5 +810,4 @@ const PurchaseReturnPage: React.FC = () => {
     </>
   );
 };
-
 export default PurchaseReturnPage;

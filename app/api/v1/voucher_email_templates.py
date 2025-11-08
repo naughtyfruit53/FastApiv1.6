@@ -11,8 +11,7 @@ from sqlalchemy import select
 from typing import List
 
 from app.core.database import get_db
-from app.core.permissions import require_organization_permission, Permission
-from app.core.security import get_current_user
+from app.core.enforcement import require_access
 from app.models.email import VoucherEmailTemplate
 from app.schemas.organization_settings import (
     VoucherEmailTemplateCreate,
@@ -27,12 +26,14 @@ router = APIRouter(prefix="/voucher-email-templates", tags=["voucher-email-templ
 async def list_voucher_email_templates(
     voucher_type: str = None,
     entity_type: str = None,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.VIEW_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_email_template", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """List all voucher email templates for the organization"""
+    current_user, org_id = auth
+    
     stmt = select(VoucherEmailTemplate).where(
-        VoucherEmailTemplate.organization_id == current_user.organization_id
+        VoucherEmailTemplate.organization_id == org_id
     )
     
     if voucher_type:
@@ -48,13 +49,15 @@ async def list_voucher_email_templates(
 @router.get("/{template_id}", response_model=VoucherEmailTemplateResponse)
 async def get_voucher_email_template(
     template_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.VIEW_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_email_template", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get a specific voucher email template"""
+    current_user, org_id = auth
+    
     stmt = select(VoucherEmailTemplate).where(
         VoucherEmailTemplate.id == template_id,
-        VoucherEmailTemplate.organization_id == current_user.organization_id
+        VoucherEmailTemplate.organization_id == org_id
     )
     result = await db.execute(stmt)
     template = result.scalar_one_or_none()
@@ -71,20 +74,22 @@ async def get_voucher_email_template(
 @router.post("/", response_model=VoucherEmailTemplateResponse, status_code=status.HTTP_201_CREATED)
 async def create_voucher_email_template(
     template_data: VoucherEmailTemplateCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.MANAGE_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_email_template", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new voucher email template"""
+    current_user, org_id = auth
+    
     # Ensure template is for current user's organization
-    if template_data.organization_id != current_user.organization_id:
+    if template_data.organization_id != org_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot create template for another organization"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Voucher email template not found"
         )
     
     # Check for duplicate
     stmt = select(VoucherEmailTemplate).where(
-        VoucherEmailTemplate.organization_id == current_user.organization_id,
+        VoucherEmailTemplate.organization_id == org_id,
         VoucherEmailTemplate.voucher_type == template_data.voucher_type,
         VoucherEmailTemplate.entity_type == template_data.entity_type
     )
@@ -109,13 +114,15 @@ async def create_voucher_email_template(
 async def update_voucher_email_template(
     template_id: int,
     template_data: VoucherEmailTemplateUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.MANAGE_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_email_template", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update a voucher email template"""
+    current_user, org_id = auth
+    
     stmt = select(VoucherEmailTemplate).where(
         VoucherEmailTemplate.id == template_id,
-        VoucherEmailTemplate.organization_id == current_user.organization_id
+        VoucherEmailTemplate.organization_id == org_id
     )
     result = await db.execute(stmt)
     template = result.scalar_one_or_none()
@@ -139,13 +146,15 @@ async def update_voucher_email_template(
 @router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_voucher_email_template(
     template_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.MANAGE_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_email_template", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete a voucher email template"""
+    current_user, org_id = auth
+    
     stmt = select(VoucherEmailTemplate).where(
         VoucherEmailTemplate.id == template_id,
-        VoucherEmailTemplate.organization_id == current_user.organization_id
+        VoucherEmailTemplate.organization_id == org_id
     )
     result = await db.execute(stmt)
     template = result.scalar_one_or_none()
@@ -166,16 +175,18 @@ async def delete_voucher_email_template(
 async def get_default_template(
     voucher_type: str,
     entity_type: str,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(require_organization_permission(Permission.VIEW_VOUCHERS))
+    auth: tuple = Depends(require_access("voucher_email_template", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get default email template for a voucher type and entity type.
     Returns org-specific template if exists, otherwise returns a generated default.
     """
+    current_user, org_id = auth
+    
     # Try to get org-specific template
     stmt = select(VoucherEmailTemplate).where(
-        VoucherEmailTemplate.organization_id == current_user.organization_id,
+        VoucherEmailTemplate.organization_id == org_id,
         VoucherEmailTemplate.voucher_type == voucher_type,
         VoucherEmailTemplate.entity_type == entity_type,
         VoucherEmailTemplate.is_active == True
@@ -220,7 +231,7 @@ async def get_default_template(
     # Return as a response-like object
     return VoucherEmailTemplateResponse(
         id=0,  # Special ID to indicate it's a default template
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         voucher_type=voucher_type,
         entity_type=entity_type,
         subject_template=default_templates[key]["subject_template"],

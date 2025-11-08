@@ -1,4 +1,5 @@
 # app/api/v1/payroll_monitoring.py
+from app.core.enforcement import require_access
 # Phase 2: Payroll Monitoring and Observability System
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -10,8 +11,7 @@ from datetime import datetime, date, timedelta
 import time
 
 from app.db.session import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+
 from app.models.user_models import User
 from app.models.payroll_models import PayrollComponent, PayrollRun, PayrollLine
 from app.models.erp_models import ChartOfAccounts
@@ -28,11 +28,12 @@ router = APIRouter()
 
 @router.get("/payroll/monitoring/health", response_model=PayrollHealthCheck)
 async def get_payroll_health_check(
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get comprehensive payroll system health check"""
+    current_user, organization_id = auth
+    
     try:
         start_time = time.time()
         query_count = 0
@@ -131,11 +132,12 @@ async def get_payroll_health_check(
 @router.get("/payroll/monitoring/metrics")
 async def get_payroll_metrics(
     days: int = Query(30, description="Number of days to analyze"),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get detailed payroll metrics and analytics"""
+    current_user, organization_id = auth
+    
     try:
         start_date = datetime.utcnow() - timedelta(days=days)
         
@@ -268,11 +270,12 @@ async def get_payroll_metrics(
 
 @router.get("/payroll/monitoring/performance")
 async def get_performance_analysis(
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get performance analysis and bottleneck identification"""
+    current_user, organization_id = auth
+    
     try:
         start_time = time.time()
         
@@ -387,11 +390,12 @@ async def get_performance_analysis(
 @router.get("/payroll/monitoring/alerts")
 async def get_payroll_alerts(
     severity: Optional[str] = Query(None, description="Filter by severity: low, medium, high, critical"),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get current payroll system alerts and warnings"""
+    current_user, organization_id = auth
+    
     try:
         alerts = []
         
@@ -507,11 +511,12 @@ async def get_payroll_alerts(
 
 @router.post("/payroll/monitoring/benchmark")
 async def run_performance_benchmark(
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Run comprehensive performance benchmark"""
+    current_user, organization_id = auth
+    
     try:
         benchmark_results = {}
         

@@ -1,4 +1,5 @@
 # app/api/v1/payroll_components.py
+from app.core.enforcement import require_access
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -7,7 +8,7 @@ import logging
 
 from app.db.session import get_db
 from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+
 from app.models.user_models import User
 from app.models.payroll_models import PayrollComponent
 from app.models.erp_models import ChartOfAccounts
@@ -53,11 +54,12 @@ def validate_chart_account(db: Session, chart_account_id: int, organization_id: 
 @router.post("/payroll/components", response_model=PayrollComponentResponse)
 async def create_payroll_component(
     component: PayrollComponentCreate,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("payroll", "create")),
+    db: Session = Depends(get_db)
 ):
     """Create a new payroll component with chart account mapping"""
+    current_user, organization_id = auth
+    
     try:
         # Validate expense account if provided
         if component.expense_account_id:
@@ -118,11 +120,11 @@ async def get_payroll_components(
     per_page: int = Query(100, ge=1, le=1000),
     component_type: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("payroll", "read")),
+    db: Session = Depends(get_db)
 ):
     """Get payroll components with filtering and pagination"""
+    current_user, organization_id = auth
     try:
         query = db.query(PayrollComponent).filter(
             PayrollComponent.organization_id == organization_id
@@ -160,11 +162,12 @@ async def get_payroll_components(
 @router.get("/payroll/components/{component_id}", response_model=PayrollComponentResponse)
 async def get_payroll_component(
     component_id: int,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("payroll", "read")),
+    db: Session = Depends(get_db)
 ):
     """Get a specific payroll component"""
+    current_user, organization_id = auth
+    
     component = db.query(PayrollComponent).filter(
         PayrollComponent.id == component_id,
         PayrollComponent.organization_id == organization_id
@@ -183,11 +186,12 @@ async def get_payroll_component(
 async def update_payroll_component(
     component_id: int,
     component_update: PayrollComponentUpdate,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("payroll", "update")),
+    db: Session = Depends(get_db)
 ):
     """Update a payroll component"""
+    current_user, organization_id = auth
+    
     try:
         # Get existing component
         db_component = db.query(PayrollComponent).filter(
@@ -258,11 +262,12 @@ async def update_payroll_component(
 @router.delete("/payroll/components/{component_id}")
 async def delete_payroll_component(
     component_id: int,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("payroll", "delete")),
+    db: Session = Depends(get_db)
 ):
     """Delete a payroll component (soft delete by setting inactive)"""
+    current_user, organization_id = auth
+    
     try:
         component = db.query(PayrollComponent).filter(
             PayrollComponent.id == component_id,
@@ -298,11 +303,12 @@ async def update_component_chart_account_mapping(
     component_id: int,
     expense_account_id: Optional[int] = None,
     payable_account_id: Optional[int] = None,
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("payroll", "create")),
+    db: Session = Depends(get_db)
 ):
     """Update chart account mapping for a payroll component"""
+    current_user, organization_id = auth
+    
     try:
         component = db.query(PayrollComponent).filter(
             PayrollComponent.id == component_id,

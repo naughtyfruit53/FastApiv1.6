@@ -25,6 +25,7 @@ import {
   Flag
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '@/components/ProtectedPage';
 
 const TasksPage: React.FC = () => {
   const taskStats = {
@@ -61,6 +62,9 @@ const TasksPage: React.FC = () => {
   };
 
   return (
+
+
+    <ProtectedPage moduleKey="tasks" action="read">
     <DashboardLayout
       title="My Tasks"
       subtitle="Manage your tasks and track progress"
@@ -222,6 +226,12 @@ const TasksPage: React.FC = () => {
         <Add />
       </Fab>
     </DashboardLayout>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

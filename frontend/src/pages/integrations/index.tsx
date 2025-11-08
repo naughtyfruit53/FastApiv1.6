@@ -35,6 +35,7 @@ import {
   Send,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import { ProtectedPage } from '../../components/ProtectedPage';
 import integrationService, {
   IntegrationConfig,
 } from '../../services/integrationService';
@@ -174,7 +175,8 @@ const IntegrationsPage: React.FC = () => {
   const googleIntegrations = integrations.filter((i) => i.type === 'google_workspace');
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <ProtectedPage moduleKey="admin" action="read">
+      ontainer maxWidth="xl" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Integrations</Typography>
         <Button
@@ -305,7 +307,7 @@ const IntegrationsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default IntegrationsPage;

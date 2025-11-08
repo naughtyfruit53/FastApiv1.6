@@ -1,3 +1,5 @@
+// frontend/src/components/DemoModeDialog.tsx
+
 "use client";
 import React, { useState } from "react";
 import {

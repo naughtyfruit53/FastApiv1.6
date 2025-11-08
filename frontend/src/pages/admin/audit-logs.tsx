@@ -17,6 +17,7 @@ import { History, Security, Person, Business } from "@mui/icons-material";
 import { useAuth } from "../../hooks/useAuth";
 import { isOrgSuperAdmin, canManageUsers } from "../../types/user.types";
 
+import { ProtectedPage } from '@/components/ProtectedPage';
 const AuditLogsPage: NextPage = () => {
   const { user } = useAuth();
 
@@ -34,6 +35,9 @@ const AuditLogsPage: NextPage = () => {
   }
 
   return (
+
+
+    <ProtectedPage moduleKey="admin" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -129,6 +133,12 @@ const AuditLogsPage: NextPage = () => {
         </Grid>
       </Grid>
     </Container>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

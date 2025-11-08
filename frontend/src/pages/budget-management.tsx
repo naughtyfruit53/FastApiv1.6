@@ -41,6 +41,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import api from '../lib/api';
 import { formatCurrency } from "../utils/currencyUtils";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 interface Budget {
   id: number;
   name: string;
@@ -160,15 +161,17 @@ const BudgetManagementPage: React.FC = () => {
 
   if (loading) {
     return (
-      <DashboardLayout
+      <ProtectedPage moduleKey="finance" action="read">
+      rotectedPage moduleKey="finance" action="read">
+        ashboardLayout
         title="Budget Management"
         subtitle="Plan and track organizational budgets"
       >
         <LinearProgress />
       </DashboardLayout>
+      </ProtectedPage>
     );
   }
-
   return (
     <DashboardLayout
       title="Budget Management"
@@ -415,7 +418,7 @@ const BudgetManagementPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
-
 export default BudgetManagementPage;

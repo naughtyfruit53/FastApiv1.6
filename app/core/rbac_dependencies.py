@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models import User
 from app.services.rbac import RBACService
-from app.core.permissions import Permission
+from app.core.permissions import Permission, PermissionChecker  # NEW: Import PermissionChecker
 from app.core.security import get_current_user
 import logging
 
@@ -44,7 +44,7 @@ class RBACDependency:
         # Check service permission through RBAC
         rbac_service = RBACService(db)
         
-        if rbac_service.user_has_service_permission(current_user.id, self.required_permission):
+        if rbac_service.user_has_permission(current_user.id, self.required_permission):
             logger.info(f"User {current_user.id} has service permission: {self.required_permission}")
             return current_user
         
@@ -53,7 +53,6 @@ class RBACDependency:
             # Map service permissions to regular permissions for fallback
             fallback_permissions = _get_fallback_permissions(self.required_permission)
             
-            from app.core.permissions import PermissionChecker
             for fallback_perm in fallback_permissions:
                 if PermissionChecker.has_permission(current_user, fallback_perm):
                     logger.info(f"User {current_user.id} has fallback permission: {fallback_perm}")
@@ -234,83 +233,6 @@ require_installation_read = RBACDependency("installation_read")
 require_installation_update = RBACDependency("installation_update")
 require_installation_delete = RBACDependency("installation_delete")
 
-
-# Helper functions for getting RBAC service
-def get_rbac_service(db: Session = Depends(get_db)) -> RBACService:
-    """Get RBAC service instance"""
-    return RBACService(db)
-
-
-def get_user_service_permissions(
-    current_user: User = Depends(get_current_user),
-    rbac_service: RBACService = Depends(get_rbac_service)
-) -> set:
-    """Get all service permissions for current user"""
-    if not current_user:
-        return set()
-    
-    return rbac_service.get_user_service_permissions(current_user.id)
-
-
-# Role management dependencies (for administrative functions)
-def require_role_management_permission(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-) -> User:
-    """Require permission to manage service roles"""
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
-        )
-    
-    # Super admins can manage roles
-    if getattr(current_user, 'is_super_admin', False):
-        return current_user
-    
-    # Org admins can manage roles in their organization
-    from app.core.permissions import PermissionChecker
-    if PermissionChecker.has_permission(current_user, Permission.MANAGE_USERS):
-        return current_user
-    
-    # Service admins can manage roles
-    rbac_service = RBACService(db)
-    if rbac_service.user_has_service_permission(current_user.id, "crm_admin"):
-        return current_user
-    
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Insufficient permissions to manage service roles"
-    )
-
-
-def require_same_organization(
-    current_user: User = Depends(get_current_user)
-) -> Callable[[int], int]:
-    """Ensure operations are scoped to user's organization"""
-    def check_organization(target_organization_id: int) -> int:
-        if not current_user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required"
-            )
-        
-        # Super admins can access any organization
-        if getattr(current_user, 'is_super_admin', False):
-            return target_organization_id
-        
-        # Regular users must stay within their organization
-        if current_user.organization_id != target_organization_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied. Organization mismatch."
-            )
-        
-        return target_organization_id
-    
-    return check_organization
-
-
 # Installation task dependencies
 require_installation_task_create = RBACDependency("installation_task_create")
 require_installation_task_read = RBACDependency("installation_task_read")
@@ -344,11 +266,11 @@ class TechnicianCompletionDependency:
         # Check if user has completion permission
         rbac_service = RBACService(db)
         
-        if rbac_service.user_has_service_permission(current_user.id, "completion_record_create"):
+        if rbac_service.user_has_permission(current_user.id, "completion_record_create"):
             return current_user
         
         # Fallback check for installation update permission
-        if rbac_service.user_has_service_permission(current_user.id, "installation_update"):
+        if rbac_service.user_has_permission(current_user.id, "installation_update"):
             return current_user
         
         raise HTTPException(
@@ -420,7 +342,7 @@ class AssignedTechnicianDependency:
         if job.assigned_technician_id != current_user.id:
             # Check if user has management permissions as fallback
             rbac_service = RBACService(db)
-            if not rbac_service.user_has_service_permission(current_user.id, "installation_update"):
+            if not rbac_service.user_has_permission(current_user.id, "installation_update"):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Only the assigned technician can complete this installation job"
@@ -485,14 +407,13 @@ def check_service_permission(user: User, module: str, action: str, db: Session) 
     # Check service permission through RBAC
     rbac_service = RBACService(db)
     
-    if rbac_service.user_has_service_permission(user.id, permission):
+    if rbac_service.user_has_permission(user.id, permission):
         logger.info(f"User {user.id} has service permission: {permission}")
         return True
     
     # Check fallback permissions
     fallback_permissions = _get_fallback_permissions(permission)
     
-    from app.core.permissions import PermissionChecker
     for fallback_perm in fallback_permissions:
         if PermissionChecker.has_permission(user, fallback_perm):
             logger.info(f"User {user.id} has fallback permission: {fallback_perm}")
@@ -503,3 +424,72 @@ def check_service_permission(user: User, module: str, action: str, db: Session) 
         status_code=status.HTTP_403_FORBIDDEN,
         detail=f"Insufficient permissions. Required: {permission}"
     )
+
+
+# NEW: Async general permission check function for entitlements.py
+async def check_permission(db: Session, user: User, permission: str) -> bool:
+    """Async wrapper for PermissionChecker.has_permission"""
+    return PermissionChecker.has_permission(user, permission)
+
+
+# Role management dependencies (for administrative functions)
+def require_role_management_permission(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> User:
+    """Require permission to manage service roles"""
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+    
+    # Super admins can manage roles
+    if getattr(current_user, 'is_super_admin', False):
+        return current_user
+    
+    # Org admins can manage roles in their organization
+    if PermissionChecker.has_permission(current_user, Permission.MANAGE_USERS):
+        return current_user
+    
+    # Service admins can manage roles
+    rbac_service = RBACService(db)
+    if rbac_service.user_has_permission(current_user.id, "crm_admin"):
+        return current_user
+    
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Insufficient permissions to manage service roles"
+    )
+
+
+def require_same_organization(
+    current_user: User = Depends(get_current_user)
+) -> Callable[[int], int]:
+    """Ensure operations are scoped to user's organization"""
+    def check_organization(target_organization_id: int) -> int:
+        if not current_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required"
+            )
+        
+        # Super admins can access any organization
+        if getattr(current_user, 'is_super_admin', False):
+            return target_organization_id
+        
+        # Regular users must stay within their organization
+        if current_user.organization_id != target_organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Organization mismatch."
+            )
+        
+        return target_organization_id
+    
+    return check_organization
+
+
+def get_rbac_service(db: Session = Depends(get_db)) -> RBACService:  # NEW: Added get_rbac_service function
+    """Get RBAC service instance"""
+    return RBACService(db)

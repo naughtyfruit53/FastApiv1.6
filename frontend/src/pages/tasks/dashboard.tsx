@@ -25,6 +25,7 @@ import {
   Add,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
+import { ProtectedPage } from '@/components/ProtectedPage';
 interface TaskStats {
   total_tasks: number;
   todo_tasks: number;
@@ -110,6 +111,8 @@ const TaskDashboard: React.FC = () => {
   }
   const completionPercentage = getCompletionPercentage(stats);
   return (
+
+    <ProtectedPage moduleKey="tasks" action="read">
     <Box sx={{ p: 3 }}>
       {/* Header */}
       <Box
@@ -437,6 +440,10 @@ const TaskDashboard: React.FC = () => {
         </Grid>
       </Grid>
     </Box>
+
+    </ProtectedPage>
+
+  
   );
 };
 export default TaskDashboard;

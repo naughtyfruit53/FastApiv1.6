@@ -3,15 +3,15 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "../../context/AuthContext";
-import { useMobileDetection } from "../../hooks/useMobileDetection";  // Added import for mobile detection
+import { useMobileDetection } from "../../hooks/useMobileDetection";
 import AppSuperAdminDashboard from "./AppSuperAdminDashboard";
 import OrgDashboard from "./OrgDashboard";
+import RoleGate from "../../components/RoleGate";  // Import RoleGate
 
 const Dashboard: React.FC = () => {
   console.count('Render: Dashboard');
-  const { productId, vendorId } = useRouter().query;  // Added to prevent unused warning if needed
   const { user, loading } = useAuth();
-  const { isMobile } = useMobileDetection();  // Added for mobile check
+  const { isMobile } = useMobileDetection();
   const router = useRouter();
 
   const isSuperAdmin =
@@ -34,7 +34,7 @@ const Dashboard: React.FC = () => {
         "[Dashboard] No user found and not loading - redirecting to login",
       );
       router.push("/login");
-    } else if (!loading && user && isMobile && !isSuperAdmin) {  // Added mobile redirect for non-super admins
+    } else if (!loading && user && isMobile && !isSuperAdmin) {
       console.log("[Dashboard] Mobile detected for org user - redirecting to mobile dashboard");
       router.push("/mobile/dashboard");
     }
@@ -93,20 +93,24 @@ const Dashboard: React.FC = () => {
     timestamp: new Date().toISOString(),
   });
 
+  const dashboardContent = isSuperAdmin ? (
+    <>
+      {console.log("[Dashboard] Rendering App Super Admin Dashboard")}
+      <AppSuperAdminDashboard />
+    </>
+  ) : (
+    <>
+      {console.log("[Dashboard] Rendering Organization Dashboard")}
+      <OrgDashboard />
+    </>
+  );
+
   return (
-    <div className="modern-dashboard" style={{ padding: "20px" }}>
-      {isSuperAdmin ? (
-        <>
-          {console.log("[Dashboard] Rendering App Super Admin Dashboard")}
-          <AppSuperAdminDashboard />
-        </>
-      ) : (
-        <>
-          {console.log("[Dashboard] Rendering Organization Dashboard")}
-          <OrgDashboard />
-        </>
-      )}
-    </div>
+    <RoleGate requiredPermissions={['dashboard.read']}>
+      <div className="modern-dashboard" style={{ padding: "20px" }}>
+        {dashboardContent}
+      </div>
+    </RoleGate>
   );
 };
 

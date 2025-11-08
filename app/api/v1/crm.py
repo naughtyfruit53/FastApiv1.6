@@ -8,7 +8,7 @@ from datetime import datetime, date, timedelta
 import logging
 
 from app.core.database import get_db
-from app.core.tenant import require_current_organization_id
+from app.core.enforcement import require_access
 from app.models.crm_models import (
     Lead, Opportunity, OpportunityProduct, LeadActivity, OpportunityActivity,
     SalesPipeline, SalesForecast, LeadStatus, LeadSource, OpportunityStage, Commission
@@ -29,7 +29,6 @@ from app.schemas.crm import (
     Commission as CommissionSchema, CommissionCreate, CommissionUpdate
 )
 from app.services.rbac import RBACService
-from app.core.security import get_current_user as core_get_current_user
 import secrets
 import string
 
@@ -63,23 +62,16 @@ async def get_leads(
     source: Optional[str] = Query(None),
     assigned_to_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get all leads with filtering and pagination"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_lead_read" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_lead_read' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to view leads"
-        )
+    current_user, org_id = auth
 
     try:
+        # Get user permissions for admin access check
+        rbac = RBACService(db)
+        user_permissions = await rbac.get_user_service_permissions(current_user.id)
+        
         stmt = select(Lead).where(Lead.organization_id == org_id)
         
         # Apply lead ownership filtering based on user role
@@ -173,21 +165,11 @@ async def get_leads(
 @router.post("/leads", response_model=LeadSchema)
 async def create_lead(
     lead_data: LeadCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new lead"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_lead_create" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_lead_create' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to create leads"
-        )
+    current_user, org_id = auth
 
     try:
         # Generate unique lead number
@@ -219,21 +201,12 @@ async def create_lead(
 @router.get("/leads/{lead_id}", response_model=LeadSchema)
 async def get_lead(
     lead_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get a specific lead"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_lead_read" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_lead_read' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to view lead"
-        )
+    current_user, org_id = auth
+
 
     try:
         stmt = select(Lead).where(
@@ -260,21 +233,12 @@ async def get_lead(
 async def update_lead(
     lead_data: LeadUpdate,
     lead_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update a lead"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_lead_update" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_lead_update' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to update lead"
-        )
+    current_user, org_id = auth
+
 
     try:
         stmt = select(Lead).where(
@@ -310,21 +274,12 @@ async def update_lead(
 @router.delete("/leads/{lead_id}")
 async def delete_lead(
     lead_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete a lead"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_lead_delete" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_lead_delete' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to delete lead"
-        )
+    current_user, org_id = auth
+
 
     try:
         stmt = select(Lead).where(
@@ -355,21 +310,12 @@ async def delete_lead(
 async def convert_lead(
     conversion_data: LeadConversionRequest,
     lead_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Convert lead to customer and/or opportunity"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_lead_convert" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_lead_convert' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to convert lead"
-        )
+    current_user, org_id = auth
+
 
     try:
         stmt = select(Lead).where(
@@ -458,21 +404,12 @@ async def convert_lead(
 @router.get("/leads/{lead_id}/activities", response_model=List[LeadActivitySchema])
 async def get_lead_activities(
     lead_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get activities for a lead"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_lead_read" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_lead_read' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to view lead activities"
-        )
+    current_user, org_id = auth
+
 
     try:
         # Verify lead exists
@@ -507,21 +444,12 @@ async def get_lead_activities(
 async def create_lead_activity(
     activity_data: LeadActivityCreate,
     lead_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new lead activity"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_lead_activity_create" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_lead_activity_create' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to create lead activity"
-        )
+    current_user, org_id = auth
+
 
     try:
         # Verify lead exists
@@ -570,21 +498,14 @@ async def get_opportunities(
     assigned_to_id: Optional[int] = Query(None),
     customer_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get all opportunities with filtering and pagination"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_opportunity_read" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_opportunity_read' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to view opportunities"
-        )
+
+    current_user, org_id = auth
 
     try:
         stmt = select(Opportunity).where(Opportunity.organization_id == org_id)
@@ -632,22 +553,12 @@ async def get_opportunities(
 @router.post("/opportunities", response_model=OpportunitySchema)
 async def create_opportunity(
     opportunity_data: OpportunityCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    
+    auth: tuple = Depends(require_access("crm", "create")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new opportunity"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_opportunity_create" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_opportunity_create' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to create opportunity"
-        )
-
     try:
         # Generate unique opportunity number
         opportunity_number = await generate_unique_number(db, Opportunity, org_id, "OP")
@@ -681,21 +592,14 @@ async def create_opportunity(
 @router.get("/opportunities/{opportunity_id}", response_model=OpportunitySchema)
 async def get_opportunity(
     opportunity_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get a specific opportunity"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_opportunity_read" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_opportunity_read' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to view opportunity"
-        )
+
+    current_user, org_id = auth
 
     try:
         stmt = select(Opportunity).where(
@@ -722,21 +626,14 @@ async def get_opportunity(
 async def update_opportunity(
     opportunity_data: OpportunityUpdate,
     opportunity_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "update")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Update an opportunity"""
-    # Check RBAC permissions
-    rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
-    logger.debug(f"User {current_user.email} permissions: {user_permissions}")
-    if "crm_opportunity_update" not in user_permissions:
-        logger.error(f"User {current_user.email} lacks 'crm_opportunity_update' permission")
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions to update opportunity"
-        )
+
+    current_user, org_id = auth
 
     try:
         stmt = select(Opportunity).where(
@@ -783,11 +680,15 @@ async def update_opportunity(
 async def get_crm_analytics(
     period_start: date = Query(...),
     period_end: date = Query(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get CRM analytics for a specific period"""
+
+    current_user, org_id = auth
+
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_service_permissions(current_user.id)
@@ -905,11 +806,15 @@ async def get_crm_analytics(
 async def get_customer_analytics(
     period_start: date = Query(...),
     period_end: date = Query(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get customer analytics for a specific period"""
+
+    current_user, org_id = auth
+
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_service_permissions(current_user.id)
@@ -1056,11 +961,15 @@ async def get_commissions(
     limit: int = Query(100, ge=1, le=1000),
     person_type: Optional[str] = Query(None, description="Filter by person type (internal/external)"),
     payment_status: Optional[str] = Query(None, description="Filter by payment status"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get all commissions with filtering and pagination"""
+
+    current_user, org_id = auth
+
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_service_permissions(current_user.id)
@@ -1100,11 +1009,15 @@ async def get_commissions(
 @router.get("/commissions/{commission_id}", response_model=CommissionSchema)
 async def get_commission(
     commission_id: int = Path(..., description="The commission ID"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Get a specific commission by ID"""
+
+    current_user, org_id = auth
+
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_service_permissions(current_user.id)
@@ -1146,11 +1059,14 @@ async def get_commission(
 @router.post("/commissions", response_model=CommissionSchema, status_code=status.HTTP_201_CREATED)
 async def create_commission(
     commission_data: CommissionCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    
+    auth: tuple = Depends(require_access("crm", "create")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new commission record"""
+    current_user, org_id = auth
+
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_service_permissions(current_user.id)
@@ -1201,11 +1117,15 @@ async def create_commission(
 async def update_commission(
     commission_id: int = Path(..., description="The commission ID"),
     commission_data: CommissionUpdate = ...,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "update")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Update a commission record"""
+
+    current_user, org_id = auth
+
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_service_permissions(current_user.id)
@@ -1259,11 +1179,15 @@ async def update_commission(
 @router.delete("/commissions/{commission_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_commission(
     commission_id: int = Path(..., description="The commission ID"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("crm", "delete")),
+
+    db: AsyncSession = Depends(get_db)
 ):
+
     """Delete a commission record"""
+
+    current_user, org_id = auth
+
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_service_permissions(current_user.id)

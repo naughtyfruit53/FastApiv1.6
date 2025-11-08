@@ -11,6 +11,7 @@ import string
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.core.permissions import PermissionChecker, Permission
+from app.core.enforcement import require_access
 from app.models import User, Organization, OrganizationRole, UserOrganizationRole
 from app.schemas.user import UserRole
 from app.schemas import UserCreate, UserInDB
@@ -31,21 +32,17 @@ async def list_organization_users(
     skip: int = 0,
     limit: int = 100,
     active_only: bool = True,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("user", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """List users in organization"""
+    current_user, org_id = auth
     try:
-        if not current_user.is_super_admin and current_user.organization_id != organization_id:
+        # Enforce tenant isolation - can only list users in own organization
+        if organization_id != org_id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this organization"
-            )
-      
-        if not current_user.is_super_admin and current_user.role not in ["management", "org_admin"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions to list users"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
             )
       
         stmt = select(User).filter(User.organization_id == organization_id)
@@ -70,39 +67,18 @@ async def list_organization_users(
 async def create_user_in_organization(
     organization_id: int,
     user_data: UserCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("user", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Create user in organization (management or super admin only)"""
+    """Create user in organization (requires user create permission)"""
+    current_user, org_id = auth
     try:
-        # Determine if current_user is platform user
-        is_platform_user = not hasattr(current_user, 'organization_id') or current_user.organization_id is None
-        
-        if is_platform_user:
-            if getattr(current_user, 'role', '') != 'super_admin':
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied to this organization"
-                )
-        else:
-            if not getattr(current_user, 'is_super_admin', False) and current_user.organization_id != organization_id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied to this organization"
-                )
-      
-        if is_platform_user:
-            if getattr(current_user, 'role', '') != 'super_admin':
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Only super administrators can create users"
-                )
-        else:
-            if not getattr(current_user, 'is_super_admin', False) and current_user.role not in ["management", "org_admin", "manager"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Only authorized users can create users"
-                )
+        # Enforce tenant isolation - can only create users in own organization
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
       
         result = await db.execute(select(Organization).filter(Organization.id == organization_id))
         org = result.scalars().first()
@@ -123,7 +99,8 @@ async def create_user_in_organization(
                 detail="Email already registered in this organization"
             )
   
-        if not is_platform_user and not getattr(current_user, 'is_super_admin', False):
+        # Check user limit (skip for super admins)
+        if not getattr(current_user, 'is_super_admin', False):
             result = await db.execute(select(sql_func.count()).select_from(User).filter(
                 User.organization_id == organization_id,
                 User.is_active == True
@@ -136,11 +113,13 @@ async def create_user_in_organization(
                     detail=f"Maximum user limit ({org.max_users}) reached for this organization"
                 )
       
-        if user_data.role == "management" and not (is_platform_user or getattr(current_user, 'is_super_admin', False) or current_user.role == "org_admin"):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only super administrators or organization administrators can assign management role"
-            )
+        # Management role requires special permission
+        if user_data.role == "management" and current_user.role not in ["org_admin", "management"]:
+            if not getattr(current_user, 'is_super_admin', False):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only super administrators or organization administrators can assign management role"
+                )
       
         if user_data.role in ["super_admin", "app_admin"]:
             raise HTTPException(
@@ -149,7 +128,7 @@ async def create_user_in_organization(
             )
       
         # Additional check for managers creating users
-        if not is_platform_user and current_user.role == "manager":
+        if current_user.role == "manager":
             if user_data.role != "executive":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -277,6 +256,33 @@ async def create_user_in_organization(
                 logger.warning(f"Role '{new_user.role}' not found - skipping assignment")
             
             logger.info(f"User {new_user.email} created in org {org.name} by {current_user.email}")
+            
+            # Setup comprehensive RBAC for the user based on their role
+            try:
+                from app.services.user_rbac_service import UserRBACService
+                user_rbac_service = UserRBACService(db)
+                
+                # Auto-assign modules based on role
+                if new_user.role in ["org_admin", "management"]:
+                    # Grant full access to all organization modules
+                    await user_rbac_service.setup_user_rbac_by_role(
+                        user_id=new_user.id,
+                        role=new_user.role
+                    )
+                    logger.info(f"Granted full module access to {new_user.role} user {new_user.id}")
+                elif new_user.role == "manager":
+                    # Manager should already have assigned_modules from user_data
+                    if new_user.assigned_modules:
+                        logger.info(f"Manager {new_user.id} has assigned modules: {list(new_user.assigned_modules.keys())}")
+                elif new_user.role == "executive":
+                    # Executive should already have inherited from manager
+                    if new_user.reporting_manager_id:
+                        # Refresh to get the latest data
+                        await db.refresh(new_user)
+                        logger.info(f"Executive {new_user.id} reports to manager {new_user.reporting_manager_id}")
+            except Exception as rbac_error:
+                logger.warning(f"RBAC setup warning for user {new_user.id}: {rbac_error}")
+                # Don't fail user creation if RBAC setup has issues
 
             # Send welcome email with login link (OTP already sent if password was None)
             success, error = await system_email_service.send_user_creation_email(
@@ -320,14 +326,17 @@ async def update_user_in_organization(
     organization_id: int,
     user_id: int,
     user_update: Dict,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("user", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Update user in organization (management or super admin only)"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+    """Update user in organization (requires user update permission)"""
+    current_user, org_id = auth
+    
+    # Enforce tenant isolation - can only update users in own organization
+    if organization_id != org_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
         )
   
     stmt = select(User).filter(
@@ -465,20 +474,17 @@ async def update_user_in_organization(
 async def delete_user_from_organization(
     organization_id: int,
     user_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("user", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Delete user from organization (management or super admin only)"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+    """Delete user from organization (requires user delete permission)"""
+    current_user, org_id = auth
+    
+    # Enforce tenant isolation - can only delete users in own organization
+    if organization_id != org_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role != "management":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only management can delete users"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
         )
   
     if current_user.id == user_id:
@@ -543,20 +549,17 @@ async def delete_user_from_organization(
 async def reset_user_password(
     organization_id: int,
     user_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("user", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Reset user password (management or super admin only)"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
+    """Reset user password (requires user update permission)"""
+    current_user, org_id = auth
+    
+    # Enforce tenant isolation - can only reset passwords in own organization
+    if organization_id != org_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
-  
-    if not current_user.is_super_admin and current_user.role not in ["management", "org_admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can reset passwords"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
         )
   
     stmt = select(User).filter(

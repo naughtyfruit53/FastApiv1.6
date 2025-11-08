@@ -40,6 +40,7 @@ import {
 } from "chart.js";
 import axios from "axios";
 import { formatCurrency } from "../utils/currencyUtils";
+import { ProtectedPage } from '../components/ProtectedPage';
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -274,7 +275,8 @@ const FinancialReports: React.FC = () => {
       }
     : null;
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <ProtectedPage moduleKey="finance" action="read">
+      ocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ p: 3 }}>
         {/* Header */}
         <Box
@@ -933,6 +935,7 @@ const FinancialReports: React.FC = () => {
         </Paper>
       </Box>
     </LocalizationProvider>
+    </ProtectedPage>
   );
 };
 export default FinancialReports;  

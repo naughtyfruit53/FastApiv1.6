@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.security import get_current_user
+
 from app.models.system_models import Company
 from app.models.user_models import User
 from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyInDB
@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 @router.get("/current", response_model=CompanyInDB)
 async def get_current_company(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("company_branding", "read")),
     db: Session = Depends(get_db)
 ):
     try:
         company = TenantQueryFilter.apply_organization_filter(
-            db.query(Company), Company, current_user.organization_id
+            db.query(Company), Company, org_id
         ).first()
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
@@ -33,15 +33,15 @@ async def get_current_company(
 @router.post("/", response_model=CompanyInDB)
 async def create_company(
     company_data: CompanyCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("company_branding", "create")),
     db: Session = Depends(get_db)
 ):
     try:
-        existing_company = db.query(Company).filter(Company.organization_id == current_user.organization_id).first()
+        existing_company = db.query(Company).filter(Company.organization_id == org_id).first()
         if existing_company:
             raise HTTPException(status_code=400, detail="Company already exists for this organization")
 
-        db_company = Company(**company_data.dict(), organization_id=current_user.organization_id)
+        db_company = Company(**company_data.dict(), organization_id=org_id)
         db.add(db_company)
         db.commit()
         db.refresh(db_company)
@@ -54,13 +54,13 @@ async def create_company(
 async def update_company(
     company_id: int,
     update_data: CompanyUpdate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("company_branding", "update")),
     db: Session = Depends(get_db)
 ):
     try:
         company = db.query(Company).filter(
             Company.id == company_id,
-            Company.organization_id == current_user.organization_id
+            Company.organization_id == org_id
         ).first()
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
@@ -80,13 +80,13 @@ async def update_company(
 async def upload_company_logo(
     company_id: int,
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("company_branding", "read")),
     db: Session = Depends(get_db)
 ):
     try:
         company = db.query(Company).filter(
             Company.id == company_id,
-            Company.organization_id == current_user.organization_id
+            Company.organization_id == org_id
         ).first()
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
@@ -124,13 +124,13 @@ async def upload_company_logo(
 @router.get("/{company_id}/logo")
 async def get_company_logo(
     company_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("company_branding", "read")),
     db: Session = Depends(get_db)
 ):
     try:
         company = db.query(Company).filter(
             Company.id == company_id,
-            Company.organization_id == current_user.organization_id
+            Company.organization_id == org_id
         ).first()
         if not company or not company.logo_path:
             raise HTTPException(status_code=404, detail="Logo not found")
@@ -148,13 +148,13 @@ async def get_company_logo(
 @router.delete("/{company_id}/logo")
 async def delete_company_logo(
     company_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("company_branding", "delete")),
     db: Session = Depends(get_db)
 ):
     try:
         company = db.query(Company).filter(
             Company.id == company_id,
-            Company.organization_id == current_user.organization_id
+            Company.organization_id == org_id
         ).first()
         if not company or not company.logo_path:
             raise HTTPException(status_code=404, detail="Logo not found")
@@ -172,7 +172,7 @@ async def delete_company_logo(
 
 @router.get("/branding")
 async def get_company_branding(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("company_branding", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -181,7 +181,7 @@ async def get_company_branding(
     try:
         # Get the user's company
         company = TenantQueryFilter.apply_organization_filter(
-            db.query(Company), Company, current_user.organization_id
+            db.query(Company), Company, org_id
         ).first()
 
         if not company:
@@ -217,7 +217,7 @@ async def get_company_branding(
 @router.post("/audit/pdf-generation")
 async def log_pdf_generation(
     audit_data: dict,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("company_branding", "create")),
     db: Session = Depends(get_db)
 ):
     """

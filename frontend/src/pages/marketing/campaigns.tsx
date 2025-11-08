@@ -33,6 +33,7 @@ import {
   BarChart
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const MarketingCampaignsPage: React.FC = () => {
   const campaignStats = {
@@ -125,6 +126,7 @@ const MarketingCampaignsPage: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="marketing" action="read">
     <DashboardLayout
       title="Marketing Campaigns"
       subtitle="Create and manage your marketing campaigns"
@@ -317,6 +319,8 @@ const MarketingCampaignsPage: React.FC = () => {
         <Add />
       </Fab>
     </DashboardLayout>
+  );
+    </ProtectedPage>
   );
 };
 

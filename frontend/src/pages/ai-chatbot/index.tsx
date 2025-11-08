@@ -35,6 +35,7 @@ import {
 import { useRouter } from 'next/router';
 import aiService, { ChatMessage, ChatResponse, SmartInsight } from '../../services/aiService';
 
+import { ProtectedPage } from '../../components/ProtectedPage';
 interface Message {
   id: string;
   text: string;
@@ -225,7 +226,8 @@ const AIChatbotPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+    <ProtectedPage moduleKey="ai" action="read">
+      ontainer maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <BotIcon fontSize="large" color="primary" />
         AI Business Assistant
@@ -489,7 +491,7 @@ const AIChatbotPage: React.FC = () => {
         </Grid>
       </Grid>
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default AIChatbotPage;

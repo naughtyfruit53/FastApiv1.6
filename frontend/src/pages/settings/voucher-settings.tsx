@@ -23,7 +23,8 @@ import {
   Alert,
   Snackbar,
   Paper,
-  Chip
+  Chip,
+  Tooltip
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -31,6 +32,8 @@ import {
 } from '@mui/icons-material';
 import DashboardLayout from '../../components/DashboardLayout';
 import api from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface VoucherSettings {
   voucher_prefix: string;
@@ -58,6 +61,9 @@ interface VoucherFormatTemplate {
 }
 
 const VoucherSettingsPage: React.FC = () => {
+  const { user } = useAuth();
+  const isOrgAdmin = user?.role?.toLowerCase() === 'org_admin' || user?.is_super_admin;
+  
   const [settings, setSettings] = useState<VoucherSettings>({
     voucher_prefix: '',
     voucher_prefix_enabled: false,
@@ -178,132 +184,175 @@ const VoucherSettingsPage: React.FC = () => {
   }
 
   return (
-    <DashboardLayout 
-      title="Voucher Settings" 
-      subtitle="Configure voucher numbering and formatting"
-    >
+    <ProtectedPage moduleKey="settings" action="update">
+      <DashboardLayout 
+        title="Voucher Settings" 
+        subtitle="Configure voucher numbering and formatting"
+      >
       <Box sx={{ p: 3 }}>
         <Grid container spacing={3}>
-          {/* Voucher Prefix Settings */}
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Voucher Number Prefix
-                </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  Add a custom prefix (up to 5 characters) to all voucher numbers
-                </Typography>
+          {/* Voucher Prefix Settings - org_admin only */}
+          {isOrgAdmin ? (
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Voucher Number Prefix
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Add a custom prefix (up to 5 characters) to all voucher numbers
+                  </Typography>
 
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={settings.voucher_prefix_enabled}
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={settings.voucher_prefix_enabled}
+                        onChange={(e) => setSettings({ 
+                          ...settings, 
+                          voucher_prefix_enabled: e.target.checked 
+                        })}
+                      />
+                    }
+                    label="Enable Prefix"
+                    sx={{ mb: 2 }}
+                  />
+
+                  <TextField
+                    label="Prefix"
+                    value={settings.voucher_prefix}
+                    onChange={(e) => handlePrefixChange(e.target.value)}
+                    disabled={!settings.voucher_prefix_enabled}
+                    fullWidth
+                    helperText="Max 5 characters, will be converted to uppercase"
+                    inputProps={{ maxLength: 5 }}
+                    sx={{ mb: 2 }}
+                  />
+
+                  <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                    <Typography variant="caption" color="text.secondary" gutterBottom display="block">
+                      Preview:
+                    </Typography>
+                    <Typography variant="h6" color="primary">
+                      {previewNumber}
+                    </Typography>
+                  </Paper>
+                </CardContent>
+              </Card>
+            </Grid>
+          ) : (
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Voucher Number Prefix
+                  </Typography>
+                  <Alert severity="info">
+                    This setting can only be modified by Organization Administrators.
+                    {settings.voucher_prefix_enabled && (
+                      <Box sx={{ mt: 1 }}>
+                        <Typography variant="body2">
+                          Current prefix: <strong>{settings.voucher_prefix || '(none)'}</strong>
+                        </Typography>
+                      </Box>
+                    )}
+                  </Alert>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* Counter Reset Period - org_admin only */}
+          {isOrgAdmin ? (
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Counter Reset Period
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Choose how often voucher numbers reset
+                  </Typography>
+
+                  <FormControl component="fieldset" fullWidth>
+                    <RadioGroup
+                      value={settings.voucher_counter_reset_period}
                       onChange={(e) => setSettings({ 
                         ...settings, 
-                        voucher_prefix_enabled: e.target.checked 
+                        voucher_counter_reset_period: e.target.value as any
                       })}
-                    />
-                  }
-                  label="Enable Prefix"
-                  sx={{ mb: 2 }}
-                />
-
-                <TextField
-                  label="Prefix"
-                  value={settings.voucher_prefix}
-                  onChange={(e) => handlePrefixChange(e.target.value)}
-                  disabled={!settings.voucher_prefix_enabled}
-                  fullWidth
-                  helperText="Max 5 characters, will be converted to uppercase"
-                  inputProps={{ maxLength: 5 }}
-                  sx={{ mb: 2 }}
-                />
-
-                <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                  <Typography variant="caption" color="text.secondary" gutterBottom display="block">
-                    Preview:
+                    >
+                      <FormControlLabel 
+                        value="never" 
+                        control={<Radio />} 
+                        label={
+                          <Box>
+                            <Typography>Never</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Continuous numbering (e.g., PO/2526/00001)
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                      <FormControlLabel 
+                        value="annually" 
+                        control={<Radio />} 
+                        label={
+                          <Box>
+                            <Typography>Annually</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Reset every fiscal year (e.g., PO/2526/00001)
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                      <FormControlLabel 
+                        value="quarterly" 
+                        control={<Radio />} 
+                        label={
+                          <Box>
+                            <Typography>Quarterly</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Reset every quarter (e.g., PO/2526/Q1/00001)
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                      <FormControlLabel 
+                        value="monthly" 
+                        control={<Radio />} 
+                        label={
+                          <Box>
+                            <Typography>Monthly</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Reset every month (e.g., PO/2526/JAN/00001)
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </RadioGroup>
+                  </FormControl>
+                </CardContent>
+              </Card>
+            </Grid>
+          ) : (
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Counter Reset Period
                   </Typography>
-                  <Typography variant="h6" color="primary">
-                    {previewNumber}
-                  </Typography>
-                </Paper>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Counter Reset Period */}
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Counter Reset Period
-                </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  Choose how often voucher numbers reset
-                </Typography>
-
-                <FormControl component="fieldset" fullWidth>
-                  <RadioGroup
-                    value={settings.voucher_counter_reset_period}
-                    onChange={(e) => setSettings({ 
-                      ...settings, 
-                      voucher_counter_reset_period: e.target.value as any
-                    })}
-                  >
-                    <FormControlLabel 
-                      value="never" 
-                      control={<Radio />} 
-                      label={
-                        <Box>
-                          <Typography>Never</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Continuous numbering (e.g., PO/2526/00001)
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel 
-                      value="annually" 
-                      control={<Radio />} 
-                      label={
-                        <Box>
-                          <Typography>Annually</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Reset every fiscal year (e.g., PO/2526/00001)
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel 
-                      value="quarterly" 
-                      control={<Radio />} 
-                      label={
-                        <Box>
-                          <Typography>Quarterly</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Reset every quarter (e.g., PO/2526/Q1/00001)
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel 
-                      value="monthly" 
-                      control={<Radio />} 
-                      label={
-                        <Box>
-                          <Typography>Monthly</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Reset every month (e.g., PO/2526/JAN/00001)
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </RadioGroup>
-                </FormControl>
-              </CardContent>
-            </Card>
-          </Grid>
+                  <Alert severity="info">
+                    This setting can only be modified by Organization Administrators.
+                    <Box sx={{ mt: 1 }}>
+                      <Typography variant="body2">
+                        Current period: <strong>{settings.voucher_counter_reset_period}</strong>
+                      </Typography>
+                    </Box>
+                  </Alert>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
 
           {/* Voucher Format Template */}
           <Grid item xs={12}>
@@ -313,7 +362,7 @@ const VoucherSettingsPage: React.FC = () => {
                   Voucher PDF Template Style
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  Choose a professional template style for all your voucher PDFs. Each template includes bank details and terms & conditions.
+                  Choose a professional template style for all your voucher PDFs. Choose a professional template style for all your voucher PDFs. Each template includes bank details and terms & conditions.
                 </Typography>
 
                 <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -542,6 +591,7 @@ const VoucherSettingsPage: React.FC = () => {
         </Snackbar>
       </Box>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
 

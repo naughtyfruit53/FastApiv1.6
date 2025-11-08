@@ -101,6 +101,24 @@ class Permission:
     CRM_COMMISSION_UPDATE = "crm_commission_update"
     CRM_COMMISSION_DELETE = "crm_commission_delete"
 
+    # NEW: Inventory permissions
+    INVENTORY_READ = "inventory.read"
+    INVENTORY_CREATE = "inventory.create"
+    INVENTORY_UPDATE = "inventory.update"
+    INVENTORY_DELETE = "inventory.delete"
+
+    # NEW: Products permissions
+    PRODUCTS_READ = "products.read"
+    PRODUCTS_CREATE = "products.create"
+    PRODUCTS_UPDATE = "products.update"
+    PRODUCTS_DELETE = "products.delete"
+
+    # NEW: Master Data permissions
+    MASTER_DATA_READ = "master_data.read"
+    MASTER_DATA_CREATE = "master_data.create"
+    MASTER_DATA_UPDATE = "master_data.update"
+    MASTER_DATA_DELETE = "master_data.delete"
+
 
 class PermissionChecker:
     """Service for checking user permissions"""
@@ -129,6 +147,19 @@ class PermissionChecker:
             Permission.FACTORY_RESET,
             Permission.VIEW_VOUCHERS,
             Permission.MANAGE_VOUCHERS,
+            # NEW: Add inventory/products/master_data for super_admin
+            Permission.INVENTORY_READ,
+            Permission.INVENTORY_CREATE,
+            Permission.INVENTORY_UPDATE,
+            Permission.INVENTORY_DELETE,
+            Permission.PRODUCTS_READ,
+            Permission.PRODUCTS_CREATE,
+            Permission.PRODUCTS_UPDATE,
+            Permission.PRODUCTS_DELETE,
+            Permission.MASTER_DATA_READ,
+            Permission.MASTER_DATA_CREATE,
+            Permission.MASTER_DATA_UPDATE,
+            Permission.MASTER_DATA_DELETE,
             # Note: App Super Admins don't have ACCESS_ORG_SETTINGS (per requirements)
         ],
         'org_admin': [
@@ -144,9 +175,25 @@ class PermissionChecker:
             Permission.ACCESS_ORG_SETTINGS,  # Org admins have access to org settings
             Permission.VIEW_VOUCHERS,
             Permission.MANAGE_VOUCHERS,
+            # NEW: Add inventory/products/master_data for org_admin
+            Permission.INVENTORY_READ,
+            Permission.INVENTORY_CREATE,
+            Permission.INVENTORY_UPDATE,
+            Permission.INVENTORY_DELETE,
+            Permission.PRODUCTS_READ,
+            Permission.PRODUCTS_CREATE,
+            Permission.PRODUCTS_UPDATE,
+            Permission.PRODUCTS_DELETE,
+            Permission.MASTER_DATA_READ,
+            Permission.MASTER_DATA_CREATE,
+            Permission.MASTER_DATA_UPDATE,
+            Permission.MASTER_DATA_DELETE,
         ],
         'management': [
+            Permission.MANAGE_USERS,
             Permission.VIEW_USERS,
+            Permission.CREATE_USERS,
+            Permission.DELETE_USERS,
             Permission.RESET_OWN_PASSWORD,
             Permission.RESET_ORG_PASSWORDS,
             Permission.RESET_OWN_DATA,
@@ -155,6 +202,19 @@ class PermissionChecker:
             Permission.ACCESS_ORG_SETTINGS,
             Permission.VIEW_VOUCHERS,
             Permission.MANAGE_VOUCHERS,
+            # NEW: Add inventory/products/master_data for management
+            Permission.INVENTORY_READ,
+            Permission.INVENTORY_CREATE,
+            Permission.INVENTORY_UPDATE,
+            Permission.INVENTORY_DELETE,
+            Permission.PRODUCTS_READ,
+            Permission.PRODUCTS_CREATE,
+            Permission.PRODUCTS_UPDATE,
+            Permission.PRODUCTS_DELETE,
+            Permission.MASTER_DATA_READ,
+            Permission.MASTER_DATA_CREATE,
+            Permission.MASTER_DATA_UPDATE,
+            Permission.MASTER_DATA_DELETE,
         ],
         'manager': [
             Permission.VIEW_USERS,  # Can view users (their executives)
@@ -163,11 +223,19 @@ class PermissionChecker:
             Permission.VIEW_AUDIT_LOGS,
             Permission.ACCESS_ORG_SETTINGS,  # Limited access
             Permission.VIEW_VOUCHERS,
+            # NEW: Add read-only for inventory/products/master_data
+            Permission.INVENTORY_READ,
+            Permission.PRODUCTS_READ,
+            Permission.MASTER_DATA_READ,
         ],
         'executive': [
             Permission.RESET_OWN_PASSWORD,
             Permission.ACCESS_ORG_SETTINGS,  # Basic access
             Permission.VIEW_VOUCHERS,
+            # NEW: Add read-only for inventory/products/master_data
+            Permission.INVENTORY_READ,
+            Permission.PRODUCTS_READ,
+            Permission.MASTER_DATA_READ,
         ],
     }
     
@@ -177,23 +245,23 @@ class PermissionChecker:
             Permission.SUPER_ADMIN,
             Permission.PLATFORM_ADMIN,
             Permission.MANAGE_USERS,  # For platform users
-            Permission.CREATE_USERS,  # For creating platform admins
+            Permission.CREATE_USERS,  # For creating app_admins and super_admins
             Permission.RESET_ANY_PASSWORD,
             Permission.RESET_ANY_DATA,
             Permission.MANAGE_ORGANIZATIONS,
-            Permission.VIEW_ORGANIZATIONS,  # Added for list organizations access
+            Permission.VIEW_ORGANIZATIONS,
             Permission.CREATE_ORGANIZATIONS,
             Permission.DELETE_ORGANIZATIONS,
-            Permission.RESET_ANY_DATA,
             Permission.VIEW_ALL_AUDIT_LOGS,
+            Permission.FACTORY_RESET,  # Only super_admin can factory reset
         ],
-        'platform_admin': [
+        'app_admin': [
             Permission.PLATFORM_ADMIN,
             Permission.MANAGE_ORGANIZATIONS,
             Permission.CREATE_ORGANIZATIONS,
             Permission.VIEW_ORGANIZATIONS,
-            Permission.RESET_ANY_PASSWORD,  # For org passwords
             Permission.VIEW_AUDIT_LOGS,
+            # Note: app_admin CANNOT: manage platform admins, reset app/org data, factory reset
         ],
     }
     
@@ -213,15 +281,15 @@ class PermissionChecker:
         # Extract attributes consistently for both ORM and Pydantic
         role = platform_user.role.lower() if hasattr(platform_user, 'role') else ''
         is_super_admin = getattr(platform_user, 'is_super_admin', False)
-        user_type = type(platform_user).__name__
         user_id = getattr(platform_user, 'id', 'None')
         email = getattr(platform_user, 'email', 'None')
         organization_id = getattr(platform_user, 'organization_id', 'None')
         
-        logger.info(f"Permission check for {permission}: user_type={user_type}, id={user_id}, email={email}, role={role}, is_super_admin={is_super_admin}, organization_id={organization_id}")
+        logger.info(f"Permission check for {permission}: id={user_id}, email={email}, role={role}, is_super_admin={is_super_admin}, organization_id={organization_id}")
 
-        # For organization users (User or UserInDB)
-        if user_type in ['User', 'UserInDB']:
+        # Use attribute check instead of type name for robustness
+        if hasattr(platform_user, 'organization_id') and platform_user.organization_id is not None:
+            # Organization user (User or UserInDB)
             if is_super_admin or role == 'super_admin':
                 logger.info("Permission granted: Organization user is super admin")
                 return True
@@ -230,8 +298,8 @@ class PermissionChecker:
             logger.info(f"Regular permission check result: {granted}")
             return granted
         
-        # For platform users (PlatformUser or PlatformUserInDB)
-        if user_type in ['PlatformUser', 'PlatformUserInDB']:
+        else:
+            # Platform user (PlatformUser or PlatformUserInDB)
             if role == 'super_admin':
                 logger.info("Permission granted: Platform user is super admin")
                 return True
@@ -239,9 +307,6 @@ class PermissionChecker:
             granted = permission in platform_permissions
             logger.info(f"Platform permission check result: {granted}, permissions: {platform_permissions}")
             return granted
-        
-        logger.warning("Permission denied: Unknown user type")
-        return False
     
     @staticmethod
     def require_permission(
@@ -364,7 +429,7 @@ class PermissionChecker:
             return False
         
         # All other users (including org admins) can access org settings
-        return PermissionChecker.has_permission(user, Permission.ACCESS_ORG_SETTINGS)
+        return PermissionChecker.has_permission(user, Permission.ACCESS_ORG_SETTINGS)  # Org admins have access to org settings
     
     @staticmethod
     def can_factory_reset(user: Union[User, UserInDB]) -> bool:
@@ -403,12 +468,9 @@ class PermissionChecker:
         if current_user.role == 'manager' and target_user.role == 'executive':
             return target_user.reporting_manager_id == current_user.id
         
-        # Self-edit always allowed
-        if current_user.id == target_user.id:
-            return True
-        
-        return False
-
+        # Users can only reset their own password
+        return current_user.id == target_user.id
+    
     @staticmethod
     def can_create_user(current_user: Union[User, UserInDB], new_user_role: str) -> bool:
         """Check if current user can create a user of specific role"""
@@ -551,7 +613,7 @@ def require_password_reset_permission(
             detail="Authentication required"
         )
     
-    # Check if user has any password reset permission
+    # Check if any password reset permission
     if not (
         PermissionChecker.has_permission(current_user, Permission.RESET_ORG_PASSWORDS) or
         PermissionChecker.has_permission(current_user, Permission.RESET_ANY_PASSWORD)
@@ -578,7 +640,7 @@ def require_data_reset_permission(
             detail="Authentication required"
         )
     
-    # Check if user has any data reset permission
+    # Check if any data reset permission
     if not (
         PermissionChecker.has_permission(current_user, Permission.RESET_ORG_DATA) or
         PermissionChecker.has_permission(current_user, Permission.RESET_ANY_DATA)

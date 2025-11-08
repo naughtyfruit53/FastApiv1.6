@@ -1,3 +1,5 @@
+# app/core/audit.py
+
 """
 Audit logging system for security-sensitive operations
 """
@@ -14,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 async def create_audit_log(
     db: AsyncSession,
-    table_name: str,
-    record_id: Any,
+    entity_type: str,
+    entity_id: Any,
     action: str,
     user_id: Optional[int] = None,
     changes: Optional[Dict] = None,
@@ -26,8 +28,8 @@ async def create_audit_log(
     try:
         audit_log = AuditLog(
             organization_id=organization_id,
-            table_name=table_name,
-            record_id=record_id,
+            entity_type=entity_type,
+            entity_id=entity_id,
             action=action,
             user_id=user_id,
             changes=changes,
@@ -37,7 +39,7 @@ async def create_audit_log(
         db.add(audit_log)
         await db.commit()
         await db.refresh(audit_log)
-        logger.info(f"Audit log created for {table_name}:{action}")
+        logger.info(f"Audit log created for {entity_type}:{action}")
         return audit_log
     except Exception as e:
         logger.error(f"Failed to create audit log: {e}")
@@ -234,8 +236,8 @@ class AuditLogger:
         }
         return await create_audit_log(
             db=db,
-            table_name="security_events",
-            record_id=user_id or 0,
+            entity_type="security_events",
+            entity_id=user_id or 0,
             action=f"{event_type}:{action}",
             user_id=user_id,
             changes=changes,
@@ -243,8 +245,7 @@ class AuditLogger:
             user_agent=user_agent,
             organization_id=organization_id
         )
-
-
+    
 def get_client_ip(request) -> Optional[str]:
     """Extract client IP address from request"""
     try:

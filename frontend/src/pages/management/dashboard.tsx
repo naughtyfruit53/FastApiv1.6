@@ -50,6 +50,7 @@ import {
 } from "chart.js";
 import axios from "axios";
 
+import { ProtectedPage } from '../../components/ProtectedPage';
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -269,7 +270,9 @@ const ManagementDashboard: React.FC = () => {
   );
   if (isLoading) {
     return (
-      <Box
+      <ProtectedPage moduleKey="admin" action="read">
+      rotectedPage moduleKey="admin" action="read">
+        ox
         display="flex"
         justifyContent="center"
         alignItems="center"
@@ -292,6 +295,7 @@ const ManagementDashboard: React.FC = () => {
       <Alert severity="info">
         No dashboard data available for the selected period.
       </Alert>
+      </ProtectedPage>
     );
   }
   return (
@@ -766,6 +770,7 @@ const ManagementDashboard: React.FC = () => {
         </CardContent>
       </Card>
     </Box>
+    </ProtectedPage>
   );
 };
 export default ManagementDashboard;

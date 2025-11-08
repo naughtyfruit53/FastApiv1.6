@@ -39,6 +39,7 @@ import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import DashboardLayout from '../../components/DashboardLayout';
 import WebsiteAgentWizard from '../../components/WebsiteAgentWizard';
+import { ProtectedPage } from '@/components/ProtectedPage';
 import websiteAgentService, {
   WebsiteProject,
 } from '../../services/websiteAgentService';
@@ -203,6 +204,9 @@ const WebsiteAgentPage: React.FC = () => {
   }
 
   return (
+
+
+    <ProtectedPage moduleKey="service" action="read">
     <DashboardLayout>
       <Box>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
@@ -500,6 +504,12 @@ const WebsiteAgentPage: React.FC = () => {
         <WebsiteAgentWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
       </Box>
     </DashboardLayout>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

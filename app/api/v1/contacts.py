@@ -12,11 +12,9 @@ from datetime import datetime
 import logging
 
 from app.core.database import get_db
-from app.core.tenant import require_current_organization_id
+from app.core.enforcement import require_access
 from app.models.crm_models import Lead
 from app.models.user_models import User
-from app.core.security import get_current_user as core_get_current_user
-from app.services.rbac import RBACService
 from pydantic import BaseModel, EmailStr, Field
 
 logger = logging.getLogger(__name__)
@@ -87,11 +85,12 @@ async def get_contacts(
     limit: int = Query(100, ge=1, le=1000),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("contact", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all contacts with filtering and pagination"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(Lead).where(
             and_(
@@ -137,11 +136,12 @@ async def get_contacts(
 @router.post("", response_model=ContactResponse)
 async def create_contact(
     contact_data: ContactCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("contact", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new contact"""
+    current_user, org_id = auth
+    
     try:
         # Create contact using Lead model
         import secrets
@@ -177,11 +177,12 @@ async def create_contact(
 @router.get("/{contact_id}", response_model=ContactResponse)
 async def get_contact(
     contact_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("contact", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get a specific contact"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(Lead).where(
             and_(Lead.id == contact_id, Lead.organization_id == org_id)
@@ -209,11 +210,12 @@ async def get_contact(
 async def update_contact(
     contact_data: ContactUpdate,
     contact_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("contact", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update a contact"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(Lead).where(
             and_(Lead.id == contact_id, Lead.organization_id == org_id)
@@ -250,11 +252,12 @@ async def update_contact(
 @router.delete("/{contact_id}")
 async def delete_contact(
     contact_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("contact", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete a contact"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(Lead).where(
             and_(Lead.id == contact_id, Lead.organization_id == org_id)

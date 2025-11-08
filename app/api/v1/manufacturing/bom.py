@@ -7,6 +7,7 @@ from sqlalchemy import select
 from typing import List, Optional
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.vouchers import BillOfMaterials
 from pydantic import BaseModel
 
@@ -34,12 +35,14 @@ class BOMResponse(BaseModel):
 async def get_boms(
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get list of Bills of Materials"""
+    current_user, org_id = auth
+    
     stmt = select(BillOfMaterials).where(
-        BillOfMaterials.organization_id == current_user.organization_id
+        BillOfMaterials.organization_id == org_id
     ).offset(skip).limit(limit)
     result = await db.execute(stmt)
     boms = result.scalars().all()
@@ -50,14 +53,16 @@ async def clone_bom(
     bom_id: int,
     new_name: str,
     new_version: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Clone an existing BOM with all its components"""
+    current_user, org_id = auth
+    
     # Get source BOM
     stmt = select(BillOfMaterials).where(
         BillOfMaterials.id == bom_id,
-        BillOfMaterials.organization_id == current_user.organization_id
+        BillOfMaterials.organization_id == org_id
     )
     result = await db.execute(stmt)
     source_bom = result.scalar_one_or_none()
@@ -67,7 +72,7 @@ async def clone_bom(
 
     # Create new BOM
     new_bom = BillOfMaterials(
-        organization_id=current_user.organization_id,
+        organization_id=org_id,
         bom_name=new_name,
         output_item_id=source_bom.output_item_id,
         output_quantity=source_bom.output_quantity,
@@ -89,14 +94,14 @@ async def clone_bom(
     from app.models.vouchers import BOMComponent
     stmt = select(BOMComponent).where(
         BOMComponent.bom_id == bom_id,
-        BOMComponent.organization_id == current_user.organization_id
+        BOMComponent.organization_id == org_id
     )
     result = await db.execute(stmt)
     source_components = result.scalars().all()
 
     for source_comp in source_components:
         new_comp = BOMComponent(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             bom_id=new_bom.id,
             component_item_id=source_comp.component_item_id,
             quantity_required=source_comp.quantity_required,

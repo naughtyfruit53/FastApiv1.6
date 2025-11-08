@@ -45,6 +45,7 @@ import abTestingService, {
   VariantType,
   ExperimentResults,
 } from '../../services/abTestingService';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const ABTestingDashboard: React.FC = () => {
   const router = useRouter();
@@ -190,6 +191,7 @@ const ABTestingDashboard: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="analytics" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h4" component="h1">
@@ -511,6 +513,7 @@ const ABTestingDashboard: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
 

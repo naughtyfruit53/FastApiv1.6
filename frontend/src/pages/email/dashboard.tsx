@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import { Box, Typography, CircularProgress, Alert, Button, List, ListItem, ListItemText, ListItemButton } from '@mui/material';
 import { useOAuth } from '../../hooks/useOAuth';
 import { useAuth } from '../../context/AuthContext';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const EmailDashboard: React.FC = () => {
   const router = useRouter();
@@ -105,10 +106,12 @@ const EmailDashboard: React.FC = () => {
 
   // If selected, should redirect, but show loading as fallback
   return (
+    <ProtectedPage moduleKey="email" action="read">
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
       <CircularProgress />
       <Typography sx={{ ml: 2 }}>Loading inbox...</Typography>
     </Box>
+    </ProtectedPage>
   );
 };
 

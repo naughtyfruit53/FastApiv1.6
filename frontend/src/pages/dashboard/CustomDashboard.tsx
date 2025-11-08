@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import DashboardWidget, { WidgetConfig } from '../../components/DashboardWidget';
 import { useAuth } from '../../context/AuthContext';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface WidgetTemplate {
   id: string;
@@ -218,7 +219,8 @@ const CustomDashboard: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <ProtectedPage moduleKey="dashboard" action="read">
+      <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
@@ -370,6 +372,7 @@ const CustomDashboard: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
 

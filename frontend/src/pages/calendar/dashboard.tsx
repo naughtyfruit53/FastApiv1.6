@@ -32,6 +32,7 @@ import {
   LocationOn,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
+import { ProtectedPage } from '@/components/ProtectedPage';
 interface CalendarStats {
   total_events: number;
   today_events: number;
@@ -194,6 +195,8 @@ const CalendarDashboard: React.FC = () => {
     );
   }
   return (
+
+    <ProtectedPage moduleKey="calendar" action="read">
     <Box
       sx={{
         p: 3,
@@ -691,6 +694,10 @@ const CalendarDashboard: React.FC = () => {
         </Grid>
       </Grid>
     </Box>
+
+    </ProtectedPage>
+
+  
   );
 };
 export default CalendarDashboard;

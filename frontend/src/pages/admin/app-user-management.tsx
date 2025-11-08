@@ -36,6 +36,7 @@ import {
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
+import { ProtectedPage } from '@/components/ProtectedPage';
 interface AppUser {
   id: number;
   email: string;
@@ -238,6 +239,8 @@ const AppUserManagement: React.FC = () => {
     );
   }
   return (
+
+    <ProtectedPage moduleKey="admin" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box
         sx={{
@@ -543,6 +546,10 @@ const AppUserManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+
+    </ProtectedPage>
+
+  
   );
 };
 export default AppUserManagement;

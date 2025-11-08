@@ -24,6 +24,7 @@ import {
 import { useAuth } from "../../hooks/useAuth";
 import { canManageUsers } from "../../types/user.types";
 import PredictiveDashboard from "../../components/PredictiveDashboard";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -66,17 +67,18 @@ const AdvancedAnalyticsPage: NextPage = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          gutterBottom
-          sx={{ display: "flex", alignItems: "center", gap: 2 }}
-        >
-          <AutoAwesome color="primary" />
-          Advanced ML/AI Analytics
-        </Typography>
+    <ProtectedPage moduleKey="analytics" action="read">
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="h4"
+            component="h1"
+            gutterBottom
+            sx={{ display: "flex", alignItems: "center", gap: 2 }}
+          >
+            <AutoAwesome color="primary" />
+            Advanced ML/AI Analytics
+          </Typography>
         <Typography variant="body1" color="text.secondary">
           Leverage machine learning and AI for predictive insights, anomaly
           detection, and advanced analytics to drive data-driven decisions.
@@ -229,6 +231,7 @@ const AdvancedAnalyticsPage: NextPage = () => {
         </Card>
       </TabPanel>
     </Container>
+    </ProtectedPage>
   );
 };
 

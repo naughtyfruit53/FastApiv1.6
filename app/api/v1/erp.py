@@ -1,5 +1,9 @@
 # app/api/v1/erp.py
 
+"""
+ERP API endpoints
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -9,6 +13,7 @@ from datetime import datetime, date
 from decimal import Decimal
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user
 from app.core.tenant import TenantQueryMixin
 from app.core.org_restrictions import require_current_organization_id, validate_company_setup
@@ -87,11 +92,12 @@ async def get_chart_of_accounts(
     is_active: Optional[bool] = Query(None),
     search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Get chart of accounts with filtering options"""
+    current_user, organization_id = auth
+
     stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.organization_id == organization_id
     )
@@ -111,7 +117,8 @@ async def get_chart_of_accounts(
     # Order by account code
     stmt = stmt.order_by(ChartOfAccounts.account_code)
     
-    result = await db.execute(stmt.offset(skip).limit(limit))
+    stmt = stmt.offset(skip).limit(limit)
+    result = await db.execute(stmt)
     accounts = result.scalars().all()
     return accounts
 
@@ -120,11 +127,12 @@ async def get_chart_of_accounts(
 async def create_chart_of_account(
     account_data: ChartOfAccountsCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "create")),
     _ : None = Depends(validate_company_setup)
 ):
     """Create a new chart of account"""
+    current_user, organization_id = auth
+
     # Auto-generate account code if not provided
     account_code = account_data.account_code
     if not account_code:
@@ -190,11 +198,12 @@ async def create_chart_of_account(
 async def get_chart_of_account(
     account_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Get a specific chart of account"""
+    current_user, organization_id = auth
+
     stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == account_id,
         ChartOfAccounts.organization_id == organization_id
@@ -216,11 +225,12 @@ async def update_chart_of_account(
     account_id: int,
     account_data: ChartOfAccountsUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "update")),
     _ : None = Depends(validate_company_setup)
 ):
     """Update a chart of account"""
+    current_user, organization_id = auth
+
     stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == account_id,
         ChartOfAccounts.organization_id == organization_id
@@ -270,11 +280,12 @@ async def update_chart_of_account(
 async def delete_chart_of_account(
     account_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "delete")),
     _ : None = Depends(validate_company_setup)
 ):
     """Delete a chart of account"""
+    current_user, organization_id = auth
+
     stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == account_id,
         ChartOfAccounts.organization_id == organization_id
@@ -326,11 +337,12 @@ async def delete_chart_of_account(
 @router.get("/gst-configuration", response_model=List[GSTConfigurationResponse])
 async def get_gst_configurations(
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Get GST configurations"""
+    current_user, organization_id = auth
+
     stmt = select(GSTConfiguration).where(
         GSTConfiguration.organization_id == organization_id
     )
@@ -344,11 +356,12 @@ async def get_gst_configurations(
 async def create_gst_configuration(
     config_data: GSTConfigurationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "create")),
     _ : None = Depends(validate_company_setup)
 ):
     """Create GST configuration"""
+    current_user, organization_id = auth
+
     # Check if GSTIN already exists
     stmt = select(GSTConfiguration).where(
         GSTConfiguration.gstin == config_data.gstin
@@ -382,11 +395,12 @@ async def get_tax_codes(
     tax_type: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Get tax codes with filtering options"""
+    current_user, organization_id = auth
+
     stmt = select(ERPTaxCode).where(
         ERPTaxCode.organization_id == organization_id
     )
@@ -406,11 +420,12 @@ async def get_tax_codes(
 async def create_tax_code(
     tax_data: TaxCodeCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "create")),
     _ : None = Depends(validate_company_setup)
 ):
     """Create a new tax code"""
+    current_user, organization_id = auth
+
     # Check if tax code already exists
     stmt = select(ERPTaxCode).where(
         ERPTaxCode.organization_id == organization_id,
@@ -442,11 +457,12 @@ async def create_tax_code(
 async def get_trial_balance(
     as_of_date: date = Query(..., description="As of date for trial balance"),
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Generate trial balance report"""
+    current_user, organization_id = auth
+
     # Get all accounts with their balances
     stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.organization_id == organization_id,
@@ -502,11 +518,12 @@ async def get_profit_loss(
     from_date: date = Query(..., description="Start date for P&L report"),
     to_date: date = Query(..., description="End date for P&L report"),
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Generate Profit & Loss statement"""
+    current_user, organization_id = auth
+
     # Get income accounts
     income_stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.organization_id == organization_id,
@@ -568,11 +585,12 @@ async def get_profit_loss(
 async def get_balance_sheet(
     as_of_date: date = Query(..., description="As of date for balance sheet"),
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Generate Balance Sheet"""
+    current_user, organization_id = auth
+
     # Get asset accounts
     asset_stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.organization_id == organization_id,
@@ -655,11 +673,12 @@ async def get_cash_flow(
     from_date: date = Query(..., description="Start date for cash flow statement"),
     to_date: date = Query(..., description="End date for cash flow statement"),
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Generate Cash Flow Statement"""
+    current_user, organization_id = auth
+
     # Get cash/bank accounts to calculate opening and closing balance
     cash_stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.organization_id == organization_id,
@@ -724,11 +743,12 @@ async def get_general_ledger(
     end_date: Optional[date] = Query(None),
     reference_type: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Get general ledger entries with filtering options"""
+    current_user, organization_id = auth
+
     stmt = select(GeneralLedger).where(
         GeneralLedger.organization_id == organization_id
     )
@@ -756,11 +776,12 @@ async def get_general_ledger(
 async def create_general_ledger_entry(
     entry: GeneralLedgerCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "create")),
     _ : None = Depends(validate_company_setup)
 ):
     """Create a new general ledger entry"""
+    current_user, organization_id = auth
+
     # Validate account exists
     stmt = select(ChartOfAccounts).where(
         ChartOfAccounts.id == entry.account_id,
@@ -809,11 +830,12 @@ async def get_cost_centers(
     is_active: Optional[bool] = Query(None),
     parent_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Get cost centers with filtering options"""
+    current_user, organization_id = auth
+
     stmt = select(CostCenter).where(
         CostCenter.organization_id == organization_id
     )
@@ -833,11 +855,12 @@ async def get_cost_centers(
 async def create_cost_center(
     cost_center: CostCenterCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "create")),
     _ : None = Depends(validate_company_setup)
 ):
     """Create a new cost center"""
+    current_user, organization_id = auth
+
     # Check if cost center code exists
     stmt = select(CostCenter).where(
         CostCenter.organization_id == organization_id,
@@ -882,10 +905,11 @@ async def get_bank_accounts(
     limit: int = Query(100),
     is_active: Optional[bool] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("erp", "read")),
 ):
     """Get bank accounts with filtering options"""
+    current_user, organization_id = auth
+
     stmt = select(BankAccount).where(
         BankAccount.organization_id == organization_id
     )
@@ -902,10 +926,11 @@ async def get_bank_accounts(
 async def create_bank_account(
     bank_account: BankAccountCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("erp", "create")),
 ):
     """Create a new bank account"""
+    current_user, organization_id = auth
+
     # Check if account number exists
     stmt = select(BankAccount).where(
         BankAccount.organization_id == organization_id,
@@ -945,10 +970,11 @@ async def update_bank_account(
     bank_account_id: int,
     bank_account_data: BankAccountUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("erp", "update")),
 ):
     """Update an existing bank account"""
+    current_user, organization_id = auth
+
     stmt = select(BankAccount).where(
         BankAccount.id == bank_account_id,
         BankAccount.organization_id == organization_id
@@ -985,11 +1011,12 @@ async def get_financial_kpis(
     period_start: Optional[date] = Query(None),
     period_end: Optional[date] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Get financial KPIs with filtering options"""
+    current_user, organization_id = auth
+
     stmt = select(FinancialKPI).where(
         FinancialKPI.organization_id == organization_id
     )
@@ -1013,11 +1040,12 @@ async def get_financial_kpis(
 async def create_financial_kpi(
     kpi: FinancialKPICreate,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "create")),
     _ : None = Depends(validate_company_setup)
 ):
     """Create a new financial KPI"""
+    current_user, organization_id = auth
+
     # Calculate variance if target is provided
     variance_percentage = None
     if kpi.target_value and kpi.target_value != 0:
@@ -1041,11 +1069,12 @@ async def create_financial_kpi(
 @router.get("/dashboard")
 async def get_financial_dashboard(
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id),
+    auth: tuple = Depends(require_access("erp", "read")),
     _ : None = Depends(validate_company_setup)
 ):
     """Get financial dashboard data"""
+    current_user, organization_id = auth
+
     # Get total assets
     stmt_assets = select(func.sum(ChartOfAccounts.current_balance)).where(
         ChartOfAccounts.organization_id == organization_id,
@@ -1118,10 +1147,11 @@ async def get_financial_dashboard(
 async def get_coa_entity_links(
     account_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: UserInDB = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("erp", "read")),
 ):
     """
+    current_user, organization_id = auth
+
     Get all entities (customers, vendors, freight rates) linked to a specific COA account
     """
     from app.models.customer_models import Customer, Vendor

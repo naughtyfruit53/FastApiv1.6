@@ -6,6 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 from dateutil import parser as date_parser
 from app.core.database import get_db
+from app.core.enforcement import require_access, TenantEnforcement
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.financial import InterDepartmentVoucher
@@ -24,11 +25,13 @@ async def get_inter_department_vouchers(
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get all inter department vouchers with enhanced sorting and pagination"""
+    current_user, org_id = auth
+    
     query = db.query(InterDepartmentVoucher).filter(
-        InterDepartmentVoucher.organization_id == current_user.organization_id
+        InterDepartmentVoucher.organization_id == org_id
     )
     
     if status:
@@ -52,9 +55,11 @@ async def get_inter_department_vouchers(
 async def get_next_inter_department_voucher_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get the next available inter department voucher number for a given date"""
+    current_user, org_id = auth
+    
     # Parse the voucher_date if provided
     date_to_use = None
     if voucher_date:
@@ -64,16 +69,18 @@ async def get_next_inter_department_voucher_number(
             pass
     
     return VoucherNumberService.generate_voucher_number(
-        db, "IDV", current_user.organization_id, InterDepartmentVoucher, voucher_date=date_to_use
+        db, "IDV", org_id, InterDepartmentVoucher, voucher_date=date_to_use
     )
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Check if creating a voucher with the given date would create conflicts"""
+    current_user, org_id = auth
+    
     try:
         parsed_date = date_parser.parse(voucher_date)
         # Note: This is sync version, return no conflict for now
@@ -91,12 +98,14 @@ async def check_backdated_conflict(
 async def create_inter_department_voucher(
     voucher: InterDepartmentVoucherCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "create"))
 ):
+    current_user, org_id = auth
+    
     try:
         voucher_data = voucher.dict(exclude={'items'})
         voucher_data['created_by'] = current_user.id
-        voucher_data['organization_id'] = current_user.organization_id
+        voucher_data['organization_id'] = org_id
         
         # Get the voucher date for numbering
         voucher_date = None
@@ -106,16 +115,16 @@ async def create_inter_department_voucher(
         # Generate unique voucher number if not provided or blank
         if not voucher_data.get('voucher_number') or voucher_data['voucher_number'] == '':
             voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-                db, "IDV", current_user.organization_id, InterDepartmentVoucher, voucher_date=voucher_date
+                db, "IDV", org_id, InterDepartmentVoucher, voucher_date=voucher_date
             )
         else:
             existing = db.query(InterDepartmentVoucher).filter(
-                InterDepartmentVoucher.organization_id == current_user.organization_id,
+                InterDepartmentVoucher.organization_id == org_id,
                 InterDepartmentVoucher.voucher_number == voucher_data['voucher_number']
             ).first()
             if existing:
                 voucher_data['voucher_number'] = VoucherNumberService.generate_voucher_number(
-                    db, "IDV", current_user.organization_id, InterDepartmentVoucher, voucher_date=voucher_date
+                    db, "IDV", org_id, InterDepartmentVoucher, voucher_date=voucher_date
                 )
         
         db_voucher = InterDepartmentVoucher(**voucher_data)
@@ -145,11 +154,13 @@ async def create_inter_department_voucher(
 async def get_inter_department_voucher(
     voucher_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "read"))
 ):
+    current_user, org_id = auth
+    
     voucher = db.query(InterDepartmentVoucher).filter(
         InterDepartmentVoucher.id == voucher_id,
-        InterDepartmentVoucher.organization_id == current_user.organization_id
+        InterDepartmentVoucher.organization_id == org_id
     ).first()
     if not voucher:
         raise HTTPException(status_code=404, detail="Inter department voucher not found")
@@ -160,12 +171,14 @@ async def update_inter_department_voucher(
     voucher_id: int,
     voucher_update: InterDepartmentVoucherUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "update"))
 ):
+    current_user, org_id = auth
+    
     try:
         voucher = db.query(InterDepartmentVoucher).filter(
             InterDepartmentVoucher.id == voucher_id,
-            InterDepartmentVoucher.organization_id == current_user.organization_id
+            InterDepartmentVoucher.organization_id == org_id
         ).first()
         if not voucher:
             raise HTTPException(status_code=404, detail="Inter department voucher not found")
@@ -202,12 +215,14 @@ async def update_inter_department_voucher(
 async def delete_inter_department_voucher(
     voucher_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("voucher", "delete"))
 ):
+    current_user, org_id = auth
+    
     try:
         voucher = db.query(InterDepartmentVoucher).filter(
             InterDepartmentVoucher.id == voucher_id,
-            InterDepartmentVoucher.organization_id == current_user.organization_id
+            InterDepartmentVoucher.organization_id == org_id
         ).first()
         if not voucher:
             raise HTTPException(status_code=404, detail="Inter department voucher not found")

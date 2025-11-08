@@ -1,11 +1,20 @@
 # app/models/user_models.py
 
+"""
+User Models
+Defines models for users, organizations, and companies
+"""
+
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 from typing import List, Optional
 from datetime import datetime, date
+from typing import TYPE_CHECKING
+
+# Import entitlement models to resolve relationships (moved outside TYPE_CHECKING for runtime)
+from app.models.entitlement_models import OrgEntitlement, OrgSubentitlement, EntitlementEvent
 
 # Platform User Model - For SaaS platform-level users (kept here, removed from base.py)
 class PlatformUser(Base):
@@ -19,7 +28,7 @@ class PlatformUser(Base):
 
     # User details
     full_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    role: Mapped[str] = mapped_column(String, nullable=False, default="super_admin") # super_admin, platform_admin
+    role: Mapped[str] = mapped_column(String, nullable=False, default="super_admin") # super_admin, app_admin
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Temporary master password support
@@ -68,7 +77,7 @@ class Organization(Base):
     state: Mapped[str] = mapped_column(String, nullable=False)
     pin_code: Mapped[str] = mapped_column(String, nullable=False)
     country: Mapped[str] = mapped_column(String, nullable=False, default="India")
-    state_code: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    state_code: Mapped[str] = mapped_column(String, nullable=False)  # Required for GST calculation
 
     # Legal details
     gst_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -94,8 +103,9 @@ class Organization(Base):
     date_format: Mapped[str] = mapped_column(String, default="DD/MM/YYYY")
     financial_year_start: Mapped[str] = mapped_column(String, default="04/01") # April 1st
 
-    # Module Access Control - Organization level module enablement
+    # Module Access Control - Organization level module enable/disable
     enabled_modules: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {
+        # Core Business Modules
         "CRM": True,
         "ERP": True, 
         "HR": True,
@@ -103,7 +113,30 @@ class Organization(Base):
         "Service": True,
         "Analytics": True,
         "Finance": True,
-        # Removed "Mail": True as custom mail module is replaced by SnappyMail
+        
+        # Extended Modules
+        "Manufacturing": True,
+        "Procurement": True,
+        "Project": True,
+        "Asset": True,
+        "Transport": True,
+        "SEO": True,
+        "Marketing": True,
+        "Payroll": True,
+        "Talent": True,
+        
+        # Advanced Modules
+        "Workflow": True,
+        "Integration": True,
+        "AI_Analytics": True,
+        "Streaming_Analytics": True,
+        "AB_Test": True,
+        "Website_Agent": True,
+        "Email": True,
+        "Calendar": True,
+        "Task_Management": True,
+        "Order_Book": True,
+        "Exhibition": True,
     }) # Modules enabled for this organization
 
     # Onboarding status
@@ -334,7 +367,7 @@ class Organization(Base):
         back_populates="organization"
     )
     
-    # Task Management relationships
+    # Task Management Relationships
     tasks: Mapped[List["Task"]] = relationship(
         "Task",
         back_populates="organization"
@@ -344,7 +377,7 @@ class Organization(Base):
         back_populates="organization"
     )
     
-    # Calendar Management relationships
+    # Calendar Management Relationships
     calendar_events: Mapped[List["CalendarEvent"]] = relationship(
         "CalendarEvent",
         back_populates="organization"
@@ -393,7 +426,25 @@ class Organization(Base):
     # RBAC relationships
     service_roles: Mapped[List["ServiceRole"]] = relationship(
         "ServiceRole",
+        primaryjoin="Organization.id == ServiceRole.organization_id",
         back_populates="organization"
+    )
+
+    # Entitlement relationships
+    org_entitlements: Mapped[List[OrgEntitlement]] = relationship(
+        OrgEntitlement,
+        back_populates="organization",
+        cascade="all, delete-orphan"
+    )
+    org_subentitlements: Mapped[List[OrgSubentitlement]] = relationship(
+        OrgSubentitlement,
+        back_populates="organization",
+        cascade="all, delete-orphan"
+    )
+    entitlement_events: Mapped[List[EntitlementEvent]] = relationship(
+        EntitlementEvent,
+        back_populates="organization",
+        cascade="all, delete-orphan"
     )
 
     __table_args__ = (
@@ -419,7 +470,13 @@ class User(Base):
 
     # User details
     full_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    role: Mapped[str] = mapped_column(String, nullable=False, default="executive") # executive, manager, management, super_admin, org_admin
+    # NEW ROLE SYSTEM: Only 4 org-wide roles: org_admin, management, manager, executive
+    # org_admin: Full access based on entitlement only (no RBAC)
+    # management: Full owner-like access via RBAC (except Org Admin creation)
+    # manager: Module-level access assigned at creation/management
+    # executive: Submodule-level access based on reporting manager's modules
+    role: Mapped[str] = mapped_column(String, nullable=False, default="executive") # org_admin, management, manager, executive (super_admin for platform-level only)
+    role_id = Column(Integer, ForeignKey('roles.id'), nullable=True)
     department: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     designation: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     employee_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -430,21 +487,45 @@ class User(Base):
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
     has_stock_access: Mapped[bool] = mapped_column(Boolean, default=True) # Module access for stock functionality
 
-    # Module Access Control - User level module assignments
+    # Module Access Control - User level module enablement
     assigned_modules: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=lambda: {
+        # Core Business Modules
         "CRM": True,
-        "ERP": True,
+        "ERP": True, 
         "HR": True,
         "Inventory": True,
         "Service": True,
         "Analytics": True,
         "Finance": True,
-        # Removed "Mail": True as custom mail module is replaced by SnappyMail
+        
+        # Extended Modules
+        "Manufacturing": True,
+        "Procurement": True,
+        "Project": True,
+        "Asset": True,
+        "Transport": True,
+        "SEO": True,
+        "Marketing": True,
+        "Payroll": True,
+        "Talent": True,
+        
+        # Advanced Modules
+        "Workflow": True,
+        "Integration": True,
+        "AI_Analytics": True,
+        "Streaming_Analytics": True,
+        "AB_Test": True,
+        "Website_Agent": True,
+        "Email": True,
+        "Calendar": True,
+        "Task_Management": True,
+        "Order_Book": True,
+        "Exhibition": True,
     }) # Modules assigned to this user (subset of org enabled modules)
 
     # Executive-specific fields
     reporting_manager_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_user_reporting_manager_id"), nullable=True, index=True)
-    sub_module_permissions: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # {module: [sub_module1, sub_module2]} for executives
+    sub_module_permissions: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True) # {module: {submodule: [actions]}} for executives - inherited from manager
 
     # Temporary master password support
     temp_password_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Temporary password hash
@@ -576,12 +657,7 @@ class User(Base):
         back_populates="user"
     )
 
-    # SnappyMail Configuration (one-to-one per user) - Use fully qualified path to avoid registry conflict
-    snappymail_config: Mapped[Optional["SnappyMailConfig"]] = relationship(
-        "SnappyMailConfig",
-        back_populates="user",
-        uselist=False
-    )
+    # SnappyMail relationship removed - integration discontinued
 
     # RBAC relationships
     service_roles: Mapped[List["UserServiceRole"]] = relationship(
@@ -589,6 +665,8 @@ class User(Base):
         foreign_keys="UserServiceRole.user_id",
         back_populates="user"
     )
+
+    role_obj = relationship("Role", back_populates="users")
 
     __table_args__ = (
         # Unique email per organization

@@ -12,11 +12,9 @@ from datetime import datetime
 import logging
 
 from app.core.database import get_db
-from app.core.tenant import require_current_organization_id
+from app.core.enforcement import require_access
 from app.models.customer_models import Customer
 from app.models.user_models import User
-from app.core.security import get_current_user as core_get_current_user
-from app.services.rbac import RBACService
 from pydantic import BaseModel, EmailStr, Field
 
 logger = logging.getLogger(__name__)
@@ -92,11 +90,12 @@ async def get_accounts(
     type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("account", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get all accounts with filtering and pagination"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(Customer).where(Customer.organization_id == org_id)
         
@@ -145,11 +144,12 @@ async def get_accounts(
 @router.post("", response_model=AccountResponse)
 async def create_account(
     account_data: AccountCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("account", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new account"""
+    current_user, org_id = auth
+    
     try:
         # Create account using Customer model
         account_dict = account_data.model_dump()
@@ -202,11 +202,12 @@ async def create_account(
 @router.get("/{account_id}", response_model=AccountResponse)
 async def get_account(
     account_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("account", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get a specific account"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(Customer).where(
             and_(Customer.id == account_id, Customer.organization_id == org_id)
@@ -238,11 +239,12 @@ async def get_account(
 async def update_account(
     account_data: AccountUpdate,
     account_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("account", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update an account"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(Customer).where(
             and_(Customer.id == account_id, Customer.organization_id == org_id)
@@ -311,11 +313,12 @@ async def update_account(
 @router.delete("/{account_id}")
 async def delete_account(
     account_id: int = Path(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(core_get_current_user),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("account", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Delete an account"""
+    current_user, org_id = auth
+    
     try:
         stmt = select(Customer).where(
             and_(Customer.id == account_id, Customer.organization_id == org_id)

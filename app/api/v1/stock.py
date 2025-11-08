@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from typing import List, Optional, Dict, Any
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id, validate_company_setup
+from app.core.enforcement import require_access
+from app.core.org_restrictions import validate_company_setup
 from app.models import User, Stock, Product, Organization, Company, InventoryTransaction, PurchaseVoucher, Vendor
 from app.schemas.stock import (
     StockCreate, StockUpdate, StockInDB, StockWithProduct,
@@ -19,6 +19,12 @@ from datetime import datetime, timedelta
 import logging
 import pytz
 
+# NEW: Import for entitlement check
+from app.api.deps.entitlements import require_permission_with_entitlement
+
+# NEW: Import for tenant enforcement
+from app.core.tenant import require_current_organization_id, TenantQueryMixin
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -31,7 +37,8 @@ async def get_stock(
     search: str = Query("", description="Search term for stock items"),
     show_zero: bool = Query(True, description="Show items with zero quantity"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule for alignment
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.read", "inventory"))
 ):
     """
     Get stock information with product details
@@ -43,6 +50,8 @@ async def get_stock(
     
     This endpoint implements enhanced access control for stock module visibility.
     """
+    current_user, org_id = auth
+    
     logger.info(f"Stock endpoint accessed by user {current_user.email} (ID: {current_user.id})")
     logger.info(f"User role: {current_user.role}, is_super_admin: {getattr(current_user, 'is_super_admin', False)}")
     logger.info(f"User organization_id: {getattr(current_user, 'organization_id', None)}")
@@ -59,7 +68,7 @@ async def get_stock(
             )
         
         is_super_admin = getattr(current_user, 'is_super_admin', False)
-        org_id = current_user.organization_id if not is_super_admin else None
+        org_id = org_id if not is_super_admin else None
         
         if not is_super_admin and org_id is None:
             logger.error(f"User {current_user.email} has no organization_id set")
@@ -162,12 +171,14 @@ async def get_stock(
 @router.get("/low-stock", response_model=List[StockWithProduct])
 async def get_low_stock(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.read", "inventory"))
 ):
     """Get products with low stock (below reorder level) with product details, including products without stock entries"""
+    current_user, org_id = auth
+
     logger.info(f"Low stock endpoint accessed by user {current_user.email}")
     
-    # Check stock module access for standard users
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
         logger.warning(f"Standard user {current_user.email} denied access to low stock - no stock module access")
         raise HTTPException(
@@ -185,7 +196,7 @@ async def get_low_stock(
             Product.reorder_level > 0
         )
     else:
-        org_id = current_user.organization_id
+        org_id = org_id
         if not org_id:
             logger.error(f"User {current_user.email} has no organization_id set")
             raise HTTPException(
@@ -249,9 +260,12 @@ async def get_stock_movements(
     recent: bool = Query(True, description="Show only recent movements (last 30 days)"),
     product_id: Optional[int] = Query(None, description="Filter by specific product ID"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.read", "inventory"))
 ):
     """Get stock movement history (inventory transactions)"""
+    current_user, org_id = auth
+
     logger.info(f"Stock movements endpoint accessed by user {current_user.email}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -264,7 +278,7 @@ async def get_stock_movements(
     stmt = select(InventoryTransaction)
     
     if not current_user.is_super_admin:
-        org_id = current_user.organization_id
+        org_id = org_id
         if org_id is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -309,9 +323,12 @@ async def get_stock_movements(
 async def get_last_vendor_for_product(
     product_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.read", "inventory"))
 ):
     """Get the last vendor who supplied this product"""
+    current_user, org_id = auth
+
     logger.info(f"Last vendor endpoint accessed by user {current_user.email} for product {product_id}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -332,7 +349,7 @@ async def get_last_vendor_for_product(
         return None
     
     if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(last_purchase, current_user.organization_id)
+        TenantQueryMixin.ensure_tenant_access(last_purchase, org_id)
     
     stmt_vendor = select(Vendor).where(Vendor.id == last_purchase.vendor_id)
     result_vendor = await db.execute(stmt_vendor)
@@ -351,9 +368,12 @@ async def get_last_vendor_for_product(
 async def get_product_stock(
     product_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.read", "inventory"))
 ):
     """Get stock for specific product"""
+    current_user, org_id = auth
+
     logger.info(f"Product stock endpoint accessed by user {current_user.email} for product {product_id}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -378,7 +398,7 @@ async def get_product_stock(
             )
         
         if not current_user.is_super_admin:
-            TenantQueryMixin.ensure_tenant_access(product, current_user.organization_id)
+            TenantQueryMixin.ensure_tenant_access(product, org_id)
         
         return StockInDB(
             id=0,
@@ -391,7 +411,7 @@ async def get_product_stock(
         )
     
     if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(stock, current_user.organization_id)
+        TenantQueryMixin.ensure_tenant_access(stock, org_id)
     
     return stock
 
@@ -399,9 +419,12 @@ async def get_product_stock(
 async def create_stock_entry(
     stock: StockCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.create", "inventory"))
 ):
     """Create new stock entry"""
+    current_user, org_id = auth
+
     logger.info(f"Create stock entry accessed by user {current_user.email}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -411,7 +434,7 @@ async def create_stock_entry(
             detail="Access denied. You do not have permission to manage stock information."
         )
         
-    org_id = require_current_organization_id(current_user)
+    # Use org_id from auth dep (no redundant call)
     
     stmt = select(Product).where(Product.id == stock.product_id)
     result = await db.execute(stmt)
@@ -423,7 +446,7 @@ async def create_stock_entry(
         )
     
     if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(product, current_user.organization_id)
+        TenantQueryMixin.ensure_tenant_access(product, org_id)
     
     stmt = select(Stock).where(
         Stock.product_id == stock.product_id,
@@ -454,9 +477,12 @@ async def update_stock(
     product_id: int,
     stock_update: StockUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.update", "inventory"))
 ):
     """Update stock for a product"""
+    current_user, org_id = auth
+
     logger.info(f"Update stock endpoint accessed by user {current_user.email} for product {product_id}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -466,7 +492,7 @@ async def update_stock(
             detail="Access denied. You do not have permission to manage stock information."
         )
         
-    org_id = require_current_organization_id(current_user)
+    # Use org_id from auth dep (no redundant call)
         
     stmt = select(Stock).where(Stock.product_id == product_id)
     result = await db.execute(stmt)
@@ -507,9 +533,12 @@ async def adjust_stock(
     product_id: int,
     adjustment: StockAdjustment,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.create", "inventory"))
 ):
     """Enhanced stock quantity adjustment with detailed response"""
+    current_user, org_id = auth
+
     logger.info(f"Adjust stock endpoint accessed by user {current_user.email} for product {product_id}")
     
     if current_user.role == "standard_user" and not getattr(current_user, 'has_stock_access', True):
@@ -519,7 +548,7 @@ async def adjust_stock(
             detail="Access denied. You do not have permission to manage stock information."
         )
         
-    org_id = require_current_organization_id(current_user)
+    # Use org_id from auth dep (no redundant call)
         
     stmt = select(Stock).where(Stock.product_id == product_id)
     result = await db.execute(stmt)
@@ -586,9 +615,12 @@ async def bulk_import_stock(
     mode: str = "replace",
     organization_id: Optional[int] = Query(None, description="Organization ID (only for super admins)"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.create", "inventory"))
 ):
     """Enhanced bulk import stock entries from Excel file with comprehensive validation and mode selection"""
+    current_user, org_id = auth
+
     
     logger.info(f"[bulk_import_stock] Starting import for user {current_user.id} ({current_user.email})")
     logger.info(f"[bulk_import_stock] User role: {current_user.role}, is_super_admin: {getattr(current_user, 'is_super_admin', False)}")
@@ -611,10 +643,10 @@ async def bulk_import_stock(
                 detail="Specified organization not found"
             )
     else:
-        if organization_id is not None and organization_id != current_user.organization_id:
+        if organization_id is not None and organization_id != org_id:
             logger.warning(f"[bulk_import_stock] User {current_user.email} attempted to specify different org_id: {organization_id}, ignoring")
         
-        org_id = require_current_organization_id(current_user)
+        # Use org_id from auth dep (no redundant call)
         logger.info(f"[bulk_import_stock] Regular user importing for their org_id: {org_id}")
 
     await validate_company_setup(db, org_id)
@@ -886,9 +918,12 @@ async def bulk_import_stock(
 async def import_stock_excel(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.create", "inventory"))
 ):
     """Import stock entries from Excel file - alias for bulk import"""
+    current_user, org_id = auth
+
     return await bulk_import_stock(file, db=db, current_user=current_user)
 
 @router.get("/template/excel")
@@ -912,10 +947,13 @@ async def export_stock_excel(
     product_id: int = None,
     low_stock_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "inventory.read", "inventory"))
 ):
     """Export stock to Excel"""
-    org_id = require_current_organization_id(current_user)
+    current_user, org_id = auth
+
+    # Use org_id from auth dep (no redundant call)
     
     stmt = select(Stock).join(Product)
     

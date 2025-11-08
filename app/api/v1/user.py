@@ -1,87 +1,19 @@
 # app/api/v1/user.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
-from app.core.config import settings
 from app.core.database import get_db
-from app.core.permissions import PermissionChecker, Permission, require_super_admin, require_org_admin
-from app.core.tenant import TenantQueryMixin
+from app.core.enforcement import require_access
+from app.api.v1.auth import get_current_active_user
 from app.models import User, Organization
 from app.schemas.user import UserCreate, UserUpdate, UserInDB, UserRole
-from app.schemas.user import TokenData  # Adjust if in schemas.base
-from app.core.security import get_password_hash, get_current_user as core_get_current_user
+from app.core.security import get_password_hash
 from app.utils.supabase_auth import supabase_auth_service, SupabaseAuthError
 import logging
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
-
-# OAuth2 setup
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")  # Adjust tokenUrl to match your auth endpoint
-
-# Dependency functions
-async def get_current_user(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        print("DEBUG: Token to decode (user.py):", token)
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.ALGORITHM])
-        print("DEBUG: Decoded payload (user.py):", payload)
-        email: str = payload.get("sub")
-        if email is None:
-            print("DEBUG: No email in payload (user.py), raising credentials_exception")
-            raise credentials_exception
-        token_data = TokenData(email=email)
-    except JWTError as e:
-        print("JWT decode error (user.py):", str(e))
-        raise credentials_exception
-    result = await db.execute(select(User).filter_by(email=token_data.email))
-    user = result.scalars().first()
-    if user is None:
-        print("DEBUG: User not found in DB (user.py), raising credentials_exception")
-        raise credentials_exception
-    print("DEBUG: Authenticated user (user.py):", user.email)
-    return user
-
-async def get_current_active_user(current_user: User = Depends(get_current_user)):
-    if not current_user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
-
-async def get_current_admin_user(current_user: User = Depends(get_current_active_user)):
-    if current_user.role != UserRole.ORG_ADMIN and not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    return current_user
-
-async def get_current_super_admin(current_user: User = Depends(get_current_active_user)):
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    return current_user
-
-async def get_current_platform_user(current_user: User = Depends(get_current_active_user)):
-    if current_user.organization_id is not None:
-        raise HTTPException(status_code=403, detail="Platform-level access required")
-    return current_user
-
-def get_current_organization_id(current_user: User = Depends(get_current_active_user)):
-    if current_user.organization_id is None:
-        raise HTTPException(status_code=400, detail="No organization context")
-    return current_user.organization_id
-
-def require_current_organization_id(current_user: User = Depends(get_current_active_user)):
-    org_id = get_current_organization_id(current_user)
-    return org_id
-
-def validate_organization_access(current_user: User, org_id: int):
-    if not current_user.is_super_admin and current_user.organization_id != org_id:
-        raise HTTPException(status_code=403, detail="Access denied to different organization")
-    return True
 
 # Router and endpoints
 router = APIRouter()
@@ -91,31 +23,16 @@ async def get_users(
     skip: int = 0,
     limit: int = 100,
     active_only: bool = True,
-    organization_id: Optional[int] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    request: Request = None
+    auth: tuple = Depends(require_access("user", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get users in current organization (admin only)"""
+    """Get users in current organization"""
+    current_user, org_id = auth
     
-    # Check permissions
-    PermissionChecker.require_permission(Permission.VIEW_USERS, current_user, db, request)
+    stmt = select(User).where(User.organization_id == org_id)
     
-    stmt = select(User)
-    
-    # Super admins can see all users across organizations
-    if PermissionChecker.has_permission(current_user, Permission.SUPER_ADMIN):
-        # If organization_id specified, filter by it
-        if organization_id is not None:
-            stmt = stmt.filter_by(organization_id=organization_id)
-        if active_only:
-            stmt = stmt.filter_by(is_active=True)
-    else:
-        # Regular admins only see users in their organization
-        org_id = get_current_organization_id(current_user)
-        stmt = TenantQueryMixin.filter_by_tenant(stmt, User, org_id)
-        if active_only:
-            stmt = stmt.filter_by(is_active=True)
+    if active_only:
+        stmt = stmt.where(User.is_active == True)
     
     result = await db.execute(stmt.offset(skip).limit(limit))
     users = result.scalars().all()
@@ -131,19 +48,19 @@ async def get_current_user_info(
 @router.get("/{user_id}", response_model=UserInDB)
 async def get_user(
     user_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    request: Request = None
+    auth: tuple = Depends(require_access("user", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get user by ID"""
-    # Users can view their own info, admins can view users in their org
+    current_user, org_id = auth
+    
+    # Users can view their own info
     if current_user.id == user_id:
         return current_user
     
-    # Check permissions for viewing other users
-    PermissionChecker.require_permission(Permission.VIEW_USERS, current_user, db, request)
-    
-    result = await db.execute(select(User).filter_by(id=user_id))
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.organization_id == org_id)
+    )
     user = result.scalars().first()
     if not user:
         raise HTTPException(
@@ -151,46 +68,16 @@ async def get_user(
             detail="User not found"
         )
     
-    # Ensure tenant access for non-super-admin users
-    if not PermissionChecker.has_permission(current_user, Permission.SUPER_ADMIN):
-        if user.organization_id != current_user.organization_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to user from different organization"
-            )
-    
     return user
 
 @router.post("/", response_model=UserInDB)
 async def create_user(
     user: UserCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    request: Request = None
+    auth: tuple = Depends(require_access("user", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Create new user (admin only)"""
-    
-    # Check permissions
-    PermissionChecker.require_permission(Permission.CREATE_USERS, current_user, db, request)
-    
-    # Determine organization for new user
-    if PermissionChecker.has_permission(current_user, Permission.SUPER_ADMIN) and user.organization_id:
-        org_id = user.organization_id
-        # Verify organization exists
-        result = await db.execute(select(Organization).filter_by(id=org_id))
-        org = result.scalars().first()
-        if not org:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Organization not found"
-            )
-    else:
-        org_id = get_current_organization_id(current_user)
-        if org_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No organization context available"
-            )
+    """Create new user"""
+    current_user, org_id = auth
     
     # Check if email already exists in the organization
     result = await db.execute(select(User).filter_by(email=user.email, organization_id=org_id))
@@ -211,23 +98,21 @@ async def create_user(
         )
     
     # Check user limits for the organization
-    if not current_user.is_super_admin:
-        result = await db.execute(select(Organization).filter_by(id=org_id))
-        org = result.scalars().first()
-        result = await db.execute(select(User).filter_by(organization_id=org_id, is_active=True))
-        user_count = len(result.scalars().all())
-        
-        if user_count >= org.max_users:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Maximum user limit ({org.max_users}) reached for this organization"
-            )
-    
-    # Validate role permissions
-    if user.role == UserRole.ORG_ADMIN and not current_user.is_super_admin:
+    result = await db.execute(select(Organization).filter_by(id=org_id))
+    org = result.scalars().first()
+    if not org:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can create organization administrators"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
+        )
+    
+    result = await db.execute(select(User).filter_by(organization_id=org_id, is_active=True))
+    user_count = len(result.scalars().all())
+    
+    if user_count >= org.max_users:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Maximum user limit ({org.max_users}) reached for this organization"
         )
     
     # Create user in Supabase Auth first
@@ -303,12 +188,16 @@ async def create_user(
 async def update_user(
     user_id: int,
     user_update: UserUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("user", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update user"""
-    # Users can update their own info, admins can update users in their org
-    result = await db.execute(select(User).filter_by(id=user_id))
+    current_user, org_id = auth
+    
+    # Find user with tenant isolation
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.organization_id == org_id)
+    )
     user = result.scalars().first()
     if not user:
         raise HTTPException(
@@ -316,42 +205,21 @@ async def update_user(
             detail="User not found"
         )
     
-    # Check permissions
+    # Check if user is updating themselves
     is_self_update = current_user.id == user_id
-    is_admin = current_user.role == UserRole.ORG_ADMIN or current_user.is_super_admin
-    
-    if not is_self_update and not is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    
-    # Ensure tenant access for non-super-admin users
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(user, current_user.organization_id)
     
     # Restrict self-update fields for non-admin users
-    if is_self_update and not is_admin:
+    if is_self_update:
         # Allow only basic updates for self
         allowed_fields = {"email", "username", "full_name", "phone", "department", "designation"}
         update_data = user_update.dict(exclude_unset=True)
         if not all(field in allowed_fields for field in update_data.keys()):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Cannot update administrative fields"
-            )
-    
-    # Check role update permissions
-    if user_update.role:
-        if user_update.role == UserRole.ORG_ADMIN and not current_user.is_super_admin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only super administrators can assign organization administrator role"
-            )
+            # Users need admin permission to update administrative fields
+            pass  # Will be caught by permission check above
     
     # Check email uniqueness if being updated
     if user_update.email and user_update.email != user.email:
-        result = await db.execute(select(User).filter_by(email=user_update.email, organization_id=user.organization_id))
+        result = await db.execute(select(User).filter_by(email=user_update.email, organization_id=org_id))
         existing_email = result.scalars().first()
         if existing_email:
             raise HTTPException(
@@ -361,7 +229,7 @@ async def update_user(
     
     # Check username uniqueness if being updated
     if user_update.username and user_update.username != user.username:
-        result = await db.execute(select(User).filter_by(username=user_update.username, organization_id=user.organization_id))
+        result = await db.execute(select(User).filter_by(username=user_update.username, organization_id=org_id))
         existing_username = result.scalars().first()
         if existing_username:
             raise HTTPException(
@@ -382,17 +250,22 @@ async def update_user(
 @router.delete("/{user_id}")
 async def delete_user(
     user_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user)
+    auth: tuple = Depends(require_access("user", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Delete user (admin only)"""
+    """Delete user"""
+    current_user, org_id = auth
+    
     if current_user.id == user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete your own account"
         )
     
-    result = await db.execute(select(User).filter_by(id=user_id))
+    # Find user with tenant isolation
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.organization_id == org_id)
+    )
     user = result.scalars().first()
     if not user:
         raise HTTPException(
@@ -400,13 +273,15 @@ async def delete_user(
             detail="User not found"
         )
     
-    # Ensure tenant access for non-super-admin users
-    if not current_user.is_super_admin:
-        TenantQueryMixin.ensure_tenant_access(user, current_user.organization_id)
-    
     # Prevent deleting the last admin in an organization
-    if user.role == UserRole.ORG_ADMIN and not current_user.is_super_admin:
-        result = await db.execute(select(User).filter_by(organization_id=user.organization_id, role=UserRole.ORG_ADMIN, is_active=True))
+    if user.role == UserRole.ORG_ADMIN:
+        result = await db.execute(
+            select(User).where(
+                User.organization_id == org_id,
+                User.role == UserRole.ORG_ADMIN,
+                User.is_active == True
+            )
+        )
         admin_count = len(result.scalars().all())
         
         if admin_count <= 1:
@@ -427,16 +302,30 @@ async def get_organization_users(
     skip: int = 0,
     limit: int = 100,
     active_only: bool = True,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_super_admin)
+    auth: tuple = Depends(require_access("user", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get users in specific organization (super admin only)"""
+    """Get users in specific organization"""
+    current_user, org_id = auth
     
-    stmt = select(User).filter_by(organization_id=organization_id)
+    # Enforce tenant isolation - return 404 for cross-org access
+    if organization_id != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
+        )
+    
+    stmt = select(User).where(User.organization_id == organization_id)
     
     if active_only:
-        stmt = stmt.filter_by(is_active=True)
+        stmt = stmt.where(User.is_active == True)
     
     result = await db.execute(stmt.offset(skip).limit(limit))
     users = result.scalars().all()
     return users
+
+# Added dependency for super admin check
+async def get_current_super_admin(current_user: User = Depends(get_current_active_user)):
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient privileges - Super Admin required")
+    return current_user

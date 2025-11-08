@@ -40,6 +40,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface Organization {
   id: number;
   name: string;
@@ -246,6 +247,7 @@ const OrganizationsPage: React.FC = () => {
     );
   }
   return (
+    <ProtectedPage moduleKey="admin" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box
         sx={{
@@ -461,6 +463,8 @@ const OrganizationsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
+
   );
 };
 export default OrganizationsPage;

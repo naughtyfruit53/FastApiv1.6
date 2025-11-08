@@ -15,19 +15,11 @@ import { Analytics, TrendingUp, People, Assessment } from "@mui/icons-material";
 import { useAuth } from "../../hooks/useAuth";
 import CustomerAnalytics from "../../components/CustomerAnalytics";
 import { canManageUsers } from "../../types/user.types";
+import { ProtectedPage } from "../../components/ProtectedPage";
 const CustomerAnalyticsPage: NextPage = () => {
   const { user } = useAuth();
-  if (!user || !canManageUsers(user)) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          Access Denied: You don&apos;t have permission to view customer
-          analytics.
-        </Alert>
-      </Container>
-    );
-  }
   return (
+    <ProtectedPage moduleKey="analytics" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -101,6 +93,7 @@ const CustomerAnalyticsPage: NextPage = () => {
         </Grid>
       </Grid>
     </Container>
+    </ProtectedPage>
   );
 };
 export default CustomerAnalyticsPage;

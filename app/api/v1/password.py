@@ -112,13 +112,20 @@ async def change_password(
         
         logger.info(f"[CHECK] Password validation successful, updating password for user {current_user.email}")  # FIXED: Removed emoji
         
-        # Update password
-        current_user.hashed_password = get_password_hash(password_data.new_password)
-        current_user.must_change_password = False
-        current_user.force_password_reset = False
+        # Fetch the ORM User instance from DB
+        result = await db.execute(select(User).where(User.id == current_user.id))
+        user_orm = result.scalar_one_or_none()
+        if not user_orm:
+            logger.error(f"[X] User ORM not found for id {current_user.id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Update password on ORM instance
+        user_orm.hashed_password = get_password_hash(password_data.new_password)
+        user_orm.must_change_password = False
+        user_orm.force_password_reset = False
         
         # Clear temporary password if exists
-        await UserService.clear_temporary_password(db, current_user)
+        await UserService.clear_temporary_password(db, user_orm)
         
         await db.commit()
         
@@ -364,9 +371,14 @@ async def admin_reset_password(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        new_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
-        hashed_password = get_password_hash(new_password)
-        user.hashed_password = hashed_password
+        # Generate OTP instead of temp password
+        otp_service = OTPService(db)
+        success = await otp_service.generate_and_send_otp(reset_data.user_email, "admin_password_reset")
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to generate and send OTP")
+        
+        # Set flags for mandatory change on next login
+        user.force_password_reset = True
         user.must_change_password = True
         
         # Access organization_name BEFORE commit to avoid lazy load after - FIXED
@@ -376,18 +388,10 @@ async def admin_reset_password(
         
         logger.debug(f"Starting email send for admin reset to {user.email}")  # ADDED: Debug log
         
-        # Send email (system-level: app password reset)
-        success, error = await system_email_service.send_password_reset_email(
-            user_email=reset_data.user_email,
-            user_name=user.full_name or user.email,
-            new_password=new_password,
-            reset_by=current_user.email,
-            organization_name=organization_name,
-            organization_id=user.organization_id,
-            user_id=user.id
-        )
+        # Send OTP email (system-level: app password reset) - no need for separate email since OTP is sent
+        logger.info(f"OTP sent for admin password reset to {user.email}")
         
-        # Log successful password reset with enhanced details
+        # Log successful password reset attempt
         log_password_change(user.email, current_user.email, True)
         log_security_event(
             "Admin Password Reset Success",
@@ -396,11 +400,11 @@ async def admin_reset_password(
         )
         
         return AdminPasswordResetResponse(
-            message="Password reset successfully",
+            message="Password reset initiated successfully. OTP sent to user email.",
             target_email=user.email,
-            new_password=new_password,
-            email_sent=success,
-            email_error=error,
+            new_password=None,  # No temp password, use OTP
+            email_sent=True,
+            email_error=None,
             must_change_password=True
         )
         

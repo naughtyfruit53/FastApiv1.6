@@ -26,6 +26,7 @@ import {
   DragIndicator as DragIcon,
 } from "@mui/icons-material";
 import { crmService } from "../../services/crmService";
+import { ProtectedPage } from "../../components/ProtectedPage";
 interface PipelineStage {
   id: string;
   name: string;
@@ -218,6 +219,7 @@ const SalesPipeline: React.FC = () => {
     );
   }
   return (
+    <ProtectedPage moduleKey="sales" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Sales Pipeline
@@ -480,6 +482,8 @@ const SalesPipeline: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </ProtectedPage>
   );
 };
+
 export default SalesPipeline;

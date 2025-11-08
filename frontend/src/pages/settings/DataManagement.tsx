@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Security } from "@mui/icons-material";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 const DataManagement: React.FC = () => {
   const { user } = useAuth();
@@ -55,18 +56,25 @@ const DataManagement: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Data Management
-      </Typography>
-      <Alert severity="warning" sx={{ mb: 2 }}>
-        As god superadmin (naughtyfruit53@gmail.com), you can perform a factory default reset which erases all
-        app data.
-      </Alert>
-      <Button variant="contained" color="error" onClick={handleFactoryDefault}>
-        Factory Default - Reset Entire App
-      </Button>
-    </Box>
+    <ProtectedPage
+      moduleKey="admin"
+      action="write"
+      customCheck={(pc) => pc.checkIsSuperAdmin()}
+      accessDeniedMessage="Only super admins can access data management"
+    >
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Data Management
+        </Typography>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          As super admin, you can perform a factory default reset which erases all app data.
+          This operation requires special permissions and cannot be undone.
+        </Alert>
+        <Button variant="contained" color="error" onClick={handleFactoryDefault}>
+          Factory Default - Reset Entire App
+        </Button>
+      </Box>
+    </ProtectedPage>
   );
 };
 

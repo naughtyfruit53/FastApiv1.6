@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 import AddOpportunityModal from '../../components/AddOpportunityModal';
 import { crmService } from '../../services/crmService';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface Opportunity {
   id: number;
@@ -150,6 +151,7 @@ const OpportunityTracking: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="sales" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
         Opportunity Tracking
@@ -300,6 +302,7 @@ const OpportunityTracking: React.FC = () => {
         loading={addLoading}
       />
     </Container>
+    </ProtectedPage>
   );
 };
 

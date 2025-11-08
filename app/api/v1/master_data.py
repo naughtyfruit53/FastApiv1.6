@@ -14,9 +14,8 @@ from decimal import Decimal
 import logging
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.tenant import validate_company_setup
-from app.core.org_restrictions import require_current_organization_id
+from app.core.enforcement import require_access
+
 from app.models.user_models import User
 from app.models.master_data_models import (
     Category, Unit, TaxCode, PaymentTermsExtended
@@ -32,21 +31,11 @@ from app.schemas.master_data import (
 )
 from app.services.master_service import search_hsn_codes  # Added import for HSN search
 
+# NEW: Import for entitlement check
+from app.api.deps.entitlements import require_permission_with_entitlement
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-# Lazy imports to avoid circular imports
-def get_rbac(db: AsyncSession = Depends(get_db)):
-    from app.services.rbac import RBACService
-    return RBACService(db)
-
-def require_permission(perm: str):
-    async def dependency(current_user: User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
-        rbac = get_rbac(db)
-        if not await rbac.user_has_service_permission(current_user.id, perm):
-            raise HTTPException(status_code=403, detail=f"Insufficient permissions: {perm} required")
-        return current_user
-    return dependency
 
 
 class MasterDataService:
@@ -75,8 +64,8 @@ class MasterDataService:
         if category.parent_category_id is None:
             return f"/{category.id}/"
         
-        result = await db.execute(select(Category).filter_by(id=category.parent_category_id))
-        parent = result.scalars().first()
+        parent_result = await db.execute(select(Category).filter_by(id=category.parent_category_id))
+        parent = parent_result.scalars().first()
         if parent:
             parent_path = parent.path or await MasterDataService.calculate_category_path(parent, db)
             return f"{parent_path}{category.id}/"
@@ -133,11 +122,12 @@ class MasterDataService:
 @router.get("/dashboard", response_model=MasterDataStats)
 async def get_master_data_dashboard(
     company_id: Optional[int] = Query(None, description="Filter by specific company"),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    # CHANGED: Use entitlement with submodule (assuming master_data under erp)
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get master data dashboard statistics"""
+    current_user, organization_id = auth
     try:
         # Base queries with organization filter
         category_stmt = select(Category).filter_by(organization_id=organization_id)
@@ -196,11 +186,12 @@ async def get_categories(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     category_filter: CategoryFilter = Depends(),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get categories with filtering and pagination"""
+    current_user, organization_id = auth
     try:
         stmt = select(Category).filter_by(organization_id=organization_id)
         
@@ -249,11 +240,12 @@ async def get_categories(
 @router.post("/categories", response_model=CategoryResponse)
 async def create_category(
     category_data: CategoryCreate,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new category"""
+    current_user, organization_id = auth
     try:
         # Check for duplicate name
         existing_result = await db.execute(select(Category).filter_by(
@@ -324,11 +316,12 @@ async def create_category(
 @router.get("/categories/{category_id}", response_model=CategoryResponse)
 async def get_category(
     category_id: int,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific category"""
+    current_user, organization_id = auth
     result = await db.execute(select(Category).filter_by(
         id=category_id,
         organization_id=organization_id
@@ -345,11 +338,12 @@ async def get_category(
 async def update_category(
     category_id: int,
     category_data: CategoryUpdate,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.update", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Update a category"""
+    current_user, organization_id = auth
     try:
         result = await db.execute(select(Category).filter_by(
             id=category_id,
@@ -399,11 +393,12 @@ async def update_category(
 @router.delete("/categories/{category_id}")
 async def delete_category(
     category_id: int,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.delete", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Delete a category"""
+    current_user, organization_id = auth
     try:
         result = await db.execute(select(Category).filter_by(
             id=category_id,
@@ -446,11 +441,12 @@ async def get_units(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     unit_filter: UnitFilter = Depends(),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get units with filtering and pagination"""
+    current_user, organization_id = auth
     try:
         stmt = select(Unit).filter_by(organization_id=organization_id)
         
@@ -499,11 +495,12 @@ async def get_units(
 @router.post("/units", response_model=UnitResponse)
 async def create_unit(
     unit_data: UnitCreate,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new unit"""
+    current_user, organization_id = auth
     try:
         # Check for duplicate name or symbol
         existing_result = await db.execute(select(Unit).filter_by(organization_id=organization_id).where(
@@ -568,11 +565,12 @@ async def create_unit(
 @router.get("/units/{unit_id}", response_model=UnitResponse)
 async def get_unit(
     unit_id: int,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific unit"""
+    current_user, organization_id = auth
     result = await db.execute(select(Unit).filter_by(
         id=unit_id,
         organization_id=organization_id
@@ -589,11 +587,12 @@ async def get_unit(
 async def update_unit(
     unit_id: int,
     unit_data: UnitUpdate,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.update", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Update an existing unit"""
+    current_user, organization_id = auth
     try:
         result = await db.execute(select(Unit).filter_by(
             id=unit_id,
@@ -642,11 +641,12 @@ async def update_unit(
 @router.delete("/units/{unit_id}")
 async def delete_unit(
     unit_id: int,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.delete", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Delete a unit"""
+    current_user, organization_id = auth
     try:
         result = await db.execute(select(Unit).filter_by(
             id=unit_id,
@@ -677,11 +677,12 @@ async def delete_unit(
 @router.post("/units/convert", response_model=UnitConversion)
 async def convert_units(
     conversion_data: UnitConversion,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Convert value between units"""
+    current_user, organization_id = auth
     try:
         from_result = await db.execute(select(Unit).filter_by(
             id=conversion_data.from_unit_id,
@@ -721,11 +722,12 @@ async def get_tax_codes(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     tax_filter: TaxCodeFilter = Depends(),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get tax codes with filtering and pagination"""
+    current_user, organization_id = auth
     try:
         stmt = select(TaxCode).filter_by(organization_id=organization_id)
         
@@ -774,11 +776,12 @@ async def get_tax_codes(
 @router.post("/tax-codes", response_model=TaxCodeResponse)
 async def create_tax_code(
     tax_code_data: TaxCodeCreate,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Create a new tax code"""
+    current_user, organization_id = auth
     try:
         # Check for duplicate code
         existing_result = await db.execute(select(TaxCode).filter_by(
@@ -829,11 +832,12 @@ async def create_tax_code(
 @router.get("/tax-codes/{tax_code_id}", response_model=TaxCodeResponse)
 async def get_tax_code(
     tax_code_id: int,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific tax code"""
+    current_user, organization_id = auth
     result = await db.execute(select(TaxCode).filter_by(
         id=tax_code_id,
         organization_id=organization_id
@@ -850,11 +854,12 @@ async def get_tax_code(
 async def update_tax_code(
     tax_code_id: int,
     tax_code_data: TaxCodeUpdate,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.update", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Update an existing tax code"""
+    current_user, organization_id = auth
     try:
         result = await db.execute(select(TaxCode).filter_by(
             id=tax_code_id,
@@ -903,11 +908,12 @@ async def update_tax_code(
 @router.delete("/tax-codes/{tax_code_id}")
 async def delete_tax_code(
     tax_code_id: int,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.delete", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Delete a tax code"""
+    current_user, organization_id = auth
     try:
         result = await db.execute(select(TaxCode).filter_by(
             id=tax_code_id,
@@ -938,11 +944,12 @@ async def delete_tax_code(
 @router.post("/tax-codes/calculate", response_model=TaxCalculation)
 async def calculate_tax(
     tax_calculation: TaxCalculation,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Calculate tax for a given amount"""
+    current_user, organization_id = auth
     try:
         result = await db.execute(select(TaxCode).filter_by(
             id=tax_calculation.tax_code_id,
@@ -978,11 +985,12 @@ async def get_payment_terms(
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=1000),
     payment_terms_filter: PaymentTermsExtendedFilter = Depends(),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get payment terms with filtering and pagination"""
+    current_user, organization_id = auth
     try:
         stmt = select(PaymentTermsExtended).filter_by(organization_id=organization_id)
         
@@ -1028,11 +1036,12 @@ async def get_payment_terms(
 @router.post("/payment-terms", response_model=PaymentTermsExtendedResponse)
 async def create_payment_terms(
     payment_terms_data: PaymentTermsExtendedCreate,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Create new payment terms"""
+    current_user, organization_id = auth
     try:
         # Check for duplicate name
         existing_result = await db.execute(select(PaymentTermsExtended).filter_by(
@@ -1068,7 +1077,7 @@ async def create_payment_terms(
             is_default=payment_terms_data.is_default,
             early_payment_discount_days=payment_terms_data.early_payment_discount_days,
             early_payment_discount_rate=payment_terms_data.early_payment_discount_rate,
-            late_payment_penalty_days=payment_terms_data.late_payment_penalty_days,
+            late_payment_penalty_penalty_days=payment_terms_data.late_payment_penalty_penalty_days,
             late_payment_penalty_rate=payment_terms_data.late_payment_penalty_rate,
             payment_schedule=payment_terms_data.payment_schedule,
             credit_limit_amount=payment_terms_data.credit_limit_amount,
@@ -1098,11 +1107,12 @@ async def create_payment_terms(
 @router.get("/payment-terms/{payment_terms_id}", response_model=PaymentTermsExtendedResponse)
 async def get_payment_terms_by_id(
     payment_terms_id: int,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get a specific payment terms"""
+    current_user, organization_id = auth
     result = await db.execute(select(PaymentTermsExtended).filter_by(
         id=payment_terms_id,
         organization_id=organization_id
@@ -1119,11 +1129,12 @@ async def get_payment_terms_by_id(
 async def update_payment_terms(
     payment_terms_id: int,
     payment_terms_data: PaymentTermsExtendedUpdate,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.update", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Update an existing payment terms"""
+    current_user, organization_id = auth
     try:
         result = await db.execute(select(PaymentTermsExtended).filter_by(
             id=payment_terms_id,
@@ -1172,11 +1183,12 @@ async def update_payment_terms(
 @router.delete("/payment-terms/{payment_terms_id}")
 async def delete_payment_terms(
     payment_terms_id: int,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.delete", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Delete a payment terms"""
+    current_user, organization_id = auth
     try:
         result = await db.execute(select(PaymentTermsExtended).filter_by(
             id=payment_terms_id,
@@ -1211,11 +1223,12 @@ async def delete_payment_terms(
 @router.post("/categories/bulk-update")
 async def bulk_update_categories(
     bulk_update: BulkCategoryUpdate,
-    current_user: User = Depends(get_current_active_user),
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.create", "master_data")),
     db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Bulk update categories"""
+    current_user, organization_id = auth
     try:
         update_fields = bulk_update.updates.dict(exclude_unset=True)
         if not update_fields:
@@ -1251,11 +1264,12 @@ async def bulk_update_categories(
 async def hsn_search(
     query: str = Query(..., min_length=2, description="HSN code or description to search (min 2 chars)"),
     limit: int = Query(10, ge=1, le=50, description="Max results to return"),
-    current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
+    # CHANGED: Use entitlement with submodule
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "master_data.read", "master_data")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Search HSN codes with dynamic GST rates from external API"""
+    current_user, organization_id = auth
     try:
         results = await search_hsn_codes(query, limit)
         return results

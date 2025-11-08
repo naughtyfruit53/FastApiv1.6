@@ -7,6 +7,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, date, timedelta
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.core.tenant import require_current_organization_id
 from app.models.marketing_models import (
     Campaign, Promotion, PromotionRedemption, CampaignAnalytics,
@@ -67,7 +68,7 @@ async def get_campaigns(
     assigned_to_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "read"))
 ):
     """Get all campaigns with filtering and pagination"""
     query = db.query(Campaign).filter(Campaign.organization_id == org_id)
@@ -99,9 +100,11 @@ async def get_campaigns(
 async def create_campaign(
     campaign_data: CampaignCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "create"))
 ):
     """Create a new campaign"""
+    current_user, org_id = auth
+
     # Generate unique campaign number
     campaign_number = generate_campaign_number(db, org_id)
     
@@ -122,9 +125,11 @@ async def create_campaign(
 async def get_campaign(
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "read"))
 ):
     """Get a specific campaign"""
+    current_user, org_id = auth
+
     campaign = db.query(Campaign).filter(
         and_(Campaign.id == campaign_id, Campaign.organization_id == org_id)
     ).first()
@@ -139,9 +144,11 @@ async def update_campaign(
     campaign_data: CampaignUpdate,
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "update"))
 ):
     """Update a campaign"""
+    current_user, org_id = auth
+
     campaign = db.query(Campaign).filter(
         and_(Campaign.id == campaign_id, Campaign.organization_id == org_id)
     ).first()
@@ -164,9 +171,11 @@ async def update_campaign(
 async def delete_campaign(
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "delete"))
 ):
     """Delete a campaign"""
+    current_user, org_id = auth
+
     campaign = db.query(Campaign).filter(
         and_(Campaign.id == campaign_id, Campaign.organization_id == org_id)
     ).first()
@@ -186,9 +195,11 @@ async def delete_campaign(
 async def launch_campaign(
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "create"))
 ):
     """Launch a campaign"""
+    current_user, org_id = auth
+
     campaign = db.query(Campaign).filter(
         and_(Campaign.id == campaign_id, Campaign.organization_id == org_id)
     ).first()
@@ -210,9 +221,11 @@ async def launch_campaign(
 async def pause_campaign(
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "create"))
 ):
     """Pause a campaign"""
+    current_user, org_id = auth
+
     campaign = db.query(Campaign).filter(
         and_(Campaign.id == campaign_id, Campaign.organization_id == org_id)
     ).first()
@@ -232,9 +245,11 @@ async def pause_campaign(
 async def complete_campaign(
     campaign_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "create"))
 ):
     """Complete a campaign"""
+    current_user, org_id = auth
+
     campaign = db.query(Campaign).filter(
         and_(Campaign.id == campaign_id, Campaign.organization_id == org_id)
     ).first()
@@ -262,9 +277,11 @@ async def get_promotions(
     campaign_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "read"))
 ):
     """Get all promotions with filtering and pagination"""
+    current_user, org_id = auth
+
     query = db.query(Promotion).filter(Promotion.organization_id == org_id)
     
     # Apply filters
@@ -295,9 +312,11 @@ async def get_promotions(
 async def create_promotion(
     promotion_data: PromotionCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "create"))
 ):
     """Create a new promotion"""
+    current_user, org_id = auth
+
     # Check if promotion code already exists
     existing = db.query(Promotion).filter(
         and_(
@@ -325,9 +344,11 @@ async def create_promotion(
 async def get_promotion(
     promotion_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "read"))
 ):
     """Get a specific promotion"""
+    current_user, org_id = auth
+
     promotion = db.query(Promotion).filter(
         and_(Promotion.id == promotion_id, Promotion.organization_id == org_id)
     ).first()
@@ -342,9 +363,11 @@ async def update_promotion(
     promotion_data: PromotionUpdate,
     promotion_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "update"))
 ):
     """Update a promotion"""
+    current_user, org_id = auth
+
     promotion = db.query(Promotion).filter(
         and_(Promotion.id == promotion_id, Promotion.organization_id == org_id)
     ).first()
@@ -367,9 +390,11 @@ async def update_promotion(
 async def delete_promotion(
     promotion_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "delete"))
 ):
     """Delete a promotion"""
+    current_user, org_id = auth
+
     promotion = db.query(Promotion).filter(
         and_(Promotion.id == promotion_id, Promotion.organization_id == org_id)
     ).first()
@@ -396,9 +421,11 @@ async def validate_promotion(
     order_amount: float = Query(..., ge=0),
     customer_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "read"))
 ):
     """Validate a promotion code"""
+    current_user, org_id = auth
+
     promotion = db.query(Promotion).filter(
         and_(
             Promotion.organization_id == org_id,
@@ -464,9 +491,11 @@ async def redeem_promotion(
     redemption_data: PromotionRedemptionCreate,
     promotion_id: int = Path(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "create"))
 ):
     """Redeem a promotion"""
+    current_user, org_id = auth
+
     promotion = db.query(Promotion).filter(
         and_(Promotion.id == promotion_id, Promotion.organization_id == org_id)
     ).first()
@@ -535,9 +564,11 @@ async def get_marketing_lists(
     is_active: Optional[bool] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "read"))
 ):
     """Get all marketing lists"""
+    current_user, org_id = auth
+
     query = db.query(MarketingList).filter(MarketingList.organization_id == org_id)
     
     # Apply filters
@@ -565,9 +596,11 @@ async def get_marketing_lists(
 async def create_marketing_list(
     list_data: MarketingListCreate,
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "create"))
 ):
     """Create a new marketing list"""
+    current_user, org_id = auth
+
     # Check if list name already exists
     existing = db.query(MarketingList).filter(
         and_(
@@ -597,9 +630,11 @@ async def get_marketing_analytics(
     period_start: date = Query(...),
     period_end: date = Query(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "read"))
 ):
     """Get marketing analytics for a specific period"""
+    current_user, org_id = auth
+
     # Campaign analytics
     campaigns_query = db.query(Campaign).filter(
         and_(
@@ -674,9 +709,11 @@ async def get_promotion_analytics(
     period_start: date = Query(...),
     period_end: date = Query(...),
     db: Session = Depends(get_db),
-    org_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("marketing", "read"))
 ):
     """Get promotion analytics for a specific period"""
+    current_user, org_id = auth
+
     # Promotion analytics
     promotions_query = db.query(Promotion).filter(
         and_(

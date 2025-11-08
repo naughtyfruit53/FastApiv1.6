@@ -41,6 +41,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getEmails, updateEmailStatus, triggerSync, Email, MailAccount, EmailListResponse } from '../../services/emailService';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface InboxProps {
   selectedAccount?: MailAccount;
@@ -185,6 +186,7 @@ const Inbox: React.FC<InboxProps> = ({
   };
 
   return (
+    <ProtectedPage moduleKey="email" action="read">
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Toolbar */}
       <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
@@ -374,6 +376,7 @@ const Inbox: React.FC<InboxProps> = ({
         </MenuList>
       </Menu>
     </Box>
+    </ProtectedPage>
   );
 };
 

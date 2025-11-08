@@ -1,3 +1,4 @@
+# app/core/database.py
 """
 Database configuration and session management
 """
@@ -58,18 +59,23 @@ def load_schema_cache():
         if os.path.exists(_cache_file):
             with open(_cache_file, 'r') as f:
                 cache = json.load(f)
+                # Robust type checking
                 tables = cache.get('tables', {})
+                if not isinstance(tables, dict):
+                    logger.warning("Invalid tables cache format, clearing")
+                    tables = {}
                 types = cache.get('types', {})
-                # Validate cache format
-                if not (isinstance(tables, dict) and isinstance(types, dict)):
-                    logger.warning("Corrupted schema cache detected, clearing cache")
-                    clear_schema_cache()
-                    return
-                _table_existence_cache.update({k: v for k, v in tables.items()[:_MAX_CACHE_SIZE]})
-                _type_existence_cache.update({k: v for k, v in types.items()[:_MAX_CACHE_SIZE]})
+                if not isinstance(types, dict):
+                    logger.warning("Invalid types cache format, clearing")
+                    types = {}
+                _table_existence_cache.update({k: bool(v) for k, v in list(tables.items())[:_MAX_CACHE_SIZE]})
+                _type_existence_cache.update({k: bool(v) for k, v in list(types.items())[:_MAX_CACHE_SIZE]})
                 logger.info(f"Loaded schema cache: {len(_table_existence_cache)} tables, {len(_type_existence_cache)} types")
     except json.JSONDecodeError:
         logger.warning("Corrupted schema cache file, clearing cache")
+        clear_schema_cache()
+    except TypeError as e:
+        logger.warning(f"Schema cache type error ({str(e)}), clearing cache")
         clear_schema_cache()
     except Exception as e:
         logger.warning(f"Failed to load schema cache: {str(e)}")
@@ -357,45 +363,51 @@ async def create_tables():
             return
     try:
         async with asyncio.timeout(_REFLECTION_TIMEOUT_SECONDS * 2):
-            async with AsyncSessionLocal() as db:
-                critical_tables = ['users', 'organizations', 'platform_users', 'purchase_orders']
-                critical_types = ['ratelimittype', 'webhookstatus', 'integrationtype']
-                # Use asyncio.gather to handle async generator
-                tables_exist_checks = await asyncio.gather(
-                    *(check_table_exists(db, table) for table in critical_tables)
+            # Use separate sessions for each check
+            critical_tables = ['users', 'organizations', 'platform_users', 'purchase_orders']
+            critical_types = ['ratelimittype', 'webhookstatus', 'integrationtype']
+            tables_exist = True
+            for table in critical_tables:
+                async with AsyncSessionLocal() as session:
+                    exists = await check_table_exists(session, table)
+                    if not exists:
+                        tables_exist = False
+                        break
+            types_exist = True
+            for type_name in critical_types:
+                async with AsyncSessionLocal() as session:
+                    exists = await check_type_exists(session, type_name)
+                    if not exists:
+                        types_exist = False
+                        break
+            if not (tables_exist and types_exist):
+                logger.info("Creating database tables for critical models...")
+                try:
+                    log_memory_usage("Before model imports")
+                except NameError:
+                    logger.warning("log_memory_usage not available, skipping memory logging")
+                from app.models.vouchers.purchase import PurchaseOrder, GoodsReceiptNote, PurchaseVoucher, PurchaseReturn
+                from app.models.user_models import User
+                try:
+                    log_memory_usage("After model imports")
+                except NameError:
+                    logger.warning("log_memory_usage not available, skipping memory logging")
+                Base.metadata.create_all(
+                    bind=sync_engine,
+                    tables=[
+                        User.__table__,
+                        PurchaseOrder.__table__,
+                        GoodsReceiptNote.__table__,
+                        PurchaseVoucher.__table__,
+                        PurchaseReturn.__table__,
+                    ]
                 )
-                tables_exist = all(tables_exist_checks)
-                types_exist_checks = await asyncio.gather(
-                    *(check_type_exists(db, type_name) for type_name in critical_types)
-                )
-                types_exist = all(types_exist_checks)
-                if not (tables_exist and types_exist):
-                    logger.info("Creating database tables for critical models...")
-                    try:
-                        log_memory_usage("Before model imports")
-                    except NameError:
-                        logger.warning("log_memory_usage not available, skipping memory logging")
-                    from app.models.vouchers.purchase import PurchaseOrder, GoodsReceiptNote, PurchaseVoucher, PurchaseReturn
-                    from app.models.user_models import User
-                    try:
-                        log_memory_usage("After model imports")
-                    except NameError:
-                        logger.warning("log_memory_usage not available, skipping memory logging")
-                    Base.metadata.create_all(
-                        bind=sync_engine,
-                        tables=[
-                            User.__table__,
-                            PurchaseOrder.__table__,
-                            GoodsReceiptNote.__table__,
-                            PurchaseVoucher.__table__,
-                            PurchaseReturn.__table__,
-                        ]
-                    )
-                    logger.info("Database tables for critical models created successfully")
-                    await db.execute(text("INSERT INTO schema_version (version) VALUES (:version)"), {"version": "1.0"})
-                    await db.commit()
-                else:
-                    logger.info("Critical tables and types already exist, skipping creation")
+                async with AsyncSessionLocal() as session:
+                    await session.execute(text("INSERT INTO schema_version (version) VALUES (:version)"), {"version": "1.0"})
+                    await session.commit()
+                logger.info("Database tables for critical models created successfully")
+            else:
+                logger.info("Critical tables and types already exist, skipping creation")
     except asyncio.TimeoutError:
         logger.error(f"Timeout during table creation after {_REFLECTION_TIMEOUT_SECONDS * 2} seconds")
         raise

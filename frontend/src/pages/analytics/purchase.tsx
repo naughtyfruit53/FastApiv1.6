@@ -20,21 +20,13 @@ import {
   LocalShipping,
 } from "@mui/icons-material";
 import { useAuth } from "../../context/AuthContext";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 const PurchaseAnalyticsPage: NextPage = () => {
   const { user } = useAuth();
 
-  if (!user) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">
-          Please log in to access purchase analytics.
-        </Alert>
-      </Container>
-    );
-  }
-
   return (
+    <ProtectedPage moduleKey="analytics" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Typography
@@ -124,6 +116,7 @@ const PurchaseAnalyticsPage: NextPage = () => {
         </Grid>
       </Grid>
     </Container>
+    </ProtectedPage>
   );
 };
 

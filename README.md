@@ -2,7 +2,50 @@
 
 A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the TritIQ Business Suite system.
 
+## 🚀 Quick Start
+
+### First Time Setup
+
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env with your database credentials
+
+# 3. Run migrations
+alembic upgrade head
+
+# 4. Start application (auto-seeding happens on first boot)
+uvicorn app.main:app --reload
+```
+
+**That's it!** The system automatically seeds baseline data on first boot. 
+
+**Default login**: `naughtyfruit53@gmail.com` / `123456` (change after first login)
+
+📖 **[Complete User Guide](./USER_GUIDE.md)** | **[Database Reset Guide](./DATABASE_RESET_GUIDE.md)**
+
+---
+
 ## 🌟 Latest Enhancements
+
+### 🗄️ Unified Database Management (v1.6.2)
+- **Unified Seeding**: Single script (`scripts/seed_all.py`) for all baseline data
+- **Auto-Seed on Boot**: Automatically seeds missing data on application startup
+- **Idempotent Operations**: Safe to run multiple times without duplicates
+- **Complete Reset Script**: SQL script to drop all tables (`sql/drop_all_tables.sql`)
+- **Streamlined Documentation**: Cleaned up 360+ docs, kept only essential guides
+- **Comprehensive User Guide**: New `USER_GUIDE.md` with complete workflows
+
+**What gets auto-seeded:**
+- Super admin user
+- Module and submodule taxonomy
+- RBAC permissions and roles
+- Chart of Accounts
+- Voucher format templates
+- Organization defaults
 
 ### 🔒 Authentication Loop Fix (v1.6.1)
 - **Standardized Token Storage**: All frontend files now use consistent `ACCESS_TOKEN_KEY` constant

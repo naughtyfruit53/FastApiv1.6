@@ -1,4 +1,5 @@
-// src/context/AuthContext.tsx
+// frontend/src/context/AuthContext.tsx
+
 import React, {
   createContext,
   useContext,
@@ -13,27 +14,237 @@ import { authService } from "../services/authService";
 import { User, getDisplayRole } from "../types/user.types";
 import { markAuthReady, resetAuthReady } from "../lib/api";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY } from "../constants/auth";
+import { Role } from "../types/rbac.types";
+import { rbacService } from "../services/rbacService";
+
+interface UserPermissions {
+  role: string;
+  roles: Role[];
+  permissions: string[];
+  modules: string[];
+  submodules: Record<string, string[]>;
+}
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   displayRole: string | null;
+  userPermissions: UserPermissions | null;
   login: (loginResponse: any) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   updateUser: (updatedData: Partial<User>) => void;
   isOrgContextReady: boolean;
   getAuthHeaders: () => { Authorization?: string };
+  refreshPermissions: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);  // Changed to named export
 
 export function AuthProvider({ children }: { children: ReactNode }): any {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
   const router = useRouter();
   const hasFetched = useRef(false); // Prevent multiple fetches
   const isFetching = useRef(false); // Prevent concurrent fetches
+
+  const computeRoleBasedPermissions = (user: User | null): UserPermissions => {
+    if (!user) {
+      return {
+        role: 'user',
+        roles: [],
+        permissions: [],
+        modules: [],
+        submodules: {},
+      };
+    }
+
+    // STRICT ENFORCEMENT: No computed permissions for super admins
+    // All permissions must come from backend RBAC system
+    const isOrgSuperAdmin = ['super_admin', 'admin', 'management'].includes(user.role || '');
+
+    let permissions: string[] = [];
+    let modules: string[] = [];
+    let submodules: Record<string, string[]> = {};
+
+    if (isOrgSuperAdmin) {
+      // Organization admin has most permissions except super admin functions
+      permissions = [
+        'dashboard.*',
+        'finance.*',
+        'sales.*',
+        'crm.*',
+        'inventory.*',
+        'hr.*',
+        'service.*',
+        'reports.*',
+        'settings.view',
+        'settings.manageUsers',
+        'settings.manageRoles',
+        'settings.manageOrganization',
+        'master_data.*',
+        'manufacturing.*',
+        'vouchers.*',
+        'accounting.*',
+        'reportsAnalytics.*',
+        'aiAnalytics.*',
+        'marketing.*',
+        'projects.*',
+        'tasks_calendar.*',
+        'email.*',
+      ];
+      modules = [
+        'dashboard', 'finance', 'sales', 'crm', 'inventory', 'hr', 'service', 'reports', 'settings',
+        'master_data', 'manufacturing', 'vouchers', 'accounting', 'reportsAnalytics', 'aiAnalytics',
+        'marketing', 'projects', 'tasks_calendar', 'email'
+      ];
+      submodules = modules.reduce((acc, mod) => {
+        acc[mod] = ['all'];
+        return acc;
+      }, {} as Record<string, string[]>);
+    } else {
+      // Regular user - permissions based on role
+      switch (user.role) {
+        case 'finance_manager':
+          permissions = ['dashboard.view', 'finance.*', 'reports.viewFinancial'];
+          modules = ['dashboard', 'finance', 'reports'];
+          submodules = {
+            dashboard: ['view'],
+            finance: ['view', 'create', 'edit', 'delete', 'viewReports', 'manageBanks'],
+            reports: ['viewFinancial'],
+          };
+          break;
+        case 'sales_manager':
+          permissions = ['dashboard.view', 'sales.*', 'crm.*', 'reports.viewOperational'];
+          modules = ['dashboard', 'sales', 'crm', 'reports'];
+          submodules = {
+            dashboard: ['view'],
+            sales: ['view', 'create', 'edit', 'delete', 'manageCustomers', 'viewAnalytics'],
+            crm: ['view', 'create', 'edit', 'delete', 'manageContacts', 'viewAnalytics'],
+            reports: ['viewOperational'],
+          };
+          break;
+        case 'inventory_manager':
+          permissions = ['dashboard.view', 'inventory.*', 'reports.viewOperational'];
+          modules = ['dashboard', 'inventory', 'reports'];
+          submodules = {
+            dashboard: ['view'],
+            inventory: ['view', 'create', 'edit', 'delete', 'manageStock', 'viewReports'],
+            reports: ['viewOperational'],
+          };
+          break;
+        case 'hr_manager':
+          permissions = ['dashboard.view', 'hr.*', 'reports.viewOperational'];
+          modules = ['dashboard', 'hr', 'reports'];
+          submodules = {
+            dashboard: ['view'],
+            hr: ['view', 'create', 'edit', 'delete', 'manageEmployees', 'viewPayroll'],
+            reports: ['viewOperational'],
+          };
+          break;
+        case 'service_manager':
+          permissions = ['dashboard.view', 'service.*', 'reports.viewOperational'];
+          modules = ['dashboard', 'service', 'reports'];
+          submodules = {
+            dashboard: ['view'],
+            service: ['view', 'create', 'edit', 'delete', 'manageTickets', 'viewAnalytics'],
+            reports: ['viewOperational'],
+          };
+          break;
+        case 'user':
+        case 'employee':
+        default:
+          permissions = [
+            'dashboard.view',
+            'master_data.view',
+            'inventory.view',
+            'manufacturing.view',
+            'vouchers.view',
+            'finance.view',
+            'accounting.view',
+            'reportsAnalytics.view',
+            'aiAnalytics.view',
+            'sales.view',
+            'marketing.view',
+            'service.view',
+            'projects.view',
+            'hrManagement.view',
+            'tasks_calendar.view',
+            'email.view',
+          ];
+          modules = [
+            'dashboard', 'master_data', 'inventory', 'manufacturing', 'vouchers',
+            'finance', 'accounting', 'reportsAnalytics', 'aiAnalytics', 'sales',
+            'marketing', 'service', 'projects', 'hrManagement', 'tasks_calendar', 'email'
+          ];
+          submodules = modules.reduce((acc, mod) => {
+            acc[mod] = ['view'];
+            return acc;
+          }, {} as Record<string, string[]>);
+          break;
+      }
+    }
+
+    return {
+      role: user.role || 'user',
+      roles: [],
+      permissions,
+      modules,
+      submodules,
+    };
+  };
+
+  // Fetch user permissions from RBAC service
+  const fetchUserPermissions = async (userId: number) => {
+    try {
+      console.log("[AuthProvider] Fetching user permissions for user:", userId);
+      
+      // Fetch user permissions
+      const permissionsData = await rbacService.getUserPermissions(userId) || { permissions: [], modules: [], submodules: {} };
+      const rolesData = await rbacService.getUserServiceRoles(userId);
+      
+      // Compute fallback
+      const fallback = computeRoleBasedPermissions(user);
+      
+      // Ensure submodules are objects
+      const safePermissionsSubmodules = permissionsData.submodules || {};  
+      const safeFallbackSubmodules = fallback.submodules || {};  
+      
+      // Merge fetched with fallback
+      const mergedPermissions = [...new Set([...fallback.permissions, ...(permissionsData.permissions || [])])];
+      const mergedModules = [...new Set([...fallback.modules, ...(permissionsData.modules || [])])];
+      const mergedSubmodules: Record<string, string[]> = {};
+      
+      // Merge submodules
+      const allKeys = new Set([...Object.keys(safeFallbackSubmodules), ...Object.keys(safePermissionsSubmodules)]);
+      allKeys.forEach(key => {
+        mergedSubmodules[key] = [...new Set([
+          ...(safeFallbackSubmodules[key] || []),
+          ...(safePermissionsSubmodules[key] || [])
+        ])];
+      });
+
+      // Process and structure the permissions
+      const permissions: UserPermissions = {
+        role: permissionsData.role || fallback.role,
+        roles: [...new Set([...fallback.roles, ...rolesData])],
+        permissions: mergedPermissions,
+        modules: mergedModules,
+        submodules: mergedSubmodules,
+      };
+
+      setUserPermissions(permissions);
+      console.log("[AuthProvider] User permissions fetched and merged successfully");
+      return permissions;
+    } catch (error) {
+      console.error("[AuthProvider] Error fetching user permissions:", error);
+      // Set fallback permissions
+      const fallbackPermissions = computeRoleBasedPermissions(user);
+      setUserPermissions(fallbackPermissions);
+      return fallbackPermissions;
+    }
+  };
 
   // Fetch the current user from API using the token in localStorage
   const fetchUser = async (retryCount = 0) => {
@@ -49,15 +260,15 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       },
     );
     try {
-      const currentToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+      const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
       // Validate token format before proceeding
-      if (currentToken === 'null' || (currentToken && currentToken.split('.').length !== 3)) {
+      if (accessToken === 'null' || (accessToken && accessToken.split('.').length !== 3)) {
         console.log('[AuthProvider] Invalid token format detected - clearing storage');
         localStorage.removeItem(ACCESS_TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
         throw new Error('Invalid token format');
       }
-      if (!currentToken) {
+      if (!accessToken) {
         console.log("[AuthProvider] No token found in localStorage");
         throw new Error("No token found");
       }
@@ -77,11 +288,15 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         email: userData.email,
         role: userData.role,
         is_super_admin: userData.is_super_admin,
-        organization_id: userData.organization_id,
+        organization_id: userData.organization_id, // note: it's from loginResponse, not user
         must_change_password: userData.must_change_password,
       };
       setUser(newUser);
       console.log("[AuthProvider] User state updated successfully");
+      
+      // Fetch user permissions from RBAC service
+      await fetchUserPermissions(userData.id);
+      
       // Check org context for non-super-admins
       if (!userData.is_super_admin && !userData.organization_id) {
         console.error(
@@ -289,6 +504,8 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       "[AuthProvider] Stored is_super_admin:",
       loginResponse.user?.is_super_admin,
     );
+    // Clear any OTP-related fields
+    console.log("[AuthProvider] Clearing OTP-related fields");
     // Defensive: never store org_id in localStorage
     const userData = loginResponse.user;
     // Validate org context for regular users
@@ -305,11 +522,18 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       email: userData.email,
       role: userData.role,
       is_super_admin: userData.is_super_admin,
-      organization_id: userData.organization_id,
-      must_change_password: userData.must_change_password,
+      organization_id: loginResponse.organization_id, // note: it's from loginResponse, not user
+      must_change_password: loginResponse.must_change_password,
     };
     setUser(newUser);
     console.log("[AuthProvider] User state set from login response");
+
+    // Verify session immediately after setting token and user
+    await refreshUser();
+    
+    // Fetch user permissions
+    await fetchUserPermissions(userData.id);
+    
     resetAuthReady();
     markAuthReady();
     console.log("[AuthProvider] Auth ready state reset and marked");
@@ -328,6 +552,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     localStorage.removeItem(USER_ROLE_KEY);
     localStorage.removeItem(IS_SUPER_ADMIN_KEY);
     setUser(null);
+    setUserPermissions(null);
     resetAuthReady();
     console.log("[AuthProvider] Auth data cleared");
     if (router.pathname !== "/login") {
@@ -343,6 +568,13 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     await fetchUser();
   };
 
+  // Refresh permissions without fetching full user data
+  const refreshPermissions = async () => {
+    if (user) {
+      await fetchUserPermissions(user.id);
+    }
+  };
+
   // Update the user object in memory only
   const updateUser = (updatedData: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...updatedData } : null));
@@ -351,6 +583,13 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   // Get auth headers for API requests
   const getAuthHeaders = () => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    if (!token) {
+      console.warn("[AuthProvider] No token found when getting auth headers");
+    } else if (token.split('.').length !== 3) {
+      console.error("[AuthProvider] Malformed token when getting auth headers:", token.substring(0, 20) + '...');
+    } else {
+      console.log("[AuthProvider] Valid token format for auth headers");
+    }
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
@@ -475,12 +714,14 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         displayRole: user
           ? getDisplayRole(user.role, user.is_super_admin)
           : null,
+        userPermissions,
         login,
         logout,
         refreshUser,
         updateUser,
         isOrgContextReady,
         getAuthHeaders,
+        refreshPermissions,
       }}
     >
       {children}

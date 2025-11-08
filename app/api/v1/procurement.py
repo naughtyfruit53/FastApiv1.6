@@ -12,10 +12,9 @@ from datetime import datetime, date
 from decimal import Decimal
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.core.tenant import TenantQueryMixin
-from app.core.org_restrictions import require_current_organization_id, validate_company_setup
-from app.core.rbac_dependencies import check_service_permission
+from app.core.org_restrictions import validate_company_setup
 from app.models import (
     User, Organization, Vendor,
     RequestForQuotation, RFQItem, VendorRFQ, VendorQuotation, QuotationItem,
@@ -95,10 +94,11 @@ async def get_rfqs(
     status: Optional[str] = None,
     search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("procurement", "read")),
 ):
     """Get RFQs with filtering options"""
+    current_user, org_id = auth
+
     stmt = select(RequestForQuotation).where(
         RequestForQuotation.organization_id == organization_id
     ).options(joinedload(RequestForQuotation.rfq_items))
@@ -122,10 +122,11 @@ async def get_rfqs(
 async def create_rfq(
     rfq_data: RequestForQuotationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("procurement", "create")),
 ):
     """Create a new RFQ"""
+    current_user, org_id = auth
+
     # Generate RFQ number
     rfq_number = await ProcurementService.generate_rfq_number(db, organization_id)
     
@@ -184,10 +185,11 @@ async def create_rfq(
 async def get_rfq(
     rfq_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("procurement", "read")),
 ):
     """Get a specific RFQ"""
+    current_user, org_id = auth
+
     stmt = select(RequestForQuotation).where(
         RequestForQuotation.id == rfq_id,
         RequestForQuotation.organization_id == organization_id
@@ -209,10 +211,11 @@ async def update_rfq(
     rfq_id: int,
     rfq_data: RequestForQuotationUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("procurement", "update")),
 ):
     """Update an RFQ"""
+    current_user, org_id = auth
+
     stmt = select(RequestForQuotation).where(
         RequestForQuotation.id == rfq_id,
         RequestForQuotation.organization_id == organization_id
@@ -256,10 +259,11 @@ async def get_quotations(
     vendor_id: Optional[int] = None,
     is_selected: Optional[bool] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("procurement", "read")),
 ):
     """Get vendor quotations with filtering options"""
+    current_user, org_id = auth
+
     stmt = select(VendorQuotation).where(
         VendorQuotation.organization_id == organization_id
     ).options(joinedload(VendorQuotation.quotation_items))
@@ -283,10 +287,11 @@ async def get_quotations(
 async def create_quotation(
     quotation_data: VendorQuotationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("procurement", "create")),
 ):
     """Create a new vendor quotation"""
+    current_user, org_id = auth
+
     # Verify RFQ exists and is open for responses
     stmt = select(RequestForQuotation).where(
         RequestForQuotation.id == quotation_data.rfq_id,
@@ -379,10 +384,11 @@ async def get_vendor_evaluations(
     vendor_id: Optional[int] = None,
     evaluation_type: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("procurement", "read")),
 ):
     """Get vendor evaluations with filtering options"""
+    current_user, org_id = auth
+
     stmt = select(VendorEvaluation).where(
         VendorEvaluation.organization_id == organization_id
     )
@@ -403,10 +409,11 @@ async def get_vendor_evaluations(
 async def create_vendor_evaluation(
     evaluation_data: VendorEvaluationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("procurement", "create")),
 ):
     """Create a new vendor evaluation"""
+    current_user, org_id = auth
+
     evaluation = VendorEvaluation(
         organization_id=organization_id,
         evaluated_by=current_user.id,
@@ -428,10 +435,11 @@ async def get_purchase_requisitions(
     approval_status: Optional[str] = None,
     department: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("procurement", "read")),
 ):
     """Get purchase requisitions with filtering options"""
+    current_user, org_id = auth
+
     stmt = select(PurchaseRequisition).where(
         PurchaseRequisition.organization_id == organization_id
     ).options(joinedload(PurchaseRequisition.requisition_items))
@@ -452,10 +460,11 @@ async def get_purchase_requisitions(
 @router.get("/analytics/dashboard", response_model=ProcurementDashboard)
 async def get_procurement_dashboard(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-    organization_id: int = Depends(require_current_organization_id)
+    auth: tuple = Depends(require_access("procurement", "read")),
 ):
     """Get procurement dashboard analytics"""
+    current_user, org_id = auth
+
     # RFQ Analytics
     stmt_total = select(func.count(RequestForQuotation.id)).where(
         RequestForQuotation.organization_id == organization_id

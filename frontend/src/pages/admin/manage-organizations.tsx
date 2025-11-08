@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/manage-organizations.tsx
+
 "use client";
 import React, { useState } from "react";
 import {
@@ -23,6 +25,7 @@ import {
   Checkbox,
   FormControlLabel,
   FormGroup,
+  Tooltip,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import {
@@ -38,6 +41,10 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { organizationService } from "../../services/organizationService";
+import { useAuth } from "../../context/AuthContext";
+import ModuleSelectionModal from '../../components/ModuleSelectionModal';
+
+import { ProtectedPage } from '@/components/ProtectedPage';
 interface Organization {
   id: number;
   name: string;
@@ -49,10 +56,13 @@ interface Organization {
   max_users: number;
   created_at: string;
   company_details_completed: boolean;
+  enabled_modules: { [key: string]: boolean }; // Object for modules
 }
 const ManageOrganizations: React.FC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.is_super_admin || false;
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [resetDataDialogOpen, setResetDataDialogOpen] = useState(false);
@@ -66,24 +76,6 @@ const ManageOrganizations: React.FC = () => {
   const { data: organizations, isLoading, error } = useQuery({
     queryKey: ["organizations"],
     queryFn: organizationService.getAllOrganizations,
-  });
-  
-  // Fetch available modules
-  const { data: availableModulesData } = useQuery({
-    queryKey: ["available-modules"],
-    queryFn: async () => {
-      const token = localStorage.getItem("token");
-      const response = await fetch("/api/v1/organizations/available-modules", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch available modules");
-      }
-      return response.json();
-    },
   });
   
   if (error) {
@@ -101,20 +93,22 @@ const ManageOrganizations: React.FC = () => {
       orgId,
       action,
       data,
+      config,
     }: {
       orgId: number;
       action: string;
       data?: any;
+      config?: any;
     }) => {
       // Map actions to appropriate API calls
       if (action === "activate") {
         return organizationService.updateOrganizationById(orgId, {
           status: "active",
-        });
+        }, config);
       } else if (action === "hold") {
         return organizationService.updateOrganizationById(orgId, {
           status: "suspended",
-        });
+        }, config);
       } else if (action === "reset") {
         // TODO: Implement password reset API call
         console.log("Password reset for org:", orgId);
@@ -130,22 +124,8 @@ const ManageOrganizations: React.FC = () => {
     },
   });
   const resetOrgDataMutation = useMutation({
-    mutationFn: async (orgId: number) => {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`/api/organizations/reset-data`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.detail || "Failed to reset organization data",
-        );
-      }
-      return response.json();
+    mutationFn: async ({config}: {config?: any}) => {
+      return organizationService.resetOrganizationData(config);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
@@ -167,106 +147,31 @@ const ManageOrganizations: React.FC = () => {
   };
   const handleModuleControl = async (org: Organization) => {
     setSelectedOrg(org);
-    // Fetch current organization modules
+    // Fetch current organization modules using service
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`/api/v1/organizations/${org.id}/modules`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setOrgModules(
-          data.enabled_modules || {
-            CRM: true,
-            ERP: true,
-            HR: true,
-            Inventory: true,
-            Service: true,
-            Analytics: true,
-            Finance: true,
-          },
-        );
-      } else {
-        // Set default modules if API fails
-        setOrgModules({
-          CRM: true,
-          ERP: true,
-          HR: true,
-          Inventory: true,
-          Service: true,
-          Analytics: true,
-          Finance: true,
-        });
-      }
+      const config = isSuperAdmin ? {headers: {'X-Organization-ID': `${org.id}`}} : undefined;
+      const data = await organizationService.getOrganizationModules(org.id, config);
+      setOrgModules(data.enabled_modules || {});
     } catch (err) {
       console.error("Failed to fetch organization modules:", err);
-      setOrgModules({
-        CRM: true,
-        ERP: true,
-        HR: true,
-        Inventory: true,
-        Service: true,
-        Analytics: true,
-        Finance: true,
-      });
+      setOrgModules({});
     }
     setModuleControlDialogOpen(true);
   };
-  const updateModulesMutation = useMutation({
-    mutationFn: async (modules: { [key: string]: boolean }) => {
-      if (!selectedOrg) {
-        throw new Error("No organization selected");
-      }
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `/api/v1/organizations/${selectedOrg.id}/modules`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ enabled_modules: modules }),
-        },
-      );
-      if (!response.ok) {
-        throw new Error("Failed to update organization modules");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      setModuleControlDialogOpen(false);
-      setSelectedOrg(null);
-      // Show success message
-      console.log("Organization modules updated successfully");
-    },
-    onError: (error) => {
-      console.error("Failed to update organization modules:", error);
-    },
-  });
-  const handleModuleChange = (module: string, enabled: boolean) => {
-    setOrgModules((prev) => ({
-      ...prev,
-      [module]: enabled,
-    }));
-  };
-  const confirmModuleUpdate = () => {
-    updateModulesMutation.mutate(orgModules);
-  };
   const confirmAction = () => {
     if (selectedOrg && actionType) {
+      const config = isSuperAdmin ? {headers: {'X-Organization-ID': `${selectedOrg.id}`}} : undefined;
       updateOrganizationMutation.mutate({
         orgId: selectedOrg.id,
         action: actionType,
+        config,
       });
     }
   };
   const confirmResetData = () => {
     if (selectedOrg) {
-      resetOrgDataMutation.mutate(selectedOrg.id);
+      const config = isSuperAdmin ? {headers: {'X-Organization-ID': `${selectedOrg.id}`}} : undefined;
+      resetOrgDataMutation.mutate({config});
     }
   };
   const getStatusChip = (status: string) => {
@@ -283,6 +188,8 @@ const ManageOrganizations: React.FC = () => {
     return <Chip label={config.label} color={config.color} size="small" />;
   };
   return (
+
+    <ProtectedPage moduleKey="admin" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box
         sx={{
@@ -444,14 +351,29 @@ const ManageOrganizations: React.FC = () => {
                     >
                       <Visibility />
                     </IconButton>
-                    <IconButton
-                      size="small"
-                      color="secondary"
-                      onClick={() => handleModuleControl(org)}
-                      title="Module Control"
-                    >
-                      <Settings />
-                    </IconButton>
+                    {isSuperAdmin ? (
+                      <Tooltip title="Manage module entitlements (Super Admin only)">
+                        <IconButton
+                          size="small"
+                          color="secondary"
+                          onClick={() => handleModuleControl(org)}
+                        >
+                          <Settings />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="Module entitlement management requires Super Admin access">
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="secondary"
+                            disabled
+                          >
+                            <Settings />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    )}
                     <IconButton
                       size="small"
                       color="primary"
@@ -573,80 +495,19 @@ const ManageOrganizations: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      {/* Module Control Dialog */}
-      <Dialog
+      {/* Module Control Modal */}
+      <ModuleSelectionModal
         open={moduleControlDialogOpen}
         onClose={() => setModuleControlDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Module Control - {selectedOrg?.name}</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            Control which modules are enabled for this organization. Changes are
-            applied in real time.
-          </Typography>
-          <FormGroup>
-            {availableModulesData &&
-              Object.entries(availableModulesData.available_modules || {}).map(
-                ([moduleKey, moduleInfo]) => (
-                  <FormControlLabel
-                    key={moduleKey}
-                    control={
-                      <Checkbox
-                        checked={orgModules[moduleKey] || false}
-                        onChange={(e) =>
-                          handleModuleChange(moduleKey, e.target.checked)
-                        }
-                        color="primary"
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography variant="body2" fontWeight="medium">
-                          {moduleInfo.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {moduleInfo.description}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                ),
-              )}
-            {!availableModulesData &&
-              Object.entries(orgModules).map(([module, enabled]) => (
-                <FormControlLabel
-                  key={module}
-                  control={
-                    <Checkbox
-                      checked={enabled}
-                      onChange={(e) =>
-                        handleModuleChange(module, e.target.checked)
-                      }
-                      color="primary"
-                    />
-                  }
-                  label={module}
-                />
-              ))}
-          </FormGroup>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModuleControlDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={confirmModuleUpdate}
-            variant="contained"
-            color="primary"
-            disabled={updateModulesMutation.isPending}
-          >
-            {updateModulesMutation.isPending ? "Updating..." : "Update Modules"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        orgId={selectedOrg?.id}
+        orgName={selectedOrg?.name}
+        isSuperAdmin={isSuperAdmin}
+      />
     </Container>
+
+    </ProtectedPage>
+
+  
   );
 };
 export default ManageOrganizations;

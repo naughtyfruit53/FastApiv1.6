@@ -24,6 +24,7 @@ import {
 import { Refresh, Download, Print, TrendingUp, TrendingDown } from '@mui/icons-material';
 import axios from 'axios';
 import { formatCurrency } from '../../utils/currencyUtils';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface CashFlowData {
   period: { start_date: string; end_date: string };
@@ -83,13 +84,16 @@ const CashFlowPage: React.FC = () => {
 
   if (loading) {
     return (
+      <ProtectedPage moduleKey="reports" action="read">
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
       </Box>
+      </ProtectedPage>
     );
   }
 
   return (
+    <ProtectedPage moduleKey="reports" action="read">
     <Box sx={{ p: 3 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
@@ -278,6 +282,7 @@ const CashFlowPage: React.FC = () => {
         </>
       )}
     </Box>
+    </ProtectedPage>
   );
 };
 

@@ -506,7 +506,7 @@ class SystemEmailService:
                                   db: Optional[AsyncSession] = None) -> tuple[bool, Optional[str]]:
         """Send password reset email with enhanced audit logging"""
         try:
-            logger.debug(f"Preparing password reset email for {user_email}")
+            logger.debug(f"Starting password reset email for {user_email}")
             template_vars = {
                 'user_name': user_name,
                 'user_email': user_email,
@@ -593,10 +593,6 @@ class SystemEmailService:
             logger.error(error_msg)
             return False, error_msg
 
-    def generate_otp(self, length: int = 6) -> str:
-        """Generate a secure random OTP"""
-        return ''.join(secrets.choice(string.digits) for i in range(length))
-    
     async def send_otp_email(self, 
                      to_email: str, 
                      otp: str, 

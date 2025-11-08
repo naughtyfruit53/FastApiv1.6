@@ -37,6 +37,7 @@ import userService from '../../services/userService'; // Changed to default impo
 import { useRouter } from 'next/navigation';
 import SyncStatus from './sync';
 import EmailTemplates from './templates';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const EmailAccountSettings: React.FC = () => {
   const router = useRouter();
@@ -137,6 +138,7 @@ const EmailAccountSettings: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="email" action="read">
     <Box sx={{ p: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" gutterBottom>
@@ -314,6 +316,7 @@ const EmailAccountSettings: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 };
 

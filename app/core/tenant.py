@@ -294,18 +294,34 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         logger.error(f"Error validating user: {str(e)}")
         raise credentials_exception
 
-def require_current_organization_id(current_user: User = Depends(get_current_user)) -> int:
+def require_current_organization_id(current_user: User = Depends(get_current_user)) -> Optional[int]:
+    """
+    Get and enforce organization ID for the current user.
+    
+    For super_admin users: Returns None if no organization context is set, 
+    allowing endpoints to handle organization_id from path parameters.
+    
+    For regular users: Requires organization_id to be set, either from context or user.
+    
+    Returns:
+        int or None: The organization ID, or None for super_admin without context
+    
+    Raises:
+        HTTPException: If organization context is missing for regular users
+    """
     org_id = TenantContext.get_organization_id()
     if org_id is None:
         if current_user.organization_id is not None:
             TenantContext.set_organization_id(current_user.organization_id)
             org_id = current_user.organization_id
-        else:
+        elif not current_user.is_super_admin:
+            # Regular users must have organization context
             raise HTTPException(
                 status_code=400,
                 detail="No current organization specified"
             )
-    if not current_user.is_super_admin and current_user.organization_id != org_id:
+        # For super_admin, return None to allow endpoint to handle org_id from path
+    if org_id is not None and not current_user.is_super_admin and current_user.organization_id != org_id:
         raise HTTPException(
             status_code=403,
             detail="User does not belong to the requested organization"

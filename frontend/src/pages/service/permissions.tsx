@@ -10,6 +10,7 @@ import { Security } from "@mui/icons-material";
 import DashboardLayout from "../../components/DashboardLayout";
 import { useAuth } from "../../context/AuthContext";
 import RoleManagement from "../../components/RoleManagement/RoleManagement";
+import { ProtectedPage } from "@/components/ProtectedPage";
 
 export default function ServicePermissions() {
   const { user } = useAuth();
@@ -37,6 +38,7 @@ export default function ServicePermissions() {
   }
 
   return (
+    <ProtectedPage moduleKey="service" action="read">
     <DashboardLayout
       title="Service Permissions"
       subtitle="Manage permissions for Service CRM"
@@ -59,5 +61,6 @@ export default function ServicePermissions() {
         <RoleManagement />
       </Container>
     </DashboardLayout>
+    </ProtectedPage>
   );
 }

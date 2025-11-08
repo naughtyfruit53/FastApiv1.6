@@ -50,6 +50,7 @@ import { useWatch } from "react-hook-form";
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance";
 import { formatCurrency } from "../../../utils/currencyUtils";
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 const PurchaseOrderPage: React.FC = () => {
   console.count('Render: PurchaseOrderPage');
   const { company, isLoading: companyLoading, error: companyError } = useCompany();
@@ -940,11 +941,11 @@ const PurchaseOrderPage: React.FC = () => {
 
   if (isLoading || companyLoading) {
     return (
-      <Container>
+      <ProtectedPage moduleKey="procurement" action="write">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
-      </Container>
+      </ProtectedPage>
     );
   }
 

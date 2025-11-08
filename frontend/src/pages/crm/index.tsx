@@ -29,6 +29,7 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "@/context/AuthContext";
 import { crmService, Lead, Opportunity, CRMAnalytics } from "../../services";
+import { ProtectedPage } from "../../components/ProtectedPage";
 const statusColors: Record<string, string> = {
   new: "default",
   contacted: "info",
@@ -274,18 +275,19 @@ export default function CRMDashboard() {
     </TableContainer>
   );
   return (
-    <Box sx={{ p: 3 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Typography variant="h4" component="h1">
-          CRM Dashboard
-        </Typography>
+    <ProtectedPage moduleKey="crm" action="read">
+      <Box sx={{ p: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Typography variant="h4" component="h1">
+            CRM Dashboard
+          </Typography>
         <Box sx={{ display: "flex", gap: 2 }}>
           <Button
             variant="contained"
@@ -451,5 +453,6 @@ export default function CRMDashboard() {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 }

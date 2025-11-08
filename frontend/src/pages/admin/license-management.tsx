@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/license-management.tsx
+
 'use client';
 import React, { useState } from 'react';
 import {
@@ -32,6 +34,7 @@ import adminService from '../../services/adminService';
 import CreateOrganizationLicenseModal from '../../components/CreateOrganizationLicenseModal';
 import { useAuth } from '../../context/AuthContext';
 
+import { ProtectedPage } from '@/components/ProtectedPage';
 interface Organization {
   id: number;
   name: string;
@@ -50,10 +53,16 @@ const LicenseManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { user } = useAuth();
+
+  // API calls using real service
+  const { data: organizations, isLoading } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: organizationService.getAllOrganizations,
+    enabled: !!user?.is_super_admin && !user?.organization_id
+  });
 
   // Restrict to app-level accounts only (super admins without organization)
-  const { user } = useAuth();
-  
   if (!user?.is_super_admin || user?.organization_id) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -73,12 +82,6 @@ const LicenseManagement: React.FC = () => {
       </Container>
     );
   }
-
-  // API calls using real service
-  const { data: organizations, isLoading } = useQuery({
-    queryKey: ['organizations'],
-    queryFn: organizationService.getAllOrganizations
-  });
 
   const handleCreateLicense = () => {
     // License creation is handled by the modal
@@ -135,6 +138,9 @@ const LicenseManagement: React.FC = () => {
   ) || [];
 
   return (
+
+
+    <ProtectedPage moduleKey="admin" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
@@ -330,6 +336,12 @@ const LicenseManagement: React.FC = () => {
         onSuccess={handleCreateLicense}
       />
     </Container>
+
+
+    </ProtectedPage>
+
+
+  
   );
 };
 

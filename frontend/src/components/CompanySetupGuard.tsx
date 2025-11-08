@@ -1,8 +1,10 @@
 // frontend/src/components/CompanySetupGuard.tsx
+'use client'; // Added 'use client' for client-side hooks
+
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useQuery } from "@tanstack/react-query";
-import { organizationService } from "../services/organizationService";
+import { companyService } from "../services/authService";  // Changed to companyService
 import { useAuth } from "../context/AuthContext";
 import CompanyDetailsModal from "./CompanyDetailsModal";
 import { toast } from "react-toastify";
@@ -40,12 +42,12 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
 
   // Only enable query when auth is ready, token exists, and not exempt
   const {
-    data: organization,
-    isLoading: organizationLoading,
-    refetch: refetchOrganization,
+    data: company,  // Changed from organization to company
+    isLoading: companyLoading,  // Changed naming
+    refetch: refetchCompany,  // Changed naming
   } = useQuery({
-    queryKey: ["organization"],
-    queryFn: organizationService.getCurrentOrganization,
+    queryKey: ["company"],  // Changed queryKey
+    queryFn: companyService.getCurrentCompany,  // Changed to companyService
     enabled:
       !!localStorage.getItem("token") &&
       !!user &&
@@ -55,8 +57,8 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
     retry: 1,
   });
 
-  // Check if organization setup is required
-  const isOrganizationSetupRequired = !organizationLoading && organization === null;
+  // Check if company setup is required
+  const isCompanySetupRequired = !companyLoading && company === null;
 
   useEffect(() => {
     // Skip if auth loading, user not loaded, is super admin, or on exempt route
@@ -64,31 +66,31 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
       return;
     }
 
-    // Skip if organization query is still loading to avoid premature modal display
-    if (organizationLoading) {
+    // Skip if company query is still loading to avoid premature modal display
+    if (companyLoading) {
       return;
     }
 
-    // Only show modal if organization setup is actually required AND modal not already shown
-    if (isOrganizationSetupRequired && !showCompanyModal) {
+    // Only show modal if company setup is actually required AND modal not already shown
+    if (isCompanySetupRequired && !showCompanyModal) {
       setShowCompanyModal(true);
 
       // Show appropriate toast notification based on route
       if (!hasShownToast) {
         if (router.pathname === "/dashboard") {
           toast.info(
-            "Welcome! Please complete your organization setup to get started.",
+            "Welcome! Please complete your company setup to get started.",
             {
               autoClose: 5000,
-              toastId: "organization-setup-welcome",
+              toastId: "company-setup-welcome",
             },
           );
         } else if (isRestrictedRoute) {
           toast.warning(
-            "Please complete your organization setup to access this feature.",
+            "Please complete your company setup to access this feature.",
             {
               autoClose: 5000,
-              toastId: "organization-setup-required",
+              toastId: "company-setup-required",
             },
           );
         }
@@ -96,36 +98,36 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
       }
     }
 
-    // If organization data exists, ensure modal is hidden
-    if (organization && showCompanyModal) {
+    // If company data exists, ensure modal is hidden
+    if (company && showCompanyModal) {
       setShowCompanyModal(false);
     }
   }, [
     authLoading,
     user,
-    isOrganizationSetupRequired,
+    isCompanySetupRequired,
     isRestrictedRoute,
     hasShownToast,
     isExemptRoute,
-    organizationLoading,
-    organization,
+    companyLoading,
+    company,
     showCompanyModal,
   ]);
 
   const handleCompanyModalClose = () => {
-    if (isOrganizationSetupRequired) {
-      // Don't allow closing if organization setup is required
+    if (isCompanySetupRequired) {
+      // Don't allow closing if company setup is required
       return;
     }
     setShowCompanyModal(false);
   };
 
-  const handleOrganizationSetupSuccess = () => {
+  const handleCompanySetupSuccess = () => {
     setShowCompanyModal(false);
     setHasShownToast(false);
-    refetchOrganization();
+    refetchCompany();
     toast.success(
-      "Organization details saved successfully! You can now access all features.",
+      "Company details saved successfully! You can now access all features.",
       {
         autoClose: 3000,
       },
@@ -137,8 +139,8 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
     return <>{children}</>;
   }
 
-  // Show loading state while checking organization
-  if (organizationLoading) {
+  // Show loading state while checking company
+  if (companyLoading) {
     return <>{children}</>;
   }
 
@@ -146,12 +148,12 @@ const CompanySetupGuard: React.FC<CompanySetupGuardProps> = ({ children }) => {
     <>
       {children}
 
-      {/* Organization setup modal - required if no organization exists */}
+      {/* Company setup modal - required if no company exists */}
       <CompanyDetailsModal
         open={showCompanyModal}
         onClose={handleCompanyModalClose}
-        onSuccess={handleOrganizationSetupSuccess}
-        isRequired={isOrganizationSetupRequired}
+        onSuccess={handleCompanySetupSuccess}
+        isRequired={isCompanySetupRequired}
       />
     </>
   );

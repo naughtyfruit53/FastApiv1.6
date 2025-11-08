@@ -8,34 +8,61 @@ import logging
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user
 from app.models import Organization, User, Product, Customer, Vendor, Stock
 from app.schemas.user import UserRole
 from app.schemas import OrganizationUpdate, OrganizationInDB
-import logging
 from app.utils.supabase_auth import supabase_auth_service
 from app.models.rbac_models import UserServiceRole, ServiceRolePermission, ServiceRole  # Changed to absolute from rbac_models
 
 from sqlalchemy import select, delete, func  # Added imports for async queries
+from app.core.tenant import TenantContext  # Added import for TenantContext
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 module_router = router  # Alias for backward compatibility
 
+# Cache sorted valid modules at module level to avoid repeated sorting
+_VALID_MODULES_SORTED = None
+
+def get_sorted_valid_modules():
+    """Get cached sorted list of valid modules"""
+    global _VALID_MODULES_SORTED
+    if _VALID_MODULES_SORTED is None:
+        from app.core.modules_registry import get_all_modules
+        _VALID_MODULES_SORTED = sorted(get_all_modules())
+    return _VALID_MODULES_SORTED
+
 @router.get("/{organization_id:int}/modules")
 async def get_organization_modules(
     organization_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization_module", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Get organization's enabled modules"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
+    """
+    Get organization's enabled modules (read-only).
+    
+    Returns both enabled modules and list of all available modules in the system.
+    This endpoint is read-only. Only super_admin can update module entitlements
+    via the PUT endpoint.
+    
+    **Requires**: organization_module read permission (org_admin or super_admin)
+    """
+    current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        # Super admin can access any organization by explicit org_id
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
   
     result = await db.execute(select(Organization).filter(Organization.id == organization_id))
     organization = result.scalars().first()
@@ -45,31 +72,66 @@ async def get_organization_modules(
             detail="Organization not found"
         )
   
-    enabled_modules = organization.enabled_modules or {
-        "CRM": True,
-        "ERP": True,
-        "HR": True,
-        "Inventory": True,
-        "Service": True,
-        "Analytics": True,
-        "Finance": True
-    }
+    from app.core.modules_registry import get_default_enabled_modules, get_all_modules
+    
+    enabled_modules = organization.enabled_modules or get_default_enabled_modules()
+    available_modules = get_all_modules()
   
-    return {"enabled_modules": enabled_modules}
+    return {
+        "enabled_modules": enabled_modules,
+        "available_modules": available_modules,
+        "organization_id": organization_id,
+        "organization_name": organization.name
+    }
 
 @router.put("/{organization_id:int}/modules")
 async def update_organization_modules(
     organization_id: int,
     modules_data: dict,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Update organization's enabled modules (super admin only)"""
+    """
+    Update organization's enabled modules.
+    
+    **IMPORTANT**: This endpoint is restricted to super_admin only.
+    Module entitlement management is a licensing/billing operation that only
+    platform administrators can perform. Organization admins cannot activate
+    or deactivate modules for their organization.
+    
+    **Requires**: super_admin role
+    
+    Request body format:
+    {
+        "enabled_modules": {
+            "CRM": true,
+            "ERP": false,
+            "Finance": true,
+            ...
+        }
+    }
+    """
+    # Strict super_admin check - this is a licensing operation
     if not current_user.is_super_admin:
+        logger.warning(
+            f"User {current_user.email} (role: {current_user.role}) attempted to update modules "
+            f"for organization {organization_id}. Only super_admin can perform this action."
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can modify organization modules"
+            detail={
+                "error_type": "permission_denied",
+                "message": "Module entitlement management is restricted to platform administrators only. "
+                           "Organization administrators cannot activate or deactivate modules. "
+                           "Please contact your platform administrator to request module changes.",
+                "required_role": "super_admin",
+                "current_role": current_user.role
+            }
         )
+    
+    # Super admin can update any organization's modules by explicit org_id
+    org_id = organization_id
+    TenantContext.set_organization_id(org_id)
   
     result = await db.execute(select(Organization).filter(Organization.id == organization_id))
     organization = result.scalars().first()
@@ -80,40 +142,97 @@ async def update_organization_modules(
         )
   
     try:
-        valid_modules = ["CRM", "ERP", "HR", "Inventory", "Service", "Analytics", "Finance"]
-        for module in modules_data.get("enabled_modules", {}):
+        from app.core.modules_registry import get_all_modules
+        
+        # Validate request body structure
+        if "enabled_modules" not in modules_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing 'enabled_modules' in request body. Expected format: {'enabled_modules': {'ModuleName': true/false}}"
+            )
+        
+        enabled_modules = modules_data.get("enabled_modules", {})
+        
+        # Validate that enabled_modules is a dict
+        if not isinstance(enabled_modules, dict):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="'enabled_modules' must be a dictionary mapping module names to boolean values"
+            )
+        
+        valid_modules = get_all_modules()
+        invalid_modules = []
+        
+        # Validate each module key
+        for module, enabled in enabled_modules.items():
             if module not in valid_modules:
+                invalid_modules.append(module)
+            
+            # Validate that values are booleans
+            if not isinstance(enabled, bool):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid module: {module}"
+                    detail=f"Module '{module}' has invalid value. Expected boolean (true/false), got: {type(enabled).__name__}"
                 )
+        
+        if invalid_modules:
+            # Use cached sorted modules list
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid module(s): {', '.join(invalid_modules)}. Valid modules are: {', '.join(get_sorted_valid_modules())}"
+            )
       
-        organization.enabled_modules = modules_data.get("enabled_modules", {})
-        await db.commit()
+        # Idempotent update - only commit if there are actual changes
+        if organization.enabled_modules != enabled_modules:
+            organization.enabled_modules = enabled_modules
+            await db.commit()
+            logger.info(f"Organization {organization_id} modules updated by {current_user.email}: {len(enabled_modules)} modules configured")
+            message = "Organization modules updated successfully"
+        else:
+            logger.debug(f"Organization {organization_id} modules unchanged - idempotent update")
+            message = "Organization modules unchanged (already up to date)"
       
-        logger.info(f"Organization {organization_id} modules updated by {current_user.email}")
-        return {"message": "Organization modules updated successfully", "enabled_modules": organization.enabled_modules}
+        return {
+            "message": message,
+            "enabled_modules": organization.enabled_modules,
+            "available_modules": valid_modules
+        }
       
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating organization modules: {e}")
+        # Log exception with stack trace only in development for debugging
+        from app.core.config import settings
+        logger.error(
+            f"Error updating organization modules for org {organization_id}: {type(e).__name__}", 
+            exc_info=(settings.ENVIRONMENT == "development")
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update organization modules"
+            detail="Failed to update organization modules due to an internal error. Please contact support if the issue persists."
         )
 
 @router.get("/{organization_id:int}", response_model=OrganizationInDB)
 async def get_organization(
     organization_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get organization by ID"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
+    current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        # Super admin can access any organization by explicit org_id
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
   
     result = await db.execute(select(Organization).filter(Organization.id == organization_id))
     org = result.scalars().first()
@@ -129,15 +248,22 @@ async def get_organization(
 async def update_organization(
     organization_id: int,
     org_update: OrganizationUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update organization"""
-    if not current_user.is_super_admin:
-        if current_user.organization_id != organization_id or current_user.role not in [UserRole.ORG_ADMIN]:
+    current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        # Super admin can update any organization by explicit org_id
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions to update this organization"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
             )
   
     result = await db.execute(select(Organization).filter(Organization.id == organization_id))
@@ -180,16 +306,24 @@ async def update_organization(
 @router.delete("/{organization_id:int}")
 async def delete_organization(
     organization_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("organization", "delete")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Delete organization (Super admin only)"""
-    if not current_user.is_super_admin:
+    """Delete organization (requires organization delete permission)"""
+    current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
+    
+    # Critical operation - extra super admin check for safety
+    if not getattr(current_user, 'is_super_admin', False):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only super administrators can delete organizations"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
         )
-  
+    
+    # Can delete any organization with proper permission (super admin only in practice)
     result = await db.execute(select(Organization).filter(Organization.id == organization_id))
     org = result.scalars().first()
     if not org:
@@ -200,11 +334,23 @@ async def delete_organization(
   
     try:
         # Delete all related data
-        # Delete user_service_roles
-        await db.execute(delete(UserServiceRole).where(UserServiceRole.organization_id == organization_id))
+        # Delete user_service_roles using subquery for roles in this organization
+        await db.execute(
+            delete(UserServiceRole).where(
+                UserServiceRole.role_id.in_(
+                    select(ServiceRole.id).where(ServiceRole.organization_id == organization_id)
+                )
+            )
+        )
         
-        # Delete service_role_permissions
-        await db.execute(delete(ServiceRolePermission).where(ServiceRolePermission.organization_id == organization_id))
+        # Delete service_role_permissions using subquery for roles in this organization
+        await db.execute(
+            delete(ServiceRolePermission).where(
+                ServiceRolePermission.role_id.in_(
+                    select(ServiceRole.id).where(ServiceRole.organization_id == organization_id)
+                )
+            )
+        )
         
         # Delete stock
         await db.execute(delete(Stock).where(Stock.organization_id == organization_id))
@@ -256,15 +402,23 @@ async def delete_organization(
 async def get_user_modules(
     organization_id: int,
     user_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("user", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get user's assigned modules"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
+    current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        # Super admin can access any organization's user modules by explicit org_id
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
   
     if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN] and current_user.role != "HR":
         if current_user.id != user_id:
@@ -302,15 +456,23 @@ async def update_user_modules(
     organization_id: int,
     user_id: int,
     modules_data: dict,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("user", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
-    """Update user's assigned modules (HR role or org admin)"""
-    if not current_user.is_super_admin and current_user.organization_id != organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this organization"
-        )
+    """Update user's assigned modules (requires user update permission)"""
+    current_user, org_id = auth
+    
+    if current_user.is_super_admin:
+        # Super admin can update any organization's user modules by explicit org_id
+        org_id = organization_id
+        TenantContext.set_organization_id(org_id)
+    else:
+        # Enforce tenant isolation for non-super_admin users
+        if organization_id != org_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
   
     if not current_user.is_super_admin and current_user.role not in [UserRole.ORG_ADMIN] and current_user.role != "HR":
         raise HTTPException(

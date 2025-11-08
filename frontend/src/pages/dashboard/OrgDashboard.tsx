@@ -15,7 +15,8 @@ import DashboardLayout from "../../components/DashboardLayout";
 import ModernLoading from "../../components/ModernLoading";
 import { useAuth } from "../../context/AuthContext";
 import { isAppSuperAdmin, isOrgSuperAdmin } from "../../types/user.types";
-import CompanyDetailsModal from "../../components/CompanyDetailsModal";
+import { usePermissions } from "../../context/PermissionContext";  // Added import for permissions
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface OrgStatistics {
   total_products: number;
@@ -46,32 +47,17 @@ interface OrgStatistics {
 
 const OrgDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();  // Added hook for permission check
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCompanyDetailsModal, setShowCompanyDetailsModal] = useState(false);
-  const [companyDetailsSkipped, setCompanyDetailsSkipped] = useState(false);
   
   const isSuperAdmin = isAppSuperAdmin(user) || isOrgSuperAdmin(user);
   
   useEffect(() => {
     fetchOrgStatistics();
     fetchRecentActivities();
-    
-    // Check if company details need to be completed before allowing access
-    const checkCompanyDetails = () => {
-      if (isOrgSuperAdmin(user) && user?.company_details_completed === false) {
-        const skippedFlag = localStorage.getItem('company_details_skipped');
-        if (!skippedFlag) {
-          setShowCompanyDetailsModal(true);
-        } else {
-          setCompanyDetailsSkipped(true);
-        }
-      }
-    };
-    
-    checkCompanyDetails();
   }, [user]);
 
   const fetchOrgStatistics = async () => {
@@ -79,7 +65,14 @@ const OrgDashboard: React.FC = () => {
       setLoading(true);
       const data = await adminService.getOrgStatistics();
       console.log("Org statistics response:", data); // Debug API response
-      const inventoryValue = await adminService.getInventoryValue();
+      let inventoryValue = 0;
+      // Removed permission check to always fetch inventory value
+      try {
+        inventoryValue = await adminService.getInventoryValue();
+      } catch (invError) {
+        console.error("Inventory value fetch failed:", invError);
+        // Set to 0 on error, continue loading
+      }
       setStatistics({
         ...data,
         inventory_value: inventoryValue,
@@ -245,20 +238,21 @@ const OrgDashboard: React.FC = () => {
   const validityDays = calculateValidityDays(statistics.license_expiry_date);
 
   return (
-    <DashboardLayout title="Organization Dashboard">
-      <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
-        {statsCards.map((stat, index) => (
-          <MetricCard
-            key={index}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            color={stat.color}
-            description={stat.description}
-            trend={stat.trend}
-            href={stat.href}
-          />
-        ))}
+    <ProtectedPage moduleKey="dashboard" action="read">
+      <DashboardLayout title="Organization Dashboard">
+        <Box className="modern-grid cols-3" sx={{ mb: 4 }}>
+          {statsCards.map((stat, index) => (
+            <MetricCard
+              key={index}
+              title={stat.title}
+              value={stat.value}
+              icon={stat.icon}
+              color={stat.color}
+              description={stat.description}
+              trend={stat.trend}
+              href={stat.href}
+            />
+          ))}
       </Box>
       <Box className="modern-grid cols-2" sx={{ mb: 4 }}>
         <Paper className="modern-card" sx={{ p: 3 }}>
@@ -327,15 +321,25 @@ const OrgDashboard: React.FC = () => {
                   <ListItemText
                     primary={activity.title}
                     secondary={
-                      <Box>
-                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                      <React.Fragment>
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          sx={{ display: 'block', mb: 0.5 }}
+                          color="text.primary"
+                        >
                           {activity.description}
                         </Typography>
-                        <Typography variant="caption" color="textSecondary">
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          sx={{ display: 'block' }}
+                          color="text.secondary"
+                        >
                           {activityService.formatActivityTime(activity.timestamp)}
                           {activity.user_name && ` • by ${activity.user_name}`}
                         </Typography>
-                      </Box>
+                      </React.Fragment>
                     }
                   />
                 </ListItem>
@@ -444,52 +448,8 @@ const OrgDashboard: React.FC = () => {
           </Box>
         )}
       </Paper>
-      
-      {/* Show alert if company details were skipped */}
-      {companyDetailsSkipped && (
-        <Alert
-          severity="warning"
-          sx={{ mt: 2 }}
-          action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => {
-                setShowCompanyDetailsModal(true);
-                setCompanyDetailsSkipped(false);
-              }}
-            >
-              Complete Now
-            </Button>
-          }
-        >
-          Company details are not complete. Click "Complete Now" to add your company information.
-        </Alert>
-      )}
-      
-      {/* Company Details Modal */}
-      <CompanyDetailsModal
-        open={showCompanyDetailsModal}
-        onClose={() => {
-          // If skipped, set flag in localStorage
-          if (user?.company_details_completed === false) {
-            localStorage.setItem('company_details_skipped', 'true');
-            setCompanyDetailsSkipped(true);
-          }
-          setShowCompanyDetailsModal(false);
-        }}
-        onSuccess={() => {
-          // Clear skipped flag on successful completion
-          localStorage.removeItem('company_details_skipped');
-          setShowCompanyDetailsModal(false);
-          setCompanyDetailsSkipped(false);
-          // Refresh user context to update company_details_completed flag
-          window.location.reload();
-        }}
-        isRequired={user?.company_details_completed === false && isOrgSuperAdmin(user)}
-        mode="create"
-      />
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
 

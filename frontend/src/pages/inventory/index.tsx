@@ -61,6 +61,7 @@ import "jspdf-autotable";
 import { organizationService } from "../../services/organizationService";
 import SortableTable, { HeadCell } from "../../components/SortableTable";
 import AddProductModal from "../../components/AddProductModal";
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 declare module "jspdf" {
   interface jsPDF {
@@ -682,22 +683,23 @@ const InventoryManagement: React.FC = () => {
   };
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 4,
-          }}
-        >
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom sx={{ textAlign: 'center' }}>
-              Current Stock
-            </Typography>
+    <ProtectedPage moduleKey="inventory" action="read">
+      <Box sx={{ flexGrow: 1 }}>
+        <Container maxWidth={false} sx={{ mt: 4, mb: 4 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 4,
+            }}
+          >
+            <Box>
+              <Typography variant="h4" component="h1" gutterBottom sx={{ textAlign: 'center' }}>
+                Current Stock
+              </Typography>
+            </Box>
           </Box>
-        </Box>
         {/* Summary Cards */}
         <Box sx={{ mb: 4 }}>{renderSummaryCards()}</Box>
         {/* Inventory Content */}
@@ -1085,6 +1087,7 @@ const InventoryManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 };
 export default InventoryManagement;

@@ -9,14 +9,17 @@ import "../styles/modern-theme.css";
 import "../styles/print.css";
 import "../styles/mobile/mobile-theme.css";
 import "../styles/email-reader.css";  // Moved global CSS import here
-import Layout from "../components/layout";
 import { useRouter } from "next/router";
-import { AuthProvider, useAuth } from "../context/AuthContext";
-import { CompanyProvider, useCompany } from "../context/CompanyContext"; // Updated import
+import { AuthProvider } from "../context/AuthContext";
+import { CompanyProvider } from "../context/CompanyContext"; // Updated import
 import { EmailProvider } from "../context/EmailContext"; // Added import for EmailProvider
+import { PermissionProvider } from "../context/PermissionContext";  // Added import for PermissionProvider
+import { OrganizationProvider } from "../context/OrganizationContext";  // NEW: Added import for OrganizationProvider to fix undefined context error
 import { useState, useEffect } from "react"; // Added import for useState and useEffect
 import Head from 'next/head';  // Added import for Head to handle meta tags
-import ChatbotNavigator from "../components/ChatbotNavigator"; // Import chatbot component
+import AppLayout from "../components/AppLayout"; // Global layout with MegaMenu
+// Removed ChatbotNavigator import as it may be causing the undefined component error
+import CompanySetupGuard from "../components/CompanySetupGuard";  // NEW: Import CompanySetupGuard
 
 // Create modern theme using our design system
 const theme = createTheme({
@@ -170,31 +173,9 @@ const ClientOnly = ({ children }: { children: React.ReactNode }) => {
   return mounted ? <>{children}</> : null;
 };
 
-function MyApp({ Component, pageProps }: AppProps): any {
-  const LayoutWrapper = () => {
-    const { user, logout } = useAuth();
-    const { refetch: refetchCompany } = useCompany(); // Added
-    const router = useRouter();
-    const showMegaMenu =
-      !!user && router.pathname !== "/login" && router.pathname !== "/";
-    const showChatbot = !!user && router.pathname !== "/login" && router.pathname !== "/";
-
-    // Refetch company data on initial load and user change
-    useEffect(() => {
-      if (user) {
-        refetchCompany();
-      }
-    }, [user, refetchCompany]);
-    
-    return (
-      <>
-        <Layout user={user} onLogout={logout} showMegaMenu={showMegaMenu}>
-          <Component {...pageProps} />
-        </Layout>
-        {showChatbot && <ChatbotNavigator />}
-      </>
-    );
-  };
+function MyApp({ Component, pageProps }: AppProps) {
+  // Use the layout defined at the page level, if available
+  const getLayout = Component.getLayout || ((page) => page);
 
   return (
     <>
@@ -202,29 +183,38 @@ function MyApp({ Component, pageProps }: AppProps): any {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />  {/* Updated for iOS safe area support */}
       </Head>
       <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <CompanyProvider>
-            <EmailProvider>
-              <ThemeProvider theme={theme}>
-                <CssBaseline />
-                <ClientOnly>
-                  <LayoutWrapper />
-                  <ToastContainer
-                    position="top-right"
-                    autoClose={5000}
-                    hideProgressBar={false}
-                    newestOnTop={false}
-                    closeOnClick
-                    rtl={false}
-                    pauseOnFocusLoss
-                    draggable
-                    pauseOnHover
-                  />
-                </ClientOnly>
-              </ThemeProvider>
-            </EmailProvider>
-          </CompanyProvider>
-        </QueryClientProvider>
+        <OrganizationProvider>  {/* NEW: Wrapped with OrganizationProvider to provide context */}
+          <QueryClientProvider client={queryClient}>
+            <PermissionProvider>
+              <CompanyProvider>
+                <EmailProvider>
+                  <ThemeProvider theme={theme}>
+                    <CssBaseline />
+                    <ClientOnly>
+                      {/* Global AppLayout wraps all pages and conditionally shows MegaMenu */}
+                      <AppLayout>
+                        <CompanySetupGuard>  {/* NEW: Wrapped with CompanySetupGuard to show modal on login if company details missing */}
+                          {getLayout(<Component {...pageProps} />)}
+                        </CompanySetupGuard>
+                      </AppLayout>
+                      <ToastContainer
+                        position="top-right"
+                        autoClose={5000}
+                        hideProgressBar={false}
+                        newestOnTop={false}
+                        closeOnClick
+                        rtl={false}
+                        pauseOnFocusLoss
+                        draggable
+                        pauseOnHover
+                      />
+                    </ClientOnly>
+                  </ThemeProvider>
+                </EmailProvider>
+              </CompanyProvider>
+            </PermissionProvider>
+          </QueryClientProvider>
+        </OrganizationProvider>
       </AuthProvider>
     </>
   );

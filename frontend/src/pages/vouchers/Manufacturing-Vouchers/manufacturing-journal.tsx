@@ -16,6 +16,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../lib/api";
 import { getProducts } from "../../../services/masterService";
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface ManufacturingJournalFinishedProduct {
   product_id: number;
   quantity: number;
@@ -323,7 +324,8 @@ export default function ManufacturingJournalVoucher() {
 
     if (isLoading) {
     return (
-      <Container>
+      <ProtectedPage moduleKey="manufacturing" action="write">
+        <Container>
         <Box
           display="flex"
           justifyContent="center"
@@ -333,10 +335,12 @@ export default function ManufacturingJournalVoucher() {
           <CircularProgress />
         </Box>
       </Container>
+      </ProtectedPage>
     );
   }
   return (
-    <Container maxWidth="xl">
+    <ProtectedPage moduleKey="manufacturing" action="write">
+       maxWidth="xl">
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Manufacturing Journal Vouchers

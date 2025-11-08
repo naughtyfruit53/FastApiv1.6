@@ -29,6 +29,7 @@ import {
   Delete as DeleteIcon,
   FileCopy as FileCopyIcon,
 } from '@mui/icons-material';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface EmailTemplate {
   id: number;
@@ -78,6 +79,7 @@ const EmailTemplates: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="email" action="read">
     <Box sx={{ p: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" gutterBottom>
@@ -225,6 +227,7 @@ const EmailTemplates: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Box>
+    </ProtectedPage>
   );
 };
 

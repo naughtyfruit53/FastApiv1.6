@@ -33,6 +33,7 @@ import {
 import axios from "axios";
 import { formatCurrency } from "../utils/currencyUtils";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface BudgetData {
@@ -84,7 +85,9 @@ const BudgetsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <ProtectedPage moduleKey="finance" action="read">
+      rotectedPage moduleKey="finance" action="read">
+        ox display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
       </Box>
     );
@@ -284,7 +287,7 @@ const BudgetsPage: React.FC = () => {
         </CardContent>
       </Card>
     </Box>
+    </ProtectedPage>
   );
 };
-
 export default BudgetsPage;

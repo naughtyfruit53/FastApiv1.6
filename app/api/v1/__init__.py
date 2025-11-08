@@ -300,7 +300,7 @@ def register_subrouters():
         raise
 
     try:
-        from ..pincode import router as pincode_router
+        from .pincode import router as pincode_router
         logger.debug("Imported pincode_router")
         api_v1_router.include_router(pincode_router, prefix="/pincode", tags=["Pincode"])
         pincode_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /pincode{route.path}" for route in pincode_router.routes if isinstance(route, APIRoute)]
@@ -360,7 +360,7 @@ def register_subrouters():
         raise
 
     try:
-        from ..products import router as products_router
+        from .products import router as products_router  # CHANGED: from ..products to .products
         logger.debug("Imported products_router")
         api_v1_router.include_router(products_router, prefix="/products", tags=["products"])
         products_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in products_router.routes if isinstance(route, APIRoute)]
@@ -405,6 +405,188 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include exhibition_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Entitlements API (app-level, read-only)
+    try:
+        from .entitlements import router as entitlements_router
+        logger.debug("Imported entitlements_router")
+        api_v1_router.include_router(entitlements_router, tags=["entitlements"])
+        entitlements_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in entitlements_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered entitlements endpoints: {len(entitlements_routes)} routes")
+        for route_path in entitlements_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include entitlements_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Admin Entitlements API (admin-only, write)
+    try:
+        from .admin_entitlements import router as admin_entitlements_router
+        logger.debug("Imported admin_entitlements_router")
+        api_v1_router.include_router(admin_entitlements_router, tags=["admin-entitlements"])
+        admin_ent_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in admin_entitlements_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered admin_entitlements endpoints: {len(admin_ent_routes)} routes")
+        for route_path in admin_ent_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include admin_entitlements_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Admin Categories API (admin-only, category-based entitlement management)
+    try:
+        from .admin_categories import router as admin_categories_router
+        logger.debug("Imported admin_categories_router")
+        api_v1_router.include_router(admin_categories_router, tags=["admin-categories"])
+        admin_cat_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in admin_categories_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered admin_categories endpoints: {len(admin_cat_routes)} routes")
+        for route_path in admin_cat_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include admin_categories_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Role Delegation API (org_admin and management)
+    try:
+        from .role_delegation import router as role_delegation_router
+        logger.debug("Imported role_delegation_router")
+        api_v1_router.include_router(role_delegation_router, prefix="/role-delegation", tags=["Role Delegation"])
+        role_delegation_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /role-delegation{route.path}" for route in role_delegation_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered role_delegation endpoints: {len(role_delegation_routes)} routes")
+        for route_path in role_delegation_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include role_delegation_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Customer Analytics API
+    try:
+        from .customer_analytics import router as customer_analytics_router
+        logger.debug("Imported customer_analytics_router")
+        api_v1_router.include_router(customer_analytics_router, prefix="/customer-analytics", tags=["Customer Analytics"])
+        customer_analytics_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /customer-analytics{route.path}" for route in customer_analytics_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered customer_analytics endpoints: {len(customer_analytics_routes)} routes")
+        for route_path in customer_analytics_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include customer_analytics_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Management Reports API
+    try:
+        from .management_reports import router as management_reports_router
+        logger.debug("Imported management_reports_router")
+        api_v1_router.include_router(management_reports_router, prefix="/management-reports", tags=["Management Reports"])
+        management_reports_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /management-reports{route.path}" for route in management_reports_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered management_reports endpoints: {len(management_reports_routes)} routes")
+        for route_path in management_reports_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include management_reports_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Notifications API
+    try:
+        from .notifications import router as notifications_router
+        logger.debug("Imported notifications_router")
+        api_v1_router.include_router(notifications_router, prefix="/notifications", tags=["Notifications"])
+        notifications_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /notifications{route.path}" for route in notifications_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered notifications endpoints: {len(notifications_routes)} routes")
+        for route_path in notifications_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include notifications_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Platform API
+    try:
+        from .platform import router as platform_router
+        logger.debug("Imported platform_router")
+        api_v1_router.include_router(platform_router, prefix="/platform", tags=["Platform"])
+        platform_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /platform{route.path}" for route in platform_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered platform endpoints: {len(platform_routes)} routes")
+        for route_path in platform_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include platform_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Settings API
+    try:
+        from .settings import router as settings_router
+        logger.debug("Imported settings_router")
+        api_v1_router.include_router(settings_router, prefix="/settings", tags=["Settings"])
+        settings_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /settings{route.path}" for route in settings_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered settings endpoints: {len(settings_routes)} routes")
+        for route_path in settings_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include settings_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Organization User Management API (NEW 4-role system)
+    try:
+        from .org_user_management import router as org_user_mgmt_router
+        logger.debug("Imported org_user_management_router")
+        api_v1_router.include_router(org_user_mgmt_router, prefix="/org", tags=["Organization User Management"])
+        org_user_mgmt_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /org{route.path}" for route in org_user_mgmt_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered org_user_management endpoints: {len(org_user_mgmt_routes)} routes")
+        for route_path in org_user_mgmt_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include org_user_management_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Reports API (NEW: Added to fix 404 on /reports endpoints)
+    try:
+        from .reports import router as reports_router
+        logger.debug("Imported reports_router")
+        api_v1_router.include_router(reports_router, prefix="/reports", tags=["Reports"])
+        reports_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /reports{route.path}" for route in reports_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered reports endpoints: {len(reports_routes)} routes")
+        for route_path in reports_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include reports_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # Purchase Order API (NEW: Added to fix 404 on /purchase-orders/next-number)
+    try:
+        from .vouchers.purchase_order import router as purchase_order_router
+        logger.debug("Imported purchase_order_router")
+        api_v1_router.include_router(purchase_order_router, tags=["purchase-orders"])  # Removed prefix="/purchase-orders" to avoid double prefix
+        purchase_order_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in purchase_order_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered purchase_order endpoints: {len(purchase_order_routes)} routes")
+        for route_path in purchase_order_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include purchase_order_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # GST Search API (NEW: Added to fix 404 on /gst/search/{gst_number})
+    try:
+        from .gst_search import router as gst_search_router
+        logger.debug("Imported gst_search_router")
+        api_v1_router.include_router(gst_search_router, tags=["GST Search"])
+        gst_search_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in gst_search_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered gst_search endpoints: {len(gst_search_routes)} routes")
+        for route_path in gst_search_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include gst_search_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    # ERP API (NEW: Added to fix 404 on /erp/bank-accounts)
+    try:
+        from .erp import router as erp_router
+        logger.debug("Imported erp_router")
+        api_v1_router.include_router(erp_router, prefix="/erp", tags=["ERP"])
+        erp_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /erp{route.path}" for route in erp_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered erp endpoints: {len(erp_routes)} routes")
+        for route_path in erp_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include erp_router: {str(e)}\n{traceback.format_exc()}")
         raise
 
 register_subrouters()

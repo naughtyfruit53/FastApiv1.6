@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 import logging
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.plugin import Plugin, PluginInstallation, PluginHook, PluginRegistry
 
@@ -123,7 +123,7 @@ class PluginHookResponse(BaseModel):
 @router.post("/", response_model=PluginResponse, status_code=status.HTTP_201_CREATED)
 async def create_plugin(
     plugin_data: PluginCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("plugin", "create")),
     db: Session = Depends(get_db)
 ):
     """
@@ -139,7 +139,7 @@ async def create_plugin(
             )
         
         plugin = Plugin(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             name=plugin_data.name,
             slug=plugin_data.slug,
             plugin_type=plugin_data.plugin_type,
@@ -178,7 +178,7 @@ async def list_plugins(
     limit: int = Query(100, ge=1, le=100),
     plugin_type: Optional[str] = None,
     scope: Optional[str] = None,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("plugin", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -188,7 +188,7 @@ async def list_plugins(
         query = db.query(Plugin).filter(
             or_(
                 Plugin.scope == "global",
-                Plugin.organization_id == current_user.organization_id
+                Plugin.organization_id == org_id
             )
         )
         
@@ -214,7 +214,7 @@ async def list_plugins(
 @router.get("/{plugin_id}", response_model=PluginResponse)
 async def get_plugin(
     plugin_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("plugin", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -226,7 +226,7 @@ async def get_plugin(
                 Plugin.id == plugin_id,
                 or_(
                     Plugin.scope == "global",
-                    Plugin.organization_id == current_user.organization_id
+                    Plugin.organization_id == org_id
                 )
             )
         ).first()
@@ -253,7 +253,7 @@ async def get_plugin(
 async def update_plugin(
     plugin_id: int,
     plugin_data: PluginUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("plugin", "update")),
     db: Session = Depends(get_db)
 ):
     """
@@ -263,7 +263,7 @@ async def update_plugin(
         plugin = db.query(Plugin).filter(
             and_(
                 Plugin.id == plugin_id,
-                Plugin.organization_id == current_user.organization_id
+                Plugin.organization_id == org_id
             )
         ).first()
         
@@ -302,7 +302,7 @@ async def update_plugin(
 @router.post("/install", response_model=PluginInstallationResponse, status_code=status.HTTP_201_CREATED)
 async def install_plugin(
     install_request: PluginInstallRequest,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("plugin", "create")),
     db: Session = Depends(get_db)
 ):
     """
@@ -321,7 +321,7 @@ async def install_plugin(
         existing = db.query(PluginInstallation).filter(
             and_(
                 PluginInstallation.plugin_id == install_request.plugin_id,
-                PluginInstallation.organization_id == current_user.organization_id
+                PluginInstallation.organization_id == org_id
             )
         ).first()
         
@@ -333,7 +333,7 @@ async def install_plugin(
         
         installation = PluginInstallation(
             plugin_id=install_request.plugin_id,
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             installed_by=current_user.id,
             installed_version=plugin.version,
             active=True,
@@ -368,7 +368,7 @@ async def list_installations(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     active: Optional[bool] = None,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("plugin", "read")),
     db: Session = Depends(get_db)
 ):
     """
@@ -376,7 +376,7 @@ async def list_installations(
     """
     try:
         query = db.query(PluginInstallation).filter(
-            PluginInstallation.organization_id == current_user.organization_id
+            PluginInstallation.organization_id == org_id
         )
         
         if active is not None:
@@ -397,7 +397,7 @@ async def list_installations(
 @router.delete("/installations/{installation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def uninstall_plugin(
     installation_id: int,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("plugin", "delete")),
     db: Session = Depends(get_db)
 ):
     """
@@ -407,7 +407,7 @@ async def uninstall_plugin(
         installation = db.query(PluginInstallation).filter(
             and_(
                 PluginInstallation.id == installation_id,
-                PluginInstallation.organization_id == current_user.organization_id
+                PluginInstallation.organization_id == org_id
             )
         ).first()
         
@@ -440,7 +440,7 @@ async def uninstall_plugin(
 @router.post("/hooks", response_model=PluginHookResponse, status_code=status.HTTP_201_CREATED)
 async def create_hook(
     hook_data: PluginHookCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("plugin", "create")),
     db: Session = Depends(get_db)
 ):
     """
@@ -478,7 +478,7 @@ async def list_hooks(
     event_type: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("plugin", "read")),
     db: Session = Depends(get_db)
 ):
     """

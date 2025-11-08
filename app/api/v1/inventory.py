@@ -9,10 +9,9 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.core.tenant import TenantQueryMixin
-from app.core.org_restrictions import require_current_organization_id, validate_company_setup
-from app.core.rbac_dependencies import check_service_permission
+from app.core.org_restrictions import validate_company_setup
 from app.models import (
     User, Stock, Product, Organization, InventoryTransaction, 
     JobParts, InventoryAlert, InstallationJob
@@ -193,20 +192,11 @@ async def get_stock(
     low_stock_only: bool = Query(False, description="Filter for low stock items only"),
     search: Optional[str] = Query(None, description="Search by product name or HSN code"),
     show_zero: bool = Query(True, description="Include items with zero stock"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get stock inventory for the organization"""
-    
-    organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user,
-        module="inventory",
-        action="read",
-        db=db
-    )
+    current_user, organization_id = auth
     
     try:
         query = select(Stock).join(Product).filter(
@@ -265,20 +255,11 @@ async def get_stock(
 async def get_low_stock(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get low stock items for the organization"""
-    
-    organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user,
-        module="inventory",
-        action="read",
-        db=db
-    )
+    current_user, organization_id = auth
     
     try:
         query = select(Stock).join(Product).filter(
@@ -330,19 +311,11 @@ async def get_inventory_transactions(
     transaction_type: Optional[TransactionType] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get inventory transactions with filtering options"""
-    organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user, 
-        module="inventory", 
-        action="read",
-        db=db
-    )
+    current_user, organization_id = auth
     
     stmt = select(InventoryTransaction).where(
         InventoryTransaction.organization_id == organization_id
@@ -383,19 +356,11 @@ async def get_inventory_transactions(
 @router.post("/transactions", response_model=InventoryTransactionResponse)
 async def create_inventory_transaction(
     transaction_data: InventoryTransactionCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Create a new inventory transaction"""
-    organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user, 
-        module="inventory", 
-        action="create",
-        db=db
-    )
+    current_user, organization_id = auth
     
     try:
         transaction = await InventoryService.create_inventory_transaction(
@@ -432,19 +397,11 @@ async def get_job_parts(
     job_id: Optional[int] = None,
     product_id: Optional[int] = None,
     status: Optional[JobPartsStatus] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get job parts assignments with filtering options"""
-    organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user, 
-        module="job_parts", 
-        action="read",
-        db=db
-    )
+    current_user, organization_id = auth
     
     stmt = select(JobParts).where(
         JobParts.organization_id == organization_id
@@ -484,19 +441,11 @@ async def get_job_parts(
 @router.post("/job-parts", response_model=JobPartsResponse)
 async def assign_parts_to_job(
     job_parts_data: JobPartsCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Assign parts to a job"""
-    organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user, 
-        module="job_parts", 
-        action="create",
-        db=db
-    )
+    current_user, organization_id = auth
     
     # Verify job exists and belongs to organization
     stmt = select(InstallationJob).where(
@@ -569,19 +518,11 @@ async def assign_parts_to_job(
 async def update_job_parts(
     job_part_id: int,
     job_parts_data: JobPartsUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Update job parts assignment"""
-    organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user, 
-        module="job_parts", 
-        action="update",
-        db=db
-    )
+    current_user, organization_id = auth
     
     stmt = select(JobParts).where(
         JobParts.id == job_part_id,
@@ -656,19 +597,11 @@ async def get_inventory_alerts(
     status: Optional[AlertStatus] = None,
     priority: Optional[AlertPriority] = None,
     alert_type: Optional[AlertType] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get inventory alerts with filtering options"""
-    organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user, 
-        module="inventory_alerts", 
-        action="read",
-        db=db
-    )
+    current_user, organization_id = auth
     
     stmt = select(InventoryAlert).where(
         InventoryAlert.organization_id == organization_id
@@ -710,19 +643,11 @@ async def get_inventory_alerts(
 @router.put("/alerts/{alert_id}/acknowledge")
 async def acknowledge_alert(
     alert_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "update")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Acknowledge an inventory alert"""
-    organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user, 
-        module="inventory_alerts", 
-        action="update",
-        db=db
-    )
+    current_user, organization_id = auth
     
     stmt = select(InventoryAlert).where(
         InventoryAlert.id == alert_id,
@@ -749,11 +674,11 @@ async def get_inventory_usage_report(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     product_id: Optional[int] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Generate inventory usage report"""
-    organization_id = require_current_organization_id(current_user)
+    current_user, organization_id = auth
     
     # Default date range to last 30 days if not provided
     if not end_date:
@@ -855,11 +780,11 @@ async def get_inventory_usage_report(
 
 @router.get("/reports/value", response_model=TotalInventoryValue)
 async def get_inventory_value(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Get total inventory value"""
-    organization_id = require_current_organization_id(current_user)
+    current_user, organization_id = auth
     
     stmt = select(func.sum(Stock.quantity * Product.unit_price)).join(
         Product, Stock.product_id == Product.id
@@ -878,19 +803,11 @@ async def get_inventory_value(
 
 @router.get("/reports/low-stock", response_model=List[LowStockReport])
 async def get_low_stock_report(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("inventory", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """Generate low stock report"""
-    organization_id = require_current_organization_id(current_user)
-    
-    # Check permissions
-    check_service_permission(
-        user=current_user, 
-        module="inventory_reports", 
-        action="read",
-        db=db
-    )
+    current_user, organization_id = auth
     
     # Query for products with stock below reorder level
     stmt_low_stock = select(Product, Stock).join(

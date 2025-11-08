@@ -37,6 +37,8 @@ import {
   Phone as PhoneIcon,
   Business as BusinessIcon,
 } from "@mui/icons-material";
+import { ProtectedPage } from "../../components/ProtectedPage";
+
 interface Employee {
   id: number;
   employee_id: string;
@@ -128,6 +130,7 @@ const EmployeeDirectory: React.FC = () => {
     return matchesSearch && matchesDepartment;
   });
   return (
+    <ProtectedPage moduleKey="hr" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
         <Box
@@ -370,6 +373,7 @@ const EmployeeDirectory: React.FC = () => {
         </Dialog>
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default EmployeeDirectory;

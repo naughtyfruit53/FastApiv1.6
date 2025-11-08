@@ -6,9 +6,10 @@ from .user_models import (
     OrganizationRole, RoleModuleAssignment,
     UserOrganizationRole, OrganizationApprovalSettings, VoucherApproval
 )
+from .rbac_models import ServiceRole, ServicePermission, ServiceRolePermission, UserServiceRole
 from .rbac_models import (  # Moved RBAC models here
-    ServiceRole, ServicePermission, 
-    ServiceRolePermission, UserServiceRole
+    ServiceRole as Role, ServicePermission as Permission, 
+    ServiceRolePermission as RolePermission, UserServiceRole as UserRole
 )
 from .customer_models import (
     Vendor, Customer, CustomerFile, CustomerInteraction, 
@@ -169,14 +170,15 @@ from .master_data_models import (
     Category, Unit, TaxCode, PaymentTermsExtended,
     CategoryType, UnitType, TaxType
 )
-# Import email models
-from .email import (
-    MailAccount, Email, EmailThread, EmailAttachment, EmailSyncLog,
-    EmailAccountType, EmailSyncStatus, EmailStatus as EmailMessageStatus, EmailPriority
-)
 # Import organization settings models
-from .organization_settings import (
-    OrganizationSettings
+from .organization_settings import OrganizationSettings, VoucherFormatTemplate
+# Import AI agents models
+from .ai_agents import (
+    AIAgent, AIAgentInteraction, AIAgentCapability, AgentType, AgentStatus, AgentCapability
+)
+# Import audit log models
+from .audit_log import (
+    AuditLog, AuditLogView, AuditLogExport, AuditActionType, AuditEntityType
 )
 
 # No imports from .base as all models have been moved
@@ -188,8 +190,9 @@ __all__ = [
     "UserOrganizationRole", "OrganizationApprovalSettings", "VoucherApproval",
     
     # RBAC models
-    "ServiceRole", "ServicePermission", 
-    "ServiceRolePermission", "UserServiceRole",
+    "ServiceRole", "ServicePermission", "ServiceRolePermission", "UserServiceRole",
+    "Role", "Permission", 
+    "RolePermission", "UserRole",
     
     # Customer and business entity models
     "Company", "Vendor", "Customer", "CustomerFile", "CustomerInteraction",
@@ -310,7 +313,16 @@ __all__ = [
 
     # Master data models
     "Category", "Unit", "TaxCode", "PaymentTermsExtended",
-    "CategoryType", "UnitType", "TaxType"
+    "CategoryType", "UnitType", "TaxType",
+
+    # Organization settings models
+    "VoucherFormatTemplate",
+
+    # AI agents models
+    "AIAgent", "AIAgentInteraction", "AIAgentCapability", "AgentType", "AgentStatus", "AgentCapability",
+
+    # Audit log models
+    "AuditLog", "AuditLogView", "AuditLogExport", "AuditActionType", "AuditEntityType",
 ]
 
 # No imports from .base as all models have been moved

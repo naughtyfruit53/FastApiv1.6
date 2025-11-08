@@ -1,4 +1,5 @@
 # app/api/v1/payroll_components_advanced.py
+from app.core.enforcement import require_access
 # Phase 2: Advanced Payroll Component Management with Multi-Component Support
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -9,8 +10,7 @@ from decimal import Decimal
 from datetime import datetime, date
 
 from app.db.session import get_db
-from app.api.v1.auth import get_current_active_user
-from app.core.org_restrictions import require_current_organization_id
+
 from app.models.user_models import User
 from app.models.payroll_models import PayrollComponent, PayrollRun, PayrollLine
 from app.models.erp_models import ChartOfAccounts
@@ -37,11 +37,12 @@ router = APIRouter()
 @router.post("/payroll/components/bulk", response_model=BulkPayrollComponentResult)
 async def bulk_create_payroll_components(
     bulk_data: BulkPayrollComponentCreate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Bulk create payroll components with chart account mappings"""
+    current_user, organization_id = auth
+    
     try:
         created_components = []
         errors = []
@@ -145,11 +146,12 @@ async def get_advanced_payroll_components(
     filter_params: PayrollComponentFilter = Depends(),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get payroll components with advanced filtering and account details"""
+    current_user, organization_id = auth
+    
     try:
         query = db.query(PayrollComponent).options(
             joinedload(PayrollComponent.expense_account),
@@ -234,11 +236,12 @@ async def get_advanced_payroll_components(
 async def update_component_chart_mapping(
     component_id: int,
     mapping_data: PayrollComponentMappingUpdate,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Update chart account mapping for a payroll component"""
+    current_user, organization_id = auth
+    
     try:
         # Get component
         component = db.query(PayrollComponent).filter(
@@ -328,11 +331,12 @@ async def update_component_chart_mapping(
 
 @router.get("/payroll/components/mapping-status")
 async def get_component_mapping_status(
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Get mapping status for all payroll components"""
+    current_user, organization_id = auth
+    
     try:
         # Get counts by mapping status
         total_components = db.query(func.count(PayrollComponent.id)).filter(
@@ -399,11 +403,12 @@ async def get_component_mapping_status(
 @router.post("/payroll/settings/advanced", response_model=AdvancedPayrollSettings)
 async def update_advanced_payroll_settings(
     settings: AdvancedPayrollSettings,
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "create")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Update advanced payroll settings with default account mappings"""
+    current_user, organization_id = auth
+    
     try:
         # This would integrate with a PayrollSettings model to store advanced configurations
         # For now, we'll return the received settings as confirmation
@@ -429,11 +434,12 @@ async def update_advanced_payroll_settings(
 
 @router.get("/payroll/components/validation")
 async def validate_all_components(
-    current_user: User = Depends(get_current_active_user),
+    auth: tuple = Depends(require_access("payroll", "read")),
     db: Session = Depends(get_db),
-    organization_id: int = Depends(require_current_organization_id)
 ):
     """Validate all payroll components for chart account mappings"""
+    current_user, organization_id = auth
+    
     try:
         components = db.query(PayrollComponent).options(
             joinedload(PayrollComponent.expense_account),

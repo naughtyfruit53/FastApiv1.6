@@ -10,6 +10,7 @@ import logging
 
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models.vouchers import JobCardVoucher, JobCardSuppliedMaterial, JobCardReceivedOutput
 from app.services.voucher_service import VoucherNumberService
 from pydantic import BaseModel
@@ -80,17 +81,18 @@ class JobCardVoucherResponse(BaseModel):
 async def get_job_card_vouchers(
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Get list of job card vouchers at /api/v1/job-card-vouchers"""
     try:
         stmt = select(JobCardVoucher).where(
-            JobCardVoucher.organization_id == current_user.organization_id
+            JobCardVoucher.organization_id == org_id
         ).offset(skip).limit(limit)
         result = await db.execute(stmt)
         vouchers = result.scalars().all()
-        logger.info(f"Fetched {len(vouchers)} job card vouchers for organization {current_user.organization_id}")
+        logger.info(f"Fetched {len(vouchers)} job card vouchers for organization {org_id}")
         return vouchers
     except Exception as e:
         logger.error(f"Error fetching job card vouchers: {str(e)}")
@@ -98,15 +100,16 @@ async def get_job_card_vouchers(
 
 @router.get("/next-number")
 async def get_next_job_card_number(
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Get next job card number at /api/v1/job-card-vouchers/next-number"""
     try:
         next_number = await VoucherNumberService.generate_voucher_number_async(
-            db, "JCV", current_user.organization_id, JobCardVoucher
+            db, "JCV", org_id, JobCardVoucher
         )
-        logger.info(f"Generated next job card number: {next_number} for organization {current_user.organization_id}")
+        logger.info(f"Generated next job card number: {next_number} for organization {org_id}")
         return next_number
     except Exception as e:
         logger.error(f"Error generating job card number: {str(e)}")
@@ -115,14 +118,15 @@ async def get_next_job_card_number(
 @router.post("")
 async def create_job_card_voucher(
     voucher_data: JobCardVoucherCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+
+    db: AsyncSession = Depends(get_db)
 ):
     """Create new job card voucher at /api/v1/job-card-vouchers"""
     try:
         # Generate voucher number
         voucher_number = await VoucherNumberService.generate_voucher_number_async(
-            db, "JCV", current_user.organization_id, JobCardVoucher
+            db, "JCV", org_id, JobCardVoucher
         )
 
         # Calculate total amount from supplied materials and outputs
@@ -131,7 +135,7 @@ async def create_job_card_voucher(
         total_amount = output_value - supplied_value  # Net job work value
 
         db_voucher = JobCardVoucher(
-            organization_id=current_user.organization_id,
+            organization_id=org_id,
             voucher_number=voucher_number,
             date=datetime.now(),
             job_type=voucher_data.job_type,
@@ -156,7 +160,7 @@ async def create_job_card_voucher(
         # Add supplied materials
         for sm_data in voucher_data.supplied_materials:
             sm = JobCardSuppliedMaterial(
-                organization_id=current_user.organization_id,
+                organization_id=org_id,
                 job_card_id=db_voucher.id,
                 product_id=sm_data.product_id,
                 quantity_supplied=sm_data.quantity_supplied,
@@ -172,7 +176,7 @@ async def create_job_card_voucher(
         # Add received outputs
         for ro_data in voucher_data.received_outputs:
             ro = JobCardReceivedOutput(
-                organization_id=current_user.organization_id,
+                organization_id=org_id,
                 job_card_id=db_voucher.id,
                 product_id=ro_data.product_id,
                 quantity_received=ro_data.quantity_received,
@@ -189,7 +193,7 @@ async def create_job_card_voucher(
 
         await db.commit()
         await db.refresh(db_voucher)
-        logger.info(f"Created job card voucher {voucher_number} for organization {current_user.organization_id}")
+        logger.info(f"Created job card voucher {voucher_number} for organization {org_id}")
         return db_voucher
     except Exception as e:
         logger.error(f"Error creating job card voucher: {str(e)}")

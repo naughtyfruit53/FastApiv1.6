@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -168,6 +169,7 @@ const AIBusinessAdvisorPage: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="ai" action="read">
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
@@ -400,6 +402,7 @@ const AIBusinessAdvisorPage: React.FC = () => {
         </List>
       </Paper>
     </Container>
+    </ProtectedPage>
   );
 };
 

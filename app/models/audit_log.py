@@ -26,7 +26,6 @@ class AuditActionType(PyEnum):
     API_CALL = "api_call"
     AI_ACTION = "ai_action"
     AUTOMATION = "automation"
-    INTEGRATION = "integration"
 
 
 class AuditEntityType(PyEnum):
@@ -122,7 +121,7 @@ class AuditLog(Base):
     
     # Relationships
     user: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User")
-    ai_agent: Mapped[Optional["app.models.ai_agents.AIAgent"]] = relationship("app.models.ai_agents.AIAgent")
+    ai_agent: Mapped[Optional["AIAgent"]] = relationship("AIAgent")
     
     __table_args__ = (
         Index('idx_audit_org_entity', 'organization_id', 'entity_type', 'entity_id'),

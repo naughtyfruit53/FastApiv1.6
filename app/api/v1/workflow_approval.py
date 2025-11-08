@@ -11,7 +11,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user as get_current_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.workflow_models import (
     WorkflowTemplate, WorkflowStep, WorkflowInstance, WorkflowStepInstance,
@@ -37,11 +37,11 @@ router = APIRouter()
 @router.get("/dashboard/workflow", response_model=WorkflowDashboardStats)
 async def get_workflow_dashboard(
     company_id: Optional[int] = Query(None, description="Filter by specific company"),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("workflow_approval", "read")),
     db: Session = Depends(get_db)
 ):
     """Get workflow management dashboard statistics"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -158,11 +158,11 @@ async def get_workflow_dashboard(
 
 @router.get("/dashboard/approvals", response_model=ApprovalDashboardStats)
 async def get_approval_dashboard(
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("workflow_approval", "read")),
     db: Session = Depends(get_db)
 ):
     """Get personal approval dashboard for current user"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     user_id = current_user.id
     
     # My pending approvals
@@ -260,12 +260,12 @@ async def get_approval_dashboard(
 @router.post("/templates", response_model=WorkflowTemplateResponse)
 async def create_workflow_template(
     template: WorkflowTemplateCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("workflow_approval", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new workflow template"""
     check_service_permission(current_user, "workflow", "create", db)
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Validate company access
@@ -319,11 +319,11 @@ async def list_workflow_templates(
     per_page: int = Query(50, ge=1, le=100, description="Items per page"),
     company_id: Optional[int] = Query(None, description="Filter by company"),
     filters: WorkflowTemplateFilter = Depends(),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("workflow_approval", "read")),
     db: Session = Depends(get_db)
 ):
     """List workflow templates with filtering and pagination"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -419,12 +419,12 @@ async def list_workflow_templates(
 @router.post("/approvals", response_model=ApprovalRequestResponse)
 async def create_approval_request(
     approval: ApprovalRequestCreate,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("workflow_approval", "create")),
     db: Session = Depends(get_db)
 ):
     """Create a new approval request"""
     check_service_permission(current_user, "approval", "create", db)
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Validate company access
@@ -483,11 +483,11 @@ async def list_approval_requests(
     per_page: int = Query(50, ge=1, le=100, description="Items per page"),
     company_id: Optional[int] = Query(None, description="Filter by company"),
     filters: ApprovalRequestFilter = Depends(),
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("workflow_approval", "read")),
     db: Session = Depends(get_db)
 ):
     """List approval requests with filtering and pagination"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get user's accessible companies
@@ -592,12 +592,12 @@ async def list_approval_requests(
 async def make_approval_decision(
     approval_id: int,
     decision: ApprovalDecision,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("workflow_approval", "update")),
     db: Session = Depends(get_db)
 ):
     """Make a decision on an approval request"""
     check_service_permission(current_user, "approval", "respond", db)
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Get the approval request
@@ -682,12 +682,12 @@ async def make_approval_decision(
 @router.put("/approvals/bulk-decision")
 async def bulk_approval_decision(
     bulk_decision: BulkApprovalDecision,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("workflow_approval", "update")),
     db: Session = Depends(get_db)
 ):
     """Make bulk approval decisions"""
     check_service_permission(current_user, "approval", "respond", db)
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     user_companies = rbac.get_user_companies(current_user.id)
     
@@ -743,11 +743,11 @@ async def bulk_approval_decision(
 @router.get("/approvals/{approval_id}/history", response_model=List[ApprovalHistoryResponse])
 async def get_approval_history(
     approval_id: int,
-    current_user: User = Depends(get_current_user),
+    auth: tuple = Depends(require_access("workflow_approval", "read")),
     db: Session = Depends(get_db)
 ):
     """Get approval request history"""
-    org_id = current_user.organization_id
+    current_user, org_id = auth
     rbac = RBACService(db)
     
     # Check approval exists and user has access

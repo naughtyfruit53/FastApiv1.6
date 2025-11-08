@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { getMailAccounts, MailAccount } from '../../services/emailService';
+import { ProtectedPage } from '../../components/ProtectedPage';
 
 const SyncStatus: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -84,6 +85,7 @@ const SyncStatus: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="email" action="read">
     <Box sx={{ p: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" gutterBottom>
@@ -155,6 +157,7 @@ const SyncStatus: React.FC = () => {
         </Typography>
       </Paper>
     </Box>
+    </ProtectedPage>
   );
 };
 

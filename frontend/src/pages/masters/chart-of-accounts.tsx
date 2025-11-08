@@ -32,6 +32,7 @@ import api from "../../lib/api";  // Assuming corrected import from previous
 import AddEditAccountModal from "../../components/AddEditAccountModal";
 import ViewAccountModal from "../../components/ViewAccountModal";
 import { extractErrorMessage } from "../../utils/errorHandling";  // Import the utility for consistent error extraction
+import { ProtectedPage } from "../../components/ProtectedPage";
 
 const ChartOfAccountsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -214,6 +215,7 @@ const ChartOfAccountsPage: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="masters" action="read">
     <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Box
@@ -424,6 +426,7 @@ const ChartOfAccountsPage: React.FC = () => {
         />
       </Box>
     </Container>
+    </ProtectedPage>
   );
 };
 export default ChartOfAccountsPage;

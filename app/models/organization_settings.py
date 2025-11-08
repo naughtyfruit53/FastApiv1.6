@@ -72,8 +72,8 @@ class OrganizationSettings(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship(
-        "app.models.user_models.Organization",
+    organization: Mapped["Organization"] = relationship(
+        "Organization",
         back_populates="settings"
     )
 

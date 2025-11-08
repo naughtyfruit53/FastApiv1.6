@@ -35,6 +35,7 @@ import AddBOMModal from "../../../components/AddBOMModal";
 import ManufacturingShortageAlert from "../../../components/ManufacturingShortageAlert";
 import useManufacturingShortages from "../../../hooks/useManufacturingShortages";
 
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface ManufacturingOrder {
   id?: number;
   voucher_number?: string;
@@ -336,7 +337,8 @@ const ProductionOrder: React.FC = () => {
     setShowAddBOMModal(false);
   };
   return (
-    <Container maxWidth="xl">
+    <ProtectedPage moduleKey="manufacturing" action="write">
+       maxWidth="xl">
       <Grid container spacing={3}>
         {/* Left Panel - Order List */}
         <Grid size={5}>
@@ -761,7 +763,7 @@ const ProductionOrder: React.FC = () => {
         />
       )}
     </Container>
+    </ProtectedPage>
   );
 };
-
 export default ProductionOrder;

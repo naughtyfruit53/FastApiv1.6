@@ -36,6 +36,45 @@ def generate_subdomain(name: str) -> str:
         subdomain = f"{subdomain}-{secrets.choice(string.ascii_lowercase + string.digits) * (3 - len(subdomain))}"
     return subdomain
 
+# State to GST state code mapping (same as frontend)
+state_to_code_map = {
+    "Andhra Pradesh": "37",
+    "Arunachal Pradesh": "12",
+    "Assam": "18",
+    "Bihar": "10",
+    "Chhattisgarh": "22",
+    "Goa": "30",
+    "Gujarat": "24",
+    "Haryana": "06",
+    "Himachal Pradesh": "02",
+    "Jammu and Kashmir": "01",
+    "Jharkhand": "20",
+    "Karnataka": "29",
+    "Kerala": "32",
+    "Madhya Pradesh": "23",
+    "Maharashtra": "27",
+    "Manipur": "14",
+    "Meghalaya": "17",
+    "Mizoram": "15",
+    "Nagaland": "13",
+    "Odisha": "21",
+    "Punjab": "03",
+    "Rajasthan": "08",
+    "Sikkim": "11",
+    "Tamil Nadu": "33",
+    "Telangana": "36",
+    "Tripura": "16",
+    "Uttar Pradesh": "09",
+    "Uttarakhand": "05",
+    "West Bengal": "19",
+    "Andaman and Nicobar Islands": "35",
+    "Chandigarh": "04",
+    "Dadra and Nagar Haveli and Daman and Diu": "26",
+    "Lakshadweep": "31",
+    "Delhi": "07",
+    "Puducherry": "34",
+    "Ladakh": "38",
+}
 
 class OrganizationService:
     """Business logic for organization management"""
@@ -44,41 +83,44 @@ class OrganizationService:
     async def get_app_statistics(db: AsyncSession) -> Dict:
         """Get application-level statistics"""
         result = await db.execute(select(func.count(Organization.id)))
-        total_licenses = result.scalar_one()
+        total_licenses = result.scalar_one() or 0
         
         result = await db.execute(select(func.count(Organization.id)).where(Organization.status == "active"))
-        active_organizations = result.scalar_one()
+        active_organizations = result.scalar_one() or 0
         
         result = await db.execute(select(func.count(Organization.id)).where(Organization.status == "trial"))
-        trial_organizations = result.scalar_one()
+        trial_organizations = result.scalar_one() or 0
         
         result = await db.execute(select(func.count(User.id)).where(User.organization_id.isnot(None), User.is_active == True))
-        total_users = result.scalar_one()
+        total_users = result.scalar_one() or 0
         
         result = await db.execute(select(func.count(User.id)).where(User.is_super_admin == True, User.is_active == True))
-        super_admins = result.scalar_one()
+        super_admins = result.scalar_one() or 0
         
         plan_breakdown = {}
         result = await db.execute(select(Organization.plan_type).distinct())
         plan_types = result.scalars().all()
         for plan_type in plan_types:
             result = await db.execute(select(func.count(Organization.id)).where(Organization.plan_type == plan_type))
-            count = result.scalar_one()
+            count = result.scalar_one() or 0
             plan_breakdown[plan_type] = count
         
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         result = await db.execute(select(func.count(Organization.id)).where(Organization.created_at >= thirty_days_ago))
-        new_licenses_this_month = result.scalar_one()
+        new_licenses_this_month = result.scalar_one() or 0
         
-        total_storage_used_gb = total_licenses * 0.5
-        average_users_per_org = round(total_users / total_licenses) if total_licenses > 0 else 0
-        
+        # Fixed: Add proper query for failed_login_attempts (sum across all users)
         result = await db.execute(select(func.sum(User.failed_login_attempts)))
         failed_login_attempts = result.scalar_one() or 0
         
+        # Dummy storage calculation (replace with real if needed)
+        total_storage_used_gb = total_licenses * 0.5
+        
+        average_users_per_org = round(total_users / total_licenses) if total_licenses > 0 else 0
+        
         seven_days_ago = datetime.utcnow() - timedelta(days=7)
         result = await db.execute(select(func.count(Organization.id)).where(Organization.created_at >= seven_days_ago))
-        recent_new_orgs = result.scalar_one()
+        recent_new_orgs = result.scalar_one() or 0
         
         return {
             "total_licenses_issued": total_licenses,
@@ -146,8 +188,11 @@ class OrganizationService:
             "total_products": total_products,
             "total_stock_items": total_stock_items,
             "plan_type": org.license_type if org else "N/A",
-            "plan_status": org.status if org else "N/A",
-            "plan_expiry": plan_expiry,
+            "total_org_users": total_users,
+            "inactive_users": 0,  # Placeholder; add proper calculation if needed
+            "license_status": org.status if org else "N/A",
+            "license_issued_date": org.license_issued_date.isoformat() if org and org.license_issued_date else None,
+            "license_expiry_date": org.license_expiry_date.isoformat() if org and org.license_expiry_date else None,
             "subscription_validity_days": subscription_validity_days,
             "subscription_start": org.license_issued_date.isoformat() if org and org.license_issued_date else None,
             "generated_at": datetime.utcnow().isoformat()
@@ -165,20 +210,24 @@ class OrganizationService:
         )
         logs = result.scalars().all()
         
-        activities = [
-            RecentActivity(
-                id=log.id,
-                action=log.action,
-                entity_type=log.table_name,
-                entity_id=log.record_id,
-                user_id=log.user_id,
-                organization_id=log.organization_id,
-                description=log.changes.get('description') if log.changes else None,
-                created_at=log.timestamp,
-                user_name=log.user.full_name if log.user else None
-            )
-            for log in logs
-        ]
+        activities = []
+        for log in logs:
+            try:
+                activity = RecentActivity(
+                    id=log.id,
+                    action=log.action,
+                    entity_type=log.entity_type,
+                    entity_id=log.entity_id,  # Use entity_id from model
+                    user_id=log.user_id,
+                    organization_id=log.organization_id,
+                    description=log.changes.get('description') if log.changes else None,
+                    created_at=log.timestamp,
+                    user_name=log.user.full_name if log.user else None
+                )
+                activities.append(activity)
+            except Exception as e:
+                logger.warning(f"Skipping invalid audit log entry {log.id}: {str(e)}")
+                continue  # Skip invalid entries instead of failing
         
         return RecentActivityResponse(activities=activities)
 
@@ -191,10 +240,32 @@ class OrganizationService:
             if existing_user:
                 raise HTTPException(status_code=400, detail="Email already registered in the system. Please use a different email.")
             
-            subdomain = license_data.subdomain or generate_subdomain(license_data.organization_name)
+            subdomain = getattr(license_data, 'subdomain', None) or generate_subdomain(license_data.organization_name)
             result = await db.execute(select(Organization).filter_by(subdomain=subdomain))
             if result.scalars().first():
                 raise HTTPException(status_code=400, detail=f"Subdomain '{subdomain}' is already in use")
+            
+            # Validate enabled_modules if provided
+            if license_data.enabled_modules:
+                from app.core.modules_registry import get_all_modules
+                valid_modules = get_all_modules()
+                for module in license_data.enabled_modules:
+                    if module not in valid_modules:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Invalid module '{module}'. Valid modules: {', '.join(valid_modules)}"
+                        )
+            
+            # Set state_code if missing and state provided
+            if license_data.state and not license_data.state_code:
+                state_code = state_to_code_map.get(license_data.state.strip())
+                if state_code:
+                    license_data.state_code = state_code
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"No state code found for state '{license_data.state}'. Please provide state_code manually."
+                    )
             
             organization = Organization(
                 name=license_data.organization_name,
@@ -213,7 +284,8 @@ class OrganizationService:
                 license_type=license_data.license_type,
                 license_issued_date=datetime.utcnow(),
                 license_expiry_date=datetime.utcnow() + timedelta(days=30) if license_data.license_duration_months else None,
-                license_duration_months=license_data.license_duration_months
+                license_duration_months=license_data.license_duration_months,
+                state_code=license_data.state_code  # Ensure it's set
             )
             db.add(organization)
             await db.flush()
@@ -260,15 +332,41 @@ class OrganizationService:
             
             result = await db.execute(select(ServiceRole).filter_by(
                 organization_id=organization.id,
-                name='admin'
+                name='org_admin'
             ))
             admin_role = result.scalars().first()
             if admin_role:
                 await rbac_service.assign_role_to_user(super_admin_user.id, admin_role.id)
-                logger.info(f"Successfully assigned admin role to user {super_admin_user.email}")
+                logger.info(f"Successfully assigned org_admin role to user {super_admin_user.email}")
             else:
-                logger.error(f"Admin role not found after initialization for org {organization.id}")
-                raise HTTPException(status_code=500, detail="Failed to initialize RBAC roles properly")
+                logger.error(f"Org Admin role not found after initialization for org {organization.id}")
+                raise HTTPException(status_code=500, detail=f"Organization Admin role not found after initialization for org {organization.id}")
+            
+            # Setup comprehensive RBAC for org_admin - grant full module access
+            try:
+                from app.services.user_rbac_service import UserRBACService
+                user_rbac_service = UserRBACService(db)
+                await user_rbac_service.setup_user_rbac_by_role(
+                    user_id=super_admin_user.id,
+                    role=UserRole.ORG_ADMIN
+                )
+                logger.info(f"Granted full module access to org_admin {super_admin_user.email}")
+            except Exception as rbac_error:
+                logger.warning(f"RBAC setup warning for org {organization.id}: {rbac_error}")
+            
+            # Initialize entitlements for the new organization
+            try:
+                from app.services.entitlement_service import EntitlementService
+                entitlement_service = EntitlementService(db)
+                logger.info(f"Initializing entitlements for organization {organization.id}")
+                created_entitlements = await entitlement_service.initialize_org_entitlements(
+                    org_id=organization.id,
+                    enabled_modules=organization.enabled_modules,
+                    license_tier=organization.plan_type
+                )
+                logger.info(f"Initialized {len(created_entitlements)} entitlements for organization {organization.id}")
+            except Exception as ent_error:
+                logger.warning(f"Entitlement setup warning for org {organization.id}: {ent_error}")
             
             await db.commit()
             
@@ -286,12 +384,17 @@ class OrganizationService:
             )
             
             if not success:
-                logger.warning(f"Failed to send license creation email: {error}")
+                raise HTTPException(status_code=500, detail=f"License created but email failed: {error}")
             
             return OrganizationLicenseResponse(
+                organization_name=organization.name,
+                subdomain=organization.subdomain,
+                superadmin_email=organization.primary_email,
+                temp_password=temp_password,
                 license_type=organization.license_type,
                 license_issued_date=organization.license_issued_date,
-                license_expiry_date=organization.license_expiry_date
+                license_expiry_date=organization.license_expiry_date,
+                license_status=organization.status  # Add this derived status
             )
         except HTTPException:
             raise
@@ -308,16 +411,8 @@ class OrganizationService:
     @staticmethod
     def get_available_modules() -> Dict:
         """Get available modules in the application"""
-        available_modules = {
-            "CRM": True,
-            "ERP": True,
-            "HR": True,
-            "Inventory": True,
-            "Service": True,
-            "Analytics": True,
-            "Finance": True
-        }
-        return available_modules
+        from app.core.modules_registry import get_default_enabled_modules
+        return get_default_enabled_modules()
 
     @staticmethod
     async def get_organization_modules(db: AsyncSession, organization_id: int) -> Dict:

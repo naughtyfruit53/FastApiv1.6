@@ -10,26 +10,26 @@ from app.schemas.ledger import (
     LedgerFilters, CompleteLedgerResponse,
     OutstandingLedgerResponse
 )
-from app.core.security import get_current_user
+from app.core.enforcement import require_access
 from app.models.user_models import User
 
 router = APIRouter(
-    prefix="/ledger",
     tags=["Ledger"]
 )
 
 @router.get("/complete", response_model=CompleteLedgerResponse)
 async def get_complete_ledger(
     filters: LedgerFilters = Depends(),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("ledger", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get complete ledger with all transactions
     """
+    current_user, org_id = auth
+    
     try:
-        organization_id = current_user.organization_id
-        return await LedgerService.get_complete_ledger(db, organization_id, filters)
+        return await LedgerService.get_complete_ledger(db, org_id, filters)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -43,14 +43,15 @@ async def get_outstanding_ledger(
     voucher_type: str = Query("all", alias="voucher_type"),
     start_date: str = Query(None, alias="start_date"),
     end_date: str = Query(None, alias="end_date"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("ledger", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get outstanding ledger with balances
     """
+    current_user, org_id = auth
+    
     try:
-        organization_id = current_user.organization_id
         filters = LedgerFilters(
             account_type=account_type,
             account_id=account_id,
@@ -58,7 +59,7 @@ async def get_outstanding_ledger(
             start_date=start_date,
             end_date=end_date
         )
-        return await LedgerService.get_outstanding_ledger(db, organization_id, filters)
+        return await LedgerService.get_outstanding_ledger(db, org_id, filters)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -69,16 +70,17 @@ async def get_outstanding_ledger(
 async def get_entity_balance(
     entity_type: str,
     entity_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("ledger", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get outstanding balance for a specific vendor or customer
     """
+    current_user, org_id = auth
+    
     try:
-        organization_id = current_user.organization_id
         filters = LedgerFilters(account_type=entity_type.lower(), account_id=entity_id)
-        ledger_response = await LedgerService.get_outstanding_ledger(db, organization_id, filters)
+        ledger_response = await LedgerService.get_outstanding_ledger(db, org_id, filters)
         
         # Find the matching balance
         for balance in ledger_response.outstanding_balances:
@@ -107,15 +109,16 @@ async def get_entity_balance(
 
 @router.get("/chart-of-accounts", response_model=List[Dict[str, Any]])
 async def get_chart_of_accounts(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("ledger", "read")),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get chart of accounts (temporarily here; consider moving to chart_of_accounts.py if separate)
     """
+    current_user, org_id = auth
+    
     try:
-        organization_id = current_user.organization_id
-        return await LedgerService.get_chart_of_accounts(db, organization_id)
+        return await LedgerService.get_chart_of_accounts(db, org_id)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -124,15 +127,16 @@ async def get_chart_of_accounts(
 
 @router.post("/chart-of-accounts/standard")
 async def create_standard_chart_of_accounts(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    auth: tuple = Depends(require_access("ledger", "create")),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Create standard chart of accounts (temporarily here; consider moving to chart_of_accounts.py if separate)
     """
+    current_user, org_id = auth
+    
     try:
-        organization_id = current_user.organization_id
-        await LedgerService.create_standard_chart_of_accounts(db, organization_id)
+        await LedgerService.create_standard_chart_of_accounts(db, org_id)
         return {"message": "Standard chart of accounts created successfully"}
     except Exception as e:
         raise HTTPException(

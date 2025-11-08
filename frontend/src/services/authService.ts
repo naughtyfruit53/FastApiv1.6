@@ -213,12 +213,8 @@ export const authService = {
       return response.data;
     } catch (error: any) {
       console.error("[AuthService] Token refresh failed:", error);
-      // Clear invalid tokens
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      localStorage.removeItem(USER_ROLE_KEY);
-      localStorage.removeItem(IS_SUPER_ADMIN_KEY);
-      return null;  // Return null instead of throw
+      // Instead of clear, return null
+      return null;
     }
   },
   isTokenValid: () => {
@@ -266,25 +262,25 @@ export const voucherService = {
       throw new Error(error.userMessage || `Failed to create ${type}`);
     }
   },
-  getVoucherById: async (type: string, id: number) => {
+  getVoucherById: async (type: string, voucherId: number) => {
     try {
-      const response = await api.get(`/${type}/${id}`);
+      const response = await api.get(`/${type}/${voucherId}`);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to fetch ${type}`);
     }
   },
-  updateVoucher: async (type: string, id: number, data: any) => {
+  updateVoucher: async (type: string, voucherId: number, data: any) => {
     try {
-      const response = await api.put(`/${type}/${id}`, data);
+      const response = await api.put(`/${type}/${voucherId}`, data);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to update ${type}`);
     }
   },
-  deleteVoucher: async (type: string, id: number) => {
+  deleteVoucher: async (type: string, voucherId: number) => {
     try {
-      const response = await api.delete(`/${type}/${id}`);
+      const response = await api.delete(`/${type}/${voucherId}`);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || `Failed to delete ${type}`);
@@ -468,7 +464,7 @@ export const masterDataService = {
   },
   updateStock: async (productId: number, data: any) => {
     try {
-      const response = await api.put(`/stock/product/${productId}`, data);
+      const response = await api.put(`/stock/product/product/${productId}`, data);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || "Failed to update stock");
@@ -588,7 +584,7 @@ export const companyService = {
         return null;
       }
       console.error("[CompanyService] Error fetching company:", error);
-      return null; // Return null on error to avoid throwing
+      return null; // Instead of throw, return null on error to avoid throwing
     }
   },
   isCompanySetupRequired: async () => {
@@ -964,6 +960,14 @@ export const passwordService = {
       throw new Error(error.userMessage || "Failed to reset password");
     }
   },
+  adminResetPassword: async (userEmail: string) => {
+    try {
+      const response = await api.post("/password/admin-reset", { user_email: userEmail });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to initiate admin password reset");
+    }
+  }
 };
 export const userService = {
   // Organization user management (for org admins)

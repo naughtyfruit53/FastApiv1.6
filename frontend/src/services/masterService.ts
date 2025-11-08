@@ -25,7 +25,7 @@ interface StockResponse {
 export const getVendors = async (context?: QueryFunctionContext): Promise<any> => {
   const params = context?.queryKey?.[3] ? { organization_id: context.queryKey[3] } : {};
   console.log("[getVendors] Request params:", params);
-  const response = await api.get("/api/v1/vendors", { params, signal: context?.signal });
+  const response = await api.get("/vendors", { params, signal: context?.signal });  // CHANGED: Removed extra /api/v1 (uses getApiUrl which has /api/v1)
   console.log("[getVendors] Response data:", response.data);
   return response.data;
 };
@@ -46,7 +46,7 @@ export const searchVendors = async ({
   }
   console.log("[searchVendors] Request params:", params);
   try {
-    const response = await api.get("/api/v1/vendors", { params, signal });
+    const response = await api.get("/vendors", { params, signal });  // CHANGED: Removed extra /api/v1
     console.log("[searchVendors] Response data:", response.data);
     return response.data;
   } catch (error) {
@@ -57,24 +57,24 @@ export const searchVendors = async ({
 
 // Fetch all customers
 export const getCustomers = async (context?: QueryFunctionContext): Promise<any> => {
-  const response = await api.get("/api/v1/customers", { signal: context?.signal });
+  const response = await api.get("/customers", { signal: context?.signal });  // CHANGED: Removed extra /api/v1
   console.log("[getCustomers] Response data:", response.data);
   return response.data;
 };
 
 // Fetch all products
 export const getProducts = async (context?: QueryFunctionContext): Promise<any> => {
-  const response = await api.get("/api/v1/products", { 
+  const response = await api.get("/products", { 
     params: { active_only: false, limit: 1000000 }, 
     signal: context?.signal 
-  });
+  });  // CHANGED: Removed extra /api/v1
   console.log("[getProducts] Response data:", response.data);
   return response.data;
 };
 
 // Fetch all employees
 export const getEmployees = async (context?: QueryFunctionContext): Promise<any> => {
-  const response = await api.get("/api/v1/hr/employees", { signal: context?.signal });
+  const response = await api.get("/hr/employees", { signal: context?.signal });
   console.log("[getEmployees] Response data:", response.data);
   return response.data;
 };
@@ -85,14 +85,14 @@ export const searchCustomers = async ({
   signal,
 }: QueryFunctionContext): Promise<any> => {
   const [, searchTerm, limit] = queryKey;
-  const response = await api.get("/api/v1/customers", {
+  const response = await api.get("/customers", {
     params: {
       search: searchTerm,
       limit: limit || 1000000,
       active_only: false,
     },
     signal,
-  });
+  });  // CHANGED: Removed extra /api/v1
   console.log("[searchCustomers] Response data:", response.data);
   return response.data;
 };
@@ -103,14 +103,14 @@ export const searchProducts = async ({
   signal,
 }: QueryFunctionContext): Promise<any> => {
   const [, searchTerm, limit] = queryKey;
-  const response = await api.get("/api/v1/products", {
+  const response = await api.get("/products", {
     params: {
       search: searchTerm,
       limit: limit || 1000000,
       active_only: false,
     },
     signal,
-  });
+  });  // CHANGED: Removed extra /api/v1
   console.log("[searchProducts] Response data:", response.data);
   return response.data;
 };
@@ -130,7 +130,7 @@ export const createCustomer = async (customerData: {
   pan_number?: string;
   organization_id?: number;
 }): Promise<any> => {
-  const response = await api.post("/api/v1/customers", customerData);
+  const response = await api.post("/customers", customerData);  // CHANGED: Removed extra /api/v1
   console.log("[createCustomer] Response data:", response.data);
   return response.data;
 };
@@ -157,7 +157,7 @@ export const createVendor = async (vendorData: {
     }
   }
   console.log("[createVendor] Request data:", vendorData);
-  const response = await api.post("/api/v1/vendors", vendorData);
+  const response = await api.post("/vendors", vendorData);  // CHANGED: Removed extra /api/v1
   console.log("[createVendor] Response data:", response.data);
   return response.data;
 };
@@ -183,14 +183,14 @@ export const updateVendor = async (id: number, vendorData: {
       throw new Error(`${field.replace('_', ' ')} is required`);
     }
   }
-  const response = await api.put(`/api/v1/vendors/${id}`, vendorData);
+  const response = await api.put(`/vendors/${id}`, vendorData);  // CHANGED: Removed extra /api/v1
   console.log("[updateVendor] Response data:", response.data);
   return response.data;
 };
 
 // Delete vendor
 export const deleteVendor = async (id: number): Promise<any> => {
-  const response = await api.delete(`/api/v1/vendors/${id}`);
+  const response = await api.delete(`/vendors/${id}`);  // CHANGED: Removed extra /api/v1
   console.log("[deleteVendor] Response data:", response.data);
   return response.data;
 };
@@ -208,7 +208,7 @@ export const createProduct = async (productData: {
   description?: string;
   is_manufactured?: boolean;
 }): Promise<any> => {
-  const response = await api.post("/api/v1/products", productData);
+  const response = await api.post("/products", productData);  // CHANGED: Removed extra /api/v1
   console.log("[createProduct] Response data:", response.data);
   return response.data;
 };
@@ -227,31 +227,31 @@ export const createEmployee = async (employeeData: {
   designation?: string;
   salary?: number;
 }): Promise<any> => {
-  const response = await api.post("/api/v1/hr/employees", employeeData);
+  const response = await api.post("/hr/employees", employeeData);
   console.log("[createEmployee] Response data:", response.data);
   return response.data;
 };
 
 export const bulkImportVendors = async (data: any[]): Promise<any> => {
-  const response = await api.post("/api/v1/vendors/bulk", data);
+  const response = await api.post("/vendors/bulk", data);  // CHANGED: Removed extra /api/v1
   console.log("[bulkImportVendors] Response data:", response.data);
   return response.data;
 };
 
 export const bulkImportCustomers = async (data: any[]): Promise<any> => {
-  const response = await api.post("/api/v1/customers/bulk", data);
+  const response = await api.post("/customers/bulk", data);  // CHANGED: Removed extra /api/v1
   console.log("[bulkImportCustomers] Response data:", response.data);
   return response.data;
 };
 
 export const bulkImportProducts = async (data: any[]): Promise<any> => {
-  const response = await api.post("/api/v1/products/bulk", data);
+  const response = await api.post("/products/bulk", data);  // CHANGED: Removed extra /api/v1
   console.log("[bulkImportProducts] Response data:", response.data);
   return response.data;
 };
 
 export const bulkImportStock = async (data: any[]): Promise<any> => {
-  const response = await api.post("/api/v1/stock/bulk", data);
+  const response = await api.post("/stock/bulk", data);  // CHANGED: Removed extra /api/v1
   console.log("[bulkImportStock] Response data:", response.data);
   return response.data;
 };
@@ -274,7 +274,7 @@ export const getStock = async ({ queryKey, signal }: QueryFunctionContext): Prom
   }
   console.log("[getStock] Request params:", params);
   try {
-    const response = await api.get("/api/v1/stock", { params, signal });
+    const response = await api.get("/stock", { params, signal });  // CHANGED: Removed extra /api/v1
     console.log("[getStock] Response data:", {
       response: response.data,
       type: typeof response.data,
@@ -326,7 +326,7 @@ export const hsnSearch = async ({ queryKey }: QueryFunctionContext): Promise<any
 export const getNextAccountCode = async (accountType: string): Promise<string> => {
   try {
     const params = new URLSearchParams({ type: accountType });
-    const url = `/api/v1/chart-of-accounts/get-next-code?${params}`;
+    const url = `/chart-of-accounts/get-next-code?${params}`;
     const response = await api.get(url);
     console.log("[getNextAccountCode] Response data:", response.data);
     return response.data.next_code;
@@ -380,7 +380,7 @@ export const getTaxCodes = async (params?: {
   limit?: number;
 }): Promise<TaxCode[]> => {
   try {
-    const response = await api.get("/api/v1/master-data/tax-codes", { params });
+    const response = await api.get("/master-data/tax-codes", { params });
     console.log("[getTaxCodes] Response:", response.data);
     return response.data.items || response.data;
   } catch (error) {
@@ -392,7 +392,7 @@ export const getTaxCodes = async (params?: {
 // Get single tax code
 export const getTaxCode = async (taxCodeId: number): Promise<TaxCode> => {
   try {
-    const response = await api.get(`/api/v1/master-data/tax-codes/${taxCodeId}`);
+    const response = await api.get(`/master-data/tax-codes/${taxCodeId}`);
     console.log("[getTaxCode] Response:", response.data);
     return response.data;
   } catch (error) {
@@ -407,7 +407,7 @@ export const updateTaxCode = async (
   data: TaxCodeUpdate
 ): Promise<TaxCode> => {
   try {
-    const response = await api.put(`/api/v1/master-data/tax-codes/${taxCodeId}`, data);
+    const response = await api.put(`/master-data/tax-codes/${taxCodeId}`, data);
     console.log("[updateTaxCode] Response:", response.data);
     return response.data;
   } catch (error) {

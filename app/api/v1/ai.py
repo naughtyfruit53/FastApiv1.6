@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
+from app.core.enforcement import require_access
 from app.models import User
 from app.services.ai_service import AIService, IntentClassifier, BusinessAdvisor
 import logging
@@ -48,14 +48,16 @@ class BusinessAdviceResponse(BaseModel):
 @router.post("/intent/classify", response_model=IntentClassificationResponse)
 async def classify_intent(
     request: IntentClassificationRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("ai", "create")),
+    db: Session = Depends(get_db)
 ):
     """
     Classify user intent from a message
     
     Uses NLP-based intent classification to determine what the user wants to do
     """
+    current_user, org_id = auth
+    
     try:
         intent_classifier = IntentClassifier()
         
@@ -81,9 +83,11 @@ async def classify_intent(
 
 @router.get("/intent/patterns")
 async def get_intent_patterns(
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("ai", "read"))
 ):
     """Get available intent patterns and their keywords"""
+    current_user, org_id = auth
+    
     return {
         "patterns": IntentClassifier.INTENT_PATTERNS
     }
@@ -96,8 +100,8 @@ async def get_intent_patterns(
 @router.post("/advice", response_model=BusinessAdviceResponse)
 async def get_business_advice(
     request: BusinessAdviceRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("ai", "create")),
+    db: Session = Depends(get_db)
 ):
     """
     Get business advice for a specific category
@@ -108,6 +112,8 @@ async def get_business_advice(
     - sales: Sales growth strategies
     - customer_retention: Customer retention strategies
     """
+    current_user, org_id = auth
+    
     try:
         business_advisor = BusinessAdvisor(db)
         
@@ -124,7 +130,7 @@ async def get_business_advice(
                 detail=f"Invalid advice category. Must be one of: {', '.join(advice_methods.keys())}"
             )
         
-        advice = advice_methods[request.category](current_user.organization_id)
+        advice = advice_methods[request.category](org_id)
         
         return BusinessAdviceResponse(**advice)
         
@@ -140,9 +146,11 @@ async def get_business_advice(
 
 @router.get("/advice/categories")
 async def get_advice_categories(
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("ai", "read"))
 ):
     """Get available business advice categories"""
+    current_user, org_id = auth
+    
     return {
         "categories": [
             {
@@ -176,13 +184,15 @@ async def get_advice_categories(
 @router.get("/navigation/suggestions")
 async def get_navigation_suggestions(
     query: Optional[str] = Query(None, description="Search query for navigation"),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("ai", "read"))
 ):
     """
     Get navigation suggestions based on query or user context
     
     Returns relevant pages and actions the user might want to navigate to
     """
+    current_user, org_id = auth
+    
     # Define navigation structure
     navigation_items = [
         {"path": "/dashboard", "label": "Dashboard", "category": "overview", "keywords": ["dashboard", "home", "overview"]},
@@ -216,11 +226,13 @@ async def get_navigation_suggestions(
 @router.get("/navigation/quickactions")
 async def get_quick_actions(
     context: Optional[str] = Query(None, description="Current page context"),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("ai", "read"))
 ):
     """
     Get contextual quick actions based on current page or context
     """
+    current_user, org_id = auth
+    
     quick_actions = [
         {
             "id": "create_customer",
@@ -264,8 +276,8 @@ async def get_quick_actions(
 @router.post("/agent/execute")
 async def execute_agent_task(
     task: Dict[str, Any],
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("ai", "create")),
+    db: Session = Depends(get_db)
 ):
     """
     Execute an AI agent task
@@ -276,6 +288,8 @@ async def execute_agent_task(
     - Workflow automation
     - Business intelligence queries
     """
+    current_user, org_id = auth
+    
     try:
         task_type = task.get("type")
         
@@ -322,14 +336,16 @@ async def execute_agent_task(
 @router.get("/insights/smart")
 async def get_smart_insights(
     category: Optional[str] = Query(None, description="Insight category filter"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("ai", "read")),
+    db: Session = Depends(get_db)
 ):
     """
     Get smart business insights powered by AI
     
     Returns actionable insights based on organization data
     """
+    current_user, org_id = auth
+    
     try:
         # Placeholder insights - would be generated from actual data analysis
         insights = [
@@ -376,12 +392,14 @@ async def get_smart_insights(
 @router.get("/insights/recommendations")
 async def get_recommendations(
     context: Optional[str] = Query(None, description="Context for recommendations"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("ai", "read")),
+    db: Session = Depends(get_db)
 ):
     """
     Get personalized recommendations for the user
     """
+    current_user, org_id = auth
+    
     recommendations = [
         "Consider offering early payment discounts to improve cash flow",
         "Set up automatic reorder alerts for critical inventory items",
@@ -399,9 +417,11 @@ async def get_recommendations(
 
 @router.get("/chatbot/config")
 async def get_chatbot_config(
-    current_user: User = Depends(get_current_active_user)
+    auth: tuple = Depends(require_access("ai", "read"))
 ):
     """Get chatbot configuration and capabilities"""
+    current_user, org_id = auth
+    
     return {
         "capabilities": [
             "intent_classification",

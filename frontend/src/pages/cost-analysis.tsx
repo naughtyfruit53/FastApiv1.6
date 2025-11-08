@@ -30,6 +30,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import api from '../lib/api';
 import { formatCurrency } from "../utils/currencyUtils";
 
+import { ProtectedPage } from '../components/ProtectedPage';
 interface CostCenter {
   id: number;
   cost_center_name: string;
@@ -215,7 +216,8 @@ const CostAnalysisPage: React.FC = () => {
       low: 'success'
     };
     return (
-      <Chip
+      <ProtectedPage moduleKey="finance" action="read">
+      hip
         label={priority.toUpperCase()}
         color={colors[priority]}
         size="small"
@@ -225,15 +227,16 @@ const CostAnalysisPage: React.FC = () => {
 
   if (loading) {
     return (
-      <DashboardLayout
+      <ProtectedPage moduleKey="finance" action="read">
+        ashboardLayout
         title="Cost Analysis"
         subtitle="Analyze spending patterns and get actionable insights"
       >
         <LinearProgress />
       </DashboardLayout>
+      </ProtectedPage>
     );
   }
-
   return (
     <DashboardLayout
       title="Cost Analysis"
@@ -466,7 +469,7 @@ const CostAnalysisPage: React.FC = () => {
         )}
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
-
 export default CostAnalysisPage;

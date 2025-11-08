@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.enforcement import require_access
 from app.models import User
 from app.services.sla import SLAService, get_sla_service
 from app.schemas.sla import (
@@ -18,10 +19,6 @@ from app.schemas.sla import (
     SLATrackingResponse, SLATrackingUpdate, SLATrackingWithPolicy,
     SLAMetrics, SLADashboard, SLAPolicyAssignment, SLAPolicyAssignmentResponse,
     TicketWithSLA
-)
-from app.core.rbac_dependencies import (
-    require_same_organization, require_sla_create, require_sla_read, 
-    require_sla_update, require_sla_delete, require_sla_escalate
 )
 import logging
 
@@ -35,9 +32,9 @@ router = APIRouter()
 async def get_sla_policies(
     organization_id: int = Path(..., description="Organization ID"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    auth: tuple = Depends(require_access("sla", "read")),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_read),
-    _: int = Depends(require_same_organization)
+    db: Session = Depends(get_db)
 ):
     """Get all SLA policies for an organization"""
     logger.info(f"User {current_user.id} requesting SLA policies for organization {organization_id}")
@@ -50,9 +47,9 @@ async def get_sla_policies(
 async def create_sla_policy(
     organization_id: int = Path(..., description="Organization ID"),
     policy: SLAPolicyCreate = ...,
+    auth: tuple = Depends(require_access("sla", "create")),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_create),
-    _: int = Depends(require_same_organization)
+    db: Session = Depends(get_db)
 ):
     """Create a new SLA policy"""
     logger.info(f"User {current_user.id} creating SLA policy '{policy.name}' for organization {organization_id}")
@@ -82,8 +79,7 @@ async def get_sla_policy(
     organization_id: int = Path(..., description="Organization ID"),
     policy_id: int = Path(..., description="SLA Policy ID"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_read),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "read"))
 ):
     """Get a specific SLA policy"""
     logger.info(f"User {current_user.id} requesting SLA policy {policy_id}")
@@ -104,8 +100,7 @@ async def update_sla_policy(
     policy_id: int = Path(..., description="SLA Policy ID"),
     policy_update: SLAPolicyUpdate = ...,
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_update),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "update"))
 ):
     """Update an SLA policy"""
     logger.info(f"User {current_user.id} updating SLA policy {policy_id}")
@@ -137,8 +132,7 @@ async def delete_sla_policy(
     organization_id: int = Path(..., description="Organization ID"),
     policy_id: int = Path(..., description="SLA Policy ID"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_delete),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "delete"))
 ):
     """Delete an SLA policy"""
     logger.info(f"User {current_user.id} deleting SLA policy {policy_id}")
@@ -173,8 +167,7 @@ async def assign_sla_to_ticket(
     assignment: Optional[SLAPolicyAssignment] = None,
     force_recreate: bool = Query(False, description="Force recreate SLA tracking if it exists"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(lambda: require_service_permission("sla_create")),
-    _: int = Depends(require_same_organization)
+    current_user: User = Depends(lambda: require_service_permission("sla_create"))
 ):
     """Assign SLA policy to a ticket (auto-detects if no policy specified)"""
     logger.info(f"User {current_user.id} assigning SLA to ticket {ticket_id}")
@@ -211,8 +204,7 @@ async def get_ticket_sla(
     organization_id: int = Path(..., description="Organization ID"),
     ticket_id: int = Path(..., description="Ticket ID"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_read),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "read"))
 ):
     """Get SLA tracking for a specific ticket"""
     logger.info(f"User {current_user.id} requesting SLA tracking for ticket {ticket_id}")
@@ -239,8 +231,7 @@ async def update_sla_tracking(
     tracking_id: int = Path(..., description="SLA Tracking ID"),
     tracking_update: SLATrackingUpdate = ...,
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_update),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "update"))
 ):
     """Update SLA tracking (typically for system use)"""
     logger.info(f"User {current_user.id} updating SLA tracking {tracking_id}")
@@ -268,8 +259,7 @@ async def get_breached_slas(
     organization_id: int = Path(..., description="Organization ID"),
     limit: int = Query(50, description="Maximum number of results", le=200),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_read),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "read"))
 ):
     """Get tickets with breached SLAs"""
     logger.info(f"User {current_user.id} requesting breached SLAs for organization {organization_id}")
@@ -282,8 +272,7 @@ async def get_breached_slas(
 async def get_escalation_candidates(
     organization_id: int = Path(..., description="Organization ID"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_read),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "read"))
 ):
     """Get tickets that are candidates for escalation"""
     logger.info(f"User {current_user.id} requesting escalation candidates for organization {organization_id}")
@@ -297,8 +286,7 @@ async def trigger_escalation(
     organization_id: int = Path(..., description="Organization ID"),
     tracking_id: int = Path(..., description="SLA Tracking ID"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_escalate),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "update"))
 ):
     """Trigger escalation for an SLA tracking record"""
     logger.info(f"User {current_user.id} triggering escalation for SLA tracking {tracking_id}")
@@ -333,8 +321,7 @@ async def get_sla_metrics(
     end_date: Optional[datetime] = Query(None, description="End date for metrics (ISO format)"),
     days: int = Query(30, description="Number of days to look back if dates not specified", ge=1, le=365),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_read),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "read"))
 ):
     """Get SLA performance metrics for a date range"""
     logger.info(f"User {current_user.id} requesting SLA metrics for organization {organization_id}")
@@ -363,8 +350,7 @@ async def process_ticket_response(
     ticket_id: int = Path(..., description="Ticket ID"),
     response_time: Optional[datetime] = Query(None, description="Response time (defaults to now)"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_update),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "update"))
 ):
     """Process first response for a ticket and update SLA tracking"""
     logger.info(f"User {current_user.id} processing response for ticket {ticket_id}")
@@ -400,8 +386,7 @@ async def process_ticket_resolution(
     ticket_id: int = Path(..., description="Ticket ID"),
     resolution_time: Optional[datetime] = Query(None, description="Resolution time (defaults to now)"),
     sla_service: SLAService = Depends(get_sla_service),
-    current_user: User = Depends(require_sla_update),
-    _: int = Depends(require_same_organization)
+    auth: tuple = Depends(require_access("sla", "update"))
 ):
     """Process ticket resolution and update SLA tracking"""
     logger.info(f"User {current_user.id} processing resolution for ticket {ticket_id}")

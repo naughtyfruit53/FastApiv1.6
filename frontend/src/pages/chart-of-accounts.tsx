@@ -14,9 +14,11 @@ import {
 } from '@mui/icons-material';
 import DashboardLayout from '../components/DashboardLayout';
 
+import { ProtectedPage } from '../components/ProtectedPage';
 const ChartOfAccountsPage: React.FC = () => {
   return (
-    <DashboardLayout
+    <ProtectedPage moduleKey="finance" action="read">
+      ashboardLayout
       title="Chart Of Accounts"
       subtitle="Manage your chart of accounts and account hierarchy"
     >
@@ -54,7 +56,7 @@ const ChartOfAccountsPage: React.FC = () => {
         </Grid>
       </Grid>
     </DashboardLayout>
+    </ProtectedPage>
   );
 };
-
 export default ChartOfAccountsPage;

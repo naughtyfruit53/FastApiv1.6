@@ -24,6 +24,9 @@ import {
 import { useForm } from "react-hook-form";
 import { organizationService } from "../services/organizationService"; // Adjust if needed
 import { usePincodeLookup } from "../hooks/usePincodeLookup";
+import ModuleSelectionModal from './ModuleSelectionModal'; // Import reusable modal
+import { useAuth } from "../context/AuthContext";  // Add this import
+
 interface CreateOrganizationLicenseModalProps {
   open: boolean;
   onClose: () => void;
@@ -122,23 +125,22 @@ const stateToCodeMap: { [key: string]: string } = {
 const CreateOrganizationLicenseModal: React.FC<
   CreateOrganizationLicenseModalProps
 > = ({ open, onClose, onSuccess }) => {
+  const { user } = useAuth();  // Add this to get user context
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<any | null>(null);
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
   const [licenseActivationOpen, setLicenseActivationOpen] = useState(false);
-  const [activationPeriod, setActivationPeriod] = useState<
-    "month" | "year" | "perpetual"
-  >("year");
-  const [selectedModules, setSelectedModules] = useState({
-    CRM: true,
-    ERP: true,
-    HR: true,
-    Inventory: true,
-    Service: true,
-    Analytics: true,
-    Finance: true,
-  });
+  const [activationPeriod, setActivationPeriod] = useState<string>("trial_7"); // Default to 7-day trial
+  const [selectedModules, setSelectedModules] = useState<{ [key: string]: boolean }>({
+    crm: true,
+    erp: true,
+    manufacturing: true,
+    finance: true,
+    service: true,
+    hr: true,
+    analytics: true
+  }); // Pre-ticked object
   const {
     register,
     handleSubmit,
@@ -160,6 +162,7 @@ const CreateOrganizationLicenseModal: React.FC<
   } = usePincodeLookup();
   const pin_code = watch("pin_code");
   const state = watch("state");
+  const state_code = watch("state_code");
   // Auto-populate city, state, and state_code when pin code changes
   useEffect(() => {
     if (pin_code && pin_code.length === 6 && /^\d{6}$/.test(pin_code)) {
@@ -171,18 +174,21 @@ const CreateOrganizationLicenseModal: React.FC<
     if (pincodeData) {
       setValue("city", pincodeData.city, { shouldValidate: true });
       setValue("state", pincodeData.state, { shouldValidate: true });
-      setValue("state_code", pincodeData.state_code, { shouldValidate: true });
+      setValue("state_code", pincodeData.state_code || stateToCodeMap[pincodeData.state.trim()] || '', { shouldValidate: true });
     }
   }, [pincodeData, setValue]);
-  // Auto-populate state_code when state changes
+  // Enhanced state change handler: always set state_code if missing
   useEffect(() => {
-    if (state) {
-      const code = stateToCodeMap[state];
+    if (state && !state_code) {
+      const trimmedState = state.trim();
+      const code = stateToCodeMap[trimmedState];
       if (code) {
         setValue("state_code", code, { shouldValidate: true });
+      } else {
+        setError(`No state code found for "${trimmedState}". Please select a valid state.`);
       }
     }
-  }, [state, setValue]);
+  }, [state, state_code, setValue]);
   const handleClose = () => {
     reset();
     setError(null);
@@ -200,11 +206,22 @@ const CreateOrganizationLicenseModal: React.FC<
       timestamp: new Date().toISOString(),
       note: "Organization context managed by backend session",
     });
-    // Validate required fields that might not be caught by form validation
-    if (!data.state) {
-      setError("Please select a state");
-      setLoading(false);
-      return;
+    // Enhanced validation before submission
+    if (!data.state_code) {
+      if (data.state) {
+        const code = stateToCodeMap[data.state.trim()];
+        if (code) {
+          data.state_code = code;
+        } else {
+          setError("Invalid state selected - no matching state code found.");
+          setLoading(false);
+          return;
+        }
+      } else {
+        setError("State and state code are required.");
+        setLoading(false);
+        return;
+      }
     }
     // Prepare the data for submission
     const submissionData = {
@@ -218,7 +235,7 @@ const CreateOrganizationLicenseModal: React.FC<
       state_code: data.state_code.trim(),
       gst_number: data.gst_number?.trim() || undefined, // Optional field
       max_users: data.max_users,
-      enabled_modules: selectedModules, // Include selected modules
+      enabled_modules: selectedModules, // Send object {crm: true, ...}
     };
     console.log("[LicenseModal] Submitting license data:", submissionData);
     try {
@@ -263,18 +280,6 @@ const CreateOrganizationLicenseModal: React.FC<
     } finally {
       setLoading(false);
     }
-  };
-  const handleModuleChange = (module: string, enabled: boolean) => {
-    setSelectedModules((prev) => ({
-      ...prev,
-      [module]: enabled,
-    }));
-  };
-  const handleOpenModuleDialog = () => {
-    setModuleDialogOpen(true);
-  };
-  const handleCloseModuleDialog = () => {
-    setModuleDialogOpen(false);
   };
   return (
     <>
@@ -597,7 +602,7 @@ const CreateOrganizationLicenseModal: React.FC<
                           label="State"
                           value={watch("state") || ""}
                           onChange={(e) =>
-                            setValue("state", e.target.value, {
+                            setValue("state", e.target.value as string, {
                               shouldValidate: true,
                             })
                           }
@@ -669,7 +674,7 @@ const CreateOrganizationLicenseModal: React.FC<
           {!success && (
             <>
               <Button
-                onClick={handleOpenModuleDialog}
+                onClick={() => setModuleDialogOpen(true)}
                 variant="text"
                 disabled={loading}
                 size="large"
@@ -728,41 +733,13 @@ const CreateOrganizationLicenseModal: React.FC<
           </Box>
         </Box>
       )}
-      {/* Module Selection Dialog */}
-      <Dialog
+      <ModuleSelectionModal
         open={moduleDialogOpen}
-        onClose={handleCloseModuleDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Module Selection for New Organization</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            Select which modules should be enabled for this organization. All
-            modules are enabled by default.
-          </Typography>
-          <FormGroup>
-            {Object.entries(selectedModules).map(([module, enabled]) => (
-              <FormControlLabel
-                key={module}
-                control={
-                  <Checkbox
-                    checked={enabled}
-                    onChange={(e) =>
-                      handleModuleChange(module, e.target.checked)
-                    }
-                    color="primary"
-                  />
-                }
-                label={module}
-              />
-            ))}
-          </FormGroup>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModuleDialog}>Done</Button>
-        </DialogActions>
-      </Dialog>
+        onClose={() => setModuleDialogOpen(false)}
+        selectedModules={selectedModules}
+        onChange={setSelectedModules}
+        isSuperAdmin={user?.is_super_admin}  // Add this prop
+      />
       {/* License Activation Dialog */}
       <Dialog
         open={licenseActivationOpen}
@@ -784,12 +761,15 @@ const CreateOrganizationLicenseModal: React.FC<
               label="License Period"
               onChange={(e) =>
                 setActivationPeriod(
-                  e.target.value as "month" | "year" | "perpetual",
+                  e.target.value as string,
                 )
               }
             >
-              <MenuItem value="month">1 Month</MenuItem>
-              <MenuItem value="year">1 Year</MenuItem>
+              <MenuItem value="trial_7">Trial (7 Days)</MenuItem>
+              <MenuItem value="trial_15">Trial (15 Days)</MenuItem>
+              <MenuItem value="month_1">1 Month</MenuItem>
+              <MenuItem value="month_3">3 Months</MenuItem>
+              <MenuItem value="year_1">1 Year</MenuItem>
               <MenuItem value="perpetual">Perpetual</MenuItem>
             </Select>
           </FormControl>
