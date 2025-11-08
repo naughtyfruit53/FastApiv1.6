@@ -942,11 +942,10 @@ const PurchaseOrderPage: React.FC = () => {
   if (isLoading || companyLoading) {
     return (
       <ProtectedPage moduleKey="procurement" action="write">
-      >
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
-      </Container>
+      </ProtectedPage>
     );
   }
 
