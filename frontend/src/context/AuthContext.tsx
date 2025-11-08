@@ -288,7 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         email: userData.email,
         role: userData.role,
         is_super_admin: userData.is_super_admin,
-        organization_id: userData.organization_id,
+        organization_id: userData.organization_id, // note: it's from loginResponse, not user
         must_change_password: userData.must_change_password,
       };
       setUser(newUser);

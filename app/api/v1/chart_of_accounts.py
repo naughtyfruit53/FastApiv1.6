@@ -130,7 +130,7 @@ async def create_chart_of_account(
         
         # Create account
         account = ChartOfAccounts(
-            org_id=org_id,
+            organization_id=org_id,
             account_code=account_code,
             account_name=coa_data.account_name,
             account_type=coa_data.account_type.upper(),

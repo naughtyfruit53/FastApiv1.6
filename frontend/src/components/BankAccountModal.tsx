@@ -16,7 +16,7 @@ import {
   Switch,
   FormControlLabel,
 } from "@mui/material";
-import axios from "axios";
+import { apiClient } from "@/services/api/client"; // Import the configured apiClient
 import AddEditAccountModal from "./AddEditAccountModal"; // Use the existing AddEditAccountModal
 
 interface ChartAccount {
@@ -116,13 +116,8 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
 
   const fetchChartAccounts = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        "/api/v1/chart-of-accounts?account_type=BANK",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      console.log("Fetching chart accounts..."); // Debug log
+      const response = await apiClient.get("/chart-of-accounts?account_type=BANK");
       console.log("Chart accounts response:", response.data); // Added for debugging
       setChartAccounts(response.data.items || []);
     } catch (err: any) {
@@ -170,15 +165,11 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem("token");
+      console.log("Creating/Updating bank account..."); // Debug log
       if (mode === 'add') {
-        await axios.post("/api/v1/erp/bank-accounts", createData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await apiClient.post("/erp/bank-accounts", createData);
       } else if (mode === 'edit' && account) {
-        await axios.put(`/api/v1/erp/bank-accounts/${account.id}`, createData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await apiClient.put(`/erp/bank-accounts/${account.id}`, createData);
       }
       
       if (onSuccess) {
@@ -198,16 +189,13 @@ const BankAccountModal: React.FC<BankAccountModalProps> = ({
       return;
     }
     try {
-      const token = localStorage.getItem("token");
       console.log(`Account type before send: ${chartFormData.account_type}`);
       const payload = { ...chartFormData };
       if (payload.account_type && typeof payload.account_type === "string") {
         payload.account_type = payload.account_type.toUpperCase();
       }
       console.log("Payload being sent to backend:", payload); // Debug log
-      await axios.post("/api/v1/chart-of-accounts", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.post("/chart-of-accounts", payload);
       fetchChartAccounts();
       setOpenChartModal(false);
       // Reset chart form

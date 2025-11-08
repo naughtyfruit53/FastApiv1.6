@@ -312,7 +312,7 @@ class ServiceAction(str, Enum):
 
 # Service Permission Schemas
 class ServicePermissionBase(BaseModel):
-    name: str = Field(..., description="Permission name (e.g., service_create)")
+    name: str = Field(..., description="Permission name (e.g., service_create)", alias="permission_key")
     display_name: str = Field(..., description="Human-readable permission name")
     description: Optional[str] = Field(None, description="Permission description")
     module: ServiceModule = Field(..., description="Module this permission applies to")
@@ -342,7 +342,7 @@ class ServicePermissionInDB(ServicePermissionBase):
 
 # Service Role Schemas
 class ServiceRoleBase(BaseModel):
-    name: ServiceRoleType = Field(..., description="Role name")
+    name: ServiceRoleType = Field(..., description="Role name", alias="role_key")
     display_name: str = Field(..., description="Human-readable role name")
     description: Optional[str] = Field(None, description="Role description")
     is_active: bool = Field(True, description="Whether role is active")

@@ -576,4 +576,17 @@ def register_subrouters():
         logger.error(f"Failed to import/include gst_search_router: {str(e)}\n{traceback.format_exc()}")
         raise
 
+    # ERP API (NEW: Added to fix 404 on /erp/bank-accounts)
+    try:
+        from .erp import router as erp_router
+        logger.debug("Imported erp_router")
+        api_v1_router.include_router(erp_router, prefix="/erp", tags=["ERP"])
+        erp_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /erp{route.path}" for route in erp_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered erp endpoints: {len(erp_routes)} routes")
+        for route_path in erp_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include erp_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
 register_subrouters()

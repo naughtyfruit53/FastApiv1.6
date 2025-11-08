@@ -31,7 +31,7 @@ import {
   Sync,
   Visibility,
 } from "@mui/icons-material";
-import axios from "axios";
+import { apiClient } from "../services/api/client"; // Import apiClient for centralized requests
 import BankAccountModal from "../components/BankAccountModal"; // Import BankAccountModal
 import { ProtectedPage } from "../components/ProtectedPage";
 
@@ -71,14 +71,11 @@ const BankAccounts: React.FC = () => {
   const fetchBankAccounts = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.get("http://127.0.0.1:8000/api/v1/erp/bank-accounts", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await apiClient.get("/erp/bank-accounts"); // Use apiClient instead of axios
       setBankAccounts(response.data);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to fetch bank accounts");
+      setError(err.userMessage || "Failed to fetch bank accounts"); // Use enhanced error from apiClient
     } finally {
       setLoading(false);
     }
@@ -102,19 +99,12 @@ const BankAccounts: React.FC = () => {
   };
   const handleSetDefault = async (accountId: number) => {
     try {
-      const token = localStorage.getItem("token");
-      await axios.put(
-        `http://127.0.0.1:8000/api/v1/erp/bank-accounts/${accountId}`,
-        {
-          is_default: true,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      await apiClient.put(`/erp/bank-accounts/${accountId}`, { // Use apiClient instead of axios
+        is_default: true,
+      });
       fetchBankAccounts();
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to set default account");
+      setError(err.userMessage || "Failed to set default account"); // Use enhanced error
     }
   };
   // Calculate totals
