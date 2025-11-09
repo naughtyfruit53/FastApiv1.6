@@ -622,7 +622,7 @@ const PurchaseVoucherPage: React.FC = () => {
       if (matchedVendor) {
         setValue('vendor_id', matchedVendor.id);
         setSelectedVendor(matchedVendor);
-        toast.success('Data extracted successfully from PDF');
+        toast.success('Extracted from PDF invoice', { position: "top-right" });
       } else {
         // Show confirmation to create new vendor
         setShowCreateVendorConfirm(true);

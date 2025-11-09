@@ -318,25 +318,25 @@ const SalesOrderPage: React.FC = () => {
   };
 
   // Conflict modal handlers
-const handleChangeDateToSuggested = () => {
-  if (conflictInfo?.suggested_date) {
-    setValue('date', conflictInfo.suggested_date.split('T')[0]);
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
     setShowConflictModal(false);
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      setValue('date', '');
+    }
     setPendingDate(null);
-  }
-};
-
-const handleProceedAnyway = () => {
-  setShowConflictModal(false);
-};
-
-const handleCancelConflict = () => {
-  setShowConflictModal(false);
-  if (pendingDate) {
-    setValue('date', '');
-  }
-  setPendingDate(null);
-};
+  };
   
   const handleEditWithData = (voucher: any) => {
     if (!voucher || !voucher.id) return;
@@ -552,7 +552,7 @@ const handleCancelConflict = () => {
 
       if (matchedCustomer) {
         setValue('customer_id', matchedCustomer.id);
-        toast.success('Data extracted successfully from PDF');
+        toast.success('Extracted from PDF invoice');
       } else {
         // Show confirmation to create new customer
         setShowCreateCustomerConfirm(true);

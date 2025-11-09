@@ -197,7 +197,7 @@ class PDFExtractionService:
             'name': r'(?:Name|नाम|Full Name|Account Holder)\s*:\s*(.+?)(?=\s*(?:Father|Date|DOB|Address|जन्म तिथि|पता|$))',
             'dob': r'(?:Date of Birth|DOB|जन्म तिथि)\s*:\s*(\d{2}/\d{2}/\d{4})',
             'address': r'(?:Address|पता|Current Address|Permanent Address)\s*:\s*(.+?)(?=\s*(?:PIN|Pin Code|State|राज्य|$))',
-            'pan_number': r'(?:PAN|Pan Number|Permanent Account Number)\s*:\s*([A-Z]{5}\d{4}[A-Z])',
+            'pan_number': r'(?:PAN|Pan Number)[\s:]*([A-Z]{5}[0-9]{4}[A-Z]{1})',
             'aadhaar_number': r'(?:Aadhaar Number|आधार संख्या)\s*:\s*(\d{4}\s?\d{4}\s?\d{4})',
             'account_number': r'(?:Account Number|खाता संख्या)\s*:\s*(\d{9,18})',
             'ifsc_code': r'(?:IFSC Code|IFSC|आईएफएससी कोड)\s*:\s*([A-Z]{4}0[A-Z0-9]{6})',
@@ -235,7 +235,7 @@ class PDFExtractionService:
         return temp_file_path
     
     async def _extract_text_from_pdf(self, file_path: str) -> str:
-        """Extract text content from PDF using PyMuPDF with memory optimization"""
+        """Extract text from PDF using PyMuPDF with memory optimization"""
         try:
             doc = fitz.open(file_path, filetype="pdf")  # Specify filetype to reduce memory
             text_content = []
@@ -270,7 +270,6 @@ class PDFExtractionService:
             "invoice_number": self._extract_with_pattern(text, patterns['invoice_number']),
             "invoice_date": self._parse_date(self._extract_with_pattern(text, patterns['invoice_date'])),
             "payment_terms": "Net 30",
-            "notes": "Extracted from PDF invoice",
             "total_amount": self._parse_amount(self._extract_with_pattern(text, patterns['amount'])),
             "items": self._extract_line_items(text, "purchase")
         }
@@ -289,7 +288,6 @@ class PDFExtractionService:
             "order_number": self._extract_with_pattern(text, patterns['order_number']),
             "order_date": self._parse_date(self._extract_with_pattern(text, patterns['order_date'])),
             "payment_terms": "Net 15",
-            "notes": "Extracted from PDF sales order",
             "total_amount": self._parse_amount(self._extract_with_pattern(text, patterns['amount'])),
             "items": self._extract_line_items(text, "sales")
         }
@@ -377,7 +375,7 @@ class PDFExtractionService:
         text = re.sub(r'\s+', ' ', text).strip()
         patterns = {
             'legal_name': r'(?:Legal Name of the Taxpayer|Legal Name\s*of\s*Business|Legal Name|Name of Business|Registered Name|Name of the Proprietor|Firm Name)\s*:\s*(.+?)(?=\s*(?:Trade Name|GSTIN|PAN|Address|State|Mobile|Email|$))',
-            'trade_name': r'(?:Trade Name\s*of\s*Business|Trade Name, if any|Trade Name)\s*:\s*(.+?)(?=\s*(?:GSTIN|PAN|Address|State|Mobile|Email|$))',
+            'trade_name': r'(?:Trade Name\s*of\s*Business|Trade Name, if any|Trade Name, if any)\s*:\s*(.+?)(?=\s*(?:GSTIN|PAN|Address|State|Mobile|Email|$))',
             'gst_number': r'(?:GSTIN|Registration Number|GST Number)[\s:]*([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})',
             'address_block': r'(?:Address of Principal Place of Business|Registered Address|Address|Principal Place of Business|Complete Address|Office Address)\s*:\s*(.+?)(?=\s*(?:State Code|PIN Code|Date of Liability|$))',
             'phone': r'(?:Phone|Mobile|Contact Number|Telephone|Mobile Number)[\s:]*([+]?[0-9\s\-\(\)]{10,15})',
