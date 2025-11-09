@@ -160,6 +160,7 @@ const MigrationManagement: React.FC = () => {
     );
   }
   return (
+    <ProtectedPage moduleKey="admin" action="write">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box
         sx={{

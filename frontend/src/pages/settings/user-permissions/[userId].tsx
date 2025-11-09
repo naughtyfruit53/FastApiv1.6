@@ -94,7 +94,7 @@ const UserPermissionsPage: React.FC = () => {
     queryKey: ["user", userId],
     queryFn: async () => {
       const users = await organizationService.getOrganizationUsers(currentUser?.organization_id!);
-      const foundUser = users.find((u: User) => u.id === userId);
+      const foundUser = users.find((u: User) => u.id === u.id === userId);
       if (!foundUser) throw new Error("User not found");
       return foundUser;
     },
@@ -113,7 +113,7 @@ const UserPermissionsPage: React.FC = () => {
 
   const handleModuleToggle = (module: string) => {
     const newModules = new Set(selectedModules);
-    if (newModules.has(module)) {
+    if (newModules.has(module) ) {
       newModules.delete(module);
       // Also remove all submodules for this module
       const newSubmodules = { ...selectedSubmodules };
@@ -160,11 +160,12 @@ const UserPermissionsPage: React.FC = () => {
   if (userLoading) {
     return (
       <ProtectedPage moduleKey="admin" action="write">
-      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
           <CircularProgress />
         </Box>
       </Container>
+      </ProtectedPage>
     );
   }
 
@@ -184,6 +185,7 @@ const UserPermissionsPage: React.FC = () => {
   }
 
   return (
+    <ProtectedPage moduleKey="admin" action="write">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Breadcrumbs */}
       <Breadcrumbs sx={{ mb: 2 }}>

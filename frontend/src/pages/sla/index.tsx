@@ -214,7 +214,7 @@ const SLAManagement: React.FC = () => {
     }
     return (
       <ProtectedPage moduleKey="service" action="read">
-      rid container spacing={3}>
+      <Grid container spacing={3}>
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -294,9 +294,11 @@ const SLAManagement: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+      </ProtectedPage>
     );
   };
   return (
+    <ProtectedPage moduleKey="service" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box
         sx={{
@@ -327,7 +329,8 @@ const SLAManagement: React.FC = () => {
         </Button>
       </Box>
       {/* Summary Cards */}
-      <Box sx={{ mb: 4 }}>{renderSummaryCards()}</Box>
+      <Box
+        sx={{ mb: 4 }}>{renderSummaryCards()}</Box>
       {/* SLA Tabs */}
       <Paper sx={{ mb: 4 }}>
         <Box sx={{ borderBottom: 1, borderColor: "divider" }}>

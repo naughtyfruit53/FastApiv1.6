@@ -295,10 +295,10 @@ const ManagementDashboard: React.FC = () => {
       <Alert severity="info">
         No dashboard data available for the selected period.
       </Alert>
-      </ProtectedPage>
     );
   }
   return (
+    <ProtectedPage moduleKey="admin" action="read">
     <Box sx={{ flexGrow: 1, p: 3 }}>
       {/* Header */}
       <Box
