@@ -249,7 +249,7 @@ const ReportsPage: React.FC = () => {
     ];
     return (
       <ProtectedPage moduleKey="reports" action="read">
-      rid container spacing={3}>
+      <Grid container spacing={3}>
         {cards.map((card, index) => (
           <Grid
             key={index}
@@ -283,6 +283,7 @@ const ReportsPage: React.FC = () => {
           </Grid>
         ))}
       </Grid>
+      </ProtectedPage>
     );
   };
 

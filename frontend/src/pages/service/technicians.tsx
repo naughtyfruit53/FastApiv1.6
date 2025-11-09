@@ -17,7 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { userService } from '@/services/userService';
 import AddEmployeeModal from '@/components/AddEmployeeModal';
 
-import { ProtectedPage } from '../components/ProtectedPage';
+import { ProtectedPage } from '../../components/ProtectedPage';
 interface Technician {
   id: number;
   name: string;
@@ -141,6 +141,5 @@ export default function TechniciansManagement() {
       />
     </Box>
     </ProtectedPage>
-
   );
 }

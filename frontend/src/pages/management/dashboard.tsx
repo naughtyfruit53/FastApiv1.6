@@ -271,8 +271,7 @@ const ManagementDashboard: React.FC = () => {
   if (isLoading) {
     return (
       <ProtectedPage moduleKey="admin" action="read">
-      rotectedPage moduleKey="admin" action="read">
-        ox
+        <Box
         display="flex"
         justifyContent="center"
         alignItems="center"
@@ -280,6 +279,7 @@ const ManagementDashboard: React.FC = () => {
       >
         <CircularProgress />
       </Box>
+      </ProtectedPage>
     );
   }
   if (error) {

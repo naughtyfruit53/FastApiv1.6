@@ -150,12 +150,13 @@ const MigrationManagement: React.FC = () => {
   if (!isSuperAdmin) {
     return (
       <ProtectedPage moduleKey="admin" action="write">
-      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
           Access denied. Only super administrators can access migration
           management.
         </Alert>
       </Container>
+      </ProtectedPage>
     );
   }
   return (
