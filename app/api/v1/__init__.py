@@ -601,4 +601,16 @@ def register_subrouters():
         logger.error(f"Failed to import/include erp_router: {str(e)}\n{traceback.format_exc()}")
         raise
 
+    try:
+        from .pdf_extraction import router as pdf_extraction_router
+        logger.debug("Imported pdf_extraction_router")
+        api_v1_router.include_router(pdf_extraction_router, prefix="/pdf-extraction", tags=["PDF Extraction"])
+        pdf_extraction_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /pdf-extraction{route.path}" for route in pdf_extraction_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered pdf_extraction endpoints: {len(pdf_extraction_routes)} routes")
+        for route_path in pdf_extraction_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include pdf_extraction_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
 register_subrouters()
