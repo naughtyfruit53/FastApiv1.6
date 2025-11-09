@@ -25,7 +25,7 @@ from app.services.excel_service import ExcelService, ReportsExcelService
 import logging
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/reports", tags=["reports"])
+router = APIRouter(tags=["reports"])
 
 @router.get("/dashboard-stats")
 async def get_dashboard_statistics(
