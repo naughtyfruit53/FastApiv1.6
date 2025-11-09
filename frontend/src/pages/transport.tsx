@@ -137,14 +137,16 @@ const TransportManagementPage: NextPage = () => {
   if (!user) {
     return (
       <ProtectedPage moduleKey="logistics" action="read">
-      ontainer maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="error">
           Please log in to access Transport Management.
         </Alert>
       </Container>
+      </ProtectedPage>
     );
   }
   return (
+    <ProtectedPage moduleKey="logistics" action="read">
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>

@@ -83,10 +83,10 @@ const VendorAgingPage: React.FC = () => {
   if (loading) {
     return (
       <ProtectedPage moduleKey="finance" action="read">
-      rotectedPage moduleKey="finance" action="read">
-        ox display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
       </Box>
+      </ProtectedPage>
     );
   }
 
@@ -133,6 +133,7 @@ const VendorAgingPage: React.FC = () => {
   };
 
   return (
+    <ProtectedPage moduleKey="finance" action="read">
     <Box sx={{ p: 3 }}>
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>

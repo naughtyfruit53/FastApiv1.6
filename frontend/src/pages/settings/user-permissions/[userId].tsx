@@ -42,7 +42,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { getDisplayRole } from "../../../types/user.types";
 import { Module, MODULE_DISPLAY_NAMES, Action } from "../../../types/rbac.types";
 
-import { ProtectedPage } from '../../components/ProtectedPage';
+import { ProtectedPage } from '../../../components/ProtectedPage';
 interface User {
   id: number;
   email: string;
@@ -94,7 +94,7 @@ const UserPermissionsPage: React.FC = () => {
     queryKey: ["user", userId],
     queryFn: async () => {
       const users = await organizationService.getOrganizationUsers(currentUser?.organization_id!);
-      const foundUser = users.find((u: User) => u.id === u.id === userId);
+      const foundUser = users.find((u: User) => u.id === userId);
       if (!foundUser) throw new Error("User not found");
       return foundUser;
     },
@@ -113,7 +113,7 @@ const UserPermissionsPage: React.FC = () => {
 
   const handleModuleToggle = (module: string) => {
     const newModules = new Set(selectedModules);
-    if (newModules.has(module) ) {
+    if (newModules.has(module)) {
       newModules.delete(module);
       // Also remove all submodules for this module
       const newSubmodules = { ...selectedSubmodules };
