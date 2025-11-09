@@ -252,6 +252,18 @@ def register_subrouters():
         raise
 
     try:
+        from .bom import router as bom_router
+        logger.debug("Imported bom_router")
+        api_v1_router.include_router(bom_router, prefix="/bom", tags=["BOM"])
+        bom_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /bom{route.path}" for route in bom_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered bom endpoints: {len(bom_routes)} routes")
+        for route_path in bom_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include bom_router: {str(e)}\n{traceback.format_exc()}")
+        raise
+
+    try:
         from .transport import router as transport_router
         logger.debug("Imported transport_router")
         api_v1_router.include_router(transport_router, prefix="/transport", tags=["Transport"])
