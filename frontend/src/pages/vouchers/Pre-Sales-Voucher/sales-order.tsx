@@ -49,6 +49,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form"; // Added missing import for useWatch
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance"; // Added for customer balance display
 import { formatCurrency } from "../../../utils/currencyUtils";
+import { toast } from "react-toastify"; // Added for toast notifications
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
 const SalesOrderPage: React.FC = () => {
@@ -177,6 +178,8 @@ const SalesOrderPage: React.FC = () => {
   // New state for PDF upload
   const [pdfUploadLoading, setPdfUploadLoading] = useState(false);
   const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
+  const [extractedData, setExtractedData] = useState<any>(null);
+  const [showCreateCustomerConfirm, setShowCreateCustomerConfirm] = useState(false);
 
   const handleToggleDescription = (checked: boolean) => {
     setDescriptionEnabled(checked);
@@ -441,7 +444,7 @@ const handleCancelConflict = () => {
             cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
             sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
             igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
-            unit: item.unit || item.product?.unit || "",
+            unit: item.unit,
             current_stock: item.current_stock || 0,
             reorder_level: item.reorder_level || 0,
             description: item.description || '',
@@ -539,68 +542,65 @@ const handleCancelConflict = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      const extractedData = response.data.extracted_data;
+      const extracted = response.data.extracted_data;
+      setExtractedData(extracted);
 
-      // Map extracted data to form fields
-      if (extractedData.customer_name) {
-        const matchedCustomer = customerList?.find((c: any) => 
-          c.name.toLowerCase() === extractedData.customer_name.toLowerCase()
-        );
-        if (matchedCustomer) {
-          setValue('customer_id', matchedCustomer.id);
-        } else {
-          // Optionally prompt to add new customer
-          setPdfUploadError('Customer not found. Please add manually.');
-        }
+      // Check if customer exists
+      const matchedCustomer = customerList?.find((c: any) => 
+        c.name.toLowerCase() === (extracted.customer_name || '').toLowerCase()
+      );
+
+      if (matchedCustomer) {
+        setValue('customer_id', matchedCustomer.id);
+        toast.success('Data extracted successfully from PDF');
+      } else {
+        // Show confirmation to create new customer
+        setShowCreateCustomerConfirm(true);
       }
 
-      if (extractedData.order_number) {
-        setValue('reference_number', extractedData.order_number);
+      // Map other extracted data to form fields
+      if (extracted.order_number) {
+        setValue('reference_number', extracted.order_number);
       }
 
-      if (extractedData.order_date) {
-        setValue('date', extractedData.order_date);
+      if (extracted.order_date) {
+        setValue('date', extracted.order_date);
       }
 
-      if (extractedData.payment_terms) {
-        setValue('payment_terms', extractedData.payment_terms);
+      if (extracted.payment_terms) {
+        setValue('payment_terms', extracted.payment_terms);
       }
 
-      if (extractedData.notes) {
-        setValue('notes', extractedData.notes);
+      if (extracted.notes) {
+        setValue('notes', extracted.notes);
       }
 
       // Clear existing items
       remove(fields.map((_, index) => index));
 
-      // Add extracted items
-      extractedData.items?.forEach((item: any) => {
+      // Add extracted items - append even if no match, with product_name set
+      extracted.items?.forEach((item: any) => {
         const matchedProduct = productList?.find((p: any) => 
-          p.product_name.toLowerCase() === item.description.toLowerCase()
+          p.product_name.toLowerCase() === (item.description || '').toLowerCase()
         );
 
-        if (matchedProduct) {
-          append({
-            product_id: matchedProduct.id,
-            product_name: matchedProduct.product_name,
-            quantity: item.quantity || 1,
-            unit_price: item.unit_price || matchedProduct.unit_price || 0,
-            original_unit_price: matchedProduct.unit_price || 0,
-            discount_percentage: 0,
-            discount_amount: 0,
-            gst_rate: matchedProduct.gst_rate ?? 18,
-            cgst_rate: isIntrastate ? (matchedProduct.gst_rate ?? 18) / 2 : 0,
-            sgst_rate: isIntrastate ? (matchedProduct.gst_rate ?? 18) / 2 : 0,
-            igst_rate: isIntrastate ? 0 : matchedProduct.gst_rate ?? 18,
-            unit: matchedProduct.unit || "",
-            current_stock: 0,
-            reorder_level: matchedProduct.reorder_level || 0,
-            description: item.description || '',
-          });
-        } else {
-          // Optionally handle unmatched products
-          console.warn('Product not found:', item.description);
-        }
+        append({
+          product_id: matchedProduct?.id || null,
+          product_name: matchedProduct?.product_name || item.description || '',
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || matchedProduct?.unit_price || 0,
+          original_unit_price: matchedProduct?.unit_price || 0,
+          discount_percentage: 0,
+          discount_amount: 0,
+          gst_rate: matchedProduct?.gst_rate ?? 18,
+          cgst_rate: isIntrastate ? (matchedProduct?.gst_rate ?? 18) / 2 : 0,
+          sgst_rate: isIntrastate ? (matchedProduct?.gst_rate ?? 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : (matchedProduct?.gst_rate ?? 18),
+          unit: matchedProduct?.unit || "",
+          current_stock: 0,
+          reorder_level: matchedProduct?.reorder_level || 0,
+          description: item.description || '',
+        });
       });
 
     } catch (error) {
@@ -609,6 +609,25 @@ const handleCancelConflict = () => {
     } finally {
       setPdfUploadLoading(false);
       event.target.value = ''; // Reset file input
+    }
+  };
+
+  // Handle confirmation for creating new customer
+  const handleCreateCustomerConfirm = () => {
+    setShowCreateCustomerConfirm(false);
+    setShowAddCustomerModal(true);
+  };
+
+  const handleCreateCustomerCancel = () => {
+    setShowCreateCustomerConfirm(false);
+    setPdfUploadError('Customer not found. Please add manually.');
+  };
+
+  // Handle new customer added from modal
+  const handleCustomerAdded = (newCustomer: any) => {
+    if (newCustomer?.id) {
+      setValue("customer_id", newCustomer.id);
+      refreshMasterData();
     }
   };
 
@@ -910,6 +929,16 @@ const handleCancelConflict = () => {
           <Button onClick={handleAdditionalChargesConfirm} variant="contained">Confirm</Button>
         </DialogActions>
       </Dialog>
+      <Dialog open={showCreateCustomerConfirm} onClose={handleCreateCustomerCancel}>
+        <DialogTitle>Customer Not Found</DialogTitle>
+        <DialogContent>
+          <Typography>Customer &quot;{extractedData?.customer_name}&quot; not found. Would you like to create it?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCreateCustomerCancel}>No</Button>
+          <Button onClick={handleCreateCustomerConfirm} variant="contained">Yes</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 
@@ -949,7 +978,13 @@ const handleCancelConflict = () => {
           />
         }
       />
-      <AddCustomerModal open={showAddCustomerModal} onClose={() => setShowAddCustomerModal(false)} onAdd={(newCustomer) => { setValue("customer_id", newCustomer.id); refreshMasterData(); }} loading={addCustomerLoading} setLoading={setAddCustomerLoading} />
+      <AddCustomerModal 
+        open={showAddCustomerModal} 
+        onClose={() => setShowAddCustomerModal(false)} 
+        onAdd={handleCustomerAdded}
+        loading={addCustomerLoading} 
+        setLoading={setAddCustomerLoading} 
+      />
       <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
       <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Sales Order" onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Order")} onRevise={handleReviseWithData} onClose={handleCloseContextMenu} />

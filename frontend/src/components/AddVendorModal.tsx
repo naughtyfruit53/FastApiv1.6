@@ -142,6 +142,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         fileInputRef.current.value = "";
       }
       previousInitialData.current = memoizedInitialData;
+      
+      // If gst_number provided, auto-trigger search
+      if (initialGstNumber) {
+        handleGstSearch(initialGstNumber);
+      }
     }
     isMounted.current = true;
     return () => {
@@ -293,11 +298,11 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     }
   };
 
-  const handleGstSearch = useCallback(async () => {
+  const handleGstSearch = useCallback(async (gstNumber: string = watchedGstNumber) => {
     if (
-      !watchedGstNumber ||
+      !gstNumber ||
       !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
-        watchedGstNumber,
+        gstNumber,
       )
     ) {
       setGstUploadError("Please enter a valid GSTIN");
@@ -307,20 +312,14 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
     setGstSearchLoading(true);
     setGstUploadError(null);
     try {
-      const response = await api.get(`/gst/search/${watchedGstNumber}`);
-      console.log("GST search response:", response.data);
+      const response = await api.get(`/gst/search/${gstNumber}`);
       const data = response.data;
-      const currentValues = watch();
-      const updates: Partial<VendorFormData> = {};
+      // Auto-populate fields from API response
       Object.entries(data).forEach(([key, value]) => {
-        if (value && currentValues[key as keyof VendorFormData] !== value) {
-          updates[key as keyof VendorFormData] = value as string;
+        if (value) {
+          setValue(key as keyof VendorFormData, value as string);
         }
       });
-      if (Object.keys(updates).length > 0 && isMounted.current) {
-        console.log("Updating form with GST search data:", updates);
-        reset({ ...currentValues, ...updates, gst_number: watchedGstNumber });
-      }
     } catch (error: any) {
       console.error("GST search error:", {
         message: error.message,
@@ -344,7 +343,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
         setGstSearchLoading(false);
       }
     }
-  }, [watchedGstNumber, reset, watch]);
+  }, [watchedGstNumber, setValue, watch]);
 
   const onSubmit = async (vendorData: VendorFormData) => {
     setFormError(null);
@@ -520,7 +519,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                         <CircularProgress size={16} />
                       ) : (
                         <IconButton
-                          onClick={handleGstSearch}
+                          onClick={() => handleGstSearch()}
                           disabled={gstSearchLoading || !watchedGstNumber}
                           aria-label="Search GST"
                           color="primary"
@@ -536,6 +535,7 @@ const AddVendorModal: React.FC<AddVendorModalProps> = ({
                 }}
               />
             </Grid>
+            {/* GST Certificate Upload Section */}
             <Grid size={12}>
               <Paper
                 sx={{

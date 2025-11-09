@@ -50,6 +50,7 @@ import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntit
 import { formatCurrency } from "../../../utils/currencyUtils";
 import Link from 'next/link';
 import { organizationService } from '../../../services/organizationService';
+import { toast } from "react-toastify"; // Added for toast notifications
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
 const PurchaseVoucherPage: React.FC = () => {
@@ -364,21 +365,21 @@ const PurchaseVoucherPage: React.FC = () => {
   }, [vendorList]);
 
   const handleVendorAdded = (newVendor: any) => {
-    if (newVendor?.id) {
-      setValue("vendor_id", newVendor.id);
-      setSelectedVendor(newVendor);
-      console.log("Vendor added, updating vendor_id:", newVendor.id);
-      queryClient.setQueryData(["vendors", "", company?.organization_id], (old: any[]) => {
-        const updatedList = old ? [...old, newVendor] : [newVendor];
-        console.log("Updated vendor list:", updatedList);
-        return updatedList;
-      });
-      queryClient.invalidateQueries(["vendors"]);
-      setShowAddVendorModal(false);
-      refreshMasterData();
-    } else {
+    if (!newVendor?.id) {
       console.error("New vendor ID is missing:", newVendor);
+      return;
     }
+    setValue("vendor_id", newVendor.id);
+    setSelectedVendor(newVendor);
+    console.log("Vendor added, updating vendor_id:", newVendor.id);
+    queryClient.setQueryData(["vendors", "", company?.organization_id], (old: any[]) => {
+      const updatedList = old ? [...old, newVendor] : [newVendor];
+      console.log("Updated vendor list:", updatedList);
+      return updatedList;
+    });
+    queryClient.invalidateQueries(["vendors"]);
+    setShowAddVendorModal(false);
+    refreshMasterData();
   };
 
   const handleVoucherClick = (voucher: any) => {
@@ -558,6 +559,8 @@ const PurchaseVoucherPage: React.FC = () => {
   // New state for PDF upload
   const [pdfUploadLoading, setPdfUploadLoading] = useState(false);
   const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
+  const [extractedData, setExtractedData] = useState<any>(null);
+  const [showCreateVendorConfirm, setShowCreateVendorConfirm] = useState(false);
 
   const handleCreateGRN = (voucher: any) => {
     router.push({
@@ -608,69 +611,66 @@ const PurchaseVoucherPage: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      const extractedData = response.data.extracted_data;
+      const extracted = response.data.extracted_data;
+      setExtractedData(extracted);
 
-      // Map extracted data to form fields
-      if (extractedData.vendor_name) {
-        const matchedVendor = vendorList?.find((v: any) => 
-          v.name.toLowerCase() === extractedData.vendor_name.toLowerCase()
-        );
-        if (matchedVendor) {
-          setValue('vendor_id', matchedVendor.id);
-          setSelectedVendor(matchedVendor);
-        } else {
-          // Optionally prompt to add new vendor
-          setPdfUploadError('Vendor not found. Please add manually.');
-        }
+      // Check if vendor exists
+      const matchedVendor = vendorList?.find((v: any) => 
+        v.name.toLowerCase() === (extracted.vendor_name || '').toLowerCase()
+      );
+
+      if (matchedVendor) {
+        setValue('vendor_id', matchedVendor.id);
+        setSelectedVendor(matchedVendor);
+        toast.success('Data extracted successfully from PDF');
+      } else {
+        // Show confirmation to create new vendor
+        setShowCreateVendorConfirm(true);
       }
 
-      if (extractedData.invoice_number) {
-        setValue('reference', extractedData.invoice_number);
+      // Map other extracted data to form fields
+      if (extracted.invoice_number) {
+        setValue('reference', extracted.invoice_number);
       }
 
-      if (extractedData.invoice_date) {
-        setValue('date', extractedData.invoice_date);
+      if (extracted.invoice_date) {
+        setValue('date', extracted.invoice_date);
       }
 
-      if (extractedData.payment_terms) {
-        setValue('payment_terms', extractedData.payment_terms);
+      if (extracted.payment_terms) {
+        setValue('payment_terms', extracted.payment_terms);
       }
 
-      if (extractedData.notes) {
-        setValue('notes', extractedData.notes);
+      if (extracted.notes) {
+        setValue('notes', extracted.notes);
       }
 
       // Clear existing items
       remove(fields.map((_, index) => index));
 
-      // Add extracted items
-      extractedData.items?.forEach((item: any) => {
+      // Add extracted items - append even if no match, with product_name set
+      extracted.items?.forEach((item: any) => {
         const matchedProduct = productList?.find((p: any) => 
-          p.product_name.toLowerCase() === item.description.toLowerCase()
+          p.product_name.toLowerCase() === (item.description || '').toLowerCase()
         );
 
-        if (matchedProduct) {
-          append({
-            product_id: matchedProduct.id,
-            product_name: matchedProduct.product_name,
-            quantity: item.quantity || 1,
-            unit_price: item.unit_price || matchedProduct.unit_price || 0,
-            original_unit_price: matchedProduct.unit_price || 0,
-            discount_percentage: 0,
-            discount_amount: 0,
-            gst_rate: matchedProduct.gst_rate ?? 18,
-            cgst_rate: isIntrastate ? (matchedProduct.gst_rate ?? 18) / 2 : 0,
-            sgst_rate: isIntrastate ? (matchedProduct.gst_rate ?? 18) / 2 : 0,
-            igst_rate: isIntrastate ? 0 : matchedProduct.gst_rate ?? 18,
-            unit: matchedProduct.unit || "",
-            current_stock: 0,
-            reorder_level: matchedProduct.reorder_level || 0,
-            description: item.description || '',
-          });
-        } else {
-          // Optionally handle unmatched products
-          console.warn('Product not found:', item.description);
-        }
+        append({
+          product_id: matchedProduct?.id || null,
+          product_name: matchedProduct?.product_name || item.description || '',
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || matchedProduct?.unit_price || 0,
+          original_unit_price: matchedProduct?.unit_price || 0,
+          discount_percentage: 0,
+          discount_amount: 0,
+          gst_rate: matchedProduct?.gst_rate ?? 18,
+          cgst_rate: isIntrastate ? (matchedProduct?.gst_rate ?? 18) / 2 : 0,
+          sgst_rate: isIntrastate ? (matchedProduct?.gst_rate ?? 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : (matchedProduct?.gst_rate ?? 18),
+          unit: matchedProduct?.unit || "",
+          current_stock: 0,
+          reorder_level: matchedProduct?.reorder_level || 0,
+          description: item.description || '',
+        });
       });
 
     } catch (error) {
@@ -680,6 +680,17 @@ const PurchaseVoucherPage: React.FC = () => {
       setPdfUploadLoading(false);
       event.target.value = ''; // Reset file input
     }
+  };
+
+  // Handle confirmation for creating new vendor
+  const handleCreateVendorConfirm = () => {
+    setShowCreateVendorConfirm(false);
+    setShowAddVendorModal(true);
+  };
+
+  const handleCreateVendorCancel = () => {
+    setShowCreateVendorConfirm(false);
+    setPdfUploadError('Vendor not found. Please add manually.');
   };
 
   const indexContent = (
@@ -1014,6 +1025,16 @@ const PurchaseVoucherPage: React.FC = () => {
           <Button onClick={handleAdditionalChargesConfirm} variant="contained">Confirm</Button>
         </DialogActions>
       </Dialog>
+      <Dialog open={showCreateVendorConfirm} onClose={handleCreateVendorCancel}>
+        <DialogTitle>Vendor Not Found</DialogTitle>
+        <DialogContent>
+          <Typography>Vendor &quot;{extractedData?.vendor_name}&quot; not found. Would you like to create it?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCreateVendorCancel}>No</Button>
+          <Button onClick={handleCreateVendorConfirm} variant="contained">Yes</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 
@@ -1065,7 +1086,7 @@ const PurchaseVoucherPage: React.FC = () => {
       <AddVendorModal 
         open={showAddVendorModal} 
         onClose={() => setShowAddVendorModal(false)} 
-        onSave={handleVendorAdded} 
+        onSave={handleVendorAdded}
         loading={addVendorLoading} 
         setLoading={setAddVendorLoading} 
         organization_id={company?.organization_id}

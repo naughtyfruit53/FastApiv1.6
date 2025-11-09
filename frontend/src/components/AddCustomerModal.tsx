@@ -33,6 +33,7 @@ interface AddCustomerModalProps {
   onAdd?: (_data: any) => Promise<void>;
   loading?: boolean;
   initialName?: string;
+  initialData?: any; // Added initialData prop
 }
 interface CustomerFormData {
   name: string;
@@ -53,6 +54,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   onAdd,
   loading = false,
   initialName = "",
+  initialData = {}, // Default to empty object
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [gstFile, setGstFile] = useState<File | null>(null);
@@ -91,6 +93,23 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   } = usePincodeLookup();
   const watchedPincode = watch("pin_code");
   const watchedGstNumber = watch("gst_number");
+
+  // Auto-populate form with initialData on open
+  useEffect(() => {
+    if (open && Object.keys(initialData).length > 0) {
+      Object.entries(initialData).forEach(([key, value]) => {
+        if (value) {
+          setValue(key as keyof CustomerFormData, value as string);
+        }
+      });
+      
+      // If gst_number provided, auto-trigger search
+      if (initialData.gst_number) {
+        handleGstSearch(initialData.gst_number);
+      }
+    }
+  }, [open, initialData, setValue]);
+
   // Auto-populate form fields when pincode data is available
   useEffect(() => {
     if (pincodeData) {
@@ -181,11 +200,11 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       fileInputRef.current.value = "";
     }
   };
-  const handleGstSearch = async () => {
+  const handleGstSearch = async (gstNumber: string = watchedGstNumber) => {
     if (
-      !watchedGstNumber ||
+      !gstNumber ||
       !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
-        watchedGstNumber,
+        gstNumber,
       )
     ) {
       setGstUploadError("Please enter a valid GSTIN");
@@ -194,7 +213,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
     setGstSearchLoading(true);
     setGstUploadError(null);
     try {
-      const response = await api.get(`/gst/search/${watchedGstNumber}`);
+      const response = await api.get(`/gst/search/${gstNumber}`);
       const data = response.data;
       // Auto-populate fields from API response
       Object.entries(data).forEach(([key, value]) => {
@@ -345,7 +364,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                         <CircularProgress size={16} />
                       ) : (
                         <IconButton
-                          onClick={handleGstSearch}
+                          onClick={() => handleGstSearch()}
                           disabled={!watchedGstNumber || gstSearchLoading}
                           aria-label="Search GST"
                         >
@@ -498,8 +517,7 @@ const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                 {...register("pan_number")}
                 margin="normal"
                 InputLabelProps={{
-                  shrink:
-                    !!watch("pan_number") || !!gstExtractedData?.pan_number,
+                  shrink: !!watch("pan_number") || !!gstExtractedData?.pan_number,
                 }}
               />
             </Grid>
