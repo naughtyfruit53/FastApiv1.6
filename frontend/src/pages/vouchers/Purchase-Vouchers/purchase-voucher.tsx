@@ -339,7 +339,7 @@ const PurchaseVoucherPage: React.FC = () => {
           sgst_rate: isIntrastate ? gst_rate / 2 : 0,
           igst_rate: isIntrastate ? 0 : gst_rate,
           amount: 0,
-          unit: product.unit,
+          unit: product.unit || " ",
           current_stock: 0,
           reorder_level: parseFloat(product.reorder_level || 0),
           description: '',
@@ -555,6 +555,10 @@ const PurchaseVoucherPage: React.FC = () => {
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [pendingDate, setPendingDate] = useState<string | null>(null);
 
+  // New state for PDF upload
+  const [pdfUploadLoading, setPdfUploadLoading] = useState(false);
+  const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
+
   const handleCreateGRN = (voucher: any) => {
     router.push({
       pathname: '/vouchers/Purchase-Vouchers/grn',
@@ -581,6 +585,101 @@ const PurchaseVoucherPage: React.FC = () => {
       setValue('date', '');
     }
     setPendingDate(null);
+  };
+
+  // New PDF upload handler
+  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setPdfUploadError('Only PDF files are allowed');
+      return;
+    }
+
+    setPdfUploadLoading(true);
+    setPdfUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/pdf-extraction/extract/purchase_voucher', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const extractedData = response.data.extracted_data;
+
+      // Map extracted data to form fields
+      if (extractedData.vendor_name) {
+        const matchedVendor = vendorList?.find((v: any) => 
+          v.name.toLowerCase() === extractedData.vendor_name.toLowerCase()
+        );
+        if (matchedVendor) {
+          setValue('vendor_id', matchedVendor.id);
+          setSelectedVendor(matchedVendor);
+        } else {
+          // Optionally prompt to add new vendor
+          setPdfUploadError('Vendor not found. Please add manually.');
+        }
+      }
+
+      if (extractedData.invoice_number) {
+        setValue('reference', extractedData.invoice_number);
+      }
+
+      if (extractedData.invoice_date) {
+        setValue('date', extractedData.invoice_date);
+      }
+
+      if (extractedData.payment_terms) {
+        setValue('payment_terms', extractedData.payment_terms);
+      }
+
+      if (extractedData.notes) {
+        setValue('notes', extractedData.notes);
+      }
+
+      // Clear existing items
+      remove(fields.map((_, index) => index));
+
+      // Add extracted items
+      extractedData.items?.forEach((item: any) => {
+        const matchedProduct = productList?.find((p: any) => 
+          p.product_name.toLowerCase() === item.description.toLowerCase()
+        );
+
+        if (matchedProduct) {
+          append({
+            product_id: matchedProduct.id,
+            product_name: matchedProduct.product_name,
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || matchedProduct.unit_price || 0,
+            original_unit_price: matchedProduct.unit_price || 0,
+            discount_percentage: 0,
+            discount_amount: 0,
+            gst_rate: matchedProduct.gst_rate ?? 18,
+            cgst_rate: isIntrastate ? (matchedProduct.gst_rate ?? 18) / 2 : 0,
+            sgst_rate: isIntrastate ? (matchedProduct.gst_rate ?? 18) / 2 : 0,
+            igst_rate: isIntrastate ? 0 : matchedProduct.gst_rate ?? 18,
+            unit: matchedProduct.unit || "",
+            current_stock: 0,
+            reorder_level: matchedProduct.reorder_level || 0,
+            description: item.description || '',
+          });
+        } else {
+          // Optionally handle unmatched products
+          console.warn('Product not found:', item.description);
+        }
+      });
+
+    } catch (error) {
+      console.error('PDF extraction failed:', error);
+      setPdfUploadError('Failed to extract data from PDF. Please try again.');
+    } finally {
+      setPdfUploadLoading(false);
+      event.target.value = ''; // Reset file input
+    }
   };
 
   const indexContent = (
@@ -785,6 +884,25 @@ const PurchaseVoucherPage: React.FC = () => {
           </Grid>
           <Grid size={12} sx={voucherFormStyles.itemsHeader}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: "bold" }}>Items</Typography>
+            {mode === 'create' && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  size="small"
+                  disabled={pdfUploadLoading}
+                >
+                  {pdfUploadLoading ? 'Uploading...' : 'Upload PDF'}
+                  <input
+                    type="file"
+                    hidden
+                    accept=".pdf"
+                    onChange={handlePdfUpload}
+                  />
+                </Button>
+                {pdfUploadError && <Alert severity="error" sx={{ fontSize: 12 }}>{pdfUploadError}</Alert>}
+              </Box>
+            )}
           </Grid>
           <Grid size={12}>
             <VoucherItemTable

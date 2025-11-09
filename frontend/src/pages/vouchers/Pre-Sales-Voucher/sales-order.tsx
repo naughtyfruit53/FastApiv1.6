@@ -174,6 +174,10 @@ const SalesOrderPage: React.FC = () => {
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [pendingDate, setPendingDate] = useState<string | null>(null);
 
+  // New state for PDF upload
+  const [pdfUploadLoading, setPdfUploadLoading] = useState(false);
+  const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
+
   const handleToggleDescription = (checked: boolean) => {
     setDescriptionEnabled(checked);
     if (!checked) {
@@ -408,7 +412,7 @@ const handleCancelConflict = () => {
 
   useEffect(() => {
     if (voucherData && (mode === "view" || mode === "edit")) {
-      const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
+      const formattedDate = voucherData.date ? voucherData.date.split('T')[0] : '';
       const formattedData = {
         ...voucherData,
         date: formattedDate,
@@ -437,7 +441,7 @@ const handleCancelConflict = () => {
             cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
             sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
             igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
-            unit: item.unit,
+            unit: item.unit || item.product?.unit || "",
             current_stock: item.current_stock || 0,
             reorder_level: item.reorder_level || 0,
             description: item.description || '',
@@ -513,6 +517,100 @@ const handleCancelConflict = () => {
   };
 
   const enhancedCustomerOptions = [...(customerList || []), { id: null, name: "Add New Customer..." }];
+
+  // New PDF upload handler
+  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setPdfUploadError('Only PDF files are allowed');
+      return;
+    }
+
+    setPdfUploadLoading(true);
+    setPdfUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/pdf-extraction/extract/sales_order', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const extractedData = response.data.extracted_data;
+
+      // Map extracted data to form fields
+      if (extractedData.customer_name) {
+        const matchedCustomer = customerList?.find((c: any) => 
+          c.name.toLowerCase() === extractedData.customer_name.toLowerCase()
+        );
+        if (matchedCustomer) {
+          setValue('customer_id', matchedCustomer.id);
+        } else {
+          // Optionally prompt to add new customer
+          setPdfUploadError('Customer not found. Please add manually.');
+        }
+      }
+
+      if (extractedData.order_number) {
+        setValue('reference_number', extractedData.order_number);
+      }
+
+      if (extractedData.order_date) {
+        setValue('date', extractedData.order_date);
+      }
+
+      if (extractedData.payment_terms) {
+        setValue('payment_terms', extractedData.payment_terms);
+      }
+
+      if (extractedData.notes) {
+        setValue('notes', extractedData.notes);
+      }
+
+      // Clear existing items
+      remove(fields.map((_, index) => index));
+
+      // Add extracted items
+      extractedData.items?.forEach((item: any) => {
+        const matchedProduct = productList?.find((p: any) => 
+          p.product_name.toLowerCase() === item.description.toLowerCase()
+        );
+
+        if (matchedProduct) {
+          append({
+            product_id: matchedProduct.id,
+            product_name: matchedProduct.product_name,
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || matchedProduct.unit_price || 0,
+            original_unit_price: matchedProduct.unit_price || 0,
+            discount_percentage: 0,
+            discount_amount: 0,
+            gst_rate: matchedProduct.gst_rate ?? 18,
+            cgst_rate: isIntrastate ? (matchedProduct.gst_rate ?? 18) / 2 : 0,
+            sgst_rate: isIntrastate ? (matchedProduct.gst_rate ?? 18) / 2 : 0,
+            igst_rate: isIntrastate ? 0 : matchedProduct.gst_rate ?? 18,
+            unit: matchedProduct.unit || "",
+            current_stock: 0,
+            reorder_level: matchedProduct.reorder_level || 0,
+            description: item.description || '',
+          });
+        } else {
+          // Optionally handle unmatched products
+          console.warn('Product not found:', item.description);
+        }
+      });
+
+    } catch (error) {
+      console.error('PDF extraction failed:', error);
+      setPdfUploadError('Failed to extract data from PDF. Please try again.');
+    } finally {
+      setPdfUploadLoading(false);
+      event.target.value = ''; // Reset file input
+    }
+  };
 
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
@@ -683,6 +781,25 @@ const handleCancelConflict = () => {
           </Grid>
           <Grid size={12} sx={voucherFormStyles.itemsHeader}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: "bold" }}>Items</Typography>
+            {mode === 'create' && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  size="small"
+                  disabled={pdfUploadLoading}
+                >
+                  {pdfUploadLoading ? 'Uploading...' : 'Upload PDF'}
+                  <input
+                    type="file"
+                    hidden
+                    accept=".pdf"
+                    onChange={handlePdfUpload}
+                  />
+                </Button>
+                {pdfUploadError && <Alert severity="error" sx={{ fontSize: 12 }}>{pdfUploadError}</Alert>}
+              </Box>
+            )}
           </Grid>
           <Grid size={12}>
             <VoucherItemTable
@@ -835,7 +952,7 @@ const handleCancelConflict = () => {
       <AddCustomerModal open={showAddCustomerModal} onClose={() => setShowAddCustomerModal(false)} onAdd={(newCustomer) => { setValue("customer_id", newCustomer.id); refreshMasterData(); }} loading={addCustomerLoading} setLoading={setAddCustomerLoading} />
       <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
       <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
-      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Sales Order" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Order")} onRevise={handleReviseWithData} />
+      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Sales Order" onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Order")} onRevise={handleReviseWithData} onClose={handleCloseContextMenu} />
       <VoucherDateConflictModal
         open={showConflictModal}
         onClose={handleCancelConflict}
