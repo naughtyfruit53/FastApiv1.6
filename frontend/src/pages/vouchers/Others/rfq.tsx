@@ -251,11 +251,11 @@ const RFQPage: React.FC = () => {
   };
   return (
     <ProtectedPage moduleKey="finance" action="write">
-      
-      title="Request for Quotation (RFQ)"
-      description="Manage procurement requests and vendor quotations"
-    >
-      <Container maxWidth="xl">
+      <VoucherLayout
+        title="Request for Quotation (RFQ)"
+        description="Manage procurement requests and vendor quotations"
+      >
+        <Container maxWidth="xl">
         {/* Header Actions */}
         <Box
           sx={{
@@ -629,7 +629,8 @@ const RFQPage: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Container>
-    </VoucherLayout>
+      </VoucherLayout>
+    </ProtectedPage>
   );
 };
 export default RFQPage;

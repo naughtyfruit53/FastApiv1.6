@@ -215,7 +215,6 @@ const InterDepartmentVoucherPage: React.FC = () => {
   };
   return (
     <ProtectedPage moduleKey="finance" action="write">
-      
       <VoucherLayout
       title="Inter Department Voucher"
       voucherData={voucherData || defaultVoucherData}
@@ -288,7 +287,6 @@ const InterDepartmentVoucherPage: React.FC = () => {
         onProceedAnyway={handleProceedAnyway}
         voucherType="Inter-Department Voucher"
       />
-    </>
     </ProtectedPage>
   );
 };

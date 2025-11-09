@@ -334,7 +334,7 @@ export default function StockJournal() {
   }
   return (
     <ProtectedPage moduleKey="manufacturing" action="write">
-       maxWidth="xl">
+      <Container maxWidth="xl">
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Stock Journals
@@ -512,5 +512,6 @@ export default function StockJournal() {
         </Grid>
       </Grid>
     </Container>
+    </ProtectedPage>
   );
 }

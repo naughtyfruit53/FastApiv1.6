@@ -100,11 +100,11 @@ const DispatchDetailsPage: React.FC = () => {
   };
   return (
     <ProtectedPage moduleKey="finance" action="write">
-      
-      title="Dispatch Details"
-      description="View and track dispatch dispatch order details and delivery status"
-    >
-      <Container maxWidth="xl">
+      <VoucherLayout
+        title="Dispatch Details"
+        description="View and track dispatch dispatch order details and delivery status"
+      >
+        <Container maxWidth="xl">
         {/* Header Actions */}
         <Box
           sx={{
@@ -509,7 +509,8 @@ const DispatchDetailsPage: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Container>
-    </VoucherLayout>
+      </VoucherLayout>
+    </ProtectedPage>
   );
 };
 export default DispatchDetailsPage;

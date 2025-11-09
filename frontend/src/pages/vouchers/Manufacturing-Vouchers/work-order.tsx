@@ -44,7 +44,7 @@ const WorkOrder: React.FC = () => {
 
   return (
     <ProtectedPage moduleKey="manufacturing" action="write">
-       maxWidth="lg">
+      <Container maxWidth="lg">
       <Box sx={{ mt: 3 }}>
         <Typography variant="h4" gutterBottom>
           Work Order Management
