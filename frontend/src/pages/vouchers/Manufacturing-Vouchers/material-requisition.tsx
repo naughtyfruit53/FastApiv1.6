@@ -214,9 +214,6 @@ const MaterialRequisition: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["material-issues"] });
     },
-    onError: (error: any) => {
-      console.error("Error deleting material issue:", error);
-    },
   });
   const onSubmit = (data: MaterialIssue) => {
     if (mode === "create") {
@@ -265,7 +262,7 @@ const MaterialRequisition: React.FC = () => {
   };
   return (
     <ProtectedPage moduleKey="manufacturing" action="write">
-       maxWidth="xl">
+      <Container maxWidth="xl">
       <Grid container spacing={3}>
         {/* Left Panel - Issue List */}
         <Grid size={5}>

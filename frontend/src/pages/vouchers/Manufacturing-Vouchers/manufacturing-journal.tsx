@@ -340,7 +340,7 @@ export default function ManufacturingJournalVoucher() {
   }
   return (
     <ProtectedPage moduleKey="manufacturing" action="write">
-       maxWidth="xl">
+      <Container maxWidth="xl">
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Manufacturing Journal Vouchers
@@ -535,5 +535,6 @@ export default function ManufacturingJournalVoucher() {
         </Grid>
       </Grid>
     </Container>
+    </ProtectedPage>
   );
 };

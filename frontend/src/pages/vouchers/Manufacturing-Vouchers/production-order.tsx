@@ -95,9 +95,9 @@ const ProductionOrder: React.FC = () => {
   // Shortage checking hook
   const {
     shortageData,
-    checkShortages,
-    showShortageDialog,
-    setShowShortageDialog,
+    shortageCheck: checkShortages,
+    shortageDialog: showShortageDialog,
+    setShortageDialog: setShowShortageDialog,
   } = useManufacturingShortages(selectedId);
   const {
     control,
@@ -338,7 +338,7 @@ const ProductionOrder: React.FC = () => {
   };
   return (
     <ProtectedPage moduleKey="manufacturing" action="write">
-       maxWidth="xl">
+      <Container maxWidth="xl">
       <Grid container spacing={3}>
         {/* Left Panel - Order List */}
         <Grid size={5}>

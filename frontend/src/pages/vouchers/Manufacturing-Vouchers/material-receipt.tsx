@@ -334,7 +334,7 @@ export default function MaterialReceiptVoucher() {
   }
   return (
     <ProtectedPage moduleKey="manufacturing" action="write">
-       maxWidth="xl">
+      <Container maxWidth="xl">
       <Typography variant="h4" component="h1" gutterBottom>
         Material Receipt Vouchers
       </Typography>
@@ -357,5 +357,6 @@ export default function MaterialReceiptVoucher() {
         </Grid>
       </Grid>
     </Container>
+    </ProtectedPage>
   );
 }
