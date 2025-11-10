@@ -274,7 +274,7 @@ export const calculateVoucherTotals = (
     return sum + safeNumber(parseFloat(additionalCharges[key]) || 0);
   }, 0);
 
-  // Add additional charges to taxable amount before GST
+  // Taxable before GST includes additional charges
   const taxableBeforeGst = afterTotalDisc + totalAdditionalCharges;
   const apportionFactor = sumAfterLine > 0 ? afterTotalDisc / sumAfterLine : 0;
 
@@ -321,6 +321,7 @@ export const calculateVoucherTotals = (
   }
 
   let totalAmount = computedItems.reduce((sum, item) => sum + item.amount, 0) + totalAdditionalCharges + additionalChargesGst;
+
   const totalCgst = computedItems.reduce((sum, item) => sum + item.cgst_amount, 0) + additionalChargesCgst;
   const totalSgst = computedItems.reduce((sum, item) => sum + item.sgst_amount, 0) + additionalChargesSgst;
   const totalIgst = computedItems.reduce((sum, item) => sum + item.igst_amount, 0) + additionalChargesIgst;
@@ -339,6 +340,18 @@ export const calculateVoucherTotals = (
     gstBreakdown[rate].taxable += item.taxable_amount;
   });
 
+  // Add additional charges to GST breakdown using the average rate
+  if (totalAdditionalCharges > 0) {
+    const rate = totalGstRate;
+    if (!gstBreakdown[rate]) {
+      gstBreakdown[rate] = { cgst: 0, sgst: 0, igst: 0, taxable: 0 };
+    }
+    gstBreakdown[rate].taxable += totalAdditionalCharges;
+    gstBreakdown[rate].cgst += additionalChargesCgst;
+    gstBreakdown[rate].sgst += additionalChargesSgst;
+    gstBreakdown[rate].igst += additionalChargesIgst;
+  }
+
   // Calculate round off
   const decimalPart = totalAmount - Math.floor(totalAmount);
   let totalRoundOff = 0;
@@ -354,7 +367,7 @@ export const calculateVoucherTotals = (
     totalAmount: safeNumber(parseFloat(totalAmount.toFixed(2))),
     totalSubtotal: safeNumber(parseFloat(totalSubtotal.toFixed(2))),
     totalDiscount: safeNumber(parseFloat(totalDiscAmount.toFixed(2))),
-    totalTaxable: safeNumber(parseFloat(afterTotalDisc.toFixed(2))),
+    totalTaxable: safeNumber(parseFloat(taxableBeforeGst.toFixed(2))),
     totalAdditionalCharges: safeNumber(parseFloat(totalAdditionalCharges.toFixed(2))),
     totalGst: safeNumber(parseFloat(totalGst.toFixed(2))),
     totalCgst: safeNumber(parseFloat(totalCgst.toFixed(2))),
@@ -365,7 +378,7 @@ export const calculateVoucherTotals = (
   };
 };
 /**
- * Get GST breakdown labels based on transaction type
+ * Get GST labels based on transaction type
  */
 export const getGstLabels = (isIntrastate: boolean): any => {
   if (isIntrastate) {

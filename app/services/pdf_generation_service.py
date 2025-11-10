@@ -389,6 +389,7 @@ class VoucherPDFGenerator:
                 processed_items.append(processed_item)
                 
                 subtotal += item_subtotal
+                total_discount += discount_amount
                 total_taxable += taxable_amount
                 total_cgst += gst_calc['cgst_amount']
                 total_sgst += gst_calc['sgst_amount']
@@ -439,6 +440,7 @@ class VoucherPDFGenerator:
                         processed_items.append(processed_item)
                         
                         subtotal += item_subtotal
+                        total_discount += discount_amount
                         total_taxable += taxable_amount
                         total_cgst += gst_calc['cgst_amount']
                         total_sgst += gst_calc['sgst_amount']
@@ -469,7 +471,7 @@ class VoucherPDFGenerator:
             'items': processed_items,
             'subtotal': subtotal,
             'total_discount': total_discount,
-            'total_taxable': taxable_amount,
+            'total_taxable': total_taxable,
             'total_cgst': total_cgst,
             'total_sgst': total_sgst,
             'total_igst': total_igst,
