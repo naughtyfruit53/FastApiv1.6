@@ -23,7 +23,7 @@ import {
 import { showErrorToast, showSuccessToast, handleVoucherError } from "../utils/errorHandling";
 import { SUCCESS_MESSAGES, getDynamicMessage } from "../constants/messages";
 import {
-  generateVoucherPDF,
+  generateStandalonePDF,
   getVoucherPdfConfig,
 } from "../utils/pdfUtils";
 import { VoucherPageConfig } from "../types/voucher.types";
@@ -312,19 +312,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     company?.state_code,
   ]);
 
-  const {
-    computedItems,
-    totalAmount,
-    totalSubtotal,
-    totalGst,
-    totalCgst,
-    totalSgst,
-    totalIgst,
-    totalDiscount,
-    totalTaxable,
-    gstBreakdown,
-    totalRoundOff,
-  } = useMemo(() => {
+  const { computedItems, totalAmount, totalSubtotal, totalGst, totalCgst, totalSgst, totalIgst, totalDiscount, totalTaxable, gstBreakdown, totalRoundOff } = useMemo(() => {
     if (config.hasItems === false || !itemsWatch) {
       return {
         computedItems: [],
@@ -665,13 +653,12 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
 
   const handleGeneratePDF = useCallback(
     async (voucher?: any) => {
-      const pdfConfig = getVoucherPdfConfig(config.voucherType);
       const voucherToUse = voucher || voucherData;
       if (!voucherToUse?.id) {
         console.error("No voucher ID available for PDF generation");
         return;
       }
-      await generateVoucherPDF(voucherToUse.id, pdfConfig);
+      await generateStandalonePDF(voucherToUse.id, config.voucherType, voucherToUse.voucher_number);
     },
     [config.voucherType, voucherData],
   );

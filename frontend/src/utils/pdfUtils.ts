@@ -49,6 +49,7 @@ export interface VoucherPdfData {
 export const generateVoucherPDF = async (
   voucherId: number,
   config: VoucherPdfConfig,
+  voucherNumber?: string,
 ): Promise<void> => {
   try {
     console.log(
@@ -88,6 +89,10 @@ export const generateVoucherPDF = async (
       }
     } else {
       console.warn('No Content-Disposition header found');
+      if (voucherNumber) {
+        filename = `${voucherNumber.replace(/\//g, '-')}.pdf`;
+        console.log('Using voucher number for filename:', filename);
+      }
     }
 
     const a = document.createElement('a');
@@ -300,6 +305,7 @@ export const getVoucherPdfConfig = (voucherType: string): VoucherPdfConfig => {
 export const generateStandalonePDF = async (
   voucherId: number,
   voucherType: string,
+  voucherNumber?: string,
 ): Promise<void> => {
   try {
     console.log(
@@ -316,7 +322,7 @@ export const generateStandalonePDF = async (
     // Get PDF configuration
     const pdfConfig = getVoucherPdfConfig(voucherType);
     // Generate PDF via backend
-    await generateVoucherPDF(voucherId, pdfConfig);
+    await generateVoucherPDF(voucherId, pdfConfig, voucherNumber);
   } catch (error) {
     console.error("[PDF] Error generating standalone PDF:", error);
     alert("Failed to generate PDF. Please try again.");
