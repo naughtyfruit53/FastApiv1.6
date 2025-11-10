@@ -495,6 +495,8 @@ class VoucherPDFGenerator:
         Generate PDF for any voucher type
         """
         try:
+            # Normalize voucher_type: replace hyphens with underscores for consistent matching
+            voucher_type = voucher_type.replace('-', '_')
             template_data = await self._prepare_voucher_data(voucher_type, voucher_data, db, organization_id)
             
             from app.models.organization_settings import OrganizationSettings, VoucherFormatTemplate
@@ -506,13 +508,13 @@ class VoucherPDFGenerator:
             
             terms_conditions = None
             if org_settings:
-                if voucher_type in ['purchase', 'purchase-vouchers']:
+                if voucher_type in ['purchase', 'purchase_vouchers']:
                     terms_conditions = org_settings.purchase_voucher_terms
-                elif voucher_type in ['purchase_orders', 'purchase-orders']:
+                elif voucher_type in ['purchase_orders', 'purchase_orders']:
                     terms_conditions = org_settings.purchase_order_terms
-                elif voucher_type in ['sales', 'sales-vouchers']:
+                elif voucher_type in ['sales', 'sales_vouchers']:
                     terms_conditions = org_settings.sales_voucher_terms
-                elif voucher_type in ['sales_order', 'sales-orders']:
+                elif voucher_type in ['sales_order', 'sales_orders']:
                     terms_conditions = org_settings.sales_order_terms
                 elif voucher_type == 'quotation':
                     terms_conditions = org_settings.quotation_terms
@@ -546,7 +548,7 @@ class VoucherPDFGenerator:
                     elif layout_style == 'minimal':
                         base_template_name = 'base_voucher_minimal.html'
             
-            if voucher_type in ['purchase', 'purchase-vouchers']:
+            if voucher_type in ['purchase', 'purchase_vouchers']:
                 template_name = 'purchase_voucher.html'
             elif voucher_type == 'purchase_orders':
                 template_name = 'purchase_order.html'

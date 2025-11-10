@@ -141,7 +141,7 @@ export const VOUCHER_PDF_CONFIGS: Record<string, VoucherPdfConfig> = {
     showTaxDetails: true,
     entityType: "vendor",
   },
-  "purchase-order": {
+  "purchase-orders": {
     voucherType: "purchase-orders",
     voucherTitle: "PURCHASE ORDER",
     showItems: true,
@@ -283,7 +283,7 @@ export const VOUCHER_PDF_CONFIGS: Record<string, VoucherPdfConfig> = {
 export const getVoucherPdfConfig = (voucherType: string): VoucherPdfConfig => {
   const config = VOUCHER_PDF_CONFIGS[voucherType];
   if (!config) {
-    console.warn(`No PDF configuration found for voucher type: {voucherType}`);
+    console.warn(`No PDF configuration found for voucher type: ${voucherType}`);
     return {
       voucherType,
       voucherTitle: voucherType.toUpperCase().replace(/-/g, " "),

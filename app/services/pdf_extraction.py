@@ -9,11 +9,12 @@ import uuid
 from typing import Dict, Any, Optional, List
 from fastapi import UploadFile, HTTPException, status
 import tempfile
-import fitz  # PyMuPDF for PDF processing
 import re
 from datetime import datetime
 import requests
 import time
+import base64  # Added for base64 PDF encoding
+from PyPDF2 import PdfReader  # Added for PDF text extraction
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +30,15 @@ class PDFExtractionService:
     USE_AI_EXTRACTION = os.getenv('USE_AI_EXTRACTION', 'false').lower() == 'true'
     MINDEE_API_KEY = os.getenv('MINDEE_API_KEY')  # Free tier: https://mindee.com
     GOOGLE_DOCUMENT_AI_KEY = os.getenv('GOOGLE_DOCUMENT_AI_KEY')  # Free tier
+    OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')  # New: OpenRouter key
+    OPENROUTER_MODEL = os.getenv('OPENROUTER_MODEL', 'deepseek/deepseek-chat-v3-0324:free')  # Updated to suggested model
     
     def __init__(self):
         os.makedirs(self.UPLOAD_DIR, exist_ok=True)
         if not self.RAPIDAPI_KEY:
             logger.warning("RAPIDAPI_KEY not set in environment variables")
-        if self.USE_AI_EXTRACTION and not (self.MINDEE_API_KEY or self.GOOGLE_DOCUMENT_AI_KEY):
-            logger.warning("AI extraction enabled but no AI API keys configured")
+        if self.USE_AI_EXTRACTION and not self.OPENROUTER_API_KEY:
+            logger.warning("AI extraction enabled but no OpenRouter API key configured")
     
     async def extract_voucher_data(self, file: UploadFile, voucher_type: str) -> Dict[str, Any]:
         """
@@ -49,23 +52,41 @@ class PDFExtractionService:
         temp_file_path = await self._save_temp_file(file)
         
         try:
-            # Extract text from PDF with memory optimization
-            text_content = await self._extract_text_from_pdf(temp_file_path)
+            logger.info(f"Starting extraction for voucher_type: {voucher_type}")
+            if self.USE_AI_EXTRACTION:
+                logger.info("Attempting AI extraction")
+                # Try AI extraction directly with PDF
+                ai_extracted = await self.extract_with_ai(None, voucher_type, temp_file_path)
+                if ai_extracted:  # If AI succeeds, return it
+                    logger.info("AI extraction successful")
+                    return ai_extracted
+                logger.warning("AI extraction failed or returned empty, falling back to regex")
+            
+            # Fallback to regex extraction
+            text_content = self._extract_text_from_pdf(temp_file_path)  # Synchronous call
+            logger.info(f"Extracted text length: {len(text_content)}")
+            if len(text_content) == 0:
+                logger.warning("No text extracted from PDF - may be scanned image, consider OCR")
             
             # Parse text based on voucher type
             if voucher_type == "purchase_voucher":
-                return await self._extract_purchase_voucher_data(text_content)
+                extracted = self._extract_purchase_voucher_data(text_content)
             elif voucher_type == "sales_order":
-                return await self._extract_sales_order_data(text_content)
+                extracted = self._extract_sales_order_data(text_content)
             elif voucher_type == "vendor":
-                return await self._extract_vendor_data(text_content)
+                extracted = self._extract_vendor_data(text_content)
             elif voucher_type == "customer":
-                return await self._extract_customer_data(text_content)
+                extracted = self._extract_customer_data(text_content)
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Unsupported voucher type: {voucher_type}"
                 )
+            if not extracted or len(extracted.get('items', [])) == 0:
+                logger.info("Specific regex failed, trying generic fallback")
+                extracted = self._generic_extract(text_content, voucher_type)
+            logger.info(f"Final extraction result: {extracted}")
+            return extracted
                 
         except Exception as e:
             logger.error(f"PDF extraction failed: {str(e)}")
@@ -90,22 +111,37 @@ class PDFExtractionService:
         temp_file_path = await self._save_temp_file(file)
         
         try:
-            # Extract text from PDF
-            text_content = await self._extract_text_from_pdf(temp_file_path)
+            logger.info("Starting KYC extraction")
+            if self.USE_AI_EXTRACTION:
+                logger.info("Attempting AI extraction for KYC")
+                ai_extracted = await self.extract_with_ai(None, "kyc", temp_file_path)
+                if ai_extracted:  # If AI succeeds, return it
+                    logger.info("AI KYC extraction successful")
+                    return ai_extracted
+                logger.warning("AI KYC extraction failed or empty, falling back to regex")
+            
+            # Fallback to regex extraction
+            text_content = self._extract_text_from_pdf(temp_file_path)  # Synchronous call
+            logger.info(f"Extracted text length for KYC: {len(text_content)}")
+            if len(text_content) == 0:
+                logger.warning("No text extracted from KYC PDF - may be scanned image")
             
             # Detect document type and extract accordingly
             doc_type = self._detect_kyc_type(text_content)
+            logger.info(f"Detected KYC type: {doc_type}")
             
             if doc_type == "aadhaar":
-                return self._extract_aadhaar_data(text_content)
+                extracted = self._extract_aadhaar_data(text_content)
             elif doc_type == "pan":
-                return self._extract_pan_data(text_content)
+                extracted = self._extract_pan_data(text_content)
             elif doc_type == "passport":
-                return self._extract_passport_data(text_content)
+                extracted = self._extract_passport_data(text_content)
             elif doc_type == "bank":
-                return self._extract_bank_data(text_content)
+                extracted = self._extract_bank_data(text_content)
             else:
-                return self._extract_generic_kyc_data(text_content)
+                extracted = self._extract_generic_kyc_data(text_content)
+            logger.info(f"KYC regex extraction result: {extracted}")
+            return extracted
                 
         except Exception as e:
             logger.error(f"KYC extraction failed: {str(e)}")
@@ -234,36 +270,14 @@ class PDFExtractionService:
         
         return temp_file_path
     
-    async def _extract_text_from_pdf(self, file_path: str) -> str:
-        """Extract text from PDF using PyMuPDF with memory optimization"""
-        try:
-            doc = fitz.open(file_path, filetype="pdf")  # Specify filetype to reduce memory
-            text_content = []
-            
-            for page_num in range(min(len(doc), 10)):  # Limit to 10 pages to reduce memory
-                page = doc.load_page(page_num)
-                text = page.get_text("text", flags=fitz.TEXTFLAGS_TEXT)  # Minimal text extraction
-                text_content.append(text)
-                page.clean_contents()  # Clean up page to free memory
-                page = None  # Explicitly release page
-            doc.close()
-            return "\n".join(text_content)
-            
-        except Exception as e:
-            logger.error(f"Failed to extract text from PDF: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to read PDF content"
-            )
-    
-    async def _extract_purchase_voucher_data(self, text: str) -> Dict[str, Any]:
+    def _extract_purchase_voucher_data(self, text: str) -> Dict[str, Any]:
         """Extract data specific to Purchase Voucher"""
         patterns = {
-            'invoice_number': r'(?:invoice|bill|voucher)[\s#]*:?\s*([A-Z0-9\-\/]+)',
-            'invoice_date': r'(?:date|dated)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
-            'vendor_name': r'(?:vendor|supplier|from)[\s:]*([A-Za-z\s&\.,]+?)(?:\n|address|phone)',
-            'amount': r'(?:total|amount|sum)[\s:]*(?:rs\.?|₹)?\s*([0-9,]+\.?\d{0,2})',
-            'gst_number': r'(?:gstin|gst\s*no?)[\s:]*([0-9A-Z]{15})',
+            'invoice_number': r'(?:invoice|bill|voucher|purchase order|po|no|number|ref no)[\s#]*:?\s*([A-Z0-9\-\/]+)',
+            'invoice_date': r'(?:date|dated|issue date|order date)[\s:]*(\d{1,2}[\/\- ]\d{1,2}[\/\- ]\d{2,4})',
+            'vendor_name': r'(?:vendor|supplier|from|sold by|seller|ship from)[\s:]*([A-Za-z\s&\.,]+?)(?:\n|address|phone|gstin)',
+            'amount': r'(?:total|grand total|amount|sum|payable|net amount)[\s:]*(?:rs\.?|₹|inr)?\s*([0-9,]+\.?\d{0,2})',
+            'gst_number': r'(?:gstin|gst\s*no?|gst number)[\s:]*([0-9A-Z]{15})',
         }
         extracted_data = {
             "vendor_name": self._extract_with_pattern(text, patterns['vendor_name']),
@@ -275,20 +289,36 @@ class PDFExtractionService:
         }
         return extracted_data
     
-    async def _extract_sales_order_data(self, text: str) -> Dict[str, Any]:
-        """Extract data specific to Sales Order"""
+    def _extract_sales_order_data(self, text: str) -> Dict[str, Any]:
+        """Extract data specific to Sales Order - Treat as received PO, extract supplier as customer"""
         patterns = {
-            'order_number': r'(?:order|so|sales)[\s#]*:?\s*([A-Z0-9\-\/]+)',
-            'order_date': r'(?:date|dated)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
-            'customer_name': r'(?:customer|client|to|bill\s*to)[\s:]*([A-Za-z\s&\.,]+?)(?:\n|address|phone)',
-            'amount': r'(?:total|amount|sum)[\s:]*(?:rs\.?|₹)?\s*([0-9,]+\.?\d{0,2})',
+            'order_number': r'(?:order|po|purchase order|sales|no|number|ref no|reference)[\s#]*:?\s*([A-Z0-9\-\/]+)',
+            'order_date': r'(?:date|dated|order date|issue date|po date)[\s:]*(\d{1,2}[\/\- ]\d{1,2}[\/\- ]\d{2,4})',
+            'customer_name': r'(?:supplier|vendor|from|sold by|seller|letterhead|company name)[\s:]*([A-Za-z\s&\.,]+?)(?:\n|address|phone|gstin)',
+            'amount': r'(?:total|grand total|amount|sum|payable|net amount)[\s:]*(?:rs\.?|₹|inr)?\s*([0-9,]+\.?\d{0,2})',
+            'reference_number': r'(?:reference|ref|so|customer ref)[\s#]*:?\s*([A-Z0-9\-\/]+)',
+            'delivery_date': r'(?:delivery date|due date|ship date|expected delivery)[\s:]*(\d{1,2}[\/\- ]\d{1,2}[\/\- ]\d{2,4})',
+            'gst_terms': r'(?:gst terms|tax terms|terms of payment)[\s:]*(.+?)(?=\s*(?:freight|warranty|$))',
+            'freight': r'(?:freight|shipping|transport)[\s:]*(?:rs\.?|₹|inr)?\s*([0-9,]+\.?\d{0,2})',
+            'warranty': r'(?:warranty)[\s:]*(.+?)(?=\s*(?:installation|$))',
+            'installation_charges': r'(?:installation charges|setup fee|installation)[\s:]*(?:rs\.?|₹|inr)?\s*([0-9,]+\.?\d{0,2})',
+            'signer': r'(?:authorized signatory|signed by|prepared by)[\s:]*([A-Za-z\s&\.]+)',
+            'signer_role': r'(?:position|role|designation)[\s:]*([A-Za-z\s&\.]+)',
         }
         extracted_data = {
             "customer_name": self._extract_with_pattern(text, patterns['customer_name']),
             "order_number": self._extract_with_pattern(text, patterns['order_number']),
             "order_date": self._parse_date(self._extract_with_pattern(text, patterns['order_date'])),
+            "reference_number": self._extract_with_pattern(text, patterns['reference_number']),
+            "delivery_date": self._parse_date(self._extract_with_pattern(text, patterns['delivery_date'])),
             "payment_terms": "Net 15",
+            "gst_terms": self._extract_with_pattern(text, patterns['gst_terms']),
+            "freight": self._parse_amount(self._extract_with_pattern(text, patterns['freight'])),
+            "warranty": self._extract_with_pattern(text, patterns['warranty']),
+            "installation_charges": self._parse_amount(self._extract_with_pattern(text, patterns['installation_charges'])),
             "total_amount": self._parse_amount(self._extract_with_pattern(text, patterns['amount'])),
+            "signer": self._extract_with_pattern(text, patterns['signer']),
+            "signer_role": self._extract_with_pattern(text, patterns['signer_role']),
             "items": self._extract_line_items(text, "sales")
         }
         return extracted_data
@@ -366,23 +396,23 @@ class PDFExtractionService:
                 time.sleep(retry_delay)
                 retry_delay *= 2
     
-    async def _extract_vendor_data(self, text: str) -> Dict[str, Any]:
+    def _extract_vendor_data(self, text: str) -> Dict[str, Any]:
         """Extract vendor data from GST certificate using PDF extraction only"""
-        return await self._fallback_pdf_extraction(text, "vendor")
+        return self._fallback_pdf_extraction(text, "vendor")
     
-    async def _fallback_pdf_extraction(self, text: str, doc_type: str) -> Dict[str, Any]:
+    def _fallback_pdf_extraction(self, text: str, doc_type: str) -> Dict[str, Any]:
         """Extraction from PDF text"""
         text = re.sub(r'\s+', ' ', text).strip()
         patterns = {
-            'legal_name': r'(?:Legal Name of the Taxpayer|Legal Name\s*of\s*Business|Legal Name|Name of Business|Registered Name|Name of the Proprietor|Firm Name)\s*:\s*(.+?)(?=\s*(?:Trade Name|GSTIN|PAN|Address|State|Mobile|Email|$))',
-            'trade_name': r'(?:Trade Name\s*of\s*Business|Trade Name, if any|Trade Name, if any)\s*:\s*(.+?)(?=\s*(?:GSTIN|PAN|Address|State|Mobile|Email|$))',
-            'gst_number': r'(?:GSTIN|Registration Number|GST Number)[\s:]*([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})',
-            'address_block': r'(?:Address of Principal Place of Business|Registered Address|Address|Principal Place of Business|Complete Address|Office Address)\s*:\s*(.+?)(?=\s*(?:State Code|PIN Code|Date of Liability|$))',
-            'phone': r'(?:Phone|Mobile|Contact Number|Telephone|Mobile Number)[\s:]*([+]?[0-9\s\-\(\)]{10,15})',
+            'legal_name': r'(?:Legal Name of the Taxpayer|Legal Name\s*of\s*Business|Legal Name|Name of Business|Registered Name|Name of the Proprietor|Firm Name|Name)\s*:\s*(.+?)(?=\s*(?:Trade Name|GSTIN|PAN|Address|State|Mobile|Email|$))',
+            'trade_name': r'(?:Trade Name\s*of\s*Business|Trade Name, if any|Trade Name)\s*:\s*(.+?)(?=\s*(?:GSTIN|PAN|Address|State|Mobile|Email|$))',
+            'gst_number': r'(?:GSTIN|Registration Number|GST Number|GST)[\s:]*([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})',
+            'address_block': r'(?:Address of Principal Place of Business|Registered Address|Address|Principal Place of Business|Complete Address|Office Address|Address)\s*:\s*(.+?)(?=\s*(?:State Code|PIN Code|Date of Liability|$))',
+            'phone': r'(?:Phone|Mobile|Contact Number|Telephone|Mobile Number|Contact)[\s:]*([+]?[0-9\s\-\(\)]{10,15})',
             'email': r'(?:Email|E-mail|Mail)[\s:]*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
             'pan_number': r'(?:PAN|Pan Number)[\s:]*([A-Z]{5}[0-9]{4}[A-Z]{1})',
             'state_code': r'(?:State Code)[\s:]*(\d{2})',
-            'pin_code': r'(?:PIN Code|Pincode|Postal Code)[\s:]*(\d{6})',
+            'pin_code': r'(?:PIN Code|Pincode|Postal Code|PIN)[\s:]*(\d{6})',
             'state': r'(?:State)[\s:]*([A-Za-z\s]+)(?:PIN|Pin Code|Code|\n)',
             'registration_date': r'(?:Registration Date|Date of Registration|Date of Issue)[\s:]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
             'business_constitution': r'(?:Constitution of Business|Type of Taxpayer|Business Type)[\s:]*([A-Za-z\s]+)',
@@ -420,19 +450,20 @@ class PDFExtractionService:
             "is_active": True
         }
         if address_block:
-            address_parts = [p.strip() for p in address_block.split(',') if p.strip()]
+            address_parts = [p.strip() for p in re.split(r',|\n', address_block) if p.strip()]  # Split on comma or newline
             if len(address_parts) >= 4:
                 extracted_data["address1"] = ', '.join(address_parts[:-3])
                 extracted_data["address2"] = address_parts[-3]
-                extracted_data["city"] = address_parts[-3]
-                extracted_data["state"] = address_parts[-2]
+                extracted_data["city"] = address_parts[-2]
+                extracted_data["state"] = address_parts[-2].split()[0] if ' ' in address_parts[-2] else address_parts[-2]
                 extracted_data["pin_code"] = address_parts[-1] if not extracted_data["pin_code"] else extracted_data["pin_code"]
             elif len(address_parts) >= 3:
                 extracted_data["address1"] = address_parts[0]
                 extracted_data["address2"] = address_parts[1]
                 extracted_data["city"] = address_parts[1]
-                extracted_data["state"] = address_parts[2].split()[0]
-                pin_match = re.search(r'\d{6}', address_parts[2])
+                last = address_parts[2]
+                extracted_data["state"] = ' '.join(last.split()[:-1]) if ' ' in last else last
+                pin_match = re.search(r'\d{6}', last)
                 if pin_match and not extracted_data["pin_code"]:
                     extracted_data["pin_code"] = pin_match.group(0)
             else:
@@ -440,15 +471,16 @@ class PDFExtractionService:
                 pin_match = re.search(r'\d{6}', address_block)
                 if pin_match and not extracted_data["pin_code"]:
                     extracted_data["pin_code"] = pin_match.group(0)
+                    extracted_data["address1"] = re.sub(r'\d{6}', '', address_block).strip()
         return {k: v for k, v in extracted_data.items() if v is not None}
     
-    async def _extract_customer_data(self, text: str) -> Dict[str, Any]:
+    def _extract_customer_data(self, text: str) -> Dict[str, Any]:
         """Extract customer data from business document"""
-        return await self._extract_vendor_data(text)
+        return self._extract_vendor_data(text)
     
     def _extract_with_pattern(self, text: str, pattern: str) -> Optional[str]:
         """Extract text using regex pattern with improved cleaning"""
-        match = re.search(pattern, text, re.IGNORECASE)
+        match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
         if match:
             value = match.group(1).strip()
             value = re.sub(r'\s+', ' ', value)
@@ -459,7 +491,7 @@ class PDFExtractionService:
         """Parse and standardize date string"""
         if not date_str:
             return None
-        formats = ['%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y', '%Y-%m-%d', '%d.%m.%Y']
+        formats = ['%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y', '%Y-%m-%d', '%d.%m.%Y', '%d %b %Y', '%b %d, %Y', '%d %B %Y', '%B %d, %Y']
         for fmt in formats:
             try:
                 return datetime.strptime(date_str, fmt).strftime('%Y-%m-%d')
@@ -479,41 +511,105 @@ class PDFExtractionService:
     
     def _extract_line_items(self, text: str, voucher_type: str) -> List[Dict[str, Any]]:
         """Extract line items from table-like text in PDF"""
-        lines = text.split('\n')
+        lines = re.split(r'\n|\r', text)  # Better split
         items = []
         in_table = False
         for line in lines:
             line = line.strip()
             if not line:
                 continue
-            if re.match(r'(?:Sr|Sl|No|Item)\.?', line, re.IGNORECASE):
+            if re.search(r'(?:sr|sl|no|item|desc|product|qty|unit|rate|amount|hsn|sac|particulars)', line, re.IGNORECASE):
                 in_table = True
                 continue
             if in_table:
-                match = re.match(r'(\d+)\s+(.+?)\s+([0-9]{4,8})\s+([0-9.]+)\s+([A-Za-z]+)\s+([0-9.,]+)\s+([0-9.,]+)', line)
-                if match:
-                    items.append({
-                        "sr_no": match.group(1),
-                        "description": match.group(2).strip(),
-                        "hsn_code": match.group(3),
-                        "quantity": float(match.group(4)),
-                        "unit": match.group(5),
-                        "rate": self._parse_amount(match.group(6)),
-                        "amount": self._parse_amount(match.group(7))
-                    })
-                elif 'total' in line.lower() or 'grand' in line.lower():
+                # More flexible: Optional groups, any order-ish
+                parts = re.split(r'\s{2,}', line)  # Split on multiple spaces
+                if len(parts) >= 4:  # Min sr, desc, qty, amount
+                    item = {}
+                    try:
+                        item['sr_no'] = int(parts[0]) if parts[0].isdigit() else None
+                        item['description'] = parts[1]
+                        idx = 2
+                        if re.match(r'\d{4,8}', parts[idx]):  # HSN
+                            item['hsn_code'] = parts[idx]
+                            idx += 1
+                        item['quantity'] = float(re.sub(r'[^\d.]', '', parts[idx])) if re.search(r'\d', parts[idx]) else None
+                        idx += 1
+                        if idx < len(parts) and re.match(r'[A-Za-z]+', parts[idx]):  # Unit
+                            item['unit'] = parts[idx]
+                            idx += 1
+                        item['rate'] = self._parse_amount(parts[idx]) if idx < len(parts) else None
+                        idx += 1
+                        item['amount'] = self._parse_amount(parts[idx]) if idx < len(parts) else None
+                        items.append(item)
+                    except:
+                        pass
+                if re.search(r'total|grand|subtotal|tax|gst', line, re.IGNORECASE):
                     in_table = False
+        logger.info(f"Extracted {len(items)} line items")
         return items[:10]  # Limit to 10 items to reduce memory
     
-    async def extract_with_ai(self, file_path: str, document_type: str) -> Dict[str, Any]:
+    def _generic_extract(self, text: str, voucher_type: str) -> Dict[str, Any]:
+        """Generic fallback extraction if specific fails"""
+        patterns = {
+            'number': r'(?:no|number|ref|order|invoice|so|po)[\s#]*:?\s*([A-Z0-9\-\/]+)',
+            'date': r'(?:date|dated)[\s:]*(\d{1,2}[\/\- ]\d{1,2}[\/\- ]\d{2,4})',
+            'name': r'(?:to|from|buyer|seller|customer|vendor)[\s:]*([A-Za-z\s&\.,]+?)(?:\n|address|phone)',
+            'total': r'(?:total|amount)[\s:]*(?:rs\.?|₹)?\s*([0-9,]+\.?\d{0,2})',
+        }
+        extracted_data = {
+            "name": self._extract_with_pattern(text, patterns['name']),
+            "number": self._extract_with_pattern(text, patterns['number']),
+            "date": self._parse_date(self._extract_with_pattern(text, patterns['date'])),
+            "total_amount": self._parse_amount(self._extract_with_pattern(text, patterns['total'])),
+            "items": self._extract_line_items(text, voucher_type)
+        }
+        if voucher_type == "sales_order":
+            extracted_data["customer_name"] = extracted_data.pop("name", None)
+            extracted_data["order_number"] = extracted_data.pop("number", None)
+            extracted_data["order_date"] = extracted_data.pop("date", None)
+            extracted_data["payment_terms"] = "Net 15"
+        elif voucher_type == "purchase_voucher":
+            extracted_data["vendor_name"] = extracted_data.pop("name", None)
+            extracted_data["invoice_number"] = extracted_data.pop("number", None)
+            extracted_data["invoice_date"] = extracted_data.pop("date", None)
+            extracted_data["payment_terms"] = "Net 30"
+        logger.info(f"Generic extraction result: {extracted_data}")
+        return extracted_data
+    
+    def _extract_text_from_pdf(self, file_path: str) -> str:
+        """Extract raw text from PDF file using PyPDF2"""
+        text = ""
+        try:
+            with open(file_path, 'rb') as f:
+                reader = PdfReader(f)
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+            text = text.strip()
+            logger.info(f"PDF text extraction successful, length: {len(text)}")
+            if len(text) < 50:
+                logger.warning("Extracted text is very short - PDF may contain images or non-extractable text")
+            return text
+        except Exception as e:
+            logger.error(f"Failed to extract text from PDF: {str(e)}")
+            raise ValueError(f"PDF text extraction failed: {str(e)}")
+    
+    async def extract_with_ai(self, text_content: Optional[str], document_type: str, file_path: str) -> Dict[str, Any]:
         """
-        AI-based PDF extraction using free AI APIs (Feature 11)
+        AI-based PDF extraction using OpenRouter with direct PDF
         """
         if not self.USE_AI_EXTRACTION:
             logger.info("AI extraction disabled, using fallback regex extraction")
             return {}
+        # Always extract text if not provided (for text-based models like OpenRouter)
+        if text_content is None:
+            text_content = self._extract_text_from_pdf(file_path)
         try:
-            if self.MINDEE_API_KEY:
+            if self.OPENROUTER_API_KEY:
+                return await self._extract_with_openrouter(text_content, document_type, file_path)
+            elif self.MINDEE_API_KEY:
                 return await self._extract_with_mindee(file_path, document_type)
             elif self.GOOGLE_DOCUMENT_AI_KEY:
                 return await self._extract_with_google_doc_ai(file_path, document_type)
@@ -522,6 +618,59 @@ class PDFExtractionService:
                 return {}
         except Exception as e:
             logger.error(f"AI extraction failed: {str(e)}")
+            return {}
+    
+    async def _extract_with_openrouter(self, text_content: str, document_type: str, file_path: str) -> Dict[str, Any]:
+        """
+        Extract data using OpenRouter API with extracted text (since model is text-based)
+        """
+        try:
+            # Improved prompt to force strict JSON output
+            prompt = f"Extract structured data from this {document_type} document as JSON only. Keys: customer_name, customer_address, customer_email, customer_phone, customer_website, order_number, order_date, reference_number, reference_date, delivery_date, items (array of objects with sl_no, description, hsn_code, quantity, unit, rate, amount), subtotal, gst_terms, freight, warranty, installation_charges, total_amount, signer, signer_role. Use null for missing. Output pure JSON, no text."
+            
+            url = "https://openrouter.ai/api/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self.OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            data = {
+                "model": self.OPENROUTER_MODEL,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt + "\n\nExtracted document text:\n" + text_content[:4000]  # Limit text to avoid token limits
+                    }
+                ]
+            }
+            
+            logger.info(f"Sending request to OpenRouter with model: {self.OPENROUTER_MODEL}")
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+            
+            # Extract from AI response (assume it's JSON in content)
+            ai_content = result['choices'][0]['message']['content']
+            logger.info(f"OpenRouter raw response: {ai_content[:500]}")  # Log snippet for debug
+            try:
+                import json
+                # Clean potential markdown
+                ai_content = re.sub(r'^```json\n|\n```$', '', ai_content).strip()
+                extracted = json.loads(ai_content)
+                if not isinstance(extracted, dict):
+                    raise ValueError("Parsed but not a dict")
+                logger.info(f"OpenRouter extraction successful: {len(extracted.get('items', []))} items extracted")
+                return extracted
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(f"Failed to parse OpenRouter JSON response: {str(e)}")
+                return {}
+            
+        except requests.exceptions.HTTPError as http_err:
+            logger.error(f"HTTP error in OpenRouter: {str(http_err)}")
+            if "402" in str(http_err):
+                logger.error("Payment required - check OpenRouter credits")
+            return {}
+        except Exception as e:
+            logger.error(f"OpenRouter API error: {str(e)}")
             return {}
     
     async def _extract_with_mindee(self, file_path: str, document_type: str) -> Dict[str, Any]:
