@@ -653,7 +653,8 @@ const PurchaseOrderPage: React.FC = () => {
                     backgroundColor: colorCode
                   }}
                 >
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
+                  <TableCell 
+                    align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{displayDate}</TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{formatCurrency(Math.round(voucher.total_amount) || 0)}</TableCell>
@@ -760,7 +761,8 @@ const PurchaseOrderPage: React.FC = () => {
               size="small" 
               options={enhancedVendorOptions} 
               getOptionLabel={(option: any) => {
-                if (typeof option === 'number') return '';
+                if (typeof option === 'number') return option.toString();
+                if (typeof option === 'string') return option;
                 return option?.name || "";
               }} 
               value={selectedVendor || (vendorList?.find((v: any) => v.id === selectedVendorId) || null)} 
@@ -941,11 +943,9 @@ const PurchaseOrderPage: React.FC = () => {
 
   if (isLoading || companyLoading) {
     return (
-      <ProtectedPage moduleKey="procurement" action="write">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
-        </Box>
-      </ProtectedPage>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
     );
   }
 
@@ -960,93 +960,95 @@ const PurchaseOrderPage: React.FC = () => {
   }
 
   return (
-    <>
-      <VoucherLayout
-        voucherType={config.voucherTitle}
-        voucherTitle={config.voucherTitle}
-        indexContent={indexContent}
-        formHeader={formHeader}
-        formContent={formBody}
-        onShowAll={() => setShowVoucherListModal(true)}
-        centerAligned={true}
-        modalContent={
-          <VoucherListModal
-            open={showVoucherListModal}
-            onClose={() => setShowVoucherListModal(false)}
-            voucherType="Purchase Orders"
-            vouchers={sortedVouchers || []}
-            onVoucherClick={handleVoucherClick}
-            onEdit={handleEditWithData}
-            onView={handleViewWithData}
-            onDelete={handleDelete}
-            onGeneratePDF={handleGeneratePDF}
-            vendorList={vendorList}
-          />
-        }
-      />
-      <AddVendorModal 
-        open={showAddVendorModal} 
-        onClose={() => setShowAddVendorModal(false)} 
-        onSave={handleVendorAdded} 
-        loading={addVendorLoading} 
-        setLoading={setAddVendorLoading} 
-        organization_id={company?.organization_id}
-      />
-      <AddProductModal 
-        open={showAddProductModal} 
-        onClose={() => setShowAddProductModal(false)} 
-        onAdd={(newProduct) => { 
-          setValue(`items.${addingItemIndex}.product_id`, newProduct.id); 
-          setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); 
-          setValue(`items.${addingItemIndex}.unit_price`, parseFloat(newProduct.unit_price || 0)); 
-          setValue(`items.${addingItemIndex}.original_unit_price`, parseFloat(newProduct.unit_price || 0)); 
-          setValue(`items.${addingItemIndex}.gst_rate`, normalizeGstRate(newProduct.gst_rate ?? 18)); 
-          setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); 
-          setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); 
-          setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : normalizeGstRate(newProduct.gst_rate ?? 18)); 
-          setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); 
-          setValue(`items.${addingItemIndex}.reorder_level`, parseFloat(newProduct.reorder_level || 0)); 
-          refreshMasterData(); 
-        }} 
-        loading={addProductLoading} 
-        setLoading={setAddProductLoading} 
-      />
-      <AddShippingAddressModal 
-        open={showShippingModal} 
-        onClose={() => setShowShippingModal(false)} 
-        loading={addShippingLoading} 
-        setLoading={setAddShippingLoading} 
-      />
-      <VoucherContextMenu 
-        contextMenu={contextMenu} 
-        voucher={null} 
-        voucherType="Purchase Order" 
-        onView={handleViewWithData} 
-        onEdit={handleEditWithData} 
-        onDelete={handleDelete} 
-        onPrint={handleGeneratePDF} 
-        onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
-        onCreateGRN={handleCreateGRN}
-        onEditTracking={handleEditTracking}
-        onClose={() => {}}
-      />
-      {selectedVoucherForTracking && (
-        <TrackingDetailsDialog
-          open={trackingDialogOpen}
-          onClose={handleTrackingDialogClose}
-          voucherId={selectedVoucherForTracking.id}
-          voucherNumber={selectedVoucherForTracking.voucher_number}
+    <ProtectedPage moduleKey="vouchers" action="create">
+      <>
+        <VoucherLayout
+          voucherType={config.voucherTitle}
+          voucherTitle={config.voucherTitle}
+          indexContent={indexContent}
+          formHeader={formHeader}
+          formContent={formBody}
+          onShowAll={() => setShowVoucherListModal(true)}
+          centerAligned={true}
+          modalContent={
+            <VoucherListModal
+              open={showVoucherListModal}
+              onClose={() => setShowVoucherListModal(false)}
+              voucherType="Purchase Orders"
+              vouchers={sortedVouchers || []}
+              onVoucherClick={handleVoucherClick}
+              onEdit={handleEditWithData}
+              onView={handleViewWithData}
+              onDelete={handleDelete}
+              onGeneratePDF={handleGeneratePDF}
+              vendorList={vendorList}
+            />
+          }
         />
-      )}
-      <VoucherDateConflictModal
-        open={showConflictModal}
-        onClose={handleCancelConflict}
-        conflictInfo={conflictInfo}
-        onChangeDateToSuggested={handleChangeDateToSuggested}
-        onProceedAnyway={handleProceedAnyway}
-        voucherType="Purchase Order"
-      />
-    </>
+        <AddVendorModal 
+          open={showAddVendorModal} 
+          onClose={() => setShowAddVendorModal(false)} 
+          onSave={handleVendorAdded} 
+          loading={addVendorLoading} 
+          setLoading={setAddVendorLoading} 
+          organization_id={company?.organization_id}
+        />
+        <AddProductModal 
+          open={showAddProductModal} 
+          onClose={() => setShowAddProductModal(false)} 
+          onAdd={(newProduct) => { 
+            setValue(`items.${addingItemIndex}.product_id`, newProduct.id); 
+            setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); 
+            setValue(`items.${addingItemIndex}.unit_price`, parseFloat(newProduct.unit_price || 0)); 
+            setValue(`items.${addingItemIndex}.original_unit_price`, parseFloat(newProduct.unit_price || 0)); 
+            setValue(`items.${addingItemIndex}.gst_rate`, normalizeGstRate(newProduct.gst_rate ?? 18)); 
+            setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); 
+            setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? normalizeGstRate(newProduct.gst_rate ?? 18) / 2 : 0); 
+            setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : normalizeGstRate(newProduct.gst_rate ?? 18)); 
+            setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); 
+            setValue(`items.${addingItemIndex}.reorder_level`, parseFloat(newProduct.reorder_level || 0)); 
+            refreshMasterData(); 
+          }} 
+          loading={addProductLoading} 
+          setLoading={setAddProductLoading} 
+        />
+        <AddShippingAddressModal 
+          open={showShippingModal} 
+          onClose={() => setShowShippingModal(false)} 
+          loading={addShippingLoading} 
+          setLoading={setAddShippingLoading} 
+        />
+        <VoucherContextMenu 
+          contextMenu={contextMenu} 
+          voucher={null} 
+          voucherType="Purchase Order" 
+          onView={handleViewWithData}
+          onEdit={handleEditWithData}
+          onDelete={handleDelete}
+          onPrint={handleGeneratePDF}
+          onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
+          onCreateGRN={handleCreateGRN}
+          onEditTracking={handleEditTracking}
+          onClose={() => {}}
+        />
+        {selectedVoucherForTracking && (
+          <TrackingDetailsDialog
+            open={trackingDialogOpen}
+            onClose={handleTrackingDialogClose}
+            voucherId={selectedVoucherForTracking.id}
+            voucherNumber={selectedVoucherForTracking.voucher_number}
+          />
+        )}
+        <VoucherDateConflictModal
+          open={showConflictModal}
+          onClose={handleCancelConflict}
+          conflictInfo={conflictInfo}
+          onChangeDateToSuggested={handleChangeDateToSuggested}
+          onProceedAnyway={handleProceedAnyway}
+          voucherType="Purchase Order"
+        />
+      </>
+    </ProtectedPage>
   );
 };
 

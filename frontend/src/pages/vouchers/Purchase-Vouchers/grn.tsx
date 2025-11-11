@@ -972,17 +972,13 @@ const GoodsReceiptNotePage: React.FC = () => {
 
     if (isLoading) {
     return (
-      <ProtectedPage moduleKey="voucher" action="create">
-        <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
-        </Box>
-      </Container>
-      </ProtectedPage>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
     );
   }
   return (
-    <ProtectedPage moduleKey="voucher" action="create">
+    <ProtectedPage moduleKey="vouchers" action="create">
       <VoucherLayout
         voucherType={config.voucherTitle}
         voucherTitle={config.voucherTitle}

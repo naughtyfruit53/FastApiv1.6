@@ -3,7 +3,7 @@
 import React, { ReactNode } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
-import { Box, Alert, Typography, Button } from "@mui/material";
+import { Box, Alert, Typography, Button, CircularProgress } from "@mui/material";
 import { LockOutlined } from "@mui/icons-material";
 
 interface RoleGateProps {
@@ -25,8 +25,28 @@ const RoleGate: React.FC<RoleGateProps> = ({
   redirectTo,
   children 
 }) => {
-  const { user, userPermissions } = useAuth();
+  const { user, userPermissions, permissionsLoading } = useAuth();
   const router = useRouter();
+
+  if (permissionsLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '60vh',
+          p: 3,
+        }}
+      >
+        <CircularProgress sx={{ mb: 2 }} />
+        <Typography variant="body1" color="text.secondary">
+          Loading permissions...
+        </Typography>
+      </Box>
+    );
+  }
 
   if (!user) {
     if (redirectTo) {

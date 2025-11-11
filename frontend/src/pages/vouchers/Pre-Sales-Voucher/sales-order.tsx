@@ -419,7 +419,26 @@ const SalesOrderPage: React.FC = () => {
       const formattedData = {
         ...voucherData,
         date: formattedDate,
+        items: voucherData.items?.map((item: any) => ({
+          ...item,
+          product_id: item.product_id,
+          product_name: item.product?.product_name || item.product_name || "",
+          unit_price: parseFloat(item.unit_price || 0),
+          original_unit_price: parseFloat(item.product?.unit_price || item.unit_price || 0),
+          discount_percentage: parseFloat(item.discount_percentage || 0),
+          discount_amount: parseFloat(item.discount_amount || 0),
+          gst_rate: normalizeGstRate(item.gst_rate ?? 18),
+          cgst_rate: isIntrastate ? normalizeGstRate(item.gst_rate ?? 18) / 2 : 0,
+          sgst_rate: isIntrastate ? normalizeGstRate(item.gst_rate ?? 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : normalizeGstRate(item.gst_rate ?? 18),
+          unit: item.unit || item.product?.unit || "",
+          current_stock: parseFloat(item.current_stock || 0),
+          reorder_level: parseFloat(item.reorder_level || 0),
+          description: item.description || '',
+          quantity: parseFloat(item.quantity || 0),
+        })) || [],
       };
+      console.log("[SalesOrderPage] Resetting form with voucherData:", formattedData);
       reset(formattedData);
       if (voucherData.additional_charges) {
         setAdditionalCharges(voucherData.additional_charges);
@@ -428,31 +447,8 @@ const SalesOrderPage: React.FC = () => {
         setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
         setAdditionalChargesEnabled(false);
       }
-      if (voucherData.items && voucherData.items.length > 0) {
-        remove();
-        voucherData.items.forEach((item: any) => {
-          append({
-            ...item,
-            product_id: item.product_id,
-            product_name: item.product?.product_name || item.product_name || "",
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            original_unit_price: item.product?.unit_price || item.unit_price || 0,
-            discount_percentage: item.discount_percentage || 0,
-            discount_amount: item.discount_amount || 0,
-            gst_rate: item.gst_rate ?? 18,
-            cgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
-            sgst_rate: isIntrastate ? (item.gst_rate ?? 18) / 2 : 0,
-            igst_rate: isIntrastate ? 0 : item.gst_rate ?? 18,
-            unit: item.unit,
-            current_stock: item.current_stock || 0,
-            reorder_level: item.reorder_level || 0,
-            description: item.description || '',
-          });
-        });
-      }
     }
-  }, [voucherData, mode, reset, append, remove, isIntrastate]);
+  }, [voucherData, mode, reset, setValue, isIntrastate]);
 
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {
@@ -695,7 +691,7 @@ const SalesOrderPage: React.FC = () => {
   const formContent = (
     <Box>
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
-      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherFormStyles.formContainer}>
         <Grid container spacing={1}>
           <Grid size={6}>
             <TextField 
@@ -800,25 +796,6 @@ const SalesOrderPage: React.FC = () => {
           </Grid>
           <Grid size={12} sx={voucherFormStyles.itemsHeader}>
             <Typography variant="h6" sx={{ fontSize: 16, fontWeight: "bold" }}>Items</Typography>
-            {mode === 'create' && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  component="label"
-                  size="small"
-                  disabled={pdfUploadLoading}
-                >
-                  {pdfUploadLoading ? 'Uploading...' : 'Upload PDF'}
-                  <input
-                    type="file"
-                    hidden
-                    accept=".pdf"
-                    onChange={handlePdfUpload}
-                  />
-                </Button>
-                {pdfUploadError && <Alert severity="error" sx={{ fontSize: 12 }}>{pdfUploadError}</Alert>}
-              </Box>
-            )}
           </Grid>
           <Grid size={12}>
             <VoucherItemTable
@@ -932,7 +909,7 @@ const SalesOrderPage: React.FC = () => {
       <Dialog open={showCreateCustomerConfirm} onClose={handleCreateCustomerCancel}>
         <DialogTitle>Customer Not Found</DialogTitle>
         <DialogContent>
-          <Typography>Customer &quot;{extractedData?.customer_name}&quot; not found. Would you like to create it?</Typography>
+          <Typography>Customer "{extractedData?.customer_name}" not found. Would you like to create it?</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCreateCustomerCancel}>No</Button>
@@ -943,60 +920,59 @@ const SalesOrderPage: React.FC = () => {
   );
 
   if (isLoading || companyLoading) {
-  
-  return (
-      <ProtectedPage moduleKey="sales" action="write">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
-        </Box>
-      </ProtectedPage>
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
     );
   }
 
   return (
-    <>
-      <VoucherLayout
-        voucherType={config.voucherTitle}
-        voucherTitle={config.voucherTitle}
-        indexContent={indexContent}
-        formHeader={formHeader}
-        formContent={formContent}
-        onShowAll={() => setShowVoucherListModal(true)}
-        centerAligned={true}
-        modalContent={
-          <VoucherListModal
-            open={showVoucherListModal}
-            onClose={() => setShowVoucherListModal(false)}
-            voucherType="Sales Orders"
-            vouchers={sortedVouchers || []}
-            onVoucherClick={handleVoucherClick}
-            onEdit={handleEditWithData}
-            onView={handleViewWithData}
-            onDelete={handleDelete}
-            onGeneratePDF={handleGeneratePDF}
-            customerList={customerList}
-          />
-        }
-      />
-      <AddCustomerModal 
-        open={showAddCustomerModal} 
-        onClose={() => setShowAddCustomerModal(false)} 
-        onAdd={handleCustomerAdded}
-        loading={addCustomerLoading} 
-        setLoading={setAddCustomerLoading} 
-      />
-      <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
-      <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
-      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Sales Order" onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Order")} onRevise={handleReviseWithData} onClose={handleCloseContextMenu} />
-      <VoucherDateConflictModal
-        open={showConflictModal}
-        onClose={handleCancelConflict}
-        conflictInfo={conflictInfo}
-        onChangeDateToSuggested={handleChangeDateToSuggested}
-        onProceedAnyway={handleProceedAnyway}
-        voucherType="Sales Order"
-      />
-    </>
+    <ProtectedPage moduleKey="vouchers" action="create">
+      <>
+        <VoucherLayout
+          voucherType={config.voucherTitle}
+          voucherTitle={config.voucherTitle}
+          indexContent={indexContent}
+          formHeader={formHeader}
+          formContent={formContent}
+          onShowAll={() => setShowVoucherListModal(true)}
+          centerAligned={true}
+          modalContent={
+            <VoucherListModal
+              open={showVoucherListModal}
+              onClose={() => setShowVoucherListModal(false)}
+              voucherType="Sales Orders"
+              vouchers={sortedVouchers || []}
+              onVoucherClick={handleVoucherClick}
+              onEdit={handleEditWithData}
+              onView={handleViewWithData}
+              onDelete={handleDelete}
+              onGeneratePDF={handleGeneratePDF}
+              customerList={customerList}
+            />
+          }
+        />
+        <AddCustomerModal 
+          open={showAddCustomerModal} 
+          onClose={() => setShowAddCustomerModal(false)} 
+          onAdd={handleCustomerAdded}
+          loading={addCustomerLoading} 
+          setLoading={setAddCustomerLoading} 
+        />
+        <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
+        <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
+        <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Sales Order" onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Sales Order")} onRevise={handleReviseWithData} onClose={handleCloseContextMenu} />
+        <VoucherDateConflictModal
+          open={showConflictModal}
+          onClose={handleCancelConflict}
+          conflictInfo={conflictInfo}
+          onChangeDateToSuggested={handleChangeDateToSuggested}
+          onProceedAnyway={handleProceedAnyway}
+          voucherType="Sales Order"
+        />
+      </>
+    </ProtectedPage>
   );
 };
 export default SalesOrderPage;

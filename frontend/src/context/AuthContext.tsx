@@ -1,5 +1,4 @@
 // frontend/src/context/AuthContext.tsx
-
 import React, {
   createContext,
   useContext,
@@ -16,7 +15,6 @@ import { markAuthReady, resetAuthReady } from "../lib/api";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY } from "../constants/auth";
 import { Role } from "../types/rbac.types";
 import { rbacService } from "../services/rbacService";
-
 interface UserPermissions {
   role: string;
   roles: Role[];
@@ -24,10 +22,10 @@ interface UserPermissions {
   modules: string[];
   submodules: Record<string, string[]>;
 }
-
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  permissionsLoading: boolean;
   displayRole: string | null;
   userPermissions: UserPermissions | null;
   login: (loginResponse: any) => Promise<void>;
@@ -38,17 +36,15 @@ interface AuthContextType {
   getAuthHeaders: () => { Authorization?: string };
   refreshPermissions: () => Promise<void>;
 }
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);  // Changed to named export
-
+export const AuthContext = createContext<AuthContextType | undefined>(undefined); // Changed to named export
 export function AuthProvider({ children }: { children: ReactNode }): any {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
   const router = useRouter();
   const hasFetched = useRef(false); // Prevent multiple fetches
   const isFetching = useRef(false); // Prevent concurrent fetches
-
   const computeRoleBasedPermissions = (user: User | null): UserPermissions => {
     if (!user) {
       return {
@@ -59,15 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         submodules: {},
       };
     }
-
     // STRICT ENFORCEMENT: No computed permissions for super admins
     // All permissions must come from backend RBAC system
     const isOrgSuperAdmin = ['super_admin', 'admin', 'management'].includes(user.role || '');
-
     let permissions: string[] = [];
     let modules: string[] = [];
     let submodules: Record<string, string[]> = {};
-
     if (isOrgSuperAdmin) {
       // Organization admin has most permissions except super admin functions
       permissions = [
@@ -185,7 +178,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
           break;
       }
     }
-
     return {
       role: user.role || 'user',
       roles: [],
@@ -194,28 +186,28 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       submodules,
     };
   };
-
   // Fetch user permissions from RBAC service
   const fetchUserPermissions = async (userId: number) => {
+    setPermissionsLoading(true);
     try {
       console.log("[AuthProvider] Fetching user permissions for user:", userId);
-      
+     
       // Fetch user permissions
       const permissionsData = await rbacService.getUserPermissions(userId) || { permissions: [], modules: [], submodules: {} };
       const rolesData = await rbacService.getUserServiceRoles(userId);
-      
+     
       // Compute fallback
       const fallback = computeRoleBasedPermissions(user);
-      
+     
       // Ensure submodules are objects
-      const safePermissionsSubmodules = permissionsData.submodules || {};  
-      const safeFallbackSubmodules = fallback.submodules || {};  
-      
+      const safePermissionsSubmodules = permissionsData.submodules || {};
+      const safeFallbackSubmodules = fallback.submodules || {};
+     
       // Merge fetched with fallback
       const mergedPermissions = [...new Set([...fallback.permissions, ...(permissionsData.permissions || [])])];
       const mergedModules = [...new Set([...fallback.modules, ...(permissionsData.modules || [])])];
       const mergedSubmodules: Record<string, string[]> = {};
-      
+     
       // Merge submodules
       const allKeys = new Set([...Object.keys(safeFallbackSubmodules), ...Object.keys(safePermissionsSubmodules)]);
       allKeys.forEach(key => {
@@ -224,7 +216,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
           ...(safePermissionsSubmodules[key] || [])
         ])];
       });
-
       // Process and structure the permissions
       const permissions: UserPermissions = {
         role: permissionsData.role || fallback.role,
@@ -233,7 +224,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         modules: mergedModules,
         submodules: mergedSubmodules,
       };
-
       setUserPermissions(permissions);
       console.log("[AuthProvider] User permissions fetched and merged successfully");
       return permissions;
@@ -243,9 +233,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       const fallbackPermissions = computeRoleBasedPermissions(user);
       setUserPermissions(fallbackPermissions);
       return fallbackPermissions;
+    } finally {
+      setPermissionsLoading(false);
     }
   };
-
   // Fetch the current user from API using the token in localStorage
   const fetchUser = async (retryCount = 0) => {
     if (isFetching.current) return; // Prevent concurrent
@@ -293,10 +284,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       };
       setUser(newUser);
       console.log("[AuthProvider] User state updated successfully");
-      
+     
       // Fetch user permissions from RBAC service
       await fetchUserPermissions(userData.id);
-      
+     
       // Check org context for non-super-admins
       if (!userData.is_super_admin && !userData.organization_id) {
         console.error(
@@ -378,7 +369,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       setLoading(false); // Ensure loading is set to false in finally
     }
   };
-
   // On mount, check for token and initialize user session
   useEffect(() => {
     console.log("[AuthProvider] Component mounted, initializing auth state");
@@ -401,7 +391,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       setLoading(false);
     }
   }, []); // Removed router.pathname dependency to prevent re-runs on path change
-
   // Handle post-login redirect with state preservation
   const handlePostLoginRedirect = () => {
     try {
@@ -425,7 +414,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       router.push("/dashboard");
     }
   };
-
   // Attempt to restore form data after login
   const restoreFormData = () => {
     try {
@@ -461,7 +449,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       console.warn("[AuthProvider] Could not restore form data:", err);
     }
   };
-
   // Force password reset if required
   useEffect(() => {
     if (
@@ -473,7 +460,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       router.push("/password-reset");
     }
   }, [user, router]);
-
   // Login: store token, hydrate user, and mark ready
   const login = async (loginResponse: any) => {
     console.log("[AuthProvider] Login process started:", {
@@ -527,13 +513,12 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     };
     setUser(newUser);
     console.log("[AuthProvider] User state set from login response");
-
     // Verify session immediately after setting token and user
     await refreshUser();
-    
+   
     // Fetch user permissions
     await fetchUserPermissions(userData.id);
-    
+   
     resetAuthReady();
     markAuthReady();
     console.log("[AuthProvider] Auth ready state reset and marked");
@@ -543,7 +528,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       "[AuthProvider] Login process completed successfully - user context established from login response",
     );
   };
-
   // Logout: clear all sensitive data and redirect
   const logout = () => {
     console.log("[AuthProvider] Logout initiated");
@@ -562,24 +546,20 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       console.log("[AuthProvider] Already on login - no redirect needed");
     }
   };
-
   // Manual refresh of user (e.g., after profile update)
   const refreshUser = async () => {
     await fetchUser();
   };
-
   // Refresh permissions without fetching full user data
   const refreshPermissions = async () => {
     if (user) {
       await fetchUserPermissions(user.id);
     }
   };
-
   // Update the user object in memory only
   const updateUser = (updatedData: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...updatedData } : null));
   };
-
   // Get auth headers for API requests
   const getAuthHeaders = () => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -592,7 +572,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     }
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
-
   // Only ready if user is super admin or has org context
   const isOrgContextReady =
     !user || user.is_super_admin || !!user.organization_id;
@@ -604,7 +583,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     willRenderChildren: !loading,
     timestamp: new Date().toISOString(),
   });
-
   // Timeout for loading
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -615,7 +593,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     }, 10000); // 10 seconds timeout
     return () => clearTimeout(timeout);
   }, [loading]);
-
   // Show loading spinner while auth state is being determined
   if (loading) {
     console.log("[AuthProvider] Rendering loading state");
@@ -705,12 +682,12 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       </>
     );
   }
-
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
+        permissionsLoading,
         displayRole: user
           ? getDisplayRole(user.role, user.is_super_admin)
           : null,
@@ -728,7 +705,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     </AuthContext.Provider>
   );
 }
-
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -736,11 +712,10 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
 export const useAuthWithOrgContext = (): any => {
   const auth = useAuth();
   return {
     ...auth,
-    isReady: !auth.loading && auth.isOrgContextReady,
+    isReady: !auth.loading && !auth.permissionsLoading && auth.isOrgContextReady,
   };
 };

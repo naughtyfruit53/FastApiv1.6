@@ -154,6 +154,16 @@ export function usePermissionCheck() {
 
   const checkModuleAccess = useCallback(
     (moduleKey: string, action: string = 'read'): PermissionCheck => {
+      // NEW: If permissions not loaded, treat as loading state
+      if (userPermissions === null) {
+        return {
+          hasPermission: false,
+          isLoading: true,
+          reason: 'Permissions are loading',
+          enforcementLevel: EnforcementLevel.RBAC,
+        };
+      }
+
       // Layer 1: Tenant - Allow super_admin without tenant context
       const isSuper = checkIsSuperAdmin();
       if (!hasTenantContext && !isSuper) {
@@ -215,6 +225,16 @@ export function usePermissionCheck() {
       submoduleKey: string,
       action: string = 'read'
     ): PermissionCheck => {
+      // NEW: If permissions not loaded, treat as loading state
+      if (userPermissions === null) {
+        return {
+          hasPermission: false,
+          isLoading: true,
+          reason: 'Permissions are loading',
+          enforcementLevel: EnforcementLevel.RBAC,
+        };
+      }
+
       // Layer 1: Tenant - Allow super_admin without tenant context
       const isSuper = checkIsSuperAdmin();
       if (!hasTenantContext && !isSuper) {
@@ -275,14 +295,14 @@ export function usePermissionCheck() {
   // ============================================================================
 
   const isLoading = useMemo(() => {
-    return entitlementsLoading || (authContext?.loading ?? true);  // NEW: Fallback to true if authContext undefined
-  }, [entitlementsLoading, authContext?.loading]);
+    return entitlementsLoading || (authContext?.loading ?? true) || (authContext?.permissionsLoading ?? false);
+  }, [entitlementsLoading, authContext?.loading, authContext?.permissionsLoading]);
 
   const isReady = useMemo(() => {
     // For super_admin, ready even without tenant context
     const isSuper = checkIsSuperAdmin();
-    return !isLoading && (hasTenantContext || isSuper) && user !== null;
-  }, [isLoading, hasTenantContext, user, checkIsSuperAdmin]);
+    return !isLoading && (hasTenantContext || isSuper) && user !== null && userPermissions !== null;
+  }, [isLoading, hasTenantContext, user, userPermissions, checkIsSuperAdmin]);
 
   // ============================================================================
   // Return API

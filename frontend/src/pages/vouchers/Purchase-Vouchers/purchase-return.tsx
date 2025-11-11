@@ -364,7 +364,6 @@ const PurchaseReturnPage: React.FC = () => {
         setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });
         setAdditionalChargesEnabled(false);
       }
-
       if (voucherData.items && voucherData.items.length > 0) {
         remove();
         voucherData.items.forEach((item: any) => {

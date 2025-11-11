@@ -517,6 +517,7 @@ const VoucherItemTable: React.FC<VoucherItemTableProps> = ({
                           isIntrastate ? 0 : value ?? 18,
                         );
                       }}
+                      getOptionLabel={(option) => `${option}`}
                       renderInput={(params) => (
                         <TextField {...params} size="small" sx={{ width: 60 }} />
                       )}

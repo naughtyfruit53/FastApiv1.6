@@ -3,9 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import axiosRetry from 'axios-retry';
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY, LEGACY_TOKEN_KEY } from '../constants/auth';
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-
 /**
  * Helper function to get access token with backward compatibility
  * Checks for new key first, then falls back to legacy key
@@ -23,14 +21,12 @@ const getAccessToken = (): string | null => {
   }
   return token;
 };
-
 /**
  * Helper function to get refresh token
  */
 const getRefreshToken = (): string | null => {
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 };
-
 // Configure axios-retry with exponential backoff
 axiosRetry(axios, {
   retries: 3,
@@ -41,7 +37,6 @@ axiosRetry(axios, {
     return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status >= 500;
   },
 });
-
 const handleTokenExpiry = () => {
   console.log("[API] Handling token expiry - preserving application state");
   const currentPath = window.location.pathname;
@@ -82,11 +77,9 @@ const handleTokenExpiry = () => {
     window.location.href = "/login";
   }, 100);
 };
-
 let isAuthReady = false;
 let authReadyPromise: Promise<void> | null = null;
 let authReadyResolve: (() => void) | null = null;
-
 const initializeAuthPromise = () => {
   if (!authReadyPromise) {
     authReadyPromise = new Promise((resolve) => {
@@ -95,7 +88,6 @@ const initializeAuthPromise = () => {
   }
 };
 initializeAuthPromise();
-
 export const markAuthReady = (): any => {
   console.log("[API] Auth context marked as ready");
   isAuthReady = true;
@@ -104,13 +96,11 @@ export const markAuthReady = (): any => {
     authReadyResolve = null;
   }
 };
-
 export const resetAuthReady = (): any => {
   console.log("[API] Auth context reset");
   isAuthReady = false;
   initializeAuthPromise();
 };
-
 const waitForAuthIfNeeded = async (config: any) => {
   const publicEndpoints = [
     "/auth/login",
@@ -154,7 +144,6 @@ const waitForAuthIfNeeded = async (config: any) => {
     }
   }
 };
-
 const refreshAxios = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -163,7 +152,6 @@ const refreshAxios = axios.create({
   timeout: 90000,
   withCredentials: true, // Enable sending cookies with cross-origin requests
 });
-
 axiosRetry(refreshAxios, {
   retries: 3,
   retryDelay: axiosRetry.exponentialDelay,
@@ -171,7 +159,6 @@ axiosRetry(refreshAxios, {
     return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status >= 500;
   },
 });
-
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
   headers: {
@@ -180,7 +167,6 @@ const api = axios.create({
   timeout: 90000,
   withCredentials: true, // Enable sending cookies with cross-origin requests
 });
-
 api.interceptors.request.use(
   async (config) => {
     await waitForAuthIfNeeded(config);
@@ -206,7 +192,6 @@ api.interceptors.request.use(
     return Promise.reject(error);
   },
 );
-
 api.interceptors.response.use(
   (response) => {
     if (response.config.headers?.Authorization) {
@@ -238,14 +223,14 @@ api.interceptors.response.use(
         autoClose: 3000,
       });
     }
-    
+   
     // Handle 403 Forbidden - Permission Denied
     if (status === 403) {
       const data = error.response?.data;
       const requiredPermission = data?.required_permission || 'unknown';
       const module = data?.module || 'this resource';
       const action = data?.action || 'perform this action';
-      
+     
       console.warn('[API] Permission denied:', {
         endpoint: url,
         method,
@@ -255,7 +240,7 @@ api.interceptors.response.use(
         user: localStorage.getItem('user_email') || 'unknown',
         timestamp: new Date().toISOString(),
       });
-      
+     
       // Show user-friendly error message
       toast.error(
         `Access Denied: You don't have permission to ${action} on ${module}. ` +
@@ -266,7 +251,7 @@ api.interceptors.response.use(
           autoClose: 5000,
         }
       );
-      
+     
       // Return the error with enhanced information for component handling
       return Promise.reject({
         ...error,
@@ -277,7 +262,7 @@ api.interceptors.response.use(
         userMessage: `You don't have permission to ${action} on ${module}`,
       });
     }
-    
+   
     if (status === 401 && !originalRequest._retry) {
       if (originalRequest.headers?.Authorization) {
         console.log(`[API] ${status} Auth error - attempting token refresh`);
@@ -356,5 +341,4 @@ api.interceptors.response.use(
     });
   },
 );
-
 export default api;

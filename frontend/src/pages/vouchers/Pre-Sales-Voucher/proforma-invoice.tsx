@@ -797,54 +797,53 @@ const handleCancelConflict = () => {
   );
 
   if (isLoading || companyLoading) {
-  
-  return (
-      <ProtectedPage moduleKey="sales" action="write">
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
-        </Box>
-      </ProtectedPage>
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
     );
   }
 
   return (
-    <>
-      <VoucherLayout
-        voucherType={config.voucherTitle}
-        voucherTitle={config.voucherTitle}
-        indexContent={indexContent}
-        formHeader={formHeader}
-        formContent={formContent}
-        onShowAll={() => setShowVoucherListModal(true)}
-        centerAligned={true}
-        modalContent={
-          <VoucherListModal
-            open={showVoucherListModal}
-            onClose={() => setShowVoucherListModal(false)}
-            voucherType="Proforma Invoices"
-            vouchers={sortedVouchers || []}
-            onVoucherClick={handleVoucherClick}
-            onEdit={handleEditWithData}
-            onView={handleViewWithData}
-            onDelete={handleDelete}
-            onGeneratePDF={handleGeneratePDF}
-            customerList={customerList}
-          />
-        }
-      />
-      <AddCustomerModal open={showAddCustomerModal} onClose={() => setShowAddCustomerModal(false)} onAdd={(newCustomer) => { setValue("customer_id", newCustomer.id); refreshMasterData(); }} loading={addCustomerLoading} setLoading={setAddCustomerLoading} />
-      <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
-      <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
-      <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Proforma Invoice" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Proforma Invoice")} onRevise={handleReviseWithData} />
-      <VoucherDateConflictModal
-        open={showConflictModal}
-        onClose={handleCancelConflict}
-        conflictInfo={conflictInfo}
-        onChangeDateToSuggested={handleChangeDateToSuggested}
-        onProceedAnyway={handleProceedAnyway}
-        voucherType="Proforma Invoice"
-      />
-    </>
+    <ProtectedPage moduleKey="vouchers" action="create">
+      <>
+        <VoucherLayout
+          voucherType={config.voucherTitle}
+          voucherTitle={config.voucherTitle}
+          indexContent={indexContent}
+          formHeader={formHeader}
+          formContent={formContent}
+          onShowAll={() => setShowVoucherListModal(true)}
+          centerAligned={true}
+          modalContent={
+            <VoucherListModal
+              open={showVoucherListModal}
+              onClose={() => setShowVoucherListModal(false)}
+              voucherType="Proforma Invoices"
+              vouchers={sortedVouchers || []}
+              onVoucherClick={handleVoucherClick}
+              onEdit={handleEditWithData}
+              onView={handleViewWithData}
+              onDelete={handleDelete}
+              onGeneratePDF={handleGeneratePDF}
+              customerList={customerList}
+            />
+          }
+        />
+        <AddCustomerModal open={showAddCustomerModal} onClose={() => setShowAddCustomerModal(false)} onAdd={(newCustomer) => { setValue("customer_id", newCustomer.id); refreshMasterData(); }} loading={addCustomerLoading} setLoading={setAddCustomerLoading} />
+        <AddProductModal open={showAddProductModal} onClose={() => setShowAddProductModal(false)} onAdd={(newProduct) => { setValue(`items.${addingItemIndex}.product_id`, newProduct.id); setValue(`items.${addingItemIndex}.product_name`, newProduct.product_name); setValue(`items.${addingItemIndex}.unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.original_unit_price`, newProduct.unit_price || 0); setValue(`items.${addingItemIndex}.gst_rate`, newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.cgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.sgst_rate`, isIntrastate ? (newProduct.gst_rate ?? 18) / 2 : 0); setValue(`items.${addingItemIndex}.igst_rate`, isIntrastate ? 0 : newProduct.gst_rate ?? 18); setValue(`items.${addingItemIndex}.unit`, newProduct.unit || ""); setValue(`items.${addingItemIndex}.reorder_level`, newProduct.reorder_level || 0); refreshMasterData(); }} loading={addProductLoading} setLoading={setAddProductLoading} />
+        <AddShippingAddressModal open={showShippingModal} onClose={() => setShowShippingModal(false)} loading={addShippingLoading} setLoading={setAddShippingLoading} />
+        <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Proforma Invoice" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Proforma Invoice")} onRevise={handleReviseWithData} />
+        <VoucherDateConflictModal
+          open={showConflictModal}
+          onClose={handleCancelConflict}
+          conflictInfo={conflictInfo}
+          onChangeDateToSuggested={handleChangeDateToSuggested}
+          onProceedAnyway={handleProceedAnyway}
+          voucherType="Proforma Invoice"
+        />
+      </>
+    </ProtectedPage>
   );
 };
 export default ProformaInvoicePage;
