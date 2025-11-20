@@ -82,8 +82,12 @@
     "typescript": "^5.9.2"
   },
   "overrides": {
-    "rimraf": "^5.0.0",
-    "glob": "^10.0.0",
-    "fstream": "^1.0.12"
+    "quilljs": {
+      "lodash": "4.17.21"
+    },
+    "glob": "10.5.0",
+    "js-yaml": "3.14.2",
+    "rimraf": "5.0.0",
+    "fstream": "1.0.12"
   }
 }
