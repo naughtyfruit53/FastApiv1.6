@@ -92,8 +92,8 @@ const LoginPage = () => {
         <Image
           src="/Tritiq.jpg"
           alt="TRITIQ BOS"
-          width={300}
-          height={120}
+          width={200}
+          height={160}
           style={{ maxWidth: "100%", height: "auto", marginBottom: "16px" }}
           priority
         />
