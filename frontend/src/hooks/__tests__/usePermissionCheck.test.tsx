@@ -1,6 +1,6 @@
 // frontend/src/hooks/__tests__/usePermissionCheck.test.tsx
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { usePermissionCheck, useHasPermission, useHasModuleAccess } from '../usePermissionCheck';
 import { AuthContext } from '../../context/AuthContext';
 import { OrganizationContext } from '../../context/OrganizationContext';

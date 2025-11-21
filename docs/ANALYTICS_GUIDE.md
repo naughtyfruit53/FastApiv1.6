@@ -2,7 +2,7 @@
 
 ## Overview
 
-The TritIQ Business Suite includes a comprehensive analytics system for tracking user behavior, optimizing UX, and understanding how users interact with mobile and demo modes.
+The TRITIQ BOS includes a comprehensive analytics system for tracking user behavior, optimizing UX, and understanding how users interact with mobile and demo modes.
 
 ## Features
 

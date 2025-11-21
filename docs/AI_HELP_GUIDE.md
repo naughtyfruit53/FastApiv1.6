@@ -2,7 +2,7 @@
 
 ## Overview
 
-The TritIQ Business Suite includes an integrated AI-powered help system that provides contextual assistance, intelligent Q&A, and guided support for mobile and demo modes.
+The TRITIQ BOS includes an integrated AI-powered help system that provides contextual assistance, intelligent Q&A, and guided support for mobile and demo modes.
 
 ## Features
 

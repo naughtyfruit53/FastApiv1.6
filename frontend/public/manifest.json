@@ -1,7 +1,7 @@
 {
-  "name": "TritIQ Business Suite",
-  "short_name": "TritIQ ERP",
-  "description": "Complete ERP solution for modern businesses",
+  "name": "Tritiq BOS",
+  "short_name": "Tritiq BOS",
+  "description": "Complete Business Operating System for modern enterprises",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document provides comprehensive UI/UX improvement suggestions for the TRITIQ ERP system based on analysis of the current frontend implementation. The suggestions focus on enhancing user experience, accessibility, performance, and overall usability.
+This document provides comprehensive UI/UX improvement suggestions for the TRITIQ BOS system based on analysis of the current frontend implementation. The suggestions focus on enhancing user experience, accessibility, performance, and overall usability.
 
 ## Table of Contents
 
@@ -367,7 +367,7 @@ This document provides comprehensive UI/UX improvement suggestions for the TRITI
 
 ## Conclusion
 
-These UI/UX improvements will significantly enhance the user experience of the TRITIQ ERP system. The phased approach ensures that critical issues are addressed first while building towards a more comprehensive and user-friendly system. Regular user feedback and metrics tracking will be essential for measuring success and identifying areas for continuous improvement.
+These UI/UX improvements will significantly enhance the user experience of the TRITIQ BOS system. The phased approach ensures that critical issues are addressed first while building towards a more comprehensive and user-friendly system. Regular user feedback and metrics tracking will be essential for measuring success and identifying areas for continuous improvement.
 
 ## Next Steps
 

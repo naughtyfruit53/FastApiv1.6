@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `complete_app_test.py` script provides comprehensive automated end-to-end testing for the TRITIQ ERP system. This testing script validates all main application features including authentication, master data management, voucher operations, inventory management, and reporting functionality.
+The `complete_app_test.py` script provides comprehensive automated end-to-end testing for the TRITIQ BOS system. This testing script validates all main application features including authentication, master data management, voucher operations, inventory management, and reporting functionality.
 
 ## Features Tested
 
@@ -356,4 +356,4 @@ python -c "from complete_app_test import ERPAutomatedTester; print(ERPAutomatedT
 
 ## License and Support
 
-This testing framework is part of the TRITIQ ERP system and follows the same licensing terms. For support and questions, please refer to the main project documentation or contact the development team.
+This testing framework is part of the TRITIQ BOS system and follows the same licensing terms. For support and questions, please refer to the main project documentation or contact the development team.

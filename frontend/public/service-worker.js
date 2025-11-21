@@ -1,4 +1,4 @@
-// Service Worker for TritIQ Business Suite PWA
+// Service Worker for TRITIQ BOS PWA
 const CACHE_NAME = 'tritiq-erp-v1.6.0';
 const RUNTIME_CACHE = 'tritiq-runtime-v1.6.0';
 
@@ -231,7 +231,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('TritIQ Business Suite', options)
+    self.registration.showNotification('TRITIQ BOS', options)
   );
 });
 

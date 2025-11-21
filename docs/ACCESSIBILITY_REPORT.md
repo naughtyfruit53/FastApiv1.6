@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This report documents the accessibility improvements and WCAG 2.1 Level AA compliance status for the TritIQ Business Suite application, with focus on mobile and demo mode experiences.
+This report documents the accessibility improvements and WCAG 2.1 Level AA compliance status for the TRITIQ BOS application, with focus on mobile and demo mode experiences.
 
 **Report Date**: October 23, 2025  
 **WCAG Version**: 2.1  

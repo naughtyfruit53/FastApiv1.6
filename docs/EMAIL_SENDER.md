@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Enhanced Brevo Email Sender provides robust transactional email capabilities with fallback providers, retry logic, audit logging, comprehensive monitoring, and **role-based automatic BCC functionality** for the TRITIQ ERP system.
+The Enhanced Brevo Email Sender provides robust transactional email capabilities with fallback providers, retry logic, audit logging, comprehensive monitoring, and **role-based automatic BCC functionality** for the TRITIQ BOS system.
 
 ## Features
 
@@ -80,7 +80,7 @@ The system supports the following email types:
 # Primary Provider (Brevo)
 BREVO_API_KEY=your-brevo-api-key
 BREVO_FROM_EMAIL=your-email@domain.com
-BREVO_FROM_NAME=TRITIQ ERP
+BREVO_FROM_NAME=TRITIQ BOS
 
 # Feature Flags
 ENABLE_BREVO_EMAIL=true
@@ -94,7 +94,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 EMAILS_FROM_EMAIL=your-email@gmail.com
-EMAILS_FROM_NAME=TRITIQ ERP
+EMAILS_FROM_NAME=TRITIQ BOS
 
 # OAuth2 Configuration (Future)
 GOOGLE_CLIENT_ID=your-google-client-id

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This comprehensive guide documents the complete mobile UI implementation for FastAPI v1.6 TritIQ Business Suite. The mobile interface provides 100% feature parity with desktop while delivering an optimized touch-first experience. This includes Progressive Web App (PWA) capabilities, offline support, and device feature integrations.
+This comprehensive guide documents the complete mobile UI implementation for FastAPI v1.6 TRITIQ BOS. The mobile interface provides 100% feature parity with desktop while delivering an optimized touch-first experience. This includes Progressive Web App (PWA) capabilities, offline support, and device feature integrations.
 
 ## Architecture & Design Principles
 
@@ -732,7 +732,7 @@ useEffect(() => {
 
 ### PWA Overview
 
-TritIQ Business Suite is fully PWA-enabled, providing app-like experiences on mobile and desktop browsers.
+TRITIQ BOS is fully PWA-enabled, providing app-like experiences on mobile and desktop browsers.
 
 #### PWA Benefits
 - **Installable**: Add to home screen on mobile devices
@@ -763,8 +763,8 @@ Defines app metadata, icons, and behavior.
 **Configuration:**
 ```json
 {
-  "name": "TritIQ Business Suite",
-  "short_name": "TritIQ ERP",
+  "name": "TRITIQ BOS",
+  "short_name": "TRITIQ BOS",
   "display": "standalone",
   "start_url": "/",
   "theme_color": "#1976d2",

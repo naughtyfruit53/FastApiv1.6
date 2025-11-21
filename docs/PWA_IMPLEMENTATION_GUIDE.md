@@ -2,7 +2,7 @@
 
 ## Overview
 
-TritIQ Business Suite now includes complete Progressive Web App (PWA) support, enabling users to install the app on their devices and use it offline. This guide covers the implementation, deployment, and best practices.
+TRITIQ BOS now includes complete Progressive Web App (PWA) support, enabling users to install the app on their devices and use it offline. This guide covers the implementation, deployment, and best practices.
 
 ## Table of Contents
 

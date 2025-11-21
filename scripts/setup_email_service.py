@@ -132,7 +132,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 EMAILS_FROM_EMAIL=your-email@gmail.com
-EMAILS_FROM_NAME=TRITIQ ERP - Role Management
+EMAILS_FROM_NAME=TRITIQ BOS - Role Management
 
 # Alternative Email Services (Optional)
 BREVO_API_KEY=your-brevo-api-key

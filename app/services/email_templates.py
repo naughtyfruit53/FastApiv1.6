@@ -16,7 +16,7 @@ def get_license_creation_admin_template(org_admin_name: str, organization_name: 
     return f"""
 Dear {org_admin_name},
 
-Welcome to TRITIQ ERP! Your organization super admin account has been created successfully.
+Welcome to TRITIQ BOS! Your organization super admin account has been created successfully.
 
 Organization Details:
 - Organization: {organization_name}
@@ -41,7 +41,7 @@ Login Instructions:
 If you have any questions or need assistance, please contact our support team.
 
 Best regards,
-TRITIQ ERP Team
+TRITIQ BOS Team
 
 ---
 This account was created by: {created_by}
@@ -78,7 +78,7 @@ Creation Summary:
 - Created by: {created_by}
 
 Best regards,
-TRITIQ ERP System
+TRITIQ BOS System
 """
 
 def get_password_reset_token_template(user_name: str, reset_url: str, organization_name: str) -> tuple[str, str]:
@@ -88,7 +88,7 @@ def get_password_reset_token_template(user_name: str, reset_url: str, organizati
     plain_text = f"""
 Dear {user_name},
 
-A password reset has been requested for your TRITIQ ERP account.
+A password reset has been requested for your TRITIQ BOS account.
 
 To reset your password, please click the link below:
 {reset_url}
@@ -101,18 +101,18 @@ Organization: {organization_name or 'Your Organization'}
 Request Time: {request_time}
 
 Best regards,
-TRITIQ ERP Team
+TRITIQ BOS Team
 """
     
     html_content = f"""
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #007bff; text-align: center;">TRITIQ ERP - Password Reset</h2>
+        <h2 style="color: #007bff; text-align: center;">TRITIQ BOS - Password Reset</h2>
         
         <p>Dear {user_name},</p>
         
-        <p>A password reset has been requested for your TRITIQ ERP account.</p>
+        <p>A password reset has been requested for your TRITIQ BOS account.</p>
         
         <div style="text-align: center; margin: 30px 0;">
             <a href="{reset_url}" 
@@ -136,7 +136,7 @@ TRITIQ ERP Team
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
         
         <p style="font-size: 12px; color: #666; text-align: center;">
-            This is an automated message from TRITIQ ERP. Please do not reply to this email.
+            This is an automated message from TRITIQ BOS. Please do not reply to this email.
         </p>
     </div>
 </body>
@@ -157,5 +157,5 @@ This OTP is valid for 10 minutes only.
 If you did not request this OTP, please ignore this email or contact support.
 
 Best regards,
-TRITIQ ERP Team
+TRITIQ BOS Team
 """

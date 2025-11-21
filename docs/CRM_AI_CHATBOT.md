@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides a comprehensive guide to the CRM system improvements, AI analytics capabilities, and chatbot integration features in the TritiQ ERP system.
+This document provides a comprehensive guide to the CRM system improvements, AI analytics capabilities, and chatbot integration features in the TRITIQ BOS system.
 
 ## Table of Contents
 

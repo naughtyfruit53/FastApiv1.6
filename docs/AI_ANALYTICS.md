@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides comprehensive information about the AI Analytics and Chatbot features in the TritIQ ERP system. The AI system includes natural language processing (NLP), intent classification, business intelligence, predictive analytics, and automated insights across all modules.
+This document provides comprehensive information about the AI Analytics and Chatbot features in the TRITIQ BOS system. The AI system includes natural language processing (NLP), intent classification, business intelligence, predictive analytics, and automated insights across all modules.
 
 ## ✅ IMPLEMENTED FEATURES
 
@@ -41,7 +41,7 @@ This document provides comprehensive information about the AI Analytics and Chat
 
 ## Overview
 
-This document outlines the comprehensive AI analytics strategy for the TritiQ ERP system, covering predictive analytics, business intelligence, automated insights, and smart notifications across all modules.
+This document outlines the comprehensive AI analytics strategy for the TRITIQ BOS system, covering predictive analytics, business intelligence, automated insights, and smart notifications across all modules.
 
 ## Table of Contents
 

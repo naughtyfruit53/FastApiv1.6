@@ -98,7 +98,7 @@ const OTPLogin: React.FC<OTPLoginProps> = ({ onLogin }) => {
         <Card>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="h4" component="h1" gutterBottom align="center">
-              TRITIQ ERP
+              TRITIQ BOS
             </Typography>
             <Typography
               variant="h6"

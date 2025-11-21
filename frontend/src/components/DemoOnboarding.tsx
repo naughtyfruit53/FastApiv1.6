@@ -35,7 +35,7 @@ const DemoOnboarding: React.FC<DemoOnboardingProps> = ({ onComplete }) => {
   const demoSteps = [
     {
       title: 'Welcome to TritIQ Demo',
-      description: 'Explore all features of TritIQ Business Suite with realistic demo data. This guided tour will help you get started.',
+      description: 'Explore all features of TRITIQ BOS with realistic demo data. This guided tour will help you get started.',
       image: '/icons/icon-512x512.png',
     },
     {

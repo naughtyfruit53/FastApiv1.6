@@ -3,7 +3,7 @@
 
 import React from "react";
 import { NextPage } from "next";
-import { Box, Container, Typography, Alert } from "@mui/material";
+import { Box, Container, Typography } from "@mui/material";
 import { Analytics } from "@mui/icons-material";
 import { useAuth } from "../../hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";

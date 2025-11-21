@@ -6,7 +6,6 @@
  */
 
 import {
-  UserRole,
   ModuleStatus,
   SUPER_ADMIN_ROLES,
   ORG_ADMIN_ROLES,
@@ -15,7 +14,6 @@ import {
   getRoleLevel,
   isModuleEnabled as checkModuleEnabled,
   type UserPermissions,
-  type ModuleEntitlement,
   type OrgEntitlements,
 } from '../constants/rbac';
 

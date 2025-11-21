@@ -2,7 +2,7 @@
 
 ## Overview
 
-This PR implements comprehensive Progressive Web App (PWA) capabilities, device feature integrations, and an onboarding/tutorial system for the TritIQ Business Suite, completing the mobile and demo mode implementation.
+This PR implements comprehensive Progressive Web App (PWA) capabilities, device feature integrations, and an onboarding/tutorial system for the TRITIQ BOS, completing the mobile and demo mode implementation.
 
 ## Deliverables
 

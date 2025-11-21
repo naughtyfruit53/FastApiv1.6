@@ -27,7 +27,6 @@ import {
   SmartToy as BotIcon,
   MenuBook as GuideIcon,
   VideoLibrary as VideoIcon,
-  Article as ArticleIcon,
   ExpandMore as ExpandMoreIcon,
   TipsAndUpdates as TipIcon,
 } from '@mui/icons-material';

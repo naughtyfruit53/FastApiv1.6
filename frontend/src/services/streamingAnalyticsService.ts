@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios';
-import { getApiUrl, getApiBaseUrl } from '../utils/config';
+import { getApiUrl } from '../utils/config';
 
 const STREAMING_API = `${getApiUrl()}/streaming-analytics`;
 

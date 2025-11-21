@@ -41,7 +41,7 @@ class MockWhatsAppProvider:
         contact_number = formatted_number.lstrip('+')
         
         # Simulate message content
-        message = f"🔐 TRITIQ ERP Security Code\n\nYour OTP for {purpose}: {otp}\n\nValid for 10 minutes. Do not share this code.\n\n- TRITIQ ERP Team"
+        message = f"🔐 TRITIQ BOS Security Code\n\nYour OTP for {purpose}: {otp}\n\nValid for 10 minutes. Do not share this code.\n\n- TRITIQ BOS Team"
         
         print(f"   Formatted Number: {contact_number}")
         print(f"   Message Content:")
@@ -123,7 +123,7 @@ def demo_login_scenarios():
     otp_service = MockOTPService()
     
     print("=" * 60)
-    print("🚀 TRITIQ ERP - WhatsApp OTP Authentication Demo")
+    print("🚀 TRITIQ BOS - WhatsApp OTP Authentication Demo")
     print("=" * 60)
     
     scenarios = [

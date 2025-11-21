@@ -262,7 +262,7 @@ Email services are configured via environment variables:
 # Brevo (System Email)
 BREVO_API_KEY=your_api_key
 BREVO_FROM_EMAIL=noreply@tritiq.com
-BREVO_FROM_NAME=TritIQ Business Suite
+BREVO_FROM_NAME=TRITIQ BOS
 ENABLE_BREVO_EMAIL=true
 
 # SMTP Fallback

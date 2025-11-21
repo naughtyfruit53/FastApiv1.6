@@ -832,7 +832,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           >
             <Box
               component="img"
-              src="/Tritiq.png"
+              src="/Tritiq.jpg"
               alt="TritiQ"
               sx={{
                 width: 40,

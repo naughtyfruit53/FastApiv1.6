@@ -5,7 +5,7 @@ Proposed
 
 ## Context
 
-The TRITIQ ERP system currently supports multi-tenant financial and inventory management. We need to extend this platform to support service-oriented businesses with customer relationship management (CRM) capabilities, appointment scheduling, and technician management while maintaining the existing multi-tenant architecture.
+The TRITIQ BOS system currently supports multi-tenant financial and inventory management. We need to extend this platform to support service-oriented businesses with customer relationship management (CRM) capabilities, appointment scheduling, and technician management while maintaining the existing multi-tenant architecture.
 
 ### Current Architecture Strengths
 - Well-established multi-tenancy with organization-based data isolation

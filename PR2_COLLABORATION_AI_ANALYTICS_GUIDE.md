@@ -2,7 +2,7 @@
 
 ## Overview
 
-This PR implements comprehensive real-time collaboration, AI-powered help, advanced analytics, and accessibility improvements for the TritIQ Business Suite, with special focus on mobile and demo mode experiences.
+This PR implements comprehensive real-time collaboration, AI-powered help, advanced analytics, and accessibility improvements for the TRITIQ BOS, with special focus on mobile and demo mode experiences.
 
 ## 🎯 Key Features Implemented
 
@@ -446,7 +446,7 @@ When adding features:
 
 ## 📄 License
 
-Proprietary - TritIQ Business Suite
+Proprietary - TritIQ BOS
 
 ## 👥 Team
 

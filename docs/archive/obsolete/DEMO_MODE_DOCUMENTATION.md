@@ -2,7 +2,7 @@
 
 ## Overview
 
-The TRITIQ ERP Demo Mode provides a comprehensive way for users to experience all system features using realistic sample data without affecting any real business data. This documentation covers the implementation, user experience, and QA testing procedures.
+The TRITIQ BOS Demo Mode provides a comprehensive way for users to experience all system features using realistic sample data without affecting any real business data. This documentation covers the implementation, user experience, and QA testing procedures.
 
 ## Features
 

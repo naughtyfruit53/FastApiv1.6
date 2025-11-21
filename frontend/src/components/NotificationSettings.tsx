@@ -53,7 +53,7 @@ const NotificationSettings: React.FC = () => {
 
   const handleTestNotification = () => {
     sendNotification('Test Notification', {
-      body: 'This is a test notification from TritIQ Business Suite',
+      body: 'This is a test notification from TRITIQ BOS',
       icon: '/icons/icon-192x192.png',
     });
   };

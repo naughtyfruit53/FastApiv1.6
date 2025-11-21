@@ -1,6 +1,6 @@
 # WhatsApp OTP Authentication Configuration Guide
 
-This document provides comprehensive instructions for configuring WhatsApp OTP authentication in the TRITIQ ERP system.
+This document provides comprehensive instructions for configuring WhatsApp OTP authentication in the TRITIQ BOS system.
 
 ## Overview
 

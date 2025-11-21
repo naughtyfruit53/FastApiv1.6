@@ -1,7 +1,7 @@
 // frontend/src/components/__tests__/ProtectedPage.test.tsx
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { ProtectedPage, withProtection } from '../ProtectedPage';
 import { usePermissionCheck } from '../../hooks/usePermissionCheck';
 import { useRouter } from 'next/navigation';

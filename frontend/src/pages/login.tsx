@@ -90,8 +90,8 @@ const LoginPage = () => {
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, textAlign: "center" }}>
         <Image
-          src="/Tritiq.png"
-          alt="TritIQ Business Suite"
+          src="/Tritiq.jpg"
+          alt="TRITIQ BOS"
           width={300}
           height={120}
           style={{ maxWidth: "100%", height: "auto", marginBottom: "16px" }}
@@ -103,8 +103,7 @@ const LoginPage = () => {
           gutterBottom
           color="textSecondary"
         >
-          One-Stop Solution for All Your Entrepreneurial Needs
-        </Typography>
+                  </Typography>
         <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: "stretch", mt: 2, gap: 2 }}>
           <Box sx={{ flex: 1 }}>
             <Box sx={{ p: 3 }}>

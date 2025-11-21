@@ -23,8 +23,7 @@ import {
   Alert,
   Snackbar,
   Paper,
-  Chip,
-  Tooltip
+  Chip
 } from '@mui/material';
 import {
   Save as SaveIcon,

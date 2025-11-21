@@ -10,7 +10,6 @@ import {
   CardContent,
   Button,
   Chip,
-  LinearProgress,
   Alert,
   AlertTitle,
   List,
@@ -29,11 +28,7 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckIcon,
   Info as InfoIcon,
-  ArrowUpward as ArrowUpIcon,
-  ArrowDownward as ArrowDownIcon,
 } from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
-import api from '@/lib/api';
 import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface TabPanelProps {

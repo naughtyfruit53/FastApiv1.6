@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Finance and Accounting Suite is a comprehensive financial management system that provides complete financial control, reporting, and analytics capabilities for the TritIQ Business Suite platform. This production-ready implementation includes all essential accounting functions with modern dashboard analytics and forecasting capabilities.
+The Finance and Accounting Suite is a comprehensive financial management system that provides complete financial control, reporting, and analytics capabilities for the TRITIQ BOS platform. This production-ready implementation includes all essential accounting functions with modern dashboard analytics and forecasting capabilities.
 
 ## Table of Contents
 
@@ -686,6 +686,6 @@ ORGANIZATION_ID=1
 
 ## Conclusion
 
-The Finance and Accounting Suite provides a complete, production-ready financial management solution for the TritIQ Business Suite platform. With comprehensive features, robust architecture, and extensive documentation, it enables organizations to maintain accurate financial records, generate insightful reports, and make data-driven financial decisions.
+The Finance and Accounting Suite provides a complete, production-ready financial management solution for the TRITIQ BOS platform. With comprehensive features, robust architecture, and extensive documentation, it enables organizations to maintain accurate financial records, generate insightful reports, and make data-driven financial decisions.
 
 For additional support or feature requests, please refer to the project repository or contact the development team.

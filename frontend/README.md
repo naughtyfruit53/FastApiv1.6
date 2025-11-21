@@ -1,6 +1,6 @@
-# TritIQ Business Suite Frontend
+# TRITIQ BOS Frontend
 
-A modern React-based frontend for the TritIQ Business Suite system built with Next.js and Material-UI.
+A modern React-based frontend for the TRITIQ BOS system built with Next.js and Material-UI.
 
 ## 🚀 Turbopack Migration
 
@@ -263,7 +263,7 @@ CMD ["npm", "start"]
 
 ## 📄 License
 
-This project is part of the TRITIQ ERP system and is proprietary software.
+This project is part of the TRITIQ BOS system and is proprietary software.
 
 ## 🤝 Contributing
 

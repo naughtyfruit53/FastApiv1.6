@@ -1,7 +1,7 @@
 # FastApiV1.5 UI Audit Report
 
 **Generated:** 2024-12-19 10:30:45  
-**System:** TRITIQ ERP - FastAPI Backend + Next.js Frontend  
+**System:** TRITIQ BOS - FastAPI Backend + Next.js Frontend  
 **Base URL:** http://localhost:3000  
 **Features Tested:** 47
 

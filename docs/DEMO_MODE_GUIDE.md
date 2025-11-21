@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Demo Mode feature in FastAPI v1.6 TritIQ Business Suite provides a comprehensive, realistic demonstration environment where users can explore all system features using realistic mock data without affecting any real business data. This guide covers implementation, usage, testing, and best practices for demo mode.
+The Demo Mode feature in FastAPI v1.6 TRITIQ BOS provides a comprehensive, realistic demonstration environment where users can explore all system features using realistic mock data without affecting any real business data. This guide covers implementation, usage, testing, and best practices for demo mode.
 
 ## Table of Contents
 

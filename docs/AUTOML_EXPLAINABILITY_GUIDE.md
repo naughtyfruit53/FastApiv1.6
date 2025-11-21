@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers the AutoML capabilities, extended ML algorithms support, and model explainability features in the TritIQ Business Suite.
+This guide covers the AutoML capabilities, extended ML algorithms support, and model explainability features in the TRITIQ BOS.
 
 ## Table of Contents
 

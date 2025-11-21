@@ -643,7 +643,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
               textAlign: "center",
             }}
           >
-            TritIQ ERP
+            TRITIQ BOS
           </div>
           <div
             style={{

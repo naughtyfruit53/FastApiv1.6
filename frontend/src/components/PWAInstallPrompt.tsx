@@ -81,7 +81,7 @@ const PWAInstallPrompt: React.FC = () => {
 
       <DialogContent>
         <Typography variant="body1" sx={{ mb: 2 }}>
-          Get the best experience with our mobile app. Install TritIQ Business Suite for:
+          Get the best experience with our mobile app. Install TRITIQ BOS for:
         </Typography>
         
         <Box sx={{ pl: 2 }}>

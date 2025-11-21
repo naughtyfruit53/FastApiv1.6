@@ -123,7 +123,7 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
       // Set demo mode flag
       localStorage.setItem("demoMode", "true");
       localStorage.setItem("isDemoTempUser", "true");
-      setSuccess("Demo login successful! Welcome to TritIQ Business Suite Demo.");
+      setSuccess("Demo login successful! Welcome to TRITIQ BOS Demo.");
       // Close dialog and start demo
       setTimeout(() => {
         onDemoStart(demoToken, demoResponse);
@@ -171,7 +171,7 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
           🎭 Demo Mode
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Experience TritIQ Business Suite with sample data
+          Experience TRITIQ BOS with sample data
         </Typography>
       </DialogTitle>
       <DialogContent sx={{ pt: 2 }}>

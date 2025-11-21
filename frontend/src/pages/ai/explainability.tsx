@@ -9,7 +9,6 @@ import {
   Card,
   CardContent,
   Button,
-  TextField,
   Select,
   MenuItem,
   FormControl,
@@ -28,10 +27,8 @@ import {
 } from '@mui/material';
 import {
   Psychology as BrainIcon,
-  Info as InfoIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  Help as HelpIcon,
 } from '@mui/icons-material';
 import { ProtectedPage } from '../../components/ProtectedPage';
 

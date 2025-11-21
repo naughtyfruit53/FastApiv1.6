@@ -4,7 +4,7 @@
 
 **Status**: ✅ **COMPLETE - Ready for Review & Deployment**
 
-PR 1 has been successfully completed, implementing comprehensive Progressive Web App (PWA) capabilities, device feature integrations, and an onboarding/tutorial system for TritIQ Business Suite v1.6.
+PR 1 has been successfully completed, implementing comprehensive Progressive Web App (PWA) capabilities, device feature integrations, and an onboarding/tutorial system for TRITIQ BOS v1.6.
 
 **Completion Date**: 2025-10-23  
 **Implementation Time**: 1 session  
@@ -269,7 +269,7 @@ Root/
 1. **Generate Icons** (5 min):
    ```bash
    # Use ImageMagick or online tool
-   convert Tritiq.png -resize 192x192 icons/icon-192x192.png
+   convert Tritiq.jpg -resize 192x192 icons/icon-192x192.png
    # Repeat for all 8 sizes
    ```
 

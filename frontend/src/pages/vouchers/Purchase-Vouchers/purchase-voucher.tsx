@@ -49,7 +49,6 @@ import { useWatch } from "react-hook-form";
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance";
 import { formatCurrency } from "../../../utils/currencyUtils";
 import Link from 'next/link';
-import { organizationService } from '../../../services/organizationService';
 import { toast } from "react-toastify"; // Added for toast notifications
 
 import { ProtectedPage } from '../../../components/ProtectedPage';

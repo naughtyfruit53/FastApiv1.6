@@ -1,7 +1,6 @@
 // frontend/src/components/DashboardLayout.tsx
 import React from "react";
 import { Box, Typography, Container } from "@mui/material";
-import MegaMenu from "./MegaMenu";
 import { useAuth } from "../context/AuthContext";
 
 export interface DashboardLayoutProps {

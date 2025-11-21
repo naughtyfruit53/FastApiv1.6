@@ -2,7 +2,7 @@
 
 ## Overview
 
-The TritiQ ERP system includes a powerful AI chatbot that can be integrated into customer websites to provide real-time support, lead generation, and service ticket creation capabilities.
+The TRITIQ BOS system includes a powerful AI chatbot that can be integrated into customer websites to provide real-time support, lead generation, and service ticket creation capabilities.
 
 ## Table of Contents
 
@@ -43,7 +43,7 @@ The TritiQ ERP system includes a powerful AI chatbot that can be integrated into
 Add the following script to your website's HTML, just before the closing `</body>` tag:
 
 ```html
-<!-- TritiQ ERP Chatbot Integration -->
+<!-- TRITIQ BOS Chatbot Integration -->
 <script>
   (function() {
     var config = {
@@ -120,7 +120,7 @@ Save this as `chatbot-integration.js`:
 
 ```javascript
 /**
- * TritiQ ERP Chatbot Widget Integration
+ * TRITIQ BOS Chatbot Widget Integration
  * Version: 1.0.0
  */
 

@@ -358,7 +358,7 @@ export default function DemoPage() {
                 🎯 Complete Feature Showcase - All Live Features Available
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Explore all features of the TRITIQ ERP system with sample data.
+                Explore all features of the TRITIQ BOS system with sample data.
                 This demo provides access to every module and functionality.
               </Typography>
               {/* Master Data Section */}
@@ -698,7 +698,7 @@ export default function DemoPage() {
               <Alert severity="info" sx={{ mt: 3 }}>
                 <Typography variant="body2">
                   <strong>✨ Full Feature Parity:</strong> This demo showcases
-                  all live features of the TRITIQ ERP system. Every module,
+                  all live features of the TRITIQ BOS system. Every module,
                   report, and functionality is accessible with sample data for
                   comprehensive testing and evaluation.
                 </Typography>

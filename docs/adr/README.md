@@ -1,6 +1,6 @@
 # Architecture Decision Record (ADR) Index
 
-This directory contains Architecture Decision Records for the TRITIQ ERP system and its Service CRM integration.
+This directory contains Architecture Decision Records for the TRITIQ BOS system and its Service CRM integration.
 
 ## What are ADRs?
 

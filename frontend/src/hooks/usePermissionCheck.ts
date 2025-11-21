@@ -24,7 +24,6 @@ import {
   userBelongsToOrg,
 } from '../utils/permissionHelpers';
 import {
-  type UserPermissions,
   type OrgEntitlements,
   type PermissionCheck,
   EnforcementLevel,

@@ -5,7 +5,7 @@ Proposed
 
 ## Context
 
-The Service CRM integration requires designing RESTful API endpoints that integrate seamlessly with the existing TRITIQ ERP API architecture. We need to establish consistent patterns for service management endpoints while supporting various client types:
+The Service CRM integration requires designing RESTful API endpoints that integrate seamlessly with the existing TRITIQ BOS API architecture. We need to establish consistent patterns for service management endpoints while supporting various client types:
 
 - **Admin Dashboard**: Full CRUD operations for service management
 - **Customer Portal**: Limited self-service operations for appointment booking

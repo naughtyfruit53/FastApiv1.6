@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This document outlines actionable enhancement suggestions for the FastAPI v1.6 TritIQ Business Suite, focusing on mobile UX improvements, demo mode enhancements, performance optimizations, and emerging technology integrations. Suggestions are categorized by priority, effort, and expected impact.
+This document outlines actionable enhancement suggestions for the FastAPI v1.6 TRITIQ BOS, focusing on mobile UX improvements, demo mode enhancements, performance optimizations, and emerging technology integrations. Suggestions are categorized by priority, effort, and expected impact.
 
 ---
 

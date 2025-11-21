@@ -4,7 +4,7 @@
  * React hooks for accessing and managing entitlements
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 

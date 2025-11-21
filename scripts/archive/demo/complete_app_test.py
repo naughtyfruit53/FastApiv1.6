@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Automated End-to-End Testing Script for TRITIQ ERP System
+Automated End-to-End Testing Script for TRITIQ BOS System
 
 This script performs comprehensive testing of all main application features
 including authentication, master data management, voucher operations,
@@ -526,7 +526,7 @@ class ERPAutomatedTester:
     
     def run_all_tests(self) -> TestReport:
         """Run all tests and return comprehensive report"""
-        print("🚀 Starting TRITIQ ERP Automated Testing")
+        print("🚀 Starting TRITIQ BOS Automated Testing")
         print("=" * 50)
         
         # Authentication test
@@ -651,7 +651,7 @@ def save_report_to_file(report: TestReport, filename: str) -> None:
 
 def main():
     """Main function for running the automated test suite"""
-    parser = argparse.ArgumentParser(description='TRITIQ ERP Automated Test Suite')
+    parser = argparse.ArgumentParser(description='TRITIQ BOS Automated Test Suite')
     parser.add_argument('--base-url', default='http://localhost:8000', help='Base URL of the ERP system')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose logging')
     parser.add_argument('--report-file', help='File to save test report (JSON format)')

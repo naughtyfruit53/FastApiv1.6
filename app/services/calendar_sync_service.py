@@ -294,7 +294,7 @@ class CalendarSyncService:
         """Generate .ics file content for specified tasks"""
         try:
             cal = Calendar()
-            cal.add('prodid', '-//TRITIQ ERP//Task Export//EN')
+            cal.add('prodid', '-//TRITIQ BOS//Task Export//EN')
             cal.add('version', '2.0')
             
             tasks = self.db.query(Task).filter(

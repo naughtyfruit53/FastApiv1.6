@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the enhanced features implemented in the TRITIQ ERP system, focusing on improved file management, PDF extraction, and user experience enhancements.
+This document describes the enhanced features implemented in the TRITIQ BOS system, focusing on improved file management, PDF extraction, and user experience enhancements.
 
 ## 1. Products Module Enhancement
 

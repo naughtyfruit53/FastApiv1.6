@@ -15,7 +15,7 @@ console.log('\n1. Testing TritiQ Branding');
 const megaMenuPath = path.join(__dirname, 'frontend/src/components/MegaMenu.tsx');
 const megaMenuContent = fs.readFileSync(megaMenuPath, 'utf8');
 
-if (megaMenuContent.includes('src="/Tritiq.png"') && megaMenuContent.includes('TritiQ')) {
+if (megaMenuContent.includes('src="/Tritiq.jpg"') && megaMenuContent.includes('TritiQ')) {
   console.log('✅ TritiQ logo implemented correctly');
 } else {
   console.log('❌ TritiQ logo not found or incorrect');
@@ -63,7 +63,7 @@ if (encryptionUtilExists && encryptedFieldsExists && encryptionDocsExists) {
 
 // Test 6: Check if TritiQ logo file exists
 console.log('\n6. Testing Logo Asset');
-const logoExists = fs.existsSync(path.join(__dirname, 'frontend/public/Tritiq.png'));
+const logoExists = fs.existsSync(path.join(__dirname, 'frontend/public/Tritiq.jpg'));
 if (logoExists) {
   console.log('✅ TritiQ logo file exists');
 } else {

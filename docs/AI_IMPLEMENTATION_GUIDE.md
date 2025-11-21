@@ -1,4 +1,4 @@
-# AI Implementation Guide - Tritiq ERP System
+# AI Implementation Guide - TRITIQ BOS System
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -16,7 +16,7 @@
 
 ## Overview
 
-The Tritiq ERP system includes comprehensive AI and machine learning capabilities to enhance business intelligence, automation, and user experience. This guide provides detailed information on configuring, implementing, and troubleshooting all AI features.
+The TRITIQ BOS system includes comprehensive AI and machine learning capabilities to enhance business intelligence, automation, and user experience. This guide provides detailed information on configuring, implementing, and troubleshooting all AI features.
 
 ### Key AI Capabilities
 - **AI Chatbot & Virtual Assistant**: Context-aware conversational AI for user assistance
@@ -883,5 +883,5 @@ Contact support@tritiq.com for:
 
 ## License
 
-This AI Implementation Guide is part of the Tritiq ERP system.
+This AI Implementation Guide is part of the TRITIQ BOS system.
 © 2025 Tritiq Technologies. All rights reserved.

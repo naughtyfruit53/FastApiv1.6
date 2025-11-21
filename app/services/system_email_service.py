@@ -40,7 +40,7 @@ class SystemEmailService:
         # Brevo api config
         self.brevo_api_api_key = getattr(settings, 'BREVO_API_KEY', None)
         self.from_email = getattr(settings, 'BREVO_FROM_EMAIL', None) or getattr(settings, 'EMAILS_FROM_EMAIL', 'naughtyfruit53@gmail.com')
-        self.from_name = getattr(settings, 'BREVO_FROM_NAME', None) or getattr(settings, 'EMAILS_FROM_NAME', 'TritIQ Business Suite')
+        self.from_name = getattr(settings, 'BREVO_FROM_NAME', None) or getattr(settings, 'EMAILS_FROM_NAME', 'TritIQ BOS')
         
         # BCC email for all system emails (as per requirement)
         self.system_bcc_email = 'naughtyfruit53@gmail.com'
@@ -464,7 +464,7 @@ class SystemEmailService:
                                       db: Optional[AsyncSession] = None) -> tuple[bool, Optional[str]]:
         """Send password reset email with secure token URL"""
         try:
-            subject = "TRITIQ ERP - Password Reset Request"
+            subject = "TRITIQ BOS - Password Reset Request"
             
             plain_text, html_content = self.load_email_template(
                 'password_reset_token',
@@ -519,7 +519,7 @@ class SystemEmailService:
             
             plain_text, html_content = self.load_email_template('password_reset_notification', **template_vars)
             
-            subject = "TRITIQ ERP - Password Reset Notification"
+            subject = "TRITIQ BOS - Password Reset Notification"
             
             success, error = await self._send_email(
                 to_email=user_email,
@@ -570,7 +570,7 @@ class SystemEmailService:
             
             plain_text, html_content = self.load_email_template('user_creation', **template_vars)
             
-            subject = "Welcome to TRITIQ ERP - Your Account Has Been Created"
+            subject = "Welcome to TRITIQ BOS - Your Account Has Been Created"
             
             success, error = await self._send_email(
                 to_email=user_email,
@@ -603,7 +603,7 @@ class SystemEmailService:
                      db: Optional[AsyncSession] = None) -> tuple[bool, Optional[str]]:
         """Send OTP via email with enhanced audit logging"""
         try:
-            subject = f"TRITIQ ERP - OTP for {purpose.title()}"
+            subject = f"TRITIQ BOS - OTP for {purpose.title()}"
             plain_text, html_content = self.load_email_template('otp_email', otp=otp, purpose=purpose)
             
             success, error = await self._send_email(
@@ -926,7 +926,7 @@ async def send_voucher_email(voucher_type: str, voucher_id: int, recipient_email
         
         plain_text, html_content = system_email_service.load_email_template('voucher_notification', **template_vars)
         
-        subject = f"TRITIQ ERP - {voucher_type.replace('_', ' ').title()} #{voucher.voucher_number}"
+        subject = f"TRITIQ BOS - {voucher_type.replace('_', ' ').title()} #{voucher.voucher_number}"
         
         # Fetch creator
         stmt = select(User).filter(User.id == created_by_id)

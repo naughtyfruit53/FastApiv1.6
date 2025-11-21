@@ -567,7 +567,7 @@ class UIAuditSystem:
         
         report_data = {
             "audit_metadata": {
-                "system": "FastApiV1.5 TRITIQ ERP",
+                "system": "FastApiV1.5 TRITIQ BOS",
                 "audit_date": stats["audit_date"],
                 "base_url": self.base_url,
                 "total_features_tested": stats["total_features"]
@@ -614,7 +614,7 @@ class UIAuditSystem:
         markdown_content = f"""# FastApiV1.5 UI Audit Report
 
 **Generated:** {timestamp}  
-**System:** TRITIQ ERP - FastAPI Backend + Next.js Frontend  
+**System:** TRITIQ BOS - FastAPI Backend + Next.js Frontend  
 **Base URL:** {self.base_url}  
 **Features Tested:** {stats['total_features']}
 

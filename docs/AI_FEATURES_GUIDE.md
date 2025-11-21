@@ -1,7 +1,7 @@
-# AI Features Guide - Tritiq ERP System
+# AI Features Guide - TRITIQ BOS System
 
 ## Overview
-This guide provides a comprehensive overview of all AI-powered features in the Tritiq ERP system, including backend implementation status, frontend availability, usage instructions, and troubleshooting tips.
+This guide provides a comprehensive overview of all AI-powered features in the TRITIQ BOS system, including backend implementation status, frontend availability, usage instructions, and troubleshooting tips.
 
 ---
 
@@ -676,4 +676,4 @@ For AI feature support:
 
 **Last Updated**: October 2025  
 **Version**: 1.6  
-**Maintainer**: Tritiq ERP Team
+**Maintainer**: TRITIQ BOS Team

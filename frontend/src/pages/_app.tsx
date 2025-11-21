@@ -9,7 +9,6 @@ import "../styles/modern-theme.css";
 import "../styles/print.css";
 import "../styles/mobile/mobile-theme.css";
 import "../styles/email-reader.css";  // Moved global CSS import here
-import { useRouter } from "next/router";
 import { AuthProvider } from "../context/AuthContext";
 import { CompanyProvider } from "../context/CompanyContext"; // Updated import
 import { EmailProvider } from "../context/EmailContext"; // Added import for EmailProvider

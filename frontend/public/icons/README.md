@@ -23,12 +23,12 @@ This directory should contain the following icon files for the Progressive Web A
 
 ## Generating Icons
 
-You can use the existing `Tritiq.png` logo and resize it to the required dimensions using:
+You can use the existing `Tritiq.jpg` logo and resize it to the required dimensions using:
 
 ```bash
 # Using ImageMagick
-convert Tritiq.png -resize 192x192 icons/icon-192x192.png
-convert Tritiq.png -resize 512x512 icons/icon-512x512.png
+convert Tritiq.jpg -resize 192x192 icons/icon-192x192.png
+convert Tritiq.jpg -resize 512x512 icons/icon-512x512.png
 # ... repeat for all sizes
 ```
 

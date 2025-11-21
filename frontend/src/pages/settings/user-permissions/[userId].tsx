@@ -15,10 +15,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   Checkbox,
   Divider,
   Alert,
@@ -29,18 +25,17 @@ import {
 import {
   ArrowBack,
   Person,
-  Security,
   Save,
   Cancel,
   Check,
   Close,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { organizationService } from "../../../services/organizationService";
 import { useAuth } from "../../../context/AuthContext";
 import { getDisplayRole } from "../../../types/user.types";
-import { Module, MODULE_DISPLAY_NAMES, Action } from "../../../types/rbac.types";
+import { Module, MODULE_DISPLAY_NAMES } from "../../../types/rbac.types";
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
 interface User {

@@ -9,12 +9,10 @@ import {
   Card,
   CardContent,
   Grid,
-  Alert,
 } from "@mui/material";
 import { Analytics, TrendingUp, People, Assessment } from "@mui/icons-material";
 import { useAuth } from "../../hooks/useAuth";
 import CustomerAnalytics from "../../components/CustomerAnalytics";
-import { canManageUsers } from "../../types/user.types";
 import { ProtectedPage } from "../../components/ProtectedPage";
 const CustomerAnalyticsPage: NextPage = () => {
   const { user } = useAuth();

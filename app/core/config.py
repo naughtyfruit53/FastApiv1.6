@@ -29,7 +29,7 @@ def assemble_cors_origins(v: str | List[str]) -> List[str] | str:
     raise ValueError(v)
 
 class Settings:
-    PROJECT_NAME: str = "TRITIQ ERP API"
+    PROJECT_NAME: str = "TRITIQ BOS API"
     VERSION: str = "1.0.0"
     DESCRIPTION: str = "FastAPI migration of PySide6 ERP application"
     API_V1_STR: str = "/api"
@@ -64,13 +64,13 @@ class Settings:
     SMTP_USERNAME: Optional[str] = os.getenv("SMTP_USERNAME")
     SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
     EMAILS_FROM_EMAIL: Optional[str] = os.getenv("EMAILS_FROM_EMAIL")
-    EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "TRITIQ ERP")
+    EMAILS_FROM_NAME: str = os.getenv("EMAILS_FROM_NAME", "TRITIQ BOS")
     
     SENDGRID_API_KEY: Optional[str] = os.getenv("SENDGRID_API_KEY")
 
     BREVO_API_KEY: Optional[str] = os.getenv("BREVO_API_KEY")
     BREVO_FROM_EMAIL: Optional[str] = os.getenv("BREVO_FROM_EMAIL")
-    BREVO_FROM_NAME: str = os.getenv("BREVO_FROM_NAME", "TRITIQ ERP")
+    BREVO_FROM_NAME: str = os.getenv("BREVO_FROM_NAME", "TRITIQ BOS")
     
     WHATSAPP_ENABLED: bool = os.getenv("WHATSAPP_ENABLED", "false").lower() == "true"
     WHATSAPP_PROVIDER: str = os.getenv("WHATSAPP_PROVIDER", "none") if os.getenv("WHATSAPP_ENABLED", "false").lower() == "true" else "none"

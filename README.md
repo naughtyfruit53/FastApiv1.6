@@ -1,6 +1,6 @@
-# TritIQ Business Suite - FastAPI Migration
+# TritIQ BOS - FastAPI Migration
 
-A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the TritIQ Business Suite system.
+A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the TRITIQ BOS system.
 
 ## 🚀 Quick Start
 
@@ -289,7 +289,7 @@ python scripts/audit_ui_features.py --verbose
 
 ### 🆕 Service CRM Integration with RBAC System
 
-The TritIQ Business Suite platform includes a comprehensive Role-Based Access Control (RBAC) system specifically designed for Service CRM operations:
+The TritIQ BOS platform includes a comprehensive Role-Based Access Control (RBAC) system specifically designed for Service CRM operations:
 
 #### Key RBAC Features
 - **30+ Granular Permissions**: Fine-grained control over Service CRM modules
@@ -681,9 +681,9 @@ The application will be available at:
 
 ```bash
 # Database
-DATABASE_URL=postgresql://user:password@localhost/tritiq_erp
+DATABASE_URL=postgresql://user:password@localhost/tritiq_BOS
 # Or for development:
-# DATABASE_URL=sqlite:///./tritiq_erp.db
+# DATABASE_URL=sqlite:///./tritiq_BOS.db
 
 # Security
 SECRET_KEY=your-super-secret-key-here
@@ -691,7 +691,7 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # Application
-PROJECT_NAME="TritIQ Business Suite API"
+PROJECT_NAME="TritIQ BOS API"
 VERSION="1.0.0"
 DEBUG=true
 API_V1_STR="/api/v1"
@@ -705,7 +705,7 @@ SMTP_PORT=587
 SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 EMAILS_FROM_EMAIL=your-email@gmail.com
-EMAILS_FROM_NAME="TritIQ Business Suite"
+EMAILS_FROM_NAME="TritIQ BOS"
 ```
 
 ## 🔧 Development
@@ -1202,7 +1202,7 @@ npm run dev
 
 ## 📄 License
 
-This project is proprietary software for TritIQ Business Suite system.
+This project is proprietary software for TritIQ BOS.
 
 ## 🙏 Acknowledgments
 

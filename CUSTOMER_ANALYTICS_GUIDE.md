@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Customer Analytics Module provides comprehensive insights and metrics for customer data within the TRITIQ ERP system. This module calculates key performance indicators, interaction patterns, and segment analytics while maintaining strict organizational data isolation.
+The Customer Analytics Module provides comprehensive insights and metrics for customer data within the TRITIQ BOS system. This module calculates key performance indicators, interaction patterns, and segment analytics while maintaining strict organizational data isolation.
 
 ## 🌟 Features
 
@@ -333,4 +333,4 @@ For questions or issues with the Customer Analytics Module:
 
 ---
 
-**Note**: This module integrates seamlessly with the existing TRITIQ ERP system and maintains backward compatibility with all existing functionality.
+**Note**: This module integrates seamlessly with the existing TRITIQ BOS system and maintains backward compatibility with all existing functionality.

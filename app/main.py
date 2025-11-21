@@ -507,7 +507,7 @@ def include_minimal_routers():
 @app.get("/")
 async def root():
     return {
-        "message": "Welcome to TritIQ Business Suite API",
+        "message": "Welcome to TritIQ BOS API",
         "version": config_settings.VERSION,
         "docs": "/docs"
     }

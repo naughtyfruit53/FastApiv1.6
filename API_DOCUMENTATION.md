@@ -410,21 +410,21 @@ result = await payment_service.process_payment(
 )
 ```
 
-### ERP Connector Integration
+### BOS Connector Integration
 
-Connect with major ERP systems for data synchronization.
+Connect with major BOS systems for data synchronization.
 
-#### Supported ERP Systems:
+#### Supported BOS Systems:
 - **QuickBooks**: Chart of accounts, customers, vendors
 - **SAP**: Financial data, master data synchronization
-- **Oracle ERP**: Comprehensive business data integration
+- **Oracle BOS**: Comprehensive business data integration
 - **Tally**: Indian accounting software integration
 
 #### Chart of Accounts Sync:
 ```python
-from app.services.external_integrations_service import ERPConnectorService
+from app.services.external_integrations_service import BOSConnectorService
 
-erp_service = ERPConnectorService(db)
+BOS_service = BOSConnectorService(db)
 result = await erp_service.sync_chart_of_accounts(integration_id=2)
 ```
 

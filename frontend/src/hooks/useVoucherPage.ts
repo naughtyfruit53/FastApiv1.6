@@ -24,7 +24,6 @@ import { showErrorToast, showSuccessToast, handleVoucherError } from "../utils/e
 import { SUCCESS_MESSAGES, getDynamicMessage } from "../constants/messages";
 import {
   generateStandalonePDF,
-  getVoucherPdfConfig,
 } from "../utils/pdfUtils";
 import { VoucherPageConfig } from "../types/voucher.types";
 import api from "../lib/api";
