@@ -604,6 +604,34 @@ async def delete_purchase_order(
             detail="Failed to delete purchase order"
         )
 
+# app/api/v1/vouchers/purchase_order.py
+
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
+from typing import List, Optional
+from app.core.database import get_db
+from app.core.enforcement import require_access
+from app.api.v1.auth import get_current_active_user
+from app.models import User, Product
+from app.models.vouchers.purchase import PurchaseOrder, PurchaseOrderItem, GoodsReceiptNote, GoodsReceiptNoteItem
+from app.schemas.vouchers.purchase import PurchaseOrderCreate, PurchaseOrderInDB, PurchaseOrderUpdate
+from app.services.system_email_service import send_voucher_email
+from app.services.voucher_service import VoucherNumberService
+import logging
+from app.utils.gst_calculator import calculate_gst_amounts
+from app.utils.voucher_gst_helper import get_state_codes_for_purchase
+from datetime import timezone
+from dateutil import parser as date_parser
+import re
+from fastapi.responses import StreamingResponse
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/purchase-orders", tags=["purchase-orders"])
+
+# ... [all other endpoints unchanged: get_purchase_orders, next-number, create, get single, pdf, update, delete] ...
+
 @router.put("/{invoice_id}/tracking")
 async def update_purchase_order_tracking(
     invoice_id: int,
@@ -624,22 +652,21 @@ async def update_purchase_order_tracking(
         po = result.scalar_one_or_none()
         
         if not po:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Purchase order not found"
-            )
+            raise HTTPException(status_code=404, detail="Purchase order not found")
         
+        # Update only if value is provided and not empty
         if transporter_name is not None:
-            po.transporter_name = transporter_name
+            po.transporter_name = transporter_name.strip() if transporter_name.strip() else None
         if tracking_number is not None:
-            po.tracking_number = tracking_number
+            po.tracking_number = tracking_number.strip() if tracking_number.strip() else None
         if tracking_link is not None:
-            po.tracking_link = tracking_link
+            po.tracking_link = tracking_link.strip() if tracking_link.strip() else None
         
         await db.commit()
-        await db.refresh(po)
+        await db.refresh(po)  # ← This forces fresh data from DB
         
-        logger.info(f"Tracking details updated for PO {po.voucher_number} by {current_user.email}")
+        logger.info(f"Tracking updated for PO {po.voucher_number} by {current_user.email}")
+        
         return {
             "message": "Tracking details updated successfully",
             "transporter_name": po.transporter_name,
@@ -651,11 +678,8 @@ async def update_purchase_order_tracking(
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating tracking details: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update tracking details"
-        )
+        logger.error(f"Error updating tracking: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update tracking details")
 
 @router.get("/{invoice_id}/tracking")
 async def get_purchase_order_tracking(
@@ -666,6 +690,7 @@ async def get_purchase_order_tracking(
     current_user, org_id = auth
     
     try:
+        # Always fetch fresh from database
         stmt = select(PurchaseOrder).where(
             PurchaseOrder.id == invoice_id,
             PurchaseOrder.organization_id == org_id
@@ -674,25 +699,19 @@ async def get_purchase_order_tracking(
         po = result.scalar_one_or_none()
         
         if not po:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Purchase order not found"
-            )
+            raise HTTPException(status_code=404, detail="Purchase order not found")
         
         return {
-            "transporter_name": po.transporter_name,
-            "tracking_number": po.tracking_number,
-            "tracking_link": po.tracking_link
+            "transporter_name": po.transporter_name or None,
+            "tracking_number": po.tracking_number or None,
+            "tracking_link": po.tracking_link or None
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error retrieving tracking details: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve tracking details"
-        )
+        logger.error(f"Error retrieving tracking: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve tracking details")
 
 @router.get("/product/{product_id}/previous-discount")
 async def get_previous_discount(

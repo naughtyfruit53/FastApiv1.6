@@ -1,3 +1,5 @@
+// frontend/src/services/dispatchService.ts
+
 import api from '../lib/api';
 import {
   DispatchItemStatus,
@@ -261,10 +263,29 @@ export const dispatchService = {
     }
   },
 
+  // NEW: fetch existing tracking when dialog opens
+  getPurchaseOrderTracking: async (voucherId: number): Promise<TrackingUpdate> => {
+    try {
+      console.log('[DispatchService] Fetching tracking for PO:', voucherId);
+      const response = await api.get(`/purchase-orders/${voucherId}/tracking`);
+      console.log('[DispatchService] Tracking data received:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('[DispatchService] Error fetching tracking:', error);
+      // Return empty object on error so dialog doesn't crash
+      return {
+        transporter_name: null,
+        tracking_number: null,
+        tracking_link: null,
+      };
+    }
+  },
+
+  // FIXED: correct plural endpoint (this was the root cause of 404)
   updatePurchaseOrderTracking: async (voucherId: number, trackingData: TrackingUpdate) => {
     try {
       console.log('[DispatchService] Updating PO tracking:', voucherId, trackingData);
-      const response = await api.put(`/vouchers/purchase-order/${voucherId}/tracking`, trackingData);
+      const response = await api.put(`/purchase-orders/${voucherId}/tracking`, trackingData);
       console.log('[DispatchService] Successfully updated PO tracking');
       return response;
     } catch (error: any) {
@@ -283,12 +304,8 @@ export const dispatchService = {
     try {
       console.log('[DispatchService] Fetching dispatch orders with params:', params);
       const queryParams = new URLSearchParams();
-      if (params.skip) {
-        queryParams.append('skip', params.skip.toString());
-      }
-      if (params.limit) {
-        queryParams.append('limit', params.limit.toString());
-      }
+      if (params.skip) queryParams.append('skip', params.skip.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
       if (params.filter) {
         Object.entries(params.filter).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
@@ -362,12 +379,8 @@ export const dispatchService = {
     try {
       console.log('[DispatchService] Fetching installation jobs with params:', params);
       const queryParams = new URLSearchParams();
-      if (params.skip) {
-        queryParams.append('skip', params.skip.toString());
-      }
-      if (params.limit) {
-        queryParams.append('limit', params.limit.toString());
-      }
+      if (params.skip) queryParams.append('skip', params.skip.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
       if (params.filter) {
         Object.entries(params.filter).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
@@ -465,12 +478,8 @@ export const dispatchService = {
     try {
       console.log('[DispatchService] Fetching installation tasks with params:', params);
       const queryParams = new URLSearchParams();
-      if (params.skip) {
-        queryParams.append('skip', params.skip.toString());
-      }
-      if (params.limit) {
-        queryParams.append('limit', params.skip.toString());
-      }
+      if (params.skip) queryParams.append('skip', params.skip.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
       if (params.filter) {
         Object.entries(params.filter).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
@@ -556,12 +565,8 @@ export const dispatchService = {
     try {
       console.log('[DispatchService] Fetching completion records with params:', params);
       const queryParams = new URLSearchParams();
-      if (params.skip) {
-        queryParams.append('skip', params.skip.toString());
-      }
-      if (params.limit) {
-        queryParams.append('limit', params.skip.toString());
-      }
+      if (params.skip) queryParams.append('skip', params.skip.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
       if (params.filter) {
         Object.entries(params.filter).forEach(([key, value]) => {
           if (value !== undefined && value !== null) {
