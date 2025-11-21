@@ -760,7 +760,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         position="static"
         className="modern-nav"
         sx={{
-          backgroundColor: '#001F3F',
+          backgroundColor: '#808080',
           color: 'white',
           boxShadow: 'var(--shadow-sm)',
           borderBottom: '1px solid var(--border-primary)',
@@ -832,11 +832,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           >
             <Box
               component="img"
-              src="/Tritiq.jpg"
+              src="/Tritiq.png"
               alt="TritiQ"
               sx={{
-                width: 40,
-                height: 40,
+                width: 60,
+                height: 60,
                 mr: 1,
                 objectFit: 'contain',
               }}
