@@ -258,3 +258,9 @@ class PurchaseReturnInDB(VoucherInDBBase):
     additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseReturnItemInDB]
     model_config = ConfigDict(from_attributes=True)
+
+# NEW: Tracking Update Schema for Body
+class TrackingUpdate(BaseModel):
+    transporter_name: Optional[str] = None
+    tracking_number: Optional[str] = None
+    tracking_link: Optional[str] = None
