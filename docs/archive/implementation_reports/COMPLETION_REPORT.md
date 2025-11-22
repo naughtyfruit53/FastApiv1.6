@@ -269,7 +269,7 @@ Root/
 1. **Generate Icons** (5 min):
    ```bash
    # Use ImageMagick or online tool
-   convert Tritiq.jpg -resize 192x192 icons/icon-192x192.png
+   convert Tritiq.png -resize 192x192 icons/icon-192x192.png
    # Repeat for all 8 sizes
    ```
 

@@ -17,7 +17,7 @@ This document summarizes the comprehensive implementation of backend/frontend ga
 ### 2. MegaMenu Branding ✅ IMPLEMENTED
 
 **Changes Made**:
-- Replaced company logo area with TritiQ logo (`/Tritiq.jpg`)
+- Replaced company logo area with TritiQ logo (`/Tritiq.png`)
 - Updated branding to show "TritiQ" + company name
 - Consistent styling with login page branding
 
@@ -31,7 +31,7 @@ This document summarizes the comprehensive implementation of backend/frontend ga
 </Avatar>
 
 // After: Direct TritiQ logo
-<Box component="img" src="/Tritiq.jpg" alt="TritiQ" sx={{ width: 40, height: 40 }} />
+<Box component="img" src="/Tritiq.png" alt="TritiQ" sx={{ width: 40, height: 40 }} />
 <Typography variant="h6">TritiQ {companyData?.name || 'ERP'}</Typography>
 ```
 

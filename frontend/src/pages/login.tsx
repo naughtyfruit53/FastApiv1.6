@@ -90,7 +90,7 @@ const LoginPage = () => {
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, textAlign: "center" }}>
         <Image
-          src="/Tritiq.jpg"
+          src="/Tritiq.png"
           alt="TRITIQ BOS"
           width={200}
           height={160}
