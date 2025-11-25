@@ -426,6 +426,9 @@ const PurchaseReturnPage: React.FC = () => {
   }, [watch('date'), mode, setValue]);
 
   const onSubmit = (data: any) => {
+    if (from_grn_id) {
+      data.grn_id = Number(from_grn_id);
+    }
     if (totalRoundOff !== 0) {
       setSubmitData(data);
       setRoundOffConfirmOpen(true);

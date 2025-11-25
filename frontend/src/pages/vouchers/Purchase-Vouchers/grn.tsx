@@ -41,6 +41,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
+import { green, yellow, red, orange, blue } from '@mui/material/colors';
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
 const GoodsReceiptNotePage: React.FC = () => {
@@ -556,12 +557,22 @@ const GoodsReceiptNotePage: React.FC = () => {
 
   // Handlers for new menu options
   const handleCreatePurchaseVoucher = (grn: any) => {
+    if (grn.has_purchase_voucher) {
+      toast.error('Purchase Voucher already created');
+      return;
+    }
     router.push(`/vouchers/Purchase-Vouchers/purchase-voucher?from_grn_id=${grn.id}`);
   };
 
   const handleCreateRejectionNote = (grn: any) => {
+    if (grn.has_purchase_return) {
+      toast.error('Purchase Return already created');
+      return;
+    }
     router.push(`/vouchers/Purchase-Vouchers/purchase-return?from_grn_id=${grn.id}`);
   };
+
+  const colors = { green, yellow, red, orange, blue };
 
   const indexContent = (
     <>
@@ -581,36 +592,39 @@ const GoodsReceiptNotePage: React.FC = () => {
                 <TableCell colSpan="4" align="center">No goods receipt notes available</TableCell>
               </TableRow>
             ) : (
-              latestVouchers.slice(0, 7).map((voucher: any) => (
-                <TableRow 
-                  key={voucher.id} 
-                  hover 
-                  onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
-                  sx={{ cursor: 'pointer' }}
-                >
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleView(voucher.id)}>
-                    {voucher.voucher_number}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
-                    {voucher.date ? new Date(voucher.date).toLocaleDateString() : 'N/A'}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || 'N/A'}</TableCell>
-                  <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
-                    <VoucherContextMenu
-                      voucher={voucher}
-                      voucherType="Goods Receipt Note"
-                      onView={() => handleView(voucher.id)}
-                      onEdit={() => handleEdit(voucher.id)}
-                      onDelete={() => handleDelete(voucher)}
-                      onPrint={handleGeneratePDF}
-                      onCreatePurchaseVoucher={handleCreatePurchaseVoucher}
-                      onCreateRejectionNote={handleCreateRejectionNote}
-                      showKebab={true}
-                      onClose={() => {}}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
+              latestVouchers.slice(0, 7).map((voucher: any) => {
+                console.log('Voucher in table:', voucher);
+                return (
+                  <TableRow 
+                    key={voucher.id} 
+                    hover 
+                    onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
+                    sx={{ cursor: 'pointer', bgcolor: voucher.color_status ? colors[voucher.color_status][100] : 'inherit' }}
+                  >
+                    <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleView(voucher.id)}>
+                      {voucher.voucher_number}
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
+                      {voucher.date ? new Date(voucher.date).toLocaleDateString() : 'N/A'}
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || 'N/A'}</TableCell>
+                    <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
+                      <VoucherContextMenu
+                        voucher={voucher}
+                        voucherType="Goods Receipt Note"
+                        onView={() => handleView(voucher.id)}
+                        onEdit={() => handleEdit(voucher.id)}
+                        onDelete={() => handleDelete(voucher)}
+                        onPrint={handleGeneratePDF}
+                        onCreatePurchaseVoucher={handleCreatePurchaseVoucher}
+                        onCreateRejectionNote={handleCreateRejectionNote}
+                        showKebab={true}
+                        onClose={() => {}}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>

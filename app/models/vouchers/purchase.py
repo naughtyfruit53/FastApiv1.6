@@ -157,11 +157,13 @@ class PurchaseReturn(BaseVoucher):
     
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
     reference_voucher_id = Column(Integer, ForeignKey("purchase_vouchers.id"))
+    grn_id = Column(Integer, ForeignKey("goods_receipt_notes.id"))  
     reason = Column(Text)
     additional_charges = Column(JSONB, default=dict)
     
     vendor = relationship("Vendor")
     reference_voucher = relationship("PurchaseVoucher")
+    grn = relationship("GoodsReceiptNote")
     items = relationship("PurchaseReturnItem", back_populates="purchase_return", cascade="all, delete-orphan")
     
     __table_args__ = (

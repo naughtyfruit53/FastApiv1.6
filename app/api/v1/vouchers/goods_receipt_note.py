@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.core.enforcement import require_access, TenantEnforcement
 from app.api.v1.auth import get_current_active_user
 from app.models import User, Stock
-from app.models.vouchers.purchase import GoodsReceiptNote, GoodsReceiptNoteItem, PurchaseOrderItem
+from app.models.vouchers.purchase import GoodsReceiptNote, GoodsReceiptNoteItem, PurchaseOrderItem, PurchaseVoucher, PurchaseReturn
 from app.schemas.vouchers import GRNCreate, GRNInDB, GRNUpdate
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
@@ -56,6 +56,33 @@ async def get_goods_receipt_notes(
     
     result = await db.execute(stmt.offset(skip).limit(limit))
     invoices = result.unique().scalars().all()
+    
+    for grn in invoices:
+        has_rejection = any(item.rejected_quantity > 0 for item in grn.items)
+        is_full_rejection = all(item.rejected_quantity == item.ordered_quantity for item in grn.items if item.ordered_quantity > 0)
+        
+        stmt_pv = select(PurchaseVoucher).where(PurchaseVoucher.grn_id == grn.id)
+        has_pv = (await db.execute(stmt_pv)).scalar_one_or_none() is not None
+        
+        stmt_pr = select(PurchaseReturn).where(PurchaseReturn.grn_id == grn.id)
+        has_pr = (await db.execute(stmt_pr)).scalar_one_or_none() is not None
+        
+        color_status = None
+        if has_pv and not has_rejection:
+            color_status = 'green'
+        elif has_pv and has_rejection and not has_pr:
+            color_status = 'yellow'
+        elif is_full_rejection and not has_pr:
+            color_status = 'red'
+        elif is_full_rejection and has_pr:
+            color_status = 'orange'
+        elif has_rejection and has_pr and not has_pv:
+            color_status = 'blue'
+        
+        grn.has_purchase_voucher = has_pv
+        grn.has_purchase_return = has_pr
+        grn.color_status = color_status
+        
     return invoices
 
 @router.get("/next-number", response_model=str)

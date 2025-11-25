@@ -19,6 +19,7 @@ class PurchaseVoucherItemInDB(PurchaseVoucherItemCreate):
 class PurchaseVoucherCreate(VoucherBase):
     vendor_id: int
     purchase_order_id: Optional[int] = None
+    grn_id: Optional[int] = None
     invoice_number: Optional[str] = None
     invoice_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
@@ -33,6 +34,7 @@ class PurchaseVoucherCreate(VoucherBase):
 class PurchaseVoucherUpdate(BaseModel):
     vendor_id: Optional[int] = None
     purchase_order_id: Optional[int] = None
+    grn_id: Optional[int] = None
     invoice_number: Optional[str] = None
     invoice_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
@@ -54,6 +56,7 @@ class PurchaseVoucherUpdate(BaseModel):
 class PurchaseVoucherInDB(VoucherInDBBase):
     vendor_id: int
     purchase_order_id: Optional[int]
+    grn_id: Optional[int]
     invoice_number: Optional[str]
     invoice_date: Optional[datetime]
     due_date: Optional[datetime]
@@ -209,7 +212,10 @@ class GRNInDB(VoucherInDBBase):
     items: List[GRNItemInDB]
     vendor: Optional[VendorMinimal] = None
     purchase_order: Optional[PurchaseOrderMinimal] = None
-    model_config = ConfigDict(from_attributes=True)
+    has_purchase_voucher: Optional[bool] = None
+    has_purchase_return: Optional[bool] = None
+    color_status: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True, extra='allow')
 
 class GRNAutoPopulateResponse(BaseModel):
     vendor_id: int
@@ -233,6 +239,7 @@ class PurchaseReturnItemInDB(PurchaseReturnItemCreate):
 class PurchaseReturnCreate(VoucherBase):
     vendor_id: int
     reference_voucher_id: Optional[int] = None
+    grn_id: Optional[int] = None
     reason: Optional[str] = None
     additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseReturnItemCreate] = []
@@ -240,6 +247,7 @@ class PurchaseReturnCreate(VoucherBase):
 class PurchaseReturnUpdate(BaseModel):
     vendor_id: Optional[int] = None
     reference_voucher_id: Optional[int] = None
+    grn_id: Optional[int] = None
     reason: Optional[str] = None
     additional_charges: Optional[Dict[str, float]] = None
     total_amount: Optional[float] = None
@@ -254,6 +262,7 @@ class PurchaseReturnUpdate(BaseModel):
 class PurchaseReturnInDB(VoucherInDBBase):
     vendor_id: int
     reference_voucher_id: Optional[int]
+    grn_id: Optional[int]
     reason: Optional[str]
     additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseReturnItemInDB]
