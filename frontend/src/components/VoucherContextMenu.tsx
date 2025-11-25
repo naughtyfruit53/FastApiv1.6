@@ -14,6 +14,8 @@ import {
   History,  // New icon for revise
   AssignmentTurnedIn,  // For GRN creation
   TrackChanges,  // For tracking details
+  AddShoppingCart as CreatePurchaseVoucherIcon,
+  RemoveShoppingCart as CreateRejectionNoteIcon,
 } from '@mui/icons-material';
 
 interface VoucherContextMenuProps {
@@ -29,6 +31,8 @@ interface VoucherContextMenuProps {
   onRevise?: (voucher: any) => void;  // New prop for revise
   onCreateGRN?: (voucher: any) => void;  // New prop for GRN creation
   onEditTracking?: (voucher: any) => void;  // New prop for tracking details
+  onCreatePurchaseVoucher?: (voucher: any) => void;  // New prop for creating purchase voucher from GRN
+  onCreateRejectionNote?: (voucher: any) => void;  // New prop for creating rejection note from GRN
   showKebab?: boolean;
   contextMenu?: { mouseX: number; mouseY: number; voucher?: any } | null;
   onClose: () => void;
@@ -47,6 +51,8 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   onRevise,
   onCreateGRN,
   onEditTracking,
+  onCreatePurchaseVoucher,
+  onCreateRejectionNote,
   showKebab = false,
   contextMenu = null,
   onClose,
@@ -111,6 +117,7 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   const isDeliveryChallan = voucherType?.toLowerCase().includes('delivery challan');
   const isPurchaseOrder = voucherType?.toLowerCase().includes('purchase order');
   const supportsTracking = isPurchaseOrder || isDeliveryChallan;
+  const isGoodsReceiptNote = voucherType === 'Goods Receipt Note';
 
   return (
     <>
@@ -162,6 +169,16 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
         {onRevise && (
           <MenuItem onClick={handleAction(onRevise)}>
             <History sx={{ mr: 1 }} /> Create Revision
+          </MenuItem>
+        )}
+        {isGoodsReceiptNote && onCreatePurchaseVoucher && (
+          <MenuItem onClick={handleAction(onCreatePurchaseVoucher)}>
+            <CreatePurchaseVoucherIcon sx={{ mr: 1 }} /> Create Purchase Voucher
+          </MenuItem>
+        )}
+        {isGoodsReceiptNote && onCreateRejectionNote && (
+          <MenuItem onClick={handleAction(onCreateRejectionNote)}>
+            <CreateRejectionNoteIcon sx={{ mr: 1 }} /> Create Rejection Note
           </MenuItem>
         )}
       </Menu>

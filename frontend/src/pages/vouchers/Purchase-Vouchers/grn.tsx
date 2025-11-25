@@ -27,15 +27,15 @@ import AddVendorModal from '../../../components/AddVendorModal';
 import AddProductModal from '../../../components/AddProductModal';
 import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
 import InwardMaterialQCModal from '../../../components/InwardMaterialQCModal';
-import VoucherContextMenu from '../../../components/VoucherContextMenu';
-import VoucherLayout from '../../../components/VoucherLayout';
-import VoucherHeaderActions from '../../../components/VoucherHeaderActions';
-import VoucherListModal from '../../../components/VoucherListModal';
+import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import VoucherLayout from "../../../components/VoucherLayout";
+import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
+import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
 import api from '../../../lib/api';
-import { useVoucherPage } from '../../../hooks/useVoucherPage';
-import { getVoucherConfig, getVoucherStyles } from '../../../utils/voucherUtils';
-import { voucherService } from '../../../services/vouchersService';
+import { useVoucherPage } from "../../../hooks/useVoucherPage";
+import { getVoucherConfig, getVoucherStyles } from "../../../utils/voucherUtils";
+import { voucherService } from "../../../services/vouchersService";
 import { useAuth } from '../../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/router';
@@ -554,6 +554,15 @@ const GoodsReceiptNotePage: React.FC = () => {
     setPendingDate(null);
   };
 
+  // Handlers for new menu options
+  const handleCreatePurchaseVoucher = (grn: any) => {
+    router.push(`/vouchers/Purchase-Vouchers/purchase-voucher?from_grn_id=${grn.id}`);
+  };
+
+  const handleCreateRejectionNote = (grn: any) => {
+    router.push(`/vouchers/Purchase-Vouchers/purchase-return?from_grn_id=${grn.id}`);
+  };
+
   const indexContent = (
     <>
       <TableContainer sx={{ maxHeight: 400 }}>
@@ -594,6 +603,8 @@ const GoodsReceiptNotePage: React.FC = () => {
                       onEdit={() => handleEdit(voucher.id)}
                       onDelete={() => handleDelete(voucher)}
                       onPrint={handleGeneratePDF}
+                      onCreatePurchaseVoucher={handleCreatePurchaseVoucher}
+                      onCreateRejectionNote={handleCreateRejectionNote}
                       showKebab={true}
                       onClose={() => {}}
                     />
@@ -1072,11 +1083,14 @@ const GoodsReceiptNotePage: React.FC = () => {
       />
       <VoucherContextMenu
         contextMenu={contextMenu}
-        onClose={handleCloseContextMenu}
-        onEdit={handleEdit}
+        voucherType="Goods Receipt Note"
         onView={handleView}
+        onEdit={handleEdit}
         onDelete={handleDelete}
         onPrint={handleGeneratePDF}
+        onCreatePurchaseVoucher={handleCreatePurchaseVoucher}
+        onCreateRejectionNote={handleCreateRejectionNote}
+        onClose={handleCloseContextMenu}
       />
     </ProtectedPage>
   );

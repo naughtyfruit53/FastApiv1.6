@@ -145,6 +145,7 @@ class PurchaseVoucherItem(VoucherItemBase):
     
     purchase_voucher_id = Column(Integer, ForeignKey("purchase_vouchers.id"), nullable=False)
     grn_item_id = Column(Integer, ForeignKey("goods_receipt_note_items.id"))  # Link to GRN item
+    description = Column(Text)
     
     purchase_voucher = relationship("PurchaseVoucher", back_populates="items")
     grn_item = relationship("GoodsReceiptNoteItem")

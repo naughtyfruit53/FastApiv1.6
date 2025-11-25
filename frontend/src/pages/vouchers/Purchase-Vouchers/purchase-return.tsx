@@ -43,15 +43,18 @@ import { useGstValidation } from "../../../hooks/useGstValidation";
 import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts";
 import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";
 import voucherFormStyles from "../../../styles/voucherFormStyles";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form"; // Added missing import for useWatch
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance"; // Added for vendor balance display
 import { formatCurrency } from "../../../utils/currencyUtils";
+import { useAuth } from '../../../context/AuthContext';
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
 const PurchaseReturnPage: React.FC = () => {
   const { company, isLoading: companyLoading } = useCompany();
+  const { isOrgContextReady } = useAuth();
   const router = useRouter();
+  const { from_grn_id } = router.query;
   const config = getVoucherConfig("purchase-return");
   const voucherStyles = getVoucherStyles();
   const queryClient = useQueryClient();
@@ -431,7 +434,7 @@ const PurchaseReturnPage: React.FC = () => {
     handleFinalSubmit(
       data,
       watch,
-      localComputedItems, // Use localComputedItems for consistency
+      localComputedItems,
       isIntrastate,
       finalTotalAmount,
       totalRoundOff,
@@ -476,6 +479,53 @@ const PurchaseReturnPage: React.FC = () => {
     }
     setPendingDate(null);
   };
+
+  // New: Fetch and pre-populate from GRN if from_grn_id is present
+  const { data: grnData } = useQuery({
+    queryKey: ['grn', from_grn_id],
+    queryFn: () => {
+      if (!from_grn_id) return null;
+      return voucherService.getGrnById(Number(from_grn_id));
+    },
+    enabled: !!from_grn_id && isOrgContextReady,
+  });
+
+  useEffect(() => {
+    if (grnData && mode === 'create') {
+      setValue('vendor_id', grnData.vendor_id);
+      setValue('reference_type', 'goods-receipt-note');
+      setValue('reference_id', grnData.id);
+      setValue('reference_number', grnData.voucher_number);
+      setValue('date', new Date().toISOString().split('T')[0]);
+
+      // Clear existing items
+      remove();
+
+      // Append items from GRN with rejected quantities (only if rejected > 0, but add all for flexibility)
+      grnData.items.forEach((item: any) => {
+        const product = productList?.find((p: any) => p.id === item.product_id) || {};
+        append({
+          product_id: item.product_id,
+          product_name: item.product_name || product.product_name || '',
+          quantity: item.rejected_quantity || 0,
+          unit_price: item.unit_price || product.unit_price || 0,
+          original_unit_price: product.unit_price || 0,
+          discount_percentage: 0,
+          discount_amount: 0,
+          gst_rate: product.gst_rate ?? 18,
+          cgst_rate: isIntrastate ? (product.gst_rate ?? 18) / 2 : 0,
+          sgst_rate: isIntrastate ? (product.gst_rate ?? 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : (product.gst_rate ?? 18),
+          unit: item.unit || product.unit || '',
+          current_stock: 0,
+          reorder_level: product.reorder_level || 0,
+          description: '',
+        });
+      });
+
+      toast.success('Pre-populated rejection note from GRN with rejected quantities');
+    }
+  }, [grnData, mode, setValue, remove, append, isIntrastate, productList]);
 
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>

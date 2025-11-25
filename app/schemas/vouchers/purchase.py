@@ -8,7 +8,7 @@ from .base import VoucherItemWithTax, VoucherBase, VoucherInDBBase, ProductMinim
 
 # Purchase Voucher
 class PurchaseVoucherItemCreate(VoucherItemWithTax):
-    pass
+    description: Optional[str] = None
 
 class PurchaseVoucherItemInDB(PurchaseVoucherItemCreate):
     id: int

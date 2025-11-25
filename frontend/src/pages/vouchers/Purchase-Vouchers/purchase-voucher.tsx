@@ -44,19 +44,21 @@ import { useGstValidation } from "../../../hooks/useGstValidation";
 import { useVoucherDiscounts } from "../../../hooks/useVoucherDiscounts";
 import { handleFinalSubmit, handleDuplicate, getStockColor } from "../../../utils/voucherHandlers";
 import voucherFormStyles from "../../../styles/voucherFormStyles";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form";
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance";
 import { formatCurrency } from "../../../utils/currencyUtils";
 import Link from 'next/link';
 import { toast } from "react-toastify"; // Added for toast notifications
+import { useAuth } from '../../../context/AuthContext';
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
 const PurchaseVoucherPage: React.FC = () => {
   console.count('Render: PurchaseVoucherPage');
   const { company, isLoading: companyLoading, error: companyError, refetch: refetchCompany } = useCompany();
+  const { isOrgContextReady } = useAuth();
   const router = useRouter();
-  const { productId, vendorId } = router.query;
+  const { productId, vendorId, from_grn_id } = router.query;
   const config = getVoucherConfig("purchase-voucher");
   const voucherStyles = getVoucherStyles();
   const queryClient = useQueryClient();
@@ -692,6 +694,51 @@ const PurchaseVoucherPage: React.FC = () => {
     setPdfUploadError('Vendor not found. Please add manually.');
   };
 
+  // New: Fetch and pre-populate from GRN if from_grn_id is present
+  const { data: grnData } = useQuery({
+    queryKey: ['grn', from_grn_id],
+    queryFn: () => {
+      if (!from_grn_id) return null;
+      return voucherService.getGrnById(Number(from_grn_id));
+    },
+    enabled: !!from_grn_id && isOrgContextReady,
+  });
+
+  useEffect(() => {
+    if (grnData && mode === 'create') {
+      setValue('vendor_id', grnData.vendor_id);
+      setValue('reference', `GRN ${grnData.voucher_number}`);
+      setValue('date', new Date().toISOString().split('T')[0]);
+
+      // Clear existing items
+      remove(fields.map((_, index) => index));
+
+      // Append items from GRN with accepted quantities
+      grnData.items.forEach((item: any) => {
+        const product = productList?.find((p: any) => p.id === item.product_id) || {};
+        append({
+          product_id: item.product_id,
+          product_name: item.product_name || product.product_name || '',
+          quantity: item.accepted_quantity || 0,
+          unit_price: item.unit_price || product.unit_price || 0,
+          original_unit_price: product.unit_price || 0,
+          discount_percentage: 0,
+          discount_amount: 0,
+          gst_rate: normalizeGstRate(product.gst_rate ?? 18),
+          cgst_rate: isIntrastate ? normalizeGstRate(product.gst_rate ?? 18) / 2 : 0,
+          sgst_rate: isIntrastate ? normalizeGstRate(product.gst_rate ?? 18) / 2 : 0,
+          igst_rate: isIntrastate ? 0 : normalizeGstRate(product.gst_rate ?? 18),
+          unit: item.unit || product.unit || '',
+          current_stock: 0,
+          reorder_level: product.reorder_level || 0,
+          description: '',
+        });
+      });
+
+      toast.success('Pre-populated from GRN with accepted quantities');
+    }
+  }, [grnData, mode, setValue, remove, append, isIntrastate, productList]);
+
   const indexContent = (
     <TableContainer sx={{ maxHeight: 400 }}>
       <Table stickyHeader size="small">
@@ -721,7 +768,6 @@ const PurchaseVoucherPage: React.FC = () => {
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{displayDate}</TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{formatCurrency(Math.round(voucher.total_amount) || 0)}</TableCell>
                   <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
                     <VoucherContextMenu
                       voucher={voucher}
