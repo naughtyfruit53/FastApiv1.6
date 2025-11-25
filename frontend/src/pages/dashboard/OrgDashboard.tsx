@@ -90,6 +90,7 @@ const OrgDashboard: React.FC = () => {
   const fetchRecentActivities = async () => {
     try {
       const response = await activityService.getRecentActivities(5);
+      console.log("Recent activities fetched:", response.activities); // Added debug log
       setRecentActivities(response.activities);
     } catch (err) {
       console.error("Failed to fetch recent activities:", err);

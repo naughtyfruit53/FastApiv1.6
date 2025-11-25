@@ -44,8 +44,19 @@ const activityService = {
   },
 
   formatActivityTime: (timestamp: string): string => {
-    const now = new Date();
+    if (!timestamp) {
+      console.warn('Missing timestamp for activity');
+      return 'Recent';
+    }
+
     const activityTime = new Date(timestamp);
+    
+    if (isNaN(activityTime.getTime())) {
+      console.error('Invalid timestamp format:', timestamp);
+      return 'Invalid Date';
+    }
+    
+    const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - activityTime.getTime()) / (1000 * 60));
 
     if (diffInMinutes < 1) return "Just now";
@@ -55,7 +66,7 @@ const activityService = {
     if (diffInHours < 24) return `${diffInHours}h ago`;
     
     const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays}d ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago}`;
     
     return activityTime.toLocaleDateString();
   }

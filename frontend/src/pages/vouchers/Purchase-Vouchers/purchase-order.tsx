@@ -545,6 +545,30 @@ const PurchaseOrderPage: React.FC = () => {
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [pendingDate, setPendingDate] = useState<string | null>(null);
 
+  const [hasTrackingMap, setHasTrackingMap] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    if (latestVouchers && latestVouchers.length > 0) {
+      const missingVouchers = latestVouchers.filter(v => !(v.id in hasTrackingMap));
+      if (missingVouchers.length > 0) {
+        Promise.all(
+          missingVouchers.map(v =>
+            voucherService.getHasTracking('purchase-orders', v.id)
+              .then(has => ({ id: v.id, has }))
+          )
+        ).then(results => {
+          console.log('Fetched tracking statuses:', results);
+          setHasTrackingMap(prev => ({
+            ...prev,
+            ...results.reduce((acc, r) => ({ ...acc, [r.id]: r.has }), {})
+          }));
+        }).catch(error => {
+          console.error('Error fetching tracking statuses:', error);
+        });
+      }
+    }
+  }, [latestVouchers]);
+
   const handleEditTracking = (voucher: any) => {
     console.log('[PurchaseOrderPage] Opening tracking for PO:', voucher.id);
     setSelectedVoucherForTracking({ id: voucher.id, voucher_number: voucher.voucher_number });
@@ -553,6 +577,22 @@ const PurchaseOrderPage: React.FC = () => {
 
   const handleTrackingDialogClose = () => {
     setTrackingDialogOpen(false);
+    if (selectedVoucherForTracking) {
+      // Refetch tracking for this PO to update accurately
+      voucherService.getHasTracking('purchase-orders', selectedVoucherForTracking.id)
+        .then(hasTracking => {
+          setHasTrackingMap(prev => ({
+            ...prev,
+            [selectedVoucherForTracking.id]: hasTracking
+          }));
+          console.log(`Updated hasTracking for PO ${selectedVoucherForTracking.id}: ${hasTracking}`);
+        })
+        .catch(error => {
+          console.error(`Error refetching tracking for PO ${selectedVoucherForTracking.id}:`, error);
+        });
+      // Also refresh voucher list for any GRN updates
+      queryClient.invalidateQueries(['purchase-orders']);
+    }
     setSelectedVoucherForTracking(null);
     refreshMasterData();
   };
@@ -566,23 +606,22 @@ const PurchaseOrderPage: React.FC = () => {
 
   const getPOColorStatus = (voucher: any) => {
     const grnStatus = voucher.grn_status || 'pending';
+    const hasTracking = hasTrackingMap[voucher.id] ?? false;
     const totalOrdered = voucher.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
     const totalReceived = voucher.items.reduce((sum: number, item: any) => sum + ((item.quantity - item.pending_quantity) || 0), 0);
     const remaining = totalOrdered - totalReceived;
     
     console.log(`PO ${voucher.voucher_number} grn_status: ${grnStatus}, `
                 + `ordered: ${totalOrdered}, received: ${totalReceived}, remaining: ${remaining}, `
-                + `items:`, voucher.items.map((item: any) => ({
-                  product_id: item.product_id,
-                  quantity: item.quantity,
-                  delivered_quantity: item.delivered_quantity,
-                  pending_quantity: item.pending_quantity
-                })));
-    
+                + `has_tracking: ${hasTracking}, `
+                + `items:`, voucher.items);
+
     if (grnStatus === 'complete') {
       return 'green';
     } else if (grnStatus === 'partial') {
       return 'yellow';
+    } else if (hasTracking) {
+      return 'blue';
     } else {
       return 'white';
     }
@@ -594,6 +633,8 @@ const PurchaseOrderPage: React.FC = () => {
         return '#4caf50';
       case 'yellow':
         return '#ff9800';
+      case 'blue':
+        return '#2196f3'; // Added blue for tracking details entered
       case 'white':
         return '#ffffff';
       default:

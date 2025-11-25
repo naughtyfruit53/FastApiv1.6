@@ -195,4 +195,16 @@ export const voucherService = {
       canRevise: true,
     };
   },
+  // New method to check if tracking details exist for a voucher
+  getHasTracking: async (type: string, id: number): Promise<boolean> => {
+    try {
+      const response = await api.get(`/${type}/${id}/tracking`);
+      console.log(`[voucherService] Tracking response for ${type} ${id}:`, response.data);
+      // Check if tracking details are present and non-empty
+      return !!response.data && !!response.data.tracking_number && response.data.tracking_number.trim() !== '';
+    } catch (error) {
+      console.error(`Error checking tracking for ${type} ${id}:`, error);
+      return false;
+    }
+  },
 };
