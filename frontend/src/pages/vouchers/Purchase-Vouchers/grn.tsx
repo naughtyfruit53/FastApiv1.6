@@ -360,6 +360,8 @@ const GoodsReceiptNotePage: React.FC = () => {
           rejected_quantity: item.rejected_quantity,
           unit_price: item.unit_price,
           po_item_id: item.po_item_id,
+          unit: item.unit,
+          total_cost: Number(item.accepted_quantity) * item.unit_price,
         })),
         purchase_order_id: data.purchase_order_id,
         voucher_number: data.voucher_number,
@@ -378,6 +380,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           accepted_quantity: Number(item.accepted_quantity) || 0,
           rejected_quantity: Number(item.rejected_quantity) || 0,
           unit_price: item.unit_price,
+          unit: item.unit,
           total_cost: Number(item.accepted_quantity) * item.unit_price,
         }));
       }
@@ -392,7 +395,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           <div>
             GRN created successfully!{' '}
             <Link href={`/vouchers/Purchase-Vouchers/grn?grn_id=${response.id}`}>
-              <a style={{ textDecoration: 'underline', color: 'white' }}>View GRN</a>
+              View GRN
             </Link>
           </div>,
           { autoClose: 5000 }
@@ -921,7 +924,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                                     product_name: productList?.find((p: any) => p.id === field.product_id)?.product_name || 'Unknown',
                                     ordered_quantity: item.ordered_quantity || 0,
                                     received_quantity: item.received_quantity || 0,
-                                    accepted_quantity: item.accepted_quantity || item.received_quantity || 0,
+                                    accepted_quantity: item.accepted_quantity || 0,
                                     rejected_quantity: item.rejected_quantity || 0,
                                     unit: item.unit || 'PCS',
                                   });
@@ -952,7 +955,7 @@ const GoodsReceiptNotePage: React.FC = () => {
         <DialogContent>
           <Typography>
             The GRN for this Purchase Order is already complete.{' '}
-            <Link href={`/vouchers/Purchase-Vouchers/grn?grn_id=${existingGrnId}`} passHref>
+            <Link href={`/vouchers/Purchase-Vouchers/grn?grn_id=${existingGrnId}`}>
               View the existing GRN
             </Link>
             .
