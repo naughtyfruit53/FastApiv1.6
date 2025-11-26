@@ -696,7 +696,7 @@ const GoodsReceiptNotePage: React.FC = () => {
               sx={{ '& .MuiInputBase-root': { height: 27 } }}
             />
           </Grid>
-          <Grid size={3}>
+          <Grid size={6}>
             {mode === 'view' ? (
               <TextField
                 fullWidth
@@ -808,7 +808,7 @@ const GoodsReceiptNotePage: React.FC = () => {
               />
             )}
           </Grid>
-          <Grid size={12}>
+          <Grid size={8}>
             <TextField
               fullWidth
               label="Notes"
