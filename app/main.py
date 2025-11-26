@@ -270,9 +270,9 @@ async def lifespan(app: FastAPI):
     if os.path.exists("app/static"):
         app.mount("/static", StaticFiles(directory="app/static"), name="static")
         logger.info("Mounted /static directory")
-    if os.path.exists("Uploads"):
-        app.mount("/Uploads", StaticFiles(directory="Uploads"), name="uploads")
-        logger.info("Mounted /Uploads directory")
+    if os.path.exists("uploads"):
+        app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+        logger.info("Mounted /uploads directory")
     
     # Schedule non-essential inits as background tasks to speed up startup
     background_tasks = BackgroundTasks()

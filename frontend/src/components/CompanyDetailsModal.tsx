@@ -22,7 +22,7 @@ import { companyService } from "../services/authService";
 import { usePincodeLookup } from "../hooks/usePincodeLookup";
 import CompanyLogoUpload from "./CompanyLogoUpload";
 import BankAccountModal from "./BankAccountModal";
-import axios from "axios";
+import api from "../lib/api";  // Changed to default import
 
 interface CompanyDetailsModalProps {
   open: boolean;
@@ -127,10 +127,7 @@ const CompanyDetailsModal: React.FC<CompanyDetailsModalProps> = ({
 
   const checkBankAccountsExist = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/erp/bank-accounts", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/erp/bank-accounts');
       return response.data && response.data.length > 0;
     } catch (err) {
       console.error("Failed to check bank accounts:", err);

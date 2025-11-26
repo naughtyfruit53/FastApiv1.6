@@ -906,6 +906,7 @@ async def get_bank_accounts(
     is_active: Optional[bool] = Query(None),
     db: AsyncSession = Depends(get_db),
     auth: tuple = Depends(require_access("erp", "read")),
+    _ : None = Depends(validate_company_setup)
 ):
     """Get bank accounts with filtering options"""
     current_user, organization_id = auth
@@ -927,6 +928,7 @@ async def create_bank_account(
     bank_account: BankAccountCreate,
     db: AsyncSession = Depends(get_db),
     auth: tuple = Depends(require_access("erp", "create")),
+    _ : None = Depends(validate_company_setup)
 ):
     """Create a new bank account"""
     current_user, organization_id = auth
@@ -971,6 +973,7 @@ async def update_bank_account(
     bank_account_data: BankAccountUpdate,
     db: AsyncSession = Depends(get_db),
     auth: tuple = Depends(require_access("erp", "update")),
+    _ : None = Depends(validate_company_setup)
 ):
     """Update an existing bank account"""
     current_user, organization_id = auth

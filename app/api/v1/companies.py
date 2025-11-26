@@ -18,6 +18,7 @@ import os
 import uuid
 import shutil
 from app.api.v1.auth import get_current_active_user
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -206,6 +207,8 @@ async def update_company(
 ):
     """Update company details with enhanced validation"""
     
+    current_user, org_id = auth  # Unpack auth to define current_user and org_id
+    
     stmt = select(Company).where(Company.id == company_id)
     result = await db.execute(stmt)
     company = result.scalar_one_or_none()
@@ -225,6 +228,13 @@ async def update_company(
         logger.info(f"Company {company.name} updated by {current_user.email}")
         return company
         
+    except IntegrityError as e:
+        await db.rollback()
+        logger.error(f"Integrity error updating company: {str(e.orig)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Required field cannot be empty or invalid data provided."
+        )
     except Exception as e:
         await db.rollback()
         logger.error(f"Error updating company: {str(e)}")
@@ -240,6 +250,8 @@ async def delete_company(
     db: AsyncSession = Depends(get_db)
 ):
     """Delete company (admin only)"""
+    
+    current_user, org_id = auth  # Unpack auth to define current_user and org_id
     
     stmt = select(Company).where(Company.id == company_id)
     result = await db.execute(stmt)
@@ -311,7 +323,6 @@ async def export_companies_excel(
             "email": company.email or "",
             "gst_number": company.gst_number or "",
             "pan_number": company.pan_number or "",
-            "registration_number": company.registration_number or "",
             "business_type": company.business_type or "",
             "industry": company.industry or "",
             "website": company.website or "",
@@ -621,5 +632,81 @@ async def remove_user_from_company(
     await db.commit()
     
     return {"message": "User removed from company successfully"}
+
+@router.post("/{company_id}/logo")
+async def upload_company_logo(
+    company_id: int,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Upload or update company logo"""
+    try:
+        # First, get or create company
+        stmt = select(Company).where(Company.id == company_id)
+        result = await db.execute(stmt)
+        company = result.scalar_one_or_none()
+        
+        if not company:
+            # Create default company if not exists
+            company = Company(
+                id=company_id,
+                organization_id=current_user.organization_id,
+                name="Default Company",  # Placeholder, can be updated later
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            db.add(company)
+            await db.commit()
+            await db.refresh(company)
+            logger.info(f"Created default company {company_id} for logo upload")
+        
+        # Validate file type
+        file_extension = file.filename.split('.')[-1].lower()
+        allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'svg'}
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid image file type. Supported: {', '.join(allowed_extensions)}"
+            )
+        
+        # Create upload directory if not exists
+        upload_dir = "./uploads/company_logos"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Generate unique filename
+        filename = f"logo_{company_id}_{uuid.uuid4()}.{file_extension}"
+        file_path = os.path.join(upload_dir, filename)
+        
+        # Save file
+        contents = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        
+        # Delete old logo if exists
+        if company.logo_path:
+            old_path = "." + company.logo_path
+            if os.path.exists(old_path):
+                os.remove(old_path)
+                logger.info(f"Removed old logo: {old_path}")
+        
+        # Update company with new logo path
+        company.logo_path = f"/uploads/company_logos/{filename}"
+        company.updated_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(company)
+        
+        logger.info(f"Logo uploaded successfully for company {company_id} by user {current_user.id}")
+        
+        return {"logo_path": company.logo_path}
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error uploading logo for company {company_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload logo. Please try again."
+        )
 
 logger.info("Companies router loaded")
