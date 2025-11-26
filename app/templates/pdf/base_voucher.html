@@ -186,19 +186,25 @@
                         <tr>
                             <!-- TOP LEFT: Company details -->
                             <td id="block-1">
-                                <div class="block-inner" style="display: flex; align-items: flex-start;">
-                                    {% if company.logo_url %}
-                                    <img src="{{ company.logo_url }}" style="width: 50px; height: 50px; margin-right: 10px; object-fit: contain;">
-                                    {% endif %}
-                                    <div>
-                                        <div style="font-weight:700; font-size:12px;">{{ company.name|upper }}</div>
-                                        <div>{{ company.address1 }}{% if company.address2 %}, {{ company.address2 }}{% endif %}</div>
-                                        <div>{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %}, {{ company.pin_code }}{% endif %}</div>
-                                        {% if company.gst_number %}<div>GSTIN: {{ company.gst_number }}</div>{% endif %}
-                                        {% if company.contact_number %}<div>Contact: {{ company.contact_number }}</div>{% endif %}
-                                        {% if company.email %}<div>Email: {{ company.email }}</div>{% endif %}
-                                        {% if company.pan_number %}<div>Company’s PAN: {{ company.pan_number }}</div>{% endif %}
-                                    </div>
+                                <div class="block-inner">
+                                    <table style="width: 100%; border-collapse: collapse; border: none;">
+                                        <tr>
+                                            <td style="width: 20%; vertical-align: top; border: none;">
+                                                {% if company.logo_url %}
+                                                <img src="{{ company.logo_url }}" style="max-width: 50px; max-height: 50px; object-fit: contain;">
+                                                {% endif %}
+                                            </td>
+                                            <td style="width: 80%; vertical-align: top; border: none;">
+                                                <div style="font-weight:700; font-size:12px;">{{ company.name|upper }}</div>
+                                                <div>{{ company.address1 }}{% if company.address2 %}, {{ company.address2 }}{% endif %}</div>
+                                                <div>{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %}, {{ company.pin_code }}{% endif %}</div>
+                                                {% if company.gst_number %}<div>GSTIN: {{ company.gst_number }}</div>{% endif %}
+                                                {% if company.contact_number %}<div>Contact: {{ company.contact_number }}</div>{% endif %}
+                                                {% if company.email %}<div>Email: {{ company.email }}</div>{% endif %}
+                                                {% if company.pan_number %}<div>Company’s PAN: {{ company.pan_number }}</div>{% endif %}
+                                            </td>
+                                        </tr>
+                                    </table>
                                 </div>
                             </td>
                             <!-- TOP RIGHT: meta table (no outer border, row separators only) -->

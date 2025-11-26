@@ -130,19 +130,25 @@
                             <!-- TOP LEFT: Company info with logo -->
                             <td id="block-1">
                                 <div class="block-inner">
-                                    {% if company.logo_url %}
-                                    <div style="margin-bottom:8px;">
-                                        <img src="{{ company.logo_url }}" alt="Company Logo" style="max-width:120px; max-height:50px;" />
-                                    </div>
-                                    {% endif %}
-                                    <div style="font-weight:700; font-size:13px; color:#667eea;">{{ company.name|upper }}</div>
-                                    <div style="margin-top:4px; line-height:1.3;">
-                                        {{ company.address }}<br>
-                                        {% if company.city %}{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %} - {{ company.pin_code }}{% endif %}<br>{% endif %}
-                                        {% if company.phone %}Phone: {{ company.phone }}<br>{% endif %}
-                                        {% if company.email %}Email: {{ company.email }}<br>{% endif %}
-                                        {% if company.gst_number %}<strong>GSTIN:</strong> {{ company.gst_number }}<br>{% endif %}
-                                    </div>
+                                    <table style="width: 100%; border-collapse: collapse; border: none;">
+                                        <tr>
+                                            <td style="width: 20%; vertical-align: top; border: none;">
+                                                {% if company.logo_url %}
+                                                <img src="{{ company.logo_url }}" alt="Company Logo" style="max-width:120px; max-height:50px; object-fit: contain;" />
+                                                {% endif %}
+                                            </td>
+                                            <td style="width: 80%; vertical-align: top; border: none;">
+                                                <div style="font-weight:700; font-size:13px; color:#667eea;">{{ company.name|upper }}</div>
+                                                <div style="margin-top:4px; line-height:1.3;">
+                                                    {{ company.address1 }}{% if company.address2 %}, {{ company.address2 }}{% endif %}<br>
+                                                    {{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %} - {{ company.pin_code }}{% endif %}<br>
+                                                    {% if company.phone %}Phone: {{ company.phone }}<br>{% endif %}
+                                                    {% if company.email %}Email: {{ company.email }}<br>{% endif %}
+                                                    {% if company.gst_number %}<strong>GSTIN:</strong> {{ company.gst_number }}<br>{% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
                                 </div>
                             </td>
                             <!-- TOP RIGHT: meta table -->
@@ -196,7 +202,7 @@
                                     {% if voucher.shipping_address.contact %}<div>Contact: {{ voucher.shipping_address.contact }}</div>{% endif %}
                                     {% if voucher.shipping_address.email %}<div>Email: {{ voucher.shipping_address.email }}</div>{% endif %}
                                     {% if voucher.shipping_address.gst_number %}<div>GSTIN: {{ voucher.shipping_address.gst_number }}</div>{% endif %}
-                                    {% if voucher.shipping_address.pan_number %}<div>PAN: {{ voucher.shipping_address.pan_number }}</div>{% endif %}
+                                    {% if voucher.shipping_address.pan_number %}<div>PAN/IT No: {{ voucher.shipping_address.pan_number }}</div>{% endif %}
                                     {% else %}
                                     {% if party %}
                                     <div style="font-weight:600;">{{ party.name|upper }}</div>
@@ -204,7 +210,7 @@
                                     {% if party.contact_number %}<div>Contact: {{ party.contact_number }}</div>{% endif %}
                                     {% if party.email %}<div>Email: {{ party.email }}</div>{% endif %}
                                     {% if party.gst_number %}<div>GSTIN: {{ party.gst_number }}</div>{% endif %}
-                                    {% if party.pan_number %}<div>PAN: {{ party.pan_number }}</div>{% endif %}
+                                    {% if party.pan_number %}<div>PAN/IT No: {{ party.pan_number }}</div>{% endif %}
                                     {% else %}
                                     <div style="font-weight:600;">(Same as Bill To)</div>
                                     {% endif %}
@@ -222,13 +228,13 @@
                 <table class="items-table" role="table">
                     <thead>
                         <tr>
-                            <th class="col-sr">Sr No.</th>
-                            <th class="col-product">Product Name</th>
+                            <th class="col-sr">#</th>
+                            <th class="col-product">Description</th>
                             <th class="col-hsn">HSN</th>
-                            <th class="col-qty">Quantity</th>
+                            <th class="col-qty">Qty</th>
                             <th class="col-rate">Rate</th>
                             {% if line_discount_enabled %}<th class="col-disc">Disc</th>{% endif %}
-                            <th class="col-gst">GST%</th>
+                            <th class="col-gst">Tax</th>
                             <th class="col-line">Amount</th>
                         </tr>
                     </thead>
@@ -238,12 +244,12 @@
                         <tr>
                             <td class="col-sr">{{ loop.index }}</td>
                             <td class="col-product">{{ item.product_name|default(item.description, 'Product') }}</td>
-                            <td class="col-hsn">{{ item.hsn_code|default('-') }}</td>
-                            <td class="col-qty num">{% if item.quantity > 0 %}{{ "%.2f"|format(item.quantity|float) }} {{ item.unit|default('Nos') }}{% else %}-{% endif %}</td>
+                            <td class="col-hsn">{{ item.hsn_code|default('—') }}</td>
+                            <td class="col-qty num">{% if item.quantity > 0 %}{{ "%.2f"|format(item.quantity|float) }} {{ item.unit|default('Nos') }}{% else %}—{% endif %}</td>
                             <td class="col-rate num">{{ item.unit_price|format_currency(show_symbol=True) }}</td>
                             {% if line_discount_enabled %}
                             <td class="col-disc num">
-                                {% if item.discount_percentage > 0 %}{{ item.discount_percentage }}%{% elif item.discount_amount > 0 %}{{ item.discount_amount|format_currency(show_symbol=True) }}{% else %}-{% endif %}
+                                {% if item.discount_percentage > 0 %}{{ item.discount_percentage }}%{% elif item.discount_amount > 0 %}{{ item.discount_amount|format_currency(show_symbol=True) }}{% else %}—{% endif %}
                             </td>
                             {% endif %}
                             <td class="col-gst num">{{ item.gst_rate|format_percentage }}%</td>
@@ -252,14 +258,14 @@
                         {% endfor %}
                         {% else %}
                         <tr>
-                            <td colspan="{% if line_discount_enabled %}8{% else %}7{% endif %}" class="text-center">No items available</td>
+                            <td colspan="{% if line_discount_enabled %}8{% else %}7{% endif %}" class="text-center">No items</td>
                         </tr>
                         {% endif %}
                     </tbody>
                     <tfoot>
                         <tr>
                             <td></td>
-                            <td style="font-weight:600;">Totals</td>
+                            <td style="text-align:right;">Subtotal</td>
                             <td></td>
                             <td class="num">{{ total_quantity|default(0) }}</td>
                             <td></td>
@@ -275,22 +281,23 @@
                     <tr>
                         <td class="left-side">
                             {% block totals_left %}
-                            <div style="font-weight:700; color:#667eea; margin-bottom:6px;">Company's Bank Details</div>
+                            <div class="section-header" style="color:#212529;">Bank Details</div>
                             {% if company.bank_details %}
-                            <div style="line-height:1.4;">
-                                <div><strong>A/c Holder:</strong> {{ company.bank_details.holder_name|default(company.name) }}</div>
-                                <div><strong>A/c No.:</strong> {{ company.bank_details.account_number }}</div>
-                                <div><strong>IFSC:</strong> {{ company.bank_details.ifsc }}</div>
-                                <div><strong>Bank:</strong> {{ company.bank_details.bank_name }} ({{ company.bank_details.branch }})</div>
+                            <div style="line-height:1.6; font-size:10.5px; color:#495057;">
+                                <div><strong style="color:#212529;">Account:</strong> {{ company.bank_details.holder_name|default(company.name) }}</div>
+                                <div><strong style="color:#212529;">Number:</strong> {{ company.bank_details.account_number }}</div>
+                                <div><strong style="color:#212529;">IFSC:</strong> {{ company.bank_details.ifsc }}</div>
+                                <div><strong style="color:#212529;">Bank:</strong> {{ company.bank_details.bank_name }}</div>
+                                <div><strong style="color:#212529;">Branch:</strong> {{ company.bank_details.branch }}</div>
                             </div>
                             {% endif %}
-                            {% if company.pan_number %}<div style="margin-top:6px; font-size:10px; color:#718096;">PAN: {{ company.pan_number }}</div>{% endif %}
+                            {% if company.pan_number %}<div style="margin-top:10px; font-size:10px; color:#6c757d;"><strong style="color:#212529;">PAN:</strong> {{ company.pan_number }}</div>{% endif %}
                             {% endblock %}
                         </td>
                         <td class="totals">
                             <table>
                                 <tbody>
-                                    <tr><td class="muted">Taxable Value</td><td class="right num">{{ total_taxable|format_currency(show_symbol=True) }}</td></tr>
+                                    <tr><td class="muted">Taxable Amount</td><td class="right num">{{ total_taxable|format_currency(show_symbol=True) }}</td></tr>
                                     {% if is_interstate %}
                                     <tr><td class="muted">IGST @ {{ voucher.gst_rate|default(18) }}%</td><td class="right num">{{ total_igst|format_currency(show_symbol=True) }}</td></tr>
                                     {% else %}
@@ -298,7 +305,7 @@
                                     <tr><td class="muted">SGST @ {{ voucher.gst_rate|default(9) }}%</td><td class="right num">{{ total_sgst|format_currency(show_symbol=True) }}</td></tr>
                                     {% endif %}
                                     <tr><td class="muted">Round Off</td><td class="right num">{{ round_off|format_currency(show_symbol=True) }}</td></tr>
-                                    <tr style="border-top:2px solid #667eea;"><td style="font-weight:700; color:#2c3e50;">Total</td><td class="right num" style="font-weight:700; color:#667eea; font-size:13px;">{{ grand_total|format_currency(show_symbol=True) }}</td></tr>
+                                    <tr><td class="muted">Total</td><td class="right num">{{ grand_total|format_currency(show_symbol=True) }}</td></tr>
                                 </tbody>
                             </table>
                         </td>
@@ -308,7 +315,7 @@
                 <!-- Amount in words -->
                 {% block amount_words_block %}
                 <div class="amount-words">
-                    <div class="label">Total (In Words):</div>
+                    <div class="label">Amount in Words</div>
                     <div class="words">{{ amount_in_words }}</div>
                 </div>
                 {% endblock %}
@@ -317,7 +324,7 @@
                 {% block terms_block %}
                 {% if terms_conditions %}
                 <div class="terms">
-                    <div style="font-weight:700; color:#d68910; margin-bottom:6px;">Terms & Conditions</div>
+                    <div class="terms-title">Terms & Conditions</div>
                     <table>
                         <tbody>
                             {% for term in terms_conditions.split('\n') %}
@@ -334,11 +341,10 @@
                 <!-- Signatures -->
                 {% block signatures_block %}
                 <div class="signatures">
-                    <div style="width:50%;"></div>
-                    <div style="width:50%; text-align:right;">
-                        <div style="font-weight:600; color:#667eea;">For {{ company.name|upper }}</div>
-                        <div style="height:30px;"></div>
-                        <div style="border-top:2px solid #2c3e50; display:inline-block; padding-top:4px; min-width:200px;">Authorized Signature</div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:400; color:#6c757d; margin-bottom:8px; font-size:10px; text-transform:uppercase; letter-spacing:0.5px;">For {{ company.name }}</div>
+                        <div style="height:40px;"></div>
+                        <div style="border-top:1px solid #212529; padding-top:6px; font-weight:600; color:#212529; min-width:180px; display:inline-block;">Authorized Signatory</div>
                     </div>
                 </div>
                 {% endblock %}

@@ -137,19 +137,25 @@
                             <!-- TOP LEFT: Company info with logo -->
                             <td id="block-1">
                                 <div class="block-inner">
-                                    {% if company.logo_url %}
-                                    <div style="margin-bottom:12px;">
-                                        <img src="{{ company.logo_url }}" alt="Company Logo" style="max-width:130px; max-height:55px;" />
-                                    </div>
-                                    {% endif %}
-                                    <div style="font-weight:600; font-size:13px; color:#212529; margin-bottom:8px;">{{ company.name }}</div>
-                                    <div style="line-height:1.5; color:#6c757d; font-size:10.5px;">
-                                        {{ company.address }}<br>
-                                        {% if company.city %}{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %} {{ company.pin_code }}{% endif %}<br>{% endif %}
-                                        {% if company.phone %}{{ company.phone }}{% if company.email %} • {% endif %}{% endif %}
-                                        {% if company.email %}{{ company.email }}<br>{% endif %}
-                                        {% if company.gst_number %}<span style="font-weight:600; color:#212529;">GSTIN:</span> {{ company.gst_number }}{% endif %}
-                                    </div>
+                                    <table style="width: 100%; border-collapse: collapse; border: none;">
+                                        <tr>
+                                            <td style="width: 20%; vertical-align: top; border: none;">
+                                                {% if company.logo_url %}
+                                                <img src="{{ company.logo_url }}" alt="Company Logo" style="max-width:130px; max-height:55px; object-fit: contain;" />
+                                                {% endif %}
+                                            </td>
+                                            <td style="width: 80%; vertical-align: top; border: none;">
+                                                <div style="font-weight:600; font-size:13px; color:#212529; margin-bottom:8px;">{{ company.name }}</div>
+                                                <div style="line-height:1.5; color:#6c757d; font-size:10.5px;">
+                                                    {{ company.address1 }}{% if company.address2 %}, {{ company.address2 }}{% endif %}<br>
+                                                    {{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %} {{ company.pin_code }}{% endif %}<br>
+                                                    {% if company.phone %}{{ company.phone }}{% if company.email %} • {% endif %}{% endif %}
+                                                    {% if company.email %}{{ company.email }}<br>{% endif %}
+                                                    {% if company.gst_number %}<span style="font-weight:600; color:#212529;">GSTIN:</span> {{ company.gst_number }}{% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </table>
                                 </div>
                             </td>
                             <!-- TOP RIGHT: meta table -->
@@ -212,7 +218,7 @@
                                     <div>{{ party.address }}{% if party.city %}, {{ party.city }}{% endif %}{% if party.state %}, {{ party.state }}{% endif %}{% if party.pin_code %} - {{ party.pin_code }}{% endif %}</div>
                                     {% if party.contact_number %}<div>Contact: {{ party.contact_number }}</div>{% endif %}
                                     {% if party.email %}<div>Email: {{ party.email }}</div>{% endif %}
-                                    {% if party.gst_number %}<div>GSTIN/UIN: {{ party.gst_number }}</div>{% endif %}
+                                    {% if party.gst_number %}<div>GSTIN: {{ party.gst_number }}</div>{% endif %}
                                     {% if party.pan_number %}<div>PAN/IT No: {{ party.pan_number }}</div>{% endif %}
                                     {% else %}
                                     <div style="font-weight:600;">(Same as Bill To)</div>
