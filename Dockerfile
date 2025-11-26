@@ -23,6 +23,7 @@ WORKDIR /app
 # Add retry logic for apt-get in runtime stage
 RUN for i in $(seq 1 5); do apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    bash \  
     fontconfig \
     libfontconfig1 \
     libmupdf-dev \
