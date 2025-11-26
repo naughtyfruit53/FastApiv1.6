@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 from app.core.config import settings as config_settings
-from app.core.database import create_tables, AsyncSessionLocal
+from app.core.database import create_tables, AsyncSessionLocal, async_engine  # Add async_engine import
 from app.core.seed_super_admin import seed_super_admin
 from app.db.session import SessionLocal
 from sqlalchemy import select, text
@@ -283,7 +283,9 @@ async def lifespan(app: FastAPI):
     background_tasks.add_task(seed_and_sync_entitlements, background_tasks)  # New: Seed and sync entitlements
     
     yield
-    # Shutdown
+    # Shutdown: Close connection pool explicitly
+    await async_engine.dispose()
+    logger.info("Database engine disposed and connections closed during shutdown")
 
 # Create FastAPI app
 app = FastAPI(

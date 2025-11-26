@@ -7,9 +7,8 @@ import logging
 import os
 import json
 import asyncio
-import urllib.parse
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSessionLocal
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.engine.url import make_url
@@ -425,3 +424,9 @@ async def create_tables():
             log_memory_usage("After table creation")
         except NameError:
             logger.warning("log_memory_usage not available, skipping memory logging")
+
+# NEW: Explicit dispose function for shutdown
+async def dispose_engine():
+    """Dispose of the async engine pool during shutdown"""
+    await async_engine.dispose()
+    logger.info("Database engine disposed successfully")

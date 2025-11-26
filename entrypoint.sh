@@ -2,6 +2,15 @@
 
 set -e
 
+# Graceful shutdown handler
+shutdown() {
+    echo "Shutdown signal received, waiting for processes to finish..."
+    wait $GUNICORN_PID
+    echo "Shutdown complete"
+}
+
+trap 'shutdown' SIGTERM SIGINT
+
 # Log PORT for debugging
 echo "Using PORT: ${PORT:-8000}"
 
@@ -15,7 +24,7 @@ log_memory_usage() {
         echo "Total: $((mem_total / 1024))MB, Used: $((mem_used / 1024))MB, Free: $((mem_free / 1024))MB"
     fi
     if command -v ps >/dev/null 2>&1; then
-        total_rss=$(ps -u appuser -o rss | awk '{sum+=$1} END {print sum}')
+        total_rss=$(ps -e -o rss | awk '{sum+=$1} END {print sum}')
         if [ -n "$total_rss" ]; then
             echo "Total process memory: $((total_rss / 1024))MB"
         fi
@@ -83,4 +92,6 @@ fi
 log_memory_usage "Before Gunicorn start"
 
 # Start Gunicorn with bind handled here (expansion works in shell)
-exec gunicorn --bind 0.0.0.0:${PORT:-8000} $GUNICORN_CMD_ARGS app.main:app
+gunicorn --bind 0.0.0.0:${PORT:-8000} $GUNICORN_CMD_ARGS app.main:app &
+GUNICORN_PID=$!
+wait $GUNICORN_PID
