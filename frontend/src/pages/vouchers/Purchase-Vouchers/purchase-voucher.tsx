@@ -58,6 +58,7 @@ const PurchaseVoucherPage: React.FC = () => {
   const { company, isLoading: companyLoading, error: companyError, refetch: refetchCompany } = useCompany();
   const { isOrgContextReady } = useAuth();
   const router = useRouter();
+  console.log('router.query:', router.query);  // Debug log for query params
   const { productId, vendorId, from_grn_id } = router.query;
   const config = getVoucherConfig("purchase-voucher");
   const voucherStyles = getVoucherStyles();
@@ -315,8 +316,8 @@ const PurchaseVoucherPage: React.FC = () => {
   useEffect(() => {
     if (mode === "create" && !nextVoucherNumber && !isLoading) {
       voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
-        .then((number) => setValue("voucher_number", number))
-        .catch((err) => console.error("Failed to fetch voucher number:", err));
+        .then(number => setValue("voucher_number", number))
+        .catch(err => console.error("Failed to fetch voucher number:", err));
     }
   }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
 
@@ -521,6 +522,10 @@ const PurchaseVoucherPage: React.FC = () => {
   }, [watch('date'), mode, setValue]);
 
   const onSubmit = async (data: any) => {
+    console.log('data.grn_id:', data.grn_id);  // Specific log for grn_id
+    console.log('Submitting data:', JSON.stringify(data, null, 2));  // Debug log for submit data
+    data.grn_id = watch('grn_id') || Number(from_grn_id) || null;  // Ensure grn_id is set
+    console.log('Final data.grn_id:', data.grn_id);  // Verify
     if (totalRoundOff !== 0) {
       setSubmitData(data);
       setRoundOffConfirmOpen(true);
@@ -545,6 +550,9 @@ const PurchaseVoucherPage: React.FC = () => {
       config,
       additionalCharges
     );
+    if (data.grn_id) {
+      queryClient.invalidateQueries(['goods-receipt-notes']);
+    }
   };
 
   const handleCancel = () => {
@@ -705,8 +713,11 @@ const PurchaseVoucherPage: React.FC = () => {
   });
 
   useEffect(() => {
+    console.log('from_grn_id:', from_grn_id);  // Debug log
     if (grnData && mode === 'create') {
+      console.log('Pre-populating from GRN:', grnData);
       setValue('vendor_id', grnData.vendor_id);
+      setValue('grn_id', Number(from_grn_id));  // Ensure grn_id is set
       setValue('reference', `GRN ${grnData.voucher_number}`);
       setValue('date', new Date().toISOString().split('T')[0]);
 
@@ -768,6 +779,7 @@ const PurchaseVoucherPage: React.FC = () => {
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{displayDate}</TableCell>
                   <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>₹{voucher.total_amount.toLocaleString()}</TableCell>
                   <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
                     <VoucherContextMenu
                       voucher={voucher}
@@ -817,6 +829,8 @@ const PurchaseVoucherPage: React.FC = () => {
         </Alert>
       )}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherFormStyles.formContainer}>
+        {/* Hidden field for grn_id */}
+        <input type="hidden" {...control.register("grn_id")} />
         <Grid container spacing={1}>
           <Grid size={4}>
             <TextField 
@@ -891,7 +905,7 @@ const PurchaseVoucherPage: React.FC = () => {
                   {...params} 
                   label="Vendor" 
                   error={!!errors.vendor_id} 
-                  helperText={errors.vendor_id ? "Required" : ""} 
+                  helperText={errors.vendor_id ? "Required" : "" } 
                   sx={voucherFormStyles.field} 
                   InputLabelProps={{ shrink: true }} 
                 />

@@ -134,6 +134,8 @@ class PurchaseVoucher(BaseVoucher):
     __table_args__ = (
         # Unique voucher number per organization
         UniqueConstraint('organization_id', 'voucher_number', name='uq_pv_org_voucher_number'),
+        # Prevent duplicate PV per GRN (allows null grn_id)
+        UniqueConstraint('organization_id', 'grn_id', name='uq_pv_org_grn'),
         Index('idx_pv_org_vendor', 'organization_id', 'vendor_id'),
         Index('idx_pv_org_po', 'organization_id', 'purchase_order_id'),
         Index('idx_pv_org_grn', 'organization_id', 'grn_id'),
@@ -169,6 +171,8 @@ class PurchaseReturn(BaseVoucher):
     __table_args__ = (
         # Unique voucher number per organization
         UniqueConstraint('organization_id', 'voucher_number', name='uq_pr_org_voucher_number'),
+        # Prevent duplicate PR per GRN (allows null grn_id)
+        UniqueConstraint('organization_id', 'grn_id', name='uq_pr_org_grn'),
         Index('idx_pr_org_vendor', 'organization_id', 'vendor_id'),
         Index('idx_purchase_return_org_date', 'organization_id', 'date'),  # Changed name to avoid conflict
     )

@@ -895,11 +895,11 @@ export const getVoucherStyles = (): any => ({
         textAlign: "center" as const,
       },
     },
-    "& .MuiFormLabel-root": {
+    "& .MuiFormLabelRoot": {
       textAlign: "center" as const,
     },
     // Enhanced dropdown width for voucher numbers
-    "& .voucher-dropdown": {
+    "& .voucherDropdown": {
       minWidth: `${UI_CONSTANTS.WIDTH.VOUCHER_MIN}px`,
       "& .MuiSelect-select": {
         minWidth: `${UI_CONSTANTS.WIDTH.VOUCHER_MIN - 20}px`,
@@ -909,7 +909,7 @@ export const getVoucherStyles = (): any => ({
       },
     },
     // Reference dropdown width
-    "& .reference-dropdown": {
+    "& .referenceDropdown": {
       minWidth: `${UI_CONSTANTS.WIDTH.REFERENCE_MIN}px`,
       "& .MuiSelect-select": {
         minWidth: `${UI_CONSTANTS.WIDTH.REFERENCE_MIN - 20}px`,
@@ -961,7 +961,7 @@ export const getVoucherStyles = (): any => ({
     "& .MuiInputBase-input": {
       textAlign: "center" as const,
     },
-    "& .MuiFormLabel-root": {
+    "& .MuiFormLabelRoot": {
       display: "block !important",
       visibility: "visible !important",
     },
@@ -1165,7 +1165,7 @@ export const getVoucherStyles = (): any => ({
           },
         },
       },
-      "& .MuiInputLabel-root": {
+      "& .MuiInputLabelRoot": {
         color: "#666",
         "&.Mui-focused": {
           color: "#2196F3",

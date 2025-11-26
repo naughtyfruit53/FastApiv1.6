@@ -142,6 +142,7 @@ async def create_purchase_voucher(
     try:
         # Check if a purchase voucher already exists for this GRN
         if voucher.grn_id:
+            logger.debug(f"Creating PV with grn_id: {voucher.grn_id}")
             stmt = select(PurchaseVoucher).where(
                 PurchaseVoucher.grn_id == voucher.grn_id,
                 PurchaseVoucher.organization_id == org_id

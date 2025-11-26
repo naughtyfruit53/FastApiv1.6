@@ -41,7 +41,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
-import { green, yellow, red, orange, blue } from '@mui/material/colors';
+import { green, yellow, red, orange, blue, grey } from '@mui/material/colors';
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
 const GoodsReceiptNotePage: React.FC = () => {
@@ -557,11 +557,15 @@ const GoodsReceiptNotePage: React.FC = () => {
 
   // Handlers for new menu options
   const handleCreatePurchaseVoucher = (grn: any) => {
+    console.log('[handleCreatePurchaseVoucher] Creating PV for GRN:', grn.id);  // Debug log
     if (grn.has_purchase_voucher) {
       toast.error('Purchase Voucher already created');
       return;
     }
-    router.push(`/vouchers/Purchase-Vouchers/purchase-voucher?from_grn_id=${grn.id}`);
+    router.push({
+      pathname: '/vouchers/Purchase-Vouchers/purchase-voucher',
+      query: { from_grn_id: grn.id }
+    });
   };
 
   const handleCreateRejectionNote = (grn: any) => {
@@ -572,7 +576,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     router.push(`/vouchers/Purchase-Vouchers/purchase-return?from_grn_id=${grn.id}`);
   };
 
-  const colors = { green, yellow, red, orange, blue };
+  const colors = { green, yellow, red, orange, blue, pending: grey };
 
   const indexContent = (
     <>
@@ -594,12 +598,16 @@ const GoodsReceiptNotePage: React.FC = () => {
             ) : (
               latestVouchers.slice(0, 7).map((voucher: any) => {
                 console.log('Voucher in table:', voucher);
+                // Add debug log for color_status
+                console.log(`GRN ${voucher.voucher_number} color_status: ${voucher.color_status}`);
+                const appliedColor = voucher.color_status ? colors[voucher.color_status][300] : 'inherit';  // Darker for visibility
+                console.log('Applying bgcolor:', appliedColor);
                 return (
                   <TableRow 
                     key={voucher.id} 
                     hover 
                     onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }}
-                    sx={{ cursor: 'pointer', bgcolor: voucher.color_status ? colors[voucher.color_status][100] : 'inherit' }}
+                    sx={{ cursor: 'pointer', bgcolor: appliedColor }}
                   >
                     <TableCell align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleView(voucher.id)}>
                       {voucher.voucher_number}
@@ -662,7 +670,7 @@ const GoodsReceiptNotePage: React.FC = () => {
         </Alert>
       )}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
-        <Grid container spacing={0.5}>
+        <Grid container spacing= {0.5}>
           <Grid size={6}>
             <TextField
               fullWidth
@@ -1071,7 +1079,7 @@ const GoodsReceiptNotePage: React.FC = () => {
             // Update the item with QC data
             const index = selectedQcItem.index;
             setValue(`items.${index}.accepted_quantity`, qcData.accepted_quantity);
-            setValue(`items.${index}.rejected_quantity`, qcData.rejected_quantity);
+            setValue(`items.${index}.rejected_quantity`, qcData.rejection_reason ? qcData.rejected_quantity : 0);
             
             // Store QC data for backend submission
             // This will be saved when the GRN is submitted

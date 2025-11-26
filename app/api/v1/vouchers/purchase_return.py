@@ -171,23 +171,41 @@ async def create_purchase_return(
                         f"discount_percentage={item_dict['discount_percentage']}, "
                         f"gst_rate={item_dict['gst_rate']}")
             
+            # Calculate taxable_amount if not provided
+            if 'taxable_amount' not in item_dict or item_dict['taxable_amount'] is None:
+                item_dict['taxable_amount'] = item_dict['quantity'] * item_dict['unit_price'] - item_dict.get('discount_amount', 0.0)
+            
+            taxable = item_dict['taxable_amount']
+            
+            # Calculate GST amounts if not provided
+            if 'cgst_amount' not in item_dict or item_dict['cgst_amount'] is None:
+                item_dict['cgst_amount'] = taxable * (item_dict['gst_rate'] / 200)
+            
+            if 'sgst_amount' not in item_dict or item_dict['sgst_amount'] is None:
+                item_dict['sgst_amount'] = taxable * (item_dict['gst_rate'] / 200)
+            
+            if 'igst_amount' not in item_dict or item_dict['igst_amount'] is None:
+                item_dict['igst_amount'] = 0.0
+            
+            cgst = item_dict['cgst_amount']
+            sgst = item_dict['sgst_amount']
+            igst = item_dict['igst_amount']
+            
+            # Set total_amount for item
+            item_dict['total_amount'] = taxable + cgst + sgst + igst
+            
             item = PurchaseReturnItem(
                 purchase_return_id=db_return.id,
                 **item_dict
             )
             db.add(item)
             
-            # Calculate totals
-            taxable = item.quantity * item.unit_price - item.discount_amount
-            cgst = taxable * (item.gst_rate / 200) if item.cgst_amount else 0
-            sgst = taxable * (item.gst_rate / 200) if item.sgst_amount else 0
-            igst = taxable * (item.gst_rate / 100) if item.igst_amount else 0
-            
-            total_amount += taxable + cgst + sgst + igst
+            # Update totals
+            total_amount += item.total_amount
             total_cgst += cgst
             total_sgst += sgst
             total_igst += igst
-            total_discount += item.discount_amount
+            total_discount += item_dict.get('discount_amount', 0.0)
             
             # Update stock (deduct returned quantity)
             stmt = select(Stock).where(
@@ -329,23 +347,41 @@ async def update_purchase_return(
                             f"discount_percentage={item_dict['discount_percentage']}, "
                             f"gst_rate={item_dict['gst_rate']}")
                 
+                # Calculate taxable_amount if not provided
+                if 'taxable_amount' not in item_dict or item_dict['taxable_amount'] is None:
+                    item_dict['taxable_amount'] = item_dict['quantity'] * item_dict['unit_price'] - item_dict.get('discount_amount', 0.0)
+                
+                taxable = item_dict['taxable_amount']
+                
+                # Calculate GST amounts if not provided
+                if 'cgst_amount' not in item_dict or item_dict['cgst_amount'] is None:
+                    item_dict['cgst_amount'] = taxable * (item_dict['gst_rate'] / 200)
+                
+                if 'sgst_amount' not in item_dict or item_dict['sgst_amount'] is None:
+                    item_dict['sgst_amount'] = taxable * (item_dict['gst_rate'] / 200)
+                
+                if 'igst_amount' not in item_dict or item_dict['igst_amount'] is None:
+                    item_dict['igst_amount'] = 0.0
+                
+                cgst = item_dict['cgst_amount']
+                sgst = item_dict['sgst_amount']
+                igst = item_dict['igst_amount']
+                
+                # Set total_amount for item
+                item_dict['total_amount'] = taxable + cgst + sgst + igst
+                
                 item = PurchaseReturnItem(
                     purchase_return_id=return_id,
                     **item_dict
                 )
                 db.add(item)
                 
-                # Calculate totals
-                taxable = item.quantity * item.unit_price - item.discount_amount
-                cgst = taxable * (item.gst_rate / 200) if item.cgst_amount else 0
-                sgst = taxable * (item.gst_rate / 200) if item.sgst_amount else 0
-                igst = taxable * (item.gst_rate / 100) if item.igst_amount else 0
-                
-                total_amount += taxable + cgst + sgst + igst
+                # Update totals
+                total_amount += item.total_amount
                 total_cgst += cgst
                 total_sgst += sgst
                 total_igst += igst
-                total_discount += item.discount_amount
+                total_discount += item_dict.get('discount_amount', 0.0)
                 
                 # Update stock (deduct new returned quantity)
                 stmt = select(Stock).where(

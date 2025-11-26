@@ -268,8 +268,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         );
       } else if (
         config.entityType === "purchase" &&
-        vendorList &&
-        selectedEntityId
+        vendorList && selectedEntityId
       ) {
         selectedEntity = vendorList.find((v: any) => v.id === selectedEntityId);
       }
@@ -374,7 +373,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
           voucher.line_discount_type,
           voucher.total_discount_type,
           voucher.total_discount || 0,
-          voucher.additional_charges || {},
         ).totalAmount,
       })),
   });
@@ -594,7 +592,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   };
 
   const sortedVouchers = useMemo(() => {
-    if (!voucherList || !Array.isArray(voucherList)) {
+    if (!voucherList) {
+      return [];
+    }
+    if (!Array.isArray(voucherList)) {
       console.warn(
         "[useVoucherPage] voucherList is not an array:",
         voucherList,
@@ -799,115 +800,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     },
     [setAddShippingLoading, setShowShippingModal],
   );
-
-  useEffect(() => {
-    if (
-      voucherData &&
-      (mode === "view" || mode === "edit" || mode === "revise")
-    ) {
-      console.log("[useVoucherPage] Loading voucher data:", voucherData);
-      const formattedDate = voucherData.date
-        ? new Date(voucherData.date).toISOString().split("T")[0]
-        : "";
-      let formattedData: any = {
-        ...voucherData,
-        date: formattedDate,
-      };
-      if (mode === "revise") {
-        formattedData = {
-          ...formattedData,
-          date: new Date().toISOString().split("T")[0],
-          voucher_number: `${voucherData.voucher_number} -rev ${
-            (voucherData.revision_number || 0) + 1
-          }`,
-          parent_id: voucherData.id,
-          revision_number: (voucherData.revision_number || 0) + 1,
-          id: undefined,
-        };
-      }
-      reset(formattedData);
-      if (
-        config.hasItems === false &&
-        voucherData.entity_id &&
-        voucherData.entity_type
-      ) {
-        setValue("entity", {
-          id: voucherData.entity_id,
-          type: voucherData.entity_type,
-          name: voucherData.entity?.name || "",
-          value: voucherData.entity_id,
-          label: voucherData.entity?.name || "",
-        });
-      }
-      if (config.hasItems !== false) {
-        setLineDiscountEnabled(!!voucherData.line_discount_type);
-        setLineDiscountType(voucherData.line_discount_type || null);
-        setTotalDiscountEnabled(!!voucherData.total_discount_type);
-        setTotalDiscountType(voucherData.total_discount_type || null);
-        setValue("total_discount", voucherData.total_discount || 0);
-      }
-      if (
-        config.hasItems !== false &&
-        voucherData.items &&
-        Array.isArray(voucherData.items)
-      ) {
-        const newItems = voucherData.items.map((item: any) => ({
-          ...item,
-          product_id: item.product_id,
-          product_name: item.product?.name || item.product_name || "Unknown Product",
-          unit_price: item.unit_price,
-          original_unit_price:
-            item.product?.unit_price || item.unit_price || 0,
-          discount_percentage: item.discount_percentage || 0,
-          discount_amount: item.discount_amount || 0,
-          gst_rate: item.gst_rate ?? 18,
-          unit: item.unit || item.product?.unit || "",
-          current_stock: item.current_stock || 0,
-          reorder_level: item.reorder_level || 0,
-          description: item.description || "",
-        }));
-        replace(newItems);
-        console.log("[useVoucherPage] Loaded items:", voucherData.items.length);
-      }
-    } else if (mode === "create") {
-      reset(defaultValues);
-    }
-  }, [
-    voucherData,
-    mode,
-    reset,
-    setValue,
-    defaultValues,
-    config.hasItems,
-    remove,
-    append,
-    replace,
-  ]);
-
-  useEffect(() => {
-    if (voucherList && Array.isArray(voucherList)) {
-      console.log(
-        `[useVoucherPage] Successfully fetched vouchers for ${config.voucherType}:`,
-        voucherList,
-      );
-      const sorted = voucherListUtils.sortLatestFirst(voucherList);
-      setFilteredVouchers(sorted);
-    }
-  }, [voucherList, config.voucherType]);
-
-  useEffect(() => {
-    if (isLoadingList === false && !voucherList) {
-      console.error(
-        `[useVoucherPage] Error fetching vouchers for ${config.voucherType}`,
-      );
-    }
-  }, [isLoadingList, voucherList, config.voucherType]);
-
-  useEffect(() => {
-    if (nextVoucherNumber && mode === "create") {
-      setValue("voucher_number", nextVoucherNumber);
-    }
-  }, [nextVoucherNumber, mode, setValue]);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {

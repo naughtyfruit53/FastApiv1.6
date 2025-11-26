@@ -1,7 +1,7 @@
 // frontend/src/components/MegaMenu.tsx
 
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -114,6 +114,53 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
   // Fetch entitlements for menu access control
   const authToken = typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
   const { entitlements } = useEntitlements(organizationData?.id, authToken || undefined);
+
+  // Precompute access for ALL menu items once on entitlements change
+  const precomputedAccess = useMemo(() => {
+    const accessMap = new Map<string, MenuItemAccess>();
+    const badgeMap = new Map<string, string | null>();
+    const tooltipMap = new Map<string, string | null>();
+
+    // Flatten ALL menu items across all menus
+    const allItems: any[] = [];
+    Object.values(menuItems).forEach((menu: any) => {
+      (menu.sections || []).forEach((section: any) => {
+        (section.subSections || []).forEach((subSection: any) => {
+          (subSection.items || []).forEach((item: any) => {
+            const itemKey = item.name || item.title || item.path;
+            if (itemKey) {
+              allItems.push({ ...item, key: itemKey });
+              if (item.subItems) {
+                item.subItems.forEach((subItem: any) => {
+                  const subKey = subItem.name || subItem.title || subItem.path;
+                  if (subKey) allItems.push({ ...subItem, key: subKey });
+                });
+              }
+            }
+          });
+        });
+      });
+    });
+
+    // Compute access/badge/tooltip for each unique item
+    allItems.forEach((item) => {
+      const params: MenuAccessParams = {
+        requireModule: item.requireModule,
+        requireSubmodule: item.requireSubmodule,
+        entitlements,
+        isAdmin: isAdminLike,
+        isSuperAdmin,
+        orgId: organizationId,
+      };
+      
+      const access = evalMenuItemAccess(params);
+      accessMap.set(item.key, access);
+      badgeMap.set(item.key, getMenuItemBadge(params));
+      tooltipMap.set(item.key, getMenuItemTooltip(params));
+    });
+
+    return { accessMap, badgeMap, tooltipMap };
+  }, [entitlements, isAdminLike, isSuperAdmin, organizationId]);
 
   // Keyboard: Esc closes menus; Ctrl/Cmd+K focuses search
   useEffect(() => {
@@ -326,20 +373,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           // Hide org-role specific items for app superadmin
           if (item.role && isSuperAdmin) return false;
           
-          // For super admins, allow all items that aren't explicitly restricted
-          if (isSuperAdmin) {
-            return true;
-          }
-          
           // Use evalMenuItemAccess for entitlement-based access control
-          const accessResult = evalMenuItemAccess({
-            requireModule: item.requireModule,
-            requireSubmodule: item.requireSubmodule,
-            entitlements: entitlements,
-            isAdmin: isAdminLike,
-            isSuperAdmin: isSuperAdmin,
-            orgId: organizationId,  // Pass orgId here
-          });
+          const accessResult = precomputedAccess.accessMap.get(item.name || item.title || item.path) || { result: 'disabled' };
           
           // If access is 'hidden', hide for non-admin users
           if (accessResult.result === 'hidden' && !isAdminLike) {
@@ -358,38 +393,15 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           return true; // Show item (may be disabled based on access result)
         })
         .map((item: any) => {
-          // Evaluate access for each item
-          const accessResult = evalMenuItemAccess({
-            requireModule: item.requireModule,
-            requireSubmodule: item.requireSubmodule,
-            entitlements: entitlements,
-            isAdmin: isAdminLike,
-            isSuperAdmin: isSuperAdmin,
-            orgId: organizationId,  // Pass orgId here
-          });
+          // Use precomputed access/badge/tooltip
+          const accessResult = precomputedAccess.accessMap.get(item.name || item.title || item.path) || { result: 'disabled' };
+          const badge = precomputedAccess.badgeMap.get(item.name || item.title || item.path) || null;
+          const tooltip = precomputedAccess.tooltipMap.get(item.name || item.title || item.path) || null;
           
           const disabled =
             accessResult.result === 'disabled' ||
             (item.role && !canManageUsers(user)) ||
             (item.servicePermission && !(isModuleEnabled('service') || hasPermission(item.servicePermission.split('.')[0], item.servicePermission.split('.')[1])));
-          
-          const badge = getMenuItemBadge({
-            requireModule: item.requireModule,
-            requireSubmodule: item.requireSubmodule,
-            entitlements: entitlements,
-            isAdmin: isAdminLike,
-            isSuperAdmin: isSuperAdmin,
-            orgId: organizationId,  // Pass orgId here
-          });
-          
-          const tooltip = getMenuItemTooltip({
-            requireModule: item.requireModule,
-            requireSubmodule: item.requireSubmodule,
-            entitlements: entitlements,
-            isAdmin: isAdminLike,
-            isSuperAdmin: isSuperAdmin,
-            orgId: organizationId,  // Pass orgId here
-          });
           
           return { 
             ...item, 
@@ -587,8 +599,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                             {subSection.items.map((item: any, itemIndex: number) => {
                               const disabled =
                                 (item.role && !canManageUsers(user)) ||
-                                (item.servicePermission && !(isModuleEnabled('service') || hasPermission(item.servicePermission.split('.')[0], item.servicePermission.split('.')[1]))) ||
-                                item.__disabled;
+                                (item.servicePermission && !(isModuleEnabled('service') || hasPermission(item.servicePermission.split('.')[0], item.servicePermission.split('.')[1])));
                               const tooltipText = item.__tooltip || (disabled ? 'Module not enabled. Contact your administrator.' : '');
                               return (
                                 <Tooltip key={itemIndex} title={tooltipText} arrow>

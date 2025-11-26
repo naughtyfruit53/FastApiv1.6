@@ -59,7 +59,7 @@ async def get_goods_receipt_notes(
     
     for grn in invoices:
         has_rejection = any(item.rejected_quantity > 0 for item in grn.items)
-        is_full_rejection = all(item.rejected_quantity == item.ordered_quantity for item in grn.items if item.ordered_quantity > 0)
+        is_full_rejection = all(item.rejected_quantity == item.received_quantity for item in grn.items if item.received_quantity > 0)
         
         stmt_pv = select(PurchaseVoucher).where(PurchaseVoucher.grn_id == grn.id)
         has_pv = (await db.execute(stmt_pv)).scalar_one_or_none() is not None
@@ -67,21 +67,31 @@ async def get_goods_receipt_notes(
         stmt_pr = select(PurchaseReturn).where(PurchaseReturn.grn_id == grn.id)
         has_pr = (await db.execute(stmt_pr)).scalar_one_or_none() is not None
         
-        color_status = None
-        if has_pv and not has_rejection:
-            color_status = 'green'
-        elif has_pv and has_rejection and not has_pr:
-            color_status = 'yellow'
-        elif is_full_rejection and not has_pr:
-            color_status = 'red'
-        elif is_full_rejection and has_pr:
-            color_status = 'orange'
-        elif has_rejection and has_pr and not has_pv:
-            color_status = 'blue'
+        logger.debug(f"GRN {grn.voucher_number} - has_rejection: {has_rejection}, is_full_rejection: {is_full_rejection}, has_pv: {has_pv}, has_pr: {has_pr}")
+        
+        color_status = 'pending'  # Default
+        
+        if has_pv:
+            if not has_rejection:
+                color_status = 'green'
+            else:
+                if not has_pr:
+                    color_status = 'yellow'
+                else:
+                    color_status = 'green'  # Rejection with PR and PV: treat as resolved (green)
+        else:  # No PV
+            if has_rejection:
+                if is_full_rejection:
+                    color_status = 'orange' if has_pr else 'red'
+                else:
+                    color_status = 'blue' if has_pr else 'red'  # Partial rejection no PR: red (consistent with full)
         
         grn.has_purchase_voucher = has_pv
         grn.has_purchase_return = has_pr
         grn.color_status = color_status
+        
+        # Add debug log for color_status
+        logger.debug(f"GRN {grn.voucher_number} - has_rejection: {has_rejection}, is_full_rejection: {is_full_rejection}, has_pv: {has_pv}, has_pr: {has_pr}, color_status: {color_status}")
         
     return invoices
 
