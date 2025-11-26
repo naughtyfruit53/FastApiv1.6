@@ -9,7 +9,7 @@ shutdown() {
     echo "Shutdown complete"
 }
 
-trap 'shutdown' SIGTERM SIGINT
+trap shutdown SIGTERM SIGINT
 
 # Log PORT for debugging
 echo "Using PORT: ${PORT:-8000}"
