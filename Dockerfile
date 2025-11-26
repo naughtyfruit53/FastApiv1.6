@@ -23,7 +23,6 @@ WORKDIR /app
 # Add retry logic for apt-get in runtime stage
 RUN for i in $(seq 1 5); do apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
-    bash \  
     fontconfig \
     libfontconfig1 \
     libmupdf-dev \
@@ -56,6 +55,7 @@ RUN mkdir -p /app/uploads \
  && mkdir -p /app/Uploads \
  && useradd -m -u 1000 appuser \
  && chown -R appuser:appuser /app \
+ && chmod +x /app/entrypoint.sh \
  && rm -rf /wheels
 
 ENV PYTHONUNBUFFERED=1 \
@@ -66,6 +66,8 @@ ENV PYTHONUNBUFFERED=1 \
 
 USER appuser
 
-EXPOSE $PORT
+# This is just documentation; Railway will still inject PORT
+EXPOSE 8000
 
-CMD ["sh", "./entrypoint.sh"]
+# Let Docker use the shebang in entrypoint.sh (no extra "sh")
+CMD ["./entrypoint.sh"]

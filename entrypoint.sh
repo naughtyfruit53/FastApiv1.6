@@ -1,15 +1,18 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
 # Graceful shutdown handler
 shutdown() {
     echo "Shutdown signal received, waiting for processes to finish..."
-    wait $GUNICORN_PID
+    if [ -n "$GUNICORN_PID" ]; then
+        wait "$GUNICORN_PID"
+    fi
     echo "Shutdown complete"
 }
 
-trap shutdown SIGTERM SIGINT
+# POSIX-safe trap (avoid SIG* names which can cause "bad trap" in some /bin/sh)
+trap 'shutdown' INT TERM
 
 # Log PORT for debugging
 echo "Using PORT: ${PORT:-8000}"
@@ -41,14 +44,14 @@ wkhtmltopdf --version || echo "wkhtmltopdf version check failed"
 # Wait for database to be ready with retry
 if [ -n "$DATABASE_URL" ]; then
     echo "Waiting for database to be ready..."
-    host=$(echo $DATABASE_URL | sed -E 's/.*@([^:]+):[0-9]+\/.*$/\1/')
-    port=$(echo $DATABASE_URL | sed -E 's/.*@[^:]+:([0-9]+)\/.*$/\1/')
+    host=$(echo "$DATABASE_URL" | sed -E 's/.*@([^:]+):[0-9]+\/.*$/\1/')
+    port=$(echo "$DATABASE_URL" | sed -E 's/.*@[^:]+:([0-9]+)\/.*$/\1/')
     
     retries=30
     count=0
-    while [ $count -lt $retries ]; do
+    while [ "$count" -lt "$retries" ]; do
         if command -v pg_isready >/dev/null 2>&1; then
-            if pg_isready -h $host -p $port -t 1; then
+            if pg_isready -h "$host" -p "$port" -t 1; then
                 echo "Database is ready"
                 break
             fi
@@ -60,7 +63,7 @@ if [ -n "$DATABASE_URL" ]; then
         echo "Retry $count/$retries..."
     done
     
-    if [ $count -eq $retries ]; then
+    if [ "$count" -eq "$retries" ]; then
         echo "Database connection timeout after $retries retries"
         exit 1
     fi
@@ -77,7 +80,7 @@ if [ -n "$DATABASE_URL" ]; then
         alembic init migrations || { echo "Alembic init failed"; exit 1; }
     fi
     # Generate initial revision if no revisions exist
-    if [ ! -d "/app/migrations/versions" ] || [ -z "$(ls -A /app/migrations/versions)" ]; then
+    if [ ! -d "/app/migrations/versions" ] || [ -z "$(ls -A /app/migrations/versions 2>/dev/null)" ]; then
         echo "No revisions found, autogenerating initial migration..."
         alembic revision --autogenerate -m "initial" || { echo "Alembic autogenerate failed"; exit 1; }
     fi
@@ -92,6 +95,8 @@ fi
 log_memory_usage "Before Gunicorn start"
 
 # Start Gunicorn with bind handled here (expansion works in shell)
-gunicorn --bind 0.0.0.0:${PORT:-8000} $GUNICORN_CMD_ARGS app.main:app &
+gunicorn --bind "0.0.0.0:${PORT:-8000}" $GUNICORN_CMD_ARGS app.main:app &
 GUNICORN_PID=$!
-wait $GUNICORN_PID
+
+# Wait on Gunicorn so signals are handled via trap
+wait "$GUNICORN_PID"
