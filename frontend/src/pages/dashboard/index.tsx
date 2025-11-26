@@ -10,7 +10,7 @@ import RoleGate from "../../components/RoleGate";  // Import RoleGate
 
 const Dashboard: React.FC = () => {
   console.count('Render: Dashboard');
-  const { user, loading } = useAuth();
+  const { user, loading, permissionsLoading } = useAuth();  // NEW: Added permissionsLoading to check full auth load
   const { isMobile } = useMobileDetection();
   const router = useRouter();
 
@@ -24,25 +24,26 @@ const Dashboard: React.FC = () => {
     console.log("[Dashboard] Component mounted, checking auth state:", {
       hasUser: !!user,
       loading,
+      permissionsLoading,
       userRole: user?.role,
       organizationId: user?.organization_id,
       timestamp: new Date().toISOString(),
     });
 
-    if (!loading && !user) {
+    if (!loading && !permissionsLoading && !user) {  // NEW: Wait for permissions too
       console.log(
         "[Dashboard] No user found and not loading - redirecting to login",
       );
       router.push("/login");
-    } else if (!loading && user && isMobile && !isSuperAdmin) {
+    } else if (!loading && !permissionsLoading && user && isMobile && !isSuperAdmin) {
       console.log("[Dashboard] Mobile detected for org user - redirecting to mobile dashboard");
       router.push("/mobile/dashboard");
     }
-  }, [user, loading, router, isMobile, isSuperAdmin]);
+  }, [user, loading, permissionsLoading, router, isMobile, isSuperAdmin]);  // NEW: Added permissionsLoading to dependency
 
   // Prevent any rendering until we have confirmed auth state
-  if (loading) {
-    console.log("[Dashboard] Still loading auth state - showing loader");
+  if (loading || permissionsLoading) {  // NEW: Check both loading states
+    console.log("[Dashboard] Still loading auth/permissions - showing loader");
     return (
       <div
         style={{
@@ -55,7 +56,7 @@ const Dashboard: React.FC = () => {
       >
         <div>Loading user context...</div>
         <div style={{ marginTop: "10px", fontSize: "12px", color: "#666" }}>
-          Establishing secure session...
+          Verifying access...
         </div>
       </div>
     );

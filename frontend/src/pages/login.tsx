@@ -11,14 +11,16 @@ import DemoModeDialog from "../components/DemoModeDialog";
 import { useAuth } from "../context/AuthContext";
 import useMobileRouting from "../hooks/mobile/useMobileRouting";
 import { ACCESS_TOKEN_KEY } from "../constants/auth";
-import { useCompany } from "../context/CompanyContext"; // Added import
+import { useCompany } from "../context/CompanyContext"; // Added to refetch company data to ensure CompanyContext is updated
+import { useRouter } from "next/router";  // Fixed: Added missing import for useRouter
 
 const LoginPage = () => {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [demoModeOpen, setDemoModeOpen] = useState(false);
   const { login } = useAuth();
   const { getMobileRoute } = useMobileRouting();
-  const { refetch: refetchCompany } = useCompany(); // Added to refetch company data
+  const { refetch: refetchCompany } = useCompany(); // Added to refetch company data to ensure CompanyContext is updated
+  const router = useRouter(); // Added import for router to handle client-side navigation
 
   useEffect(() => {
     const pendingDemo = localStorage.getItem("pendingDemoMode");
@@ -66,16 +68,16 @@ const LoginPage = () => {
         (localStorage.getItem("demoMode") === "true" && !loginResponse?.organization_id)
       ) {
         console.log("[Login] Demo mode activated - redirecting to demo page");
-        window.location.href = getMobileRoute("/demo");
+        router.push(getMobileRoute("/demo"));
         return;
       }
 
       if (loginResponse?.must_change_password && !loginResponse?.otp_login) {
         console.log("[Login] Password change required - redirecting to password reset");
-        window.location.href = getMobileRoute("/password-reset");
+        router.push(getMobileRoute("/password-reset"));
       } else {
         console.log("[Login] Login complete - redirecting to dashboard");
-        window.location.href = getMobileRoute("/dashboard");
+        router.push(getMobileRoute("/dashboard"));
       }
     } catch (err) {
       console.error("Failed to establish secure session:", err);

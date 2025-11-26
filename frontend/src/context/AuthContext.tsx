@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   const router = useRouter();
   const hasFetched = useRef(false); // Prevent multiple fetches
   const isFetching = useRef(false); // Prevent concurrent fetches
+  const isMounted = useRef(true);  // NEW: Track if component is mounted to prevent memory leaks
   const computeRoleBasedPermissions = (user: User | null): UserPermissions => {
     if (!user) {
       return {
@@ -186,15 +187,27 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       submodules,
     };
   };
-  // Fetch user permissions from RBAC service
+  // Fetch user permissions from RBAC service with timeout
   const fetchUserPermissions = async (userId: number) => {
     setPermissionsLoading(true);
     try {
       console.log("[AuthProvider] Fetching user permissions for user:", userId);
      
-      // Fetch user permissions
-      const permissionsData = await rbacService.getUserPermissions(userId) || { permissions: [], modules: [], submodules: {} };
-      const rolesData = await rbacService.getUserServiceRoles(userId);
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Permissions fetch timeout')), 12000) // Increased timeout to 12s
+      );
+     
+      // Race the API call with timeout
+      const permissionsData = await Promise.race([
+        timeoutPromise,
+        rbacService.getUserPermissions(userId)
+      ]) as { permissions: string[]; modules: string[]; submodules: Record<string, string[]> } || { permissions: [], modules: [], submodules: {} };
+     
+      const rolesData = await Promise.race([
+        timeoutPromise,
+        rbacService.getUserServiceRoles(userId)
+      ]) as Role[] || [];
      
       // Compute fallback
       const fallback = computeRoleBasedPermissions(user);
@@ -229,17 +242,21 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       return permissions;
     } catch (error) {
       console.error("[AuthProvider] Error fetching user permissions:", error);
-      // Set fallback permissions
+      // Set fallback permissions on error
       const fallbackPermissions = computeRoleBasedPermissions(user);
       setUserPermissions(fallbackPermissions);
+      toast.error('Failed to load user permissions - using default access. Some features may be unavailable.', {
+        position: "top-right",
+        autoClose: 5000,
+      });
       return fallbackPermissions;
     } finally {
       setPermissionsLoading(false);
     }
   };
-  // Fetch the current user from API using the token in localStorage
+  // Fetch the current user from API using the token in localStorage with timeout
   const fetchUser = async (retryCount = 0) => {
-    if (isFetching.current) return; // Prevent concurrent
+    if (isFetching.current || !isMounted.current) return; // NEW: Prevent concurrent and unmounted fetches
     isFetching.current = true;
     const maxRetries = 2;
     console.log(
@@ -390,7 +407,11 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       markAuthReady();
       setLoading(false);
     }
-  }, []); // Removed router.pathname dependency to prevent re-runs on path change
+
+    return () => {
+      isMounted.current = false;  // NEW: Set unmounted on cleanup to prevent async updates
+    };
+  }, [router]); // NEW: Added router to dependency list to handle path changes properly
   // Handle post-login redirect with state preservation
   const handlePostLoginRedirect = () => {
     try {
@@ -467,7 +488,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       hasRefresh: !!loginResponse.refresh_token,
       userRole: loginResponse.user_role,
       isSuperAdmin: loginResponse.user?.is_super_admin,
-      hasOrgId: !!loginResponse.user.organization_id,
+      hasOrgId: !!loginResponse.organization_id,
       timestamp: new Date().toISOString(),
     });
     localStorage.setItem(ACCESS_TOKEN_KEY, loginResponse.access_token);
@@ -590,12 +611,18 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         setLoading(false);
         toast.error('Loading timeout. Please refresh the page or check your connection.');
       }
-    }, 10000); // 10 seconds timeout
+    }, 15000); // Increased timeout to 15 seconds
     return () => clearTimeout(timeout);
   }, [loading]);
+  // Handle unauthorized state - redirect if no user and not loading
+  if (!loading && !user && router.pathname !== "/login") {
+    console.log("[AuthProvider] No user after loading - redirecting to login");
+    router.push("/login");
+    return null;
+  }
   // Show loading spinner while auth state is being determined
-  if (loading) {
-    console.log("[AuthProvider] Rendering loading state");
+  if (loading || permissionsLoading) {  // NEW: Added permissionsLoading to prevent premature render
+    console.log("[AuthProvider] Auth or permissions still loading - showing spinner");
     const spinnerStyles = `
       @keyframes authSpinner {
         0% { transform: rotate(0deg); }
@@ -666,7 +693,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
             }}
             className="auth-pulse"
           >
-            Loading your workspace...
+            Verifying access...
           </div>
           <div
             style={{
