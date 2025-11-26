@@ -196,6 +196,7 @@
                                         <div>{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %}, {{ company.pin_code }}{% endif %}</div>
                                         {% if company.gst_number %}<div>GSTIN: {{ company.gst_number }}</div>{% endif %}
                                         {% if company.contact_number %}<div>Contact: {{ company.contact_number }}</div>{% endif %}
+                                        {% if company.email %}<div>Email: {{ company.email }}</div>{% endif %}
                                         {% if company.pan_number %}<div>Company’s PAN: {{ company.pan_number }}</div>{% endif %}
                                     </div>
                                 </div>
@@ -237,6 +238,15 @@
                             <td id="block-4">
                                 <div class="block-inner">
                                     <div style="font-weight:700;">Ship To</div>
+                                    {% if voucher.vendor %}
+                                    <!-- For purchase vouchers, show company address as ship to -->
+                                    <div style="font-weight:600;">{{ company.name|upper }}</div>
+                                    <div>{{ company.address1 }}{% if company.address2 %}, {{ company.address2 }}{% endif %}</div>
+                                    <div>{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}{% if company.pin_code %} - {{ company.pin_code }}{% endif %}</div>
+                                    {% if company.contact_number %}<div>Contact: {{ company.contact_number }}</div>{% endif %}
+                                    {% if company.gst_number %}<div>GSTIN/UIN: {{ company.gst_number }}</div>{% endif %}
+                                    {% else %}
+                                    <!-- For sales vouchers, show shipping address or customer -->
                                     {% if voucher.shipping_address %}
                                     <div style="font-weight:600;">{{ voucher.shipping_address.name|default('') }}</div>
                                     <div>{{ voucher.shipping_address.address }}</div>
@@ -255,6 +265,7 @@
                                     {% if party.pan_number %}<div>PAN/IT No: {{ party.pan_number }}</div>{% endif %}
                                     {% else %}
                                     <div style="font-weight:600;">(Same as Bill To)</div>
+                                    {% endif %}
                                     {% endif %}
                                     {% endif %}
                                 </div>
