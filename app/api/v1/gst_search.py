@@ -207,6 +207,7 @@ async def search_gst_number(
                     # Removed the !result.get('gstin') raise - return even if partial
                     address = result.get('place_of_business_principal', {}).get('address', {})  # Updated path based on test result
                     name = result.get('legal_name', result.get('trade_name', 'Company Name Not Found in Database'))
+                    pan_number = result.get('pan_number') or gst_number[2:12]
                     gst_result = GSTDetails(
                         name=name,
                         gst_number=result.get('gstin', gst_number),
@@ -214,7 +215,7 @@ async def search_gst_number(
                         city=address.get('city', ""),
                         state=address.get('state', ""),
                         pin_code=address.get('pin_code', ""),
-                        pan_number=result.get('pan_number', ""),
+                        pan_number=pan_number,
                         state_code=result.get('state_code', gst_number[:2])
                     )
                     gst_cache[gst_number] = gst_result  # Cache successful result
