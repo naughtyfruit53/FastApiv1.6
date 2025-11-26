@@ -482,7 +482,7 @@ const DeliveryChallanPage: React.FC = () => {
               onReferenceSelected={handleReferenceSelected}
             />
           </Grid>
-          <Grid size={3}>
+          <Grid size={6}>
             <Autocomplete 
               size="small" 
               options={enhancedCustomerOptions} 
@@ -505,7 +505,7 @@ const DeliveryChallanPage: React.FC = () => {
               disabled={mode === "view"} 
             />
           </Grid>
-          <Grid size={1}>
+          <Grid size={2}>
             {selectedCustomerId && (
               <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
                 <Typography 
@@ -532,7 +532,7 @@ const DeliveryChallanPage: React.FC = () => {
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid size={12}>
+          <Grid size={8}>
             <TextField 
               fullWidth 
               label="Notes" 

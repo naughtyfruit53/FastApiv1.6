@@ -796,7 +796,7 @@ const PurchaseOrderPage: React.FC = () => {
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid size={3}>
+          <Grid size={6}>
             <Autocomplete 
               key={selectedVendorId || 'vendor-autocomplete'} 
               size="small" 
@@ -827,7 +827,7 @@ const PurchaseOrderPage: React.FC = () => {
               disabled={mode === "view"} 
             />
           </Grid>
-          <Grid size={1}>
+          <Grid size={2}>
             {selectedVendorId && (
               <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
                 <Typography 
@@ -854,7 +854,7 @@ const PurchaseOrderPage: React.FC = () => {
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid size={12}>
+          <Grid size={8}>
             <TextField 
               fullWidth 
               label="Notes" 
