@@ -198,11 +198,18 @@ class VoucherPDFGenerator:
             
             if company:
                 logo_url = None
-                logo_path = os.path.join('Uploads/company_logos', f"{organization_id}.png")
-                if os.path.exists(logo_path):
-                    with open(logo_path, 'rb') as f:
-                        logo_data = base64.b64encode(f.read()).decode('utf-8')
-                    logo_url = f"data:image/png;base64,{logo_data}"
+                if company.logo_path:
+                    # Correct path calculation to project root
+                    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                    full_path = os.path.join(root_dir, company.logo_path.lstrip('/'))
+                    if os.path.exists(full_path):
+                        with open(full_path, 'rb') as f:
+                            logo_data = base64.b64encode(f.read()).decode('utf-8')
+                        ext = os.path.splitext(company.logo_path)[1][1:].lower()
+                        mime = 'image/svg+xml' if ext == 'svg' else f'image/{ext if ext != "jpg" else "jpeg"}'
+                        logo_url = f"data:{mime};base64,{logo_data}"
+                    else:
+                        logger.warning(f"Logo file not found at {full_path}")
                 
                 state_code = company.state_code
                 if not state_code and company.gst_number:
@@ -570,6 +577,10 @@ class VoucherPDFGenerator:
                 template_name = 'receipt_voucher.html'
             elif voucher_type == 'grn':
                 template_name = 'goods_receipt_note.html'
+            elif voucher_type == 'credit-note':
+                template_name = 'credit_note.html'
+            elif voucher_type == 'debit-note':
+                template_name = 'debit_note.html'
             else:
                 template_name = f"{voucher_type}_voucher.html"
             

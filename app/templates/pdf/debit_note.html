@@ -1,0 +1,85 @@
+{% extends "base_voucher.html" %}
+
+{% set voucher_type_title = "Debit Note" %}
+{% set voucher_subtitle = "Debit Note" %}
+
+{% block voucher_specific_info %}
+<div class="voucher-info">
+    <div class="section-title">Debit Note Details</div>
+    <div class="info-row">
+        <span class="info-label">Debit Note No:</span>
+        <span class="info-value">{{ voucher.voucher_number|default('N/A') }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Date:</span>
+        <span class="info-value">{{ voucher.date|format_date }}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">Valid Up To Date:</span>
+        <span class="info-value">{{ voucher.valid_until|format_date|default('N/A') }}</span>
+    </div>
+    {% if voucher.reference_number %}
+    <div class="info-row">
+        <span class="info-label">Reference:</span>
+        <span class="info-value">{{ voucher.reference_number }}</span>
+    </div>
+    {% endif %}
+    <div class="info-row">
+        <span class="info-label">Status:</span>
+        <span class="info-value">
+            <span class="status-badge">{{ voucher.status|default('Draft')|title }}</span>
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block totals_left %}
+<div style="font-weight:700;">Terms and Conditions</div>
+{% if terms_conditions %}
+<table>
+    <tbody>
+        {% for term in terms_conditions.split('\n') %}
+        {% if term|trim %}
+        <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}
+
+{% block terms_block %}
+{% endblock %}
+
+{% block voucher_specific_footer %}
+{% if voucher.delivery_terms %}
+<div style="margin-top: 15px;">
+    <div class="section-title">Delivery Terms</div>
+    <div style="font-size: 10px;">
+        {{ voucher.delivery_terms }}
+    </div>
+</div>
+{% endif %}
+
+{% if voucher.payment_terms %}
+<div style="margin-top: 15px;">
+    <div class="section-title">Payment Terms</div>
+    <div style="font-size: 10px;">
+        {{ voucher.payment_terms }}
+    </div>
+</div>
+{% endif %}
+
+
+<div style="margin-top: 15px; font-size: 9px; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
+    <strong>Important Notes:</strong><br>
+    • This debit note is non-binding.<br>
+    • All prices exclusive of taxes.<br>
+    • Delivery extra as applicable.<br>
+    • Subject to stock availability.
+</div>
+
+<div style="margin-top: 15px; text-align: center; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; padding: 10px; background-color: #ebf3fd;">
+    Debit note issued. Thank you for your business.
+</div>
+{% endblock %}
