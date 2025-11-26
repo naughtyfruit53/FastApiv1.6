@@ -33,7 +33,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import api from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { ProtectedPage } from '../../components/ProtectedPage';
-import { getApiUrl } from '../../utils/config'; // Import to get the full API URL dynamically
+import { getApiUrl } from '../../utils/config'; // Import to get the full API URL dynamically for previews
 
 interface VoucherSettings {
   voucher_prefix: string;
@@ -98,10 +98,8 @@ const VoucherSettingsPage: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      // Use full URL to ensure HTTPS
-      const fullUrl = `${getApiUrl()}/organizations/settings`;
-      console.log('[VoucherSettings] Fetching settings from:', fullUrl);
-      const response = await api.get(fullUrl);
+      console.log('[VoucherSettings] Fetching settings from relative path: /organizations/settings');
+      const response = await api.get('/organizations/settings');
       if (response.data) {
         setSettings({
           voucher_prefix: response.data.voucher_prefix || '',
@@ -120,10 +118,8 @@ const VoucherSettingsPage: React.FC = () => {
 
   const fetchTemplates = async () => {
     try {
-      // Use full URL to ensure HTTPS
-      const fullUrl = `${getApiUrl()}/voucher-format-templates`;
-      console.log('[VoucherSettings] Fetching templates from:', fullUrl);
-      const response = await api.get(fullUrl);
+      console.log('[VoucherSettings] Fetching templates from relative path: /voucher-format-templates');
+      const response = await api.get('/voucher-format-templates');
       setTemplates(response.data || []);
     } catch (err) {
       console.error('Error fetching templates:', err);
@@ -163,9 +159,8 @@ const VoucherSettingsPage: React.FC = () => {
     setSuccess(null);
 
     try {
-      // Use full URL for save as well
-      const fullUrl = `${getApiUrl()}/organizations/settings`;
-      await api.put(fullUrl, settings);
+      console.log('[VoucherSettings] Saving settings to relative path: /organizations/settings');
+      await api.put('/organizations/settings', settings);
       setSuccess('Settings saved successfully!');
     } catch (err: any) {
       console.error('Error saving settings:', err);
