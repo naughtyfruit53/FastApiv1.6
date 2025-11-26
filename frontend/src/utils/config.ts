@@ -7,10 +7,15 @@
 export const getApiBaseUrl = (): string => {
   let baseUrl;
   
-  if (process.env.NODE_ENV === 'development') {
+  // Force HTTPS in production regardless of env var
+  if (process.env.NODE_ENV === 'development' || typeof window !== 'undefined' && window.location.hostname === 'localhost') {
     baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   } else {
     baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://fastapiv16-production.up.railway.app";
+    // Ensure HTTPS protocol
+    if (baseUrl.startsWith('http://')) {
+      baseUrl = baseUrl.replace('http://', 'https://');
+    }
   }
   
   // Remove trailing slashes
@@ -19,6 +24,11 @@ export const getApiBaseUrl = (): string => {
   // Remove /api/v1 if it was accidentally included
   if (baseUrl.endsWith('/api/v1')) {
     baseUrl = baseUrl.slice(0, -7);
+  }
+  
+  // Log for debugging
+  if (typeof console !== 'undefined') {
+    console.log('[config] Using API base URL:', baseUrl, 'NODE_ENV:', process.env.NODE_ENV);
   }
   
   return baseUrl;
