@@ -384,6 +384,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     } finally {
       isFetching.current = false;
       setLoading(false); // Ensure loading is set to false in finally
+      setPermissionsLoading(false); // NEW: Ensure permissionsLoading false even on error
     }
   };
   // On mount, check for token and initialize user session
@@ -406,6 +407,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       );
       markAuthReady();
       setLoading(false);
+      setPermissionsLoading(false); // NEW: Critical fix for no-token case (e.g., login page)
     }
 
     return () => {
@@ -680,7 +682,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
               textAlign: "center",
             }}
           >
-            Business Management System
+            Business Made Simple
           </div>
           <div className="auth-spinner"></div>
           <div
