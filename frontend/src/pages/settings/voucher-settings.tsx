@@ -33,7 +33,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import api from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { ProtectedPage } from '../../components/ProtectedPage';
-import { getApiBaseUrl } from '../../utils/config'; // Import to get the base URL dynamically
+import { getApiUrl } from '../../utils/config'; // Import to get the full API URL dynamically
 
 interface VoucherSettings {
   voucher_prefix: string;
@@ -98,7 +98,10 @@ const VoucherSettingsPage: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
-      const response = await api.get('/organizations/settings');
+      // Use full URL to ensure HTTPS
+      const fullUrl = `${getApiUrl()}/organizations/settings`;
+      console.log('[VoucherSettings] Fetching settings from:', fullUrl);
+      const response = await api.get(fullUrl);
       if (response.data) {
         setSettings({
           voucher_prefix: response.data.voucher_prefix || '',
@@ -117,7 +120,10 @@ const VoucherSettingsPage: React.FC = () => {
 
   const fetchTemplates = async () => {
     try {
-      const response = await api.get('/voucher-format-templates');
+      // Use full URL to ensure HTTPS
+      const fullUrl = `${getApiUrl()}/voucher-format-templates`;
+      console.log('[VoucherSettings] Fetching templates from:', fullUrl);
+      const response = await api.get(fullUrl);
       setTemplates(response.data || []);
     } catch (err) {
       console.error('Error fetching templates:', err);
@@ -157,7 +163,9 @@ const VoucherSettingsPage: React.FC = () => {
     setSuccess(null);
 
     try {
-      await api.put('/organizations/settings', settings);
+      // Use full URL for save as well
+      const fullUrl = `${getApiUrl()}/organizations/settings`;
+      await api.put(fullUrl, settings);
       setSuccess('Settings saved successfully!');
     } catch (err: any) {
       console.error('Error saving settings:', err);
@@ -407,8 +415,10 @@ const VoucherSettingsPage: React.FC = () => {
                             fullWidth
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Use dynamic base URL from config
-                              window.open(`${getApiBaseUrl()}/api/v1/voucher-format-templates/${template.id}/preview`, '_blank');
+                              // Use full API URL for preview
+                              const fullPreviewUrl = `${getApiUrl()}/voucher-format-templates/${template.id}/preview`;
+                              console.log('[VoucherSettings] Opening preview:', fullPreviewUrl);
+                              window.open(fullPreviewUrl, '_blank');
                             }}
                           >
                             Preview PDF
