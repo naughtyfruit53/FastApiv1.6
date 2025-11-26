@@ -5,7 +5,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -14,13 +14,24 @@ from app.core.config import settings as config_settings
 from app.core.database import create_tables, AsyncSessionLocal, async_engine  # Add async_engine import
 from app.core.seed_super_admin import seed_super_admin
 from app.db.session import SessionLocal
-from sqlalchemy import select, text
+from sqlalchemy import select, text, func
 from sqlalchemy.exc import ProgrammingError
 from app.models.entitlement_models import *  # Import to register entitlement models
 from app.services.entitlement_service import EntitlementService  # Import for seeding
 from app.models.user_models import Organization  # For org loop
 
 logger = logging.getLogger(__name__)
+
+# HTTPSRedirectMiddleware: Redirect HTTP to HTTPS if behind proxy
+class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        proto = request.headers.get('x-forwarded-proto', 'https').lower()
+        if proto == 'http':
+            url = request.url.replace(scheme='https')
+            logger.debug(f"Redirecting HTTP to HTTPS: {request.url} -> {url}")
+            return RedirectResponse(url)
+        response = await call_next(request)
+        return response
 
 # ForceCORSMiddleware: Inject CORS headers on ALL responses (including 500s and exceptions)
 class ForceCORSMiddleware(BaseHTTPMiddleware):
@@ -295,6 +306,9 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json",
     lifespan=lifespan
 )
+
+# Add HTTPS redirect middleware first
+app.add_middleware(HTTPSRedirectMiddleware)
 
 # Set up CORS with explicit origins
 origins = [

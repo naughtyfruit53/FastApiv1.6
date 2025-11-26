@@ -99,7 +99,8 @@ class Settings:
     MICROSOFT_CLIENT_SECRET: Optional[str] = os.getenv("MICROSOFT_CLIENT_SECRET", "")
     MICROSOFT_TENANT_ID: Optional[str] = os.getenv("MICROSOFT_TENANT_ID", "common")
     
-    OAUTH_REDIRECT_URI: str = os.getenv("OAUTH_REDIRECT_URI", "http://localhost:3000/auth/callback")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    OAUTH_REDIRECT_URI: str = os.getenv("OAUTH_REDIRECT_URI", "https://naughtyfruit.in/auth/callback" if ENVIRONMENT == "production" else "http://localhost:3000/auth/callback")
     
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
     
@@ -108,7 +109,6 @@ class Settings:
     
     BACKEND_CORS_ORIGINS: List[str] = assemble_cors_origins(os.getenv("BACKEND_CORS_ORIGINS", "https://tritiqbusinesssuite.vercel.app,https://www.naughtyfruit.in,https://naughtyfruit.in,http://localhost:3000,http://127.0.0.1:3000"))
     
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     
     # Auth transport options for development
