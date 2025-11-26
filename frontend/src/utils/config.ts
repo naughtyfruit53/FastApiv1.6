@@ -5,7 +5,13 @@
  * @returns Base URL (e.g., http://localhost:8000)
  */
 export const getApiBaseUrl = (): string => {
-  let baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  let baseUrl;
+  
+  if (process.env.NODE_ENV === 'development') {
+    baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  } else {
+    baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://fastapiv16-production.up.railway.app";
+  }
   
   // Remove trailing slashes
   baseUrl = baseUrl.replace(/\/+$/, '');

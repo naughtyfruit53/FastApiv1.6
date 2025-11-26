@@ -33,6 +33,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import api from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { ProtectedPage } from '../../components/ProtectedPage';
+import { getApiBaseUrl } from '../../utils/config'; // Import to get the base URL dynamically
 
 interface VoucherSettings {
   voucher_prefix: string;
@@ -406,7 +407,8 @@ const VoucherSettingsPage: React.FC = () => {
                             fullWidth
                             onClick={(e) => {
                               e.stopPropagation();
-                              window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/voucher-format-templates/${template.id}/preview`, '_blank');
+                              // Use dynamic base URL from config
+                              window.open(`${getApiBaseUrl()}/api/v1/voucher-format-templates/${template.id}/preview`, '_blank');
                             }}
                           >
                             Preview PDF

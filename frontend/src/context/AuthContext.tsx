@@ -195,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
      
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Permissions fetch timeout')), 12000) // Increased timeout to 12s
+        setTimeout(() => reject(new Error('Permissions fetch timeout')), 30000) // Increased timeout to 30s
       );
      
       // Race the API call with timeout
