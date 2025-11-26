@@ -8,6 +8,20 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+// Request interceptor to force HTTPS in production
+api.interceptors.request.use(
+  (config) => {
+    // Force HTTPS in production
+    if (process.env.NODE_ENV === 'production' && config.url && config.url.startsWith('http://')) {
+      config.url = config.url.replace('http://', 'https://');
+      console.log('[apiUtils] Forced HTTPS for request:', config.url);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Add token interceptor
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
