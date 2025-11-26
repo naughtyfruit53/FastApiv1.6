@@ -7,8 +7,9 @@ import logging
 import os
 import json
 import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSessionLocal
+import urllib.parse
+
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.engine.url import make_url
@@ -28,13 +29,21 @@ _MEMORY_THRESHOLD_MB = 400  # Warn if RSS exceeds 400MB
 _MAX_CACHE_SIZE = 100  # Limit cache to 100 entries each
 _REFLECTION_TIMEOUT_SECONDS = 30  # Timeout for schema reflection
 
+
 def log_memory_usage(context: str):
     process = psutil.Process(os.getpid())
     mem_info = process.memory_info()
     rss_mb = mem_info.rss / 1024 / 1024
-    logger.info(f"Memory usage ({context}): RSS={rss_mb:.2f}MB, VMS={mem_info.vms / 1024 / 1024:.2f}MB")
+    logger.info(
+        f"Memory usage ({context}): RSS={rss_mb:.2f}MB, "
+        f"VMS={mem_info.vms / 1024 / 1024:.2f}MB"
+    )
     if rss_mb > _MEMORY_THRESHOLD_MB:
-        logger.warning(f"Memory usage exceeds threshold of {_MEMORY_THRESHOLD_MB}MB: RSS={rss_mb:.2f}MB")
+        logger.warning(
+            f"Memory usage exceeds threshold of {_MEMORY_THRESHOLD_MB}MB: "
+            f"RSS={rss_mb:.2f}MB"
+        )
+
 
 def check_cache_permissions():
     try:
@@ -49,6 +58,7 @@ def check_cache_permissions():
     except Exception as e:
         logger.warning(f"Error checking schema cache permissions: {str(e)}")
         return False
+
 
 def load_schema_cache():
     if not check_cache_permissions():
@@ -67,9 +77,17 @@ def load_schema_cache():
                 if not isinstance(types, dict):
                     logger.warning("Invalid types cache format, clearing")
                     types = {}
-                _table_existence_cache.update({k: bool(v) for k, v in list(tables.items())[:_MAX_CACHE_SIZE]})
-                _type_existence_cache.update({k: bool(v) for k, v in list(types.items())[:_MAX_CACHE_SIZE]})
-                logger.info(f"Loaded schema cache: {len(_table_existence_cache)} tables, {len(_type_existence_cache)} types")
+                _table_existence_cache.update(
+                    {k: bool(v) for k, v in list(tables.items())[:_MAX_CACHE_SIZE]}
+                )
+                _type_existence_cache.update(
+                    {k: bool(v) for k, v in list(types.items())[:_MAX_CACHE_SIZE]}
+                )
+                logger.info(
+                    f"Loaded schema cache: "
+                    f"{len(_table_existence_cache)} tables, "
+                    f"{len(_type_existence_cache)} types"
+                )
     except json.JSONDecodeError:
         logger.warning("Corrupted schema cache file, clearing cache")
         clear_schema_cache()
@@ -79,6 +97,7 @@ def load_schema_cache():
     except Exception as e:
         logger.warning(f"Failed to load schema cache: {str(e)}")
         clear_schema_cache()
+
 
 def clear_schema_cache():
     try:
@@ -90,6 +109,7 @@ def clear_schema_cache():
     except Exception as e:
         logger.warning(f"Failed to clear schema cache: {str(e)}")
 
+
 def save_schema_cache():
     if not check_cache_permissions():
         logger.warning("Skipping schema cache save due to permission issues")
@@ -97,21 +117,31 @@ def save_schema_cache():
     try:
         cache = {
             'tables': dict(list(_table_existence_cache.items())[:_MAX_CACHE_SIZE]),
-            'types': dict(list(_type_existence_cache.items())[:_MAX_CACHE_SIZE])
+            'types': dict(list(_type_existence_cache.items())[:_MAX_CACHE_SIZE]),
         }
         with open(_cache_file, 'w') as f:
             json.dump(cache, f)
-        logger.info(f"Saved schema cache: {len(cache['tables'])} tables, {len(cache['types'])} types")
+        logger.info(
+            f"Saved schema cache: {len(cache['tables'])} tables, "
+            f"{len(cache['types'])} types"
+        )
     except Exception as e:
         logger.warning(f"Failed to save schema cache: {str(e)}")
 
+
 async def check_database_initialized(db: AsyncSession) -> bool:
     try:
-        query = text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'schema_version')")
+        query = text(
+            "SELECT EXISTS (SELECT FROM information_schema.tables "
+            "WHERE table_name = 'schema_version')"
+        )
         result = await db.execute(query)
         table_exists = result.scalar()
         if table_exists:
-            query = text("SELECT version FROM schema_version ORDER BY id DESC LIMIT 1")
+            query = text(
+                "SELECT version FROM schema_version "
+                "ORDER BY id DESC LIMIT 1"
+            )
             result = await db.execute(query)
             version = result.scalar()
             if version:
@@ -121,6 +151,7 @@ async def check_database_initialized(db: AsyncSession) -> bool:
     except Exception as e:
         logger.warning(f"Error checking database initialization: {str(e)}")
         return False
+
 
 async def test_database_connection():
     """Test database connection with detailed error logging"""
@@ -142,15 +173,29 @@ async def test_database_connection():
         logger.error(f"Unexpected database connection error: {str(e)}")
         return False
 
+
 database_url = settings.DATABASE_URL
 if not database_url:
-    raise ValueError("DATABASE_URL is required in .env file for database connection. Please configure it to connect to Supabase.")
+    raise ValueError(
+        "DATABASE_URL is required in .env file for database connection. "
+        "Please configure it to connect to Supabase."
+    )
 
-if not (database_url.startswith("postgresql://") or database_url.startswith("postgres://") or
-        database_url.startswith("postgresql+") or database_url.startswith("postgres+")):
-    logger.warning("DATABASE_URL is not a PostgreSQL/Supabase URL - this may cause issues in production. For development, continuing...")
+if not (
+    database_url.startswith("postgresql://")
+    or database_url.startswith("postgres://")
+    or database_url.startswith("postgresql+")
+    or database_url.startswith("postgres+")
+):
+    logger.warning(
+        "DATABASE_URL is not a PostgreSQL/Supabase URL - this may cause issues in "
+        "production. For development, continuing..."
+    )
 
-logger.info(f"Using database: {database_url.split('@')[1] if '@' in database_url else 'URL parsed'}")
+logger.info(
+    f"Using database: "
+    f"{database_url.split('@')[1] if '@' in database_url else 'URL parsed'}"
+)
 
 url_obj = make_url(database_url)
 driver = url_obj.drivername
@@ -167,7 +212,10 @@ if is_session_mode:
         "max_overflow": 2,
         "pool_timeout": 600,  # Increased timeout
     }
-    logger.info("Using Supabase direct session mode (port 5432) - pool_size=5, max_overflow=2, timeout=600s")
+    logger.info(
+        "Using Supabase direct session mode (port 5432) - "
+        "pool_size=5, max_overflow=2, timeout=600s"
+    )
 else:
     engine_kwargs = {
         "pool_pre_ping": True,
@@ -177,13 +225,16 @@ else:
         "max_overflow": 2,
         "pool_timeout": 600,
     }
-    logger.info("Using Supabase non-session mode - pool_size=5, max_overflow=2, timeout=600s")
+    logger.info(
+        "Using Supabase non-session mode - "
+        "pool_size=5, max_overflow=2, timeout=600s"
+    )
 
 connect_args = {
     "timeout": 600,  # Increased timeout
     "command_timeout": 300,
     "server_settings": {"statement_timeout": "300s", "tcp_keepalives_idle": "60"},
-    "ssl": "require"  # Enforce SSL for Supabase
+    "ssl": "require",  # Enforce SSL for Supabase
 }
 
 exec_options = {}
@@ -195,44 +246,67 @@ if 'asyncpg' in driver:
     connect_args["statement_cache_size"] = 0
     logger.info("Set statement_cache_size=0 for asyncpg")
 
-logger.debug(f"Creating async engine with connect_args: {connect_args} and kwargs: {engine_kwargs}")
+logger.debug(
+    f"Creating async engine with connect_args: {connect_args} "
+    f"and kwargs: {engine_kwargs}"
+)
 
 try:
-    async_engine = create_async_engine(database_url, connect_args=connect_args, execution_options=exec_options, **engine_kwargs)
+    async_engine = create_async_engine(
+        database_url,
+        connect_args=connect_args,
+        execution_options=exec_options,
+        **engine_kwargs,
+    )
     logger.info("Async engine created successfully")
 except Exception as e:
     logger.error(f"Failed to create async engine: {str(e)}")
     raise
 
-AsyncSessionLocal = async_sessionmaker(expire_on_commit=False, autocommit=False, autoflush=False, bind=async_engine)
+AsyncSessionLocal = async_sessionmaker(
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+    bind=async_engine,
+)
 
 sync_driver = driver.replace('asyncpg', 'psycopg')
-sync_database_url = url_obj.set(drivername=sync_driver).render_as_string(hide_password=False)
+sync_database_url = url_obj.set(
+    drivername=sync_driver
+).render_as_string(hide_password=False)
 sync_connect_args = {
     "connect_timeout": 600,
     "keepalives_idle": 60,
     "options": "-c statement_timeout=300s",
-    "sslmode": "require"
+    "sslmode": "require",
 }
 if not is_session_mode:
     sync_connect_args["prepare_threshold"] = None
-    logger.info("Disabled prepared statements for sync engine in non-session mode")
+    logger.info(
+        "Disabled prepared statements for sync engine in non-session mode"
+    )
 
 sync_exec_options = {}
 if not is_session_mode:
     sync_exec_options["compiled_cache"] = None
 
-sync_engine = create_engine(sync_database_url, connect_args=sync_connect_args, execution_options=sync_exec_options, **engine_kwargs)
+sync_engine = create_engine(
+    sync_database_url,
+    connect_args=sync_connect_args,
+    execution_options=sync_exec_options,
+    **engine_kwargs,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
 Base = declarative_base()
+
 
 async def get_db():
     db = AsyncSessionLocal()
     logger.debug("Opening new DB session")
     try:
         yield db
-    except HTTPException as e:
+    except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Database session error: {e}")
@@ -242,15 +316,16 @@ async def get_db():
         await db.close()
         logger.debug("Closed DB session")
 
+
 class DatabaseTransaction:
     def __init__(self, db_session: AsyncSession = None):
         self.db = db_session or AsyncSessionLocal()
         self.should_close = db_session is None
         logger.debug(f"Opening transaction, should_close={self.should_close}")
-        
+
     async def __aenter__(self):
         return self.db
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
             if exc_type is not None:
@@ -268,9 +343,11 @@ class DatabaseTransaction:
                 logger.debug("Closed transaction session")
         return False
 
+
 async def get_db_transaction():
     async with DatabaseTransaction() as db:
         yield db
+
 
 async def safe_database_operation(operation_func, *args, **kwargs):
     try:
@@ -280,6 +357,7 @@ async def safe_database_operation(operation_func, *args, **kwargs):
         logger.error(f"Database operation failed: {e}")
         return None
 
+
 async def execute_with_retry(operation_func, max_retries: int = 5, *args, **kwargs):
     last_exception = None
     for attempt in range(max_retries + 1):
@@ -288,11 +366,16 @@ async def execute_with_retry(operation_func, max_retries: int = 5, *args, **kwar
         except Exception as e:
             last_exception = e
             if attempt < max_retries:
-                logger.warning(f"Database operation failed (attempt {attempt + 1}/{max_retries + 1}): {e}")
+                logger.warning(
+                    f"Database operation failed (attempt {attempt + 1}/{max_retries + 1}): {e}"
+                )
                 await asyncio.sleep(2 ** attempt)
             else:
-                logger.error(f"Database operation failed after {max_retries + 1} attempts: {e}")
+                logger.error(
+                    f"Database operation failed after {max_retries + 1} attempts: {e}"
+                )
     raise last_exception
+
 
 async def check_table_exists(db: AsyncSession, table_name: str) -> bool:
     if table_name in _table_existence_cache:
@@ -313,11 +396,15 @@ async def check_table_exists(db: AsyncSession, table_name: str) -> bool:
             save_schema_cache()
             return exists
     except asyncio.TimeoutError:
-        logger.error(f"Timeout checking table {table_name} after {_REFLECTION_TIMEOUT_SECONDS} seconds")
+        logger.error(
+            f"Timeout checking table {table_name} "
+            f"after {_REFLECTION_TIMEOUT_SECONDS} seconds"
+        )
         return False
     except Exception as e:
         logger.error(f"Error checking table {table_name}: {str(e)}")
         return False
+
 
 async def check_type_exists(db: AsyncSession, type_name: str) -> bool:
     if type_name in _type_existence_cache:
@@ -340,31 +427,39 @@ async def check_type_exists(db: AsyncSession, type_name: str) -> bool:
             save_schema_cache()
             return exists
     except asyncio.TimeoutError:
-        logger.error(f"Timeout checking type {type_name} after {_REFLECTION_TIMEOUT_SECONDS} seconds")
+        logger.error(
+            f"Timeout checking type {type_name} "
+            f"after {_REFLECTION_TIMEOUT_SECONDS} seconds"
+        )
         return False
     except Exception as e:
         logger.error(f"Error checking type {type_name}: {str(e)}")
         return False
+
 
 async def create_tables():
     try:
         log_memory_usage("Before table creation")
     except NameError:
         logger.warning("log_memory_usage not available, skipping memory logging")
+
     load_schema_cache()
     skip_reflection = os.getenv("SKIP_SCHEMA_REFLECTION", "false").lower() == "true"
     if skip_reflection:
         logger.info("SKIP_SCHEMA_REFLECTION is set to true, skipping table creation")
         return
+
     async with AsyncSessionLocal() as db:
         if await check_database_initialized(db):
             logger.info("Database is initialized, skipping schema reflection")
             return
+
     try:
         async with asyncio.timeout(_REFLECTION_TIMEOUT_SECONDS * 2):
             # Use separate sessions for each check
             critical_tables = ['users', 'organizations', 'platform_users', 'purchase_orders']
             critical_types = ['ratelimittype', 'webhookstatus', 'integrationtype']
+
             tables_exist = True
             for table in critical_tables:
                 async with AsyncSessionLocal() as session:
@@ -372,6 +467,7 @@ async def create_tables():
                     if not exists:
                         tables_exist = False
                         break
+
             types_exist = True
             for type_name in critical_types:
                 async with AsyncSessionLocal() as session:
@@ -379,18 +475,31 @@ async def create_tables():
                     if not exists:
                         types_exist = False
                         break
+
             if not (tables_exist and types_exist):
                 logger.info("Creating database tables for critical models...")
                 try:
                     log_memory_usage("Before model imports")
                 except NameError:
-                    logger.warning("log_memory_usage not available, skipping memory logging")
-                from app.models.vouchers.purchase import PurchaseOrder, GoodsReceiptNote, PurchaseVoucher, PurchaseReturn
+                    logger.warning(
+                        "log_memory_usage not available, skipping memory logging"
+                    )
+
+                from app.models.vouchers.purchase import (
+                    PurchaseOrder,
+                    GoodsReceiptNote,
+                    PurchaseVoucher,
+                    PurchaseReturn,
+                )
                 from app.models.user_models import User
+
                 try:
                     log_memory_usage("After model imports")
                 except NameError:
-                    logger.warning("log_memory_usage not available, skipping memory logging")
+                    logger.warning(
+                        "log_memory_usage not available, skipping memory logging"
+                    )
+
                 Base.metadata.create_all(
                     bind=sync_engine,
                     tables=[
@@ -399,22 +508,38 @@ async def create_tables():
                         GoodsReceiptNote.__table__,
                         PurchaseVoucher.__table__,
                         PurchaseReturn.__table__,
-                    ]
+                    ],
                 )
+
                 async with AsyncSessionLocal() as session:
-                    await session.execute(text("INSERT INTO schema_version (version) VALUES (:version)"), {"version": "1.0"})
+                    await session.execute(
+                        text("INSERT INTO schema_version (version) VALUES (:version)"),
+                        {"version": "1.0"},
+                    )
                     await session.commit()
-                logger.info("Database tables for critical models created successfully")
+
+                logger.info(
+                    "Database tables for critical models created successfully"
+                )
             else:
-                logger.info("Critical tables and types already exist, skipping creation")
+                logger.info(
+                    "Critical tables and types already exist, skipping creation"
+                )
     except asyncio.TimeoutError:
-        logger.error(f"Timeout during table creation after {_REFLECTION_TIMEOUT_SECONDS * 2} seconds")
+        logger.error(
+            f"Timeout during table creation "
+            f"after {_REFLECTION_TIMEOUT_SECONDS * 2} seconds"
+        )
         raise
     except ProgrammingError as e:
         if isinstance(e.orig, (pg_errors.DuplicateTable, pg_errors.DuplicateObject)):
-            logger.warning(f"Some tables or indexes already exist, skipping creation: {str(e)}")
+            logger.warning(
+                f"Some tables or indexes already exist, skipping creation: {str(e)}"
+            )
         else:
-            logger.error(f"Unexpected database error during table creation: {str(e)}")
+            logger.error(
+                f"Unexpected database error during table creation: {str(e)}"
+            )
             raise
     except Exception as e:
         logger.error(f"Failed to create database tables: {str(e)}")
@@ -423,9 +548,12 @@ async def create_tables():
         try:
             log_memory_usage("After table creation")
         except NameError:
-            logger.warning("log_memory_usage not available, skipping memory logging")
+            logger.warning(
+                "log_memory_usage not available, skipping memory logging"
+            )
 
-# NEW: Explicit dispose function for shutdown
+
+# Explicit dispose function for shutdown
 async def dispose_engine():
     """Dispose of the async engine pool during shutdown"""
     await async_engine.dispose()
