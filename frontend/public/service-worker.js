@@ -1,6 +1,6 @@
 // Service Worker for TRITIQ BOS PWA
-const CACHE_NAME = 'tritiq-erp-v1.6.1'; // Updated version to bust old cache
-const RUNTIME_CACHE = 'tritiq-runtime-v1.6.1';
+const CACHE_NAME = 'tritiq-erp-v1.6.2'; // Updated version to bust old cache
+const RUNTIME_CACHE = 'tritiq-runtime-v1.6.2';
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
@@ -34,7 +34,7 @@ self.addEventListener('activate', (event) => {
         return Promise.all(
           cacheNames
             .filter((cacheName) => {
-              return cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE;
+              return cacheName.startsWith('tritiq-') && cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE;
             })
             .map((cacheName) => {
               console.log('[Service Worker] Deleting old cache:', cacheName);
@@ -69,9 +69,16 @@ self.addEventListener('fetch', (event) => {
     console.log('[Service Worker] Forced HTTPS for request:', request.url);
   }
 
-  // Handle API requests differently
+  // For API requests, always use network-first and do not cache
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirstStrategy(request));
+    event.respondWith(
+      fetch(request).catch(() => {
+        // If offline, return custom offline response for API
+        return new Response(JSON.stringify({ error: 'Offline' }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
     return;
   }
 
@@ -84,6 +91,28 @@ self.addEventListener('fetch', (event) => {
   // Handle static assets
   event.respondWith(cacheFirstStrategy(request));
 });
+
+// Network-first strategy for dynamic content
+async function networkFirstStrategy(request) {
+  try {
+    return await fetch(request);
+  } catch (error) {
+    console.error('[Service Worker] Network request failed:', error);
+    
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+    if (cached) {
+      return cached;
+    }
+
+    // Return offline page for navigation requests
+    if (request.mode === 'navigate') {
+      return cache.match('/offline.html');
+    }
+    
+    throw error;
+  }
+}
 
 // Cache-first strategy for static assets
 async function cacheFirstStrategy(request) {
@@ -103,37 +132,6 @@ async function cacheFirstStrategy(request) {
   } catch (error) {
     console.error('[Service Worker] Fetch failed:', error);
     
-    // Return offline page for navigation requests
-    if (request.mode === 'navigate') {
-      return cache.match('/offline.html');
-    }
-    
-    throw error;
-  }
-}
-
-// Network-first strategy for API and dynamic content
-async function networkFirstStrategy(request) {
-  const cache = await caches.open(RUNTIME_CACHE);
-
-  try {
-    const response = await fetch(request);
-    
-    // Cache successful GET requests
-    if (request.method === 'GET' && response.status === 200) {
-      cache.put(request, response.clone());
-    }
-    
-    return response;
-  } catch (error) {
-    console.error('[Service Worker] Network request failed:', error);
-    
-    // Try to serve from cache
-    const cached = await cache.match(request);
-    if (cached) {
-      return cached;
-    }
-
     // Return offline page for navigation requests
     if (request.mode === 'navigate') {
       return cache.match('/offline.html');
