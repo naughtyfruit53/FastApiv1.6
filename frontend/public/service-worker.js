@@ -1,6 +1,6 @@
 // Service Worker for TRITIQ BOS PWA
-const CACHE_NAME = 'tritiq-erp-v1.6.0';
-const RUNTIME_CACHE = 'tritiq-runtime-v1.6.0';
+const CACHE_NAME = 'tritiq-erp-v1.6.1'; // Updated version to bust old cache
+const RUNTIME_CACHE = 'tritiq-runtime-v1.6.1';
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
@@ -48,12 +48,25 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  let request = event.request;
+  let url = new URL(request.url);
 
-  // Skip cross-origin requests
-  if (url.origin !== location.origin) {
+  // Skip cross-origin requests unless it's our API
+  if (url.origin !== location.origin && !url.hostname.includes('fastapiv16-production.up.railway.app')) {
     return;
+  }
+
+  // Force HTTPS for all requests in production
+  if (url.protocol === 'http:' && url.hostname !== 'localhost') {
+    url.protocol = 'https:';
+    request = new Request(url.toString(), {
+      method: request.method,
+      headers: request.headers,
+      mode: request.mode,
+      credentials: request.credentials,
+      redirect: request.redirect
+    });
+    console.log('[Service Worker] Forced HTTPS for request:', request.url);
   }
 
   // Handle API requests differently
@@ -147,6 +160,13 @@ async function syncOfflineActions() {
     
     for (const action of actions) {
       try {
+        // Force HTTPS for sync requests
+        let syncUrl = new URL(action.url);
+        if (syncUrl.protocol === 'http:' && syncUrl.hostname !== 'localhost') {
+          syncUrl.protocol = 'https:';
+          action.url = syncUrl.toString();
+        }
+
         await fetch(action.url, {
           method: action.method,
           headers: action.headers,
