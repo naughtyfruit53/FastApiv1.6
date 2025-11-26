@@ -57,9 +57,14 @@ export const formatBalance = (balance: number): string => {
   return `₹${balance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 };
 
-// Get balance display text with Dr/Cr indicator
+// Get balance display text without Dr/Cr indicator
 export const getBalanceDisplayText = (balance: number): string => {
   if (balance === 0) return '₹0';
-  const type = balance > 0 ? 'Dr' : 'Cr';
-  return `${formatBalance(Math.abs(balance))} ${type}`;
+  return formatBalance(Math.abs(balance));
+};
+
+// Get color for balance: red for payable (negative), green for receivable (positive)
+export const getBalanceColor = (balance: number): string => {
+  if (balance === 0) return 'black';
+  return balance > 0 ? 'green' : 'red';
 };

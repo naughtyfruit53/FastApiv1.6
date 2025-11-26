@@ -33,7 +33,7 @@ async def get_complete_ledger(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error generating complete ledger"
+            detail=f"Error generating complete ledger: {str(e)}"
         )
 
 @router.get("/outstanding", response_model=OutstandingLedgerResponse)
@@ -63,7 +63,7 @@ async def get_outstanding_ledger(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error generating outstanding ledger"
+            detail=f"Error generating outstanding ledger: {str(e)}"
         )
 
 @router.get("/balances/{entity_type}/{entity_id}", response_model=Dict[str, Any])
@@ -122,7 +122,7 @@ async def get_chart_of_accounts(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error fetching chart of accounts"
+            detail=f"Error fetching chart of accounts: {str(e)}"
         )
 
 @router.post("/chart-of-accounts/standard")
@@ -141,5 +141,5 @@ async def create_standard_chart_of_accounts(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error creating standard chart of accounts"
+            detail=f"Error creating standard chart of accounts: {str(e)}"
         )

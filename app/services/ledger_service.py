@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, date
 from decimal import Decimal
+from dateutil.parser import parse as date_parser
 
 from app.models import Vendor, Customer
 from app.models.hr_models import EmployeeProfile
@@ -73,7 +74,7 @@ class LedgerService:
             )
             
         except Exception as e:
-            logger.error(f"Error generating complete ledger: {e}")
+            logger.error(f"Error generating complete ledger: {str(e)}", exc_info=True)
             raise
     
     @staticmethod
@@ -128,7 +129,7 @@ class LedgerService:
             )
             
         except Exception as e:
-            logger.error(f"Error generating outstanding ledger: {e}")
+            logger.error(f"Error generating outstanding ledger: {str(e)}", exc_info=True)
             raise
     
     @staticmethod
@@ -169,8 +170,8 @@ class LedgerService:
             {
                 "model": ReceiptVoucher,
                 "type": "receipt_voucher",
-                "account_relation": "customer", 
-                "account_field": "customer_id",
+                "account_relation": None, 
+                "account_field": "customer_id",  # Changed to None to use fetch logic
                 "debit_amount_field": "total_amount",  # Decreases customer receivable
                 "credit_amount_field": None
             },
@@ -202,6 +203,9 @@ class LedgerService:
             )
             transactions.extend(voucher_transactions)
         
+        # Filter out transactions with no date
+        transactions = [t for t in transactions if t.date is not None]
+        
         # Sort by date
         transactions.sort(key=lambda x: x.date)
         
@@ -222,11 +226,20 @@ class LedgerService:
             select(model), model, organization_id
         )
         
-        # Apply date filters
+        # Parse and apply date filters
         if filters.start_date:
-            query = query.filter(model.date >= filters.start_date)
+            try:
+                start_date = date_parser(filters.start_date).date()
+                query = query.filter(model.date >= start_date)
+            except Exception as e:
+                logger.warning(f"Invalid start_date format: {filters.start_date}, error: {str(e)}")
+        
         if filters.end_date:
-            query = query.filter(model.date <= filters.end_date)
+            try:
+                end_date = date_parser(filters.end_date).date()
+                query = query.filter(model.date <= end_date)
+            except Exception as e:
+                logger.warning(f"Invalid end_date format: {filters.end_date}, error: {str(e)}")
         
         # Handle special cases for DebitNote, CreditNote, and PaymentVoucher
         if config["type"] in ["debit_note", "credit_note", "payment_voucher"]:
@@ -273,6 +286,13 @@ class LedgerService:
             if not account_type:  # Skip if couldn't determine account
                 continue
             
+            # Normalize date to datetime
+            transaction_date = voucher.date
+            if transaction_date is None:
+                continue
+            if isinstance(transaction_date, date) and not isinstance(transaction_date, datetime):
+                transaction_date = datetime.combine(transaction_date, datetime.min.time())
+            
             # Calculate debit/credit amounts
             debit_amount = Decimal(0)
             credit_amount = Decimal(0)
@@ -292,7 +312,7 @@ class LedgerService:
                 id=voucher.id,
                 voucher_type=config["type"],
                 voucher_number=voucher.voucher_number,
-                date=voucher.date,
+                date=transaction_date,
                 account_type=account_type,
                 account_id=account_id,
                 account_name=account_name,
@@ -321,11 +341,23 @@ class LedgerService:
                 account_id = voucher.vendor_id
                 if hasattr(voucher, 'vendor') and voucher.vendor:
                     account_name = voucher.vendor.name
+                else:
+                    # Fetch if not loaded
+                    result = await db.execute(select(Vendor).filter(Vendor.id == voucher.vendor_id))
+                    vendor = result.scalar_one_or_none()
+                    if vendor:
+                        account_name = vendor.name
             elif hasattr(voucher, 'customer_id') and voucher.customer_id:
                 account_type = "customer"
                 account_id = voucher.customer_id
                 if hasattr(voucher, 'customer') and voucher.customer:
                     account_name = voucher.customer.name
+                else:
+                    # Fetch if not loaded
+                    result = await db.execute(select(Customer).filter(Customer.id == voucher.customer_id))
+                    customer = result.scalar_one_or_none()
+                    if customer:
+                        account_name = customer.name
         elif config["type"] == "payment_voucher":
             if hasattr(voucher, 'entity_type') and voucher.entity_type:
                 account_type = voucher.entity_type.lower()
@@ -342,18 +374,39 @@ class LedgerService:
                     result = await db.execute(select(EmployeeProfile).filter(EmployeeProfile.id == account_id))
                     employee = result.scalars().first()
                     account_name = employee.user.full_name if employee and employee.user else "Unknown Employee"
+        elif config["type"] == "receipt_voucher":
+            # Assuming receipt_voucher has entity_type and entity_id like payment
+            if hasattr(voucher, 'entity_type') and voucher.entity_type:
+                account_type = voucher.entity_type.lower()
+                account_id = voucher.entity_id
+                if account_type == "customer":
+                    result = await db.execute(select(Customer).filter(Customer.id == account_id))
+                    customer = result.scalars().first()
+                    account_name = customer.name if customer else "Unknown Customer"
+                # Add other types if needed
+            else:
+                # Fallback assuming customer_id
+                if hasattr(voucher, 'customer_id') and voucher.customer_id:
+                    account_type = "customer"
+                    account_id = voucher.customer_id
+                    result = await db.execute(select(Customer).filter(Customer.id == account_id))
+                    customer = result.scalars().first()
+                    account_name = customer.name if customer else "Unknown Customer"
         else:
             # Regular vouchers
             account_type = config["account_relation"]
             if config["account_field"]:
                 account_id = getattr(voucher, config["account_field"])
                 
-                # Get account name
-                relation_attr = config["account_relation"]
-                if hasattr(voucher, relation_attr):
-                    account_obj = getattr(voucher, relation_attr)
-                    if account_obj:
-                        account_name = account_obj.name
+                # Fetch name based on account_type
+                if account_type == "vendor":
+                    result = await db.execute(select(Vendor).filter(Vendor.id == account_id))
+                    vendor = result.scalars().first()
+                    account_name = vendor.name if vendor else "Unknown Vendor"
+                elif account_type == "customer":
+                    result = await db.execute(select(Customer).filter(Customer.id == account_id))
+                    customer = result.scalars().first()
+                    account_name = customer.name if customer else "Unknown Customer"
         
         return account_type, account_id, account_name
     
@@ -388,8 +441,11 @@ class LedgerService:
         filters: LedgerFilters
     ) -> List[OutstandingBalance]:
         """Calculate outstanding balances for all accounts"""
-        # Get all transactions to calculate balances
+        # Get all transactions
         all_transactions = await LedgerService._get_all_transactions(db, organization_id, filters)
+        
+        # Filter out transactions with no date
+        all_transactions = [t for t in all_transactions if t.date is not None]
         
         # Group by account and calculate final balances
         account_data = {}
@@ -424,6 +480,8 @@ class LedgerService:
         # Get contact information
         for account_key, data in account_data.items():
             account_type, account_id = account_key
+            if account_id is None:
+                continue
             if account_type == "vendor":
                 result = await db.execute(
                     select(Vendor).filter(
@@ -485,10 +543,10 @@ class LedgerService:
     @staticmethod
     def _get_date_range(transactions: List[LedgerTransaction]) -> Dict[str, Any]:
         """Get date range from transactions"""
-        if not transactions:
+        dates = [t.date for t in transactions if t.date is not None]
+        if not dates:
             return {"start_date": None, "end_date": None}
         
-        dates = [t.date for t in transactions]
         return {
             "start_date": min(dates).isoformat(),
             "end_date": max(dates).isoformat()
@@ -574,7 +632,7 @@ class LedgerService:
                 is_reconcilable=acc_data.get("reconcilable", False)
             )
             db.add(account)
-            await db.flush()  # Get the ID
+            await db.flush()
             created_accounts[acc_data["code"]] = account
         
         # Second pass: Set parent relationships

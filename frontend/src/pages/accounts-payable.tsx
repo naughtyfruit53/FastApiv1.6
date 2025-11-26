@@ -62,15 +62,16 @@ const AccountsPayablePage: React.FC = () => {
   const fetchAccountsPayable = async () => {
     try {
       setLoading(true);
-      // Fetch purchase vouchers (vendor bills)
-      const response = await api.get('/vouchers/purchase-vouchers?page=1&per_page=50');
+      // Fetch purchase vouchers (vendor bills) - updated path to match backend
+      const response = await api.get('/purchase-vouchers?page=1&per_page=50');
+      // Handle both list and dict response formats
       const purchaseVouchers = response.data.vouchers || response.data || [];
       
       // Transform to accounts payable format
       const billsData: VendorBill[] = purchaseVouchers.map((v: any) => ({
         id: v.id,
         voucher_number: v.voucher_number,
-        vendor_name: v.vendor?.name || 'Unknown Vendor',
+        vendor_name: v.vendor?.name || 'Unknown',
         date: v.voucher_date || v.date,
         due_date: v.due_date,
         total_amount: parseFloat(v.total_amount || 0),

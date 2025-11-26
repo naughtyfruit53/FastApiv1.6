@@ -1,78 +1,71 @@
-// frontend/src/components/BalanceDisplay.tsx
-// Component to display current balance for selected customers/vendors
-import React from "react";
-import { Typography, Box } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
-import { getEntityBalance } from "../services/ledgerService";
+// frontend/src/hooks/useEntityBalance.ts
+// Hook for fetching and displaying vendor/customer balance
+import { useState, useEffect } from 'react';
+import { getEntityBalance } from '../services/ledgerService';
 
-interface BalanceDisplayProps {
-  accountType: "customer" | "vendor" | null;
-  accountId: number | null;
-  disabled?: boolean;
+interface UseEntityBalanceResult {
+  balance: number;
+  loading: boolean;
+  error: string | null;
 }
 
-const BalanceDisplay: React.FC<BalanceDisplayProps> = ({
-  accountType,
-  accountId,
-  disabled = false,
-}) => {
-  const {
-    data: outstandingAmount,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ["accountBalance", accountType, accountId],
-    queryFn: () => getEntityBalance(accountType || "", accountId?.toString() || ""),
-    enabled: !disabled && !!accountType && !!accountId,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    refetchOnWindowFocus: false,
-    retry: false, // Don't retry on permission errors
-  });
+export const useEntityBalance = (
+  entityType: 'vendor' | 'customer' | null,
+  entityId: number | null
+): UseEntityBalanceResult => {
+  const [balance, setBalance] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Don't show anything if disabled, no account selected, loading, or error
-  if (
-    disabled ||
-    !accountType ||
-    !accountId ||
-    isLoading ||
-    isError ||
-    outstandingAmount === undefined
-  ) {
-    return null;
-  }
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!entityType || !entityId) {
+        setBalance(0);
+        setLoading(false);
+        setError(null);
+        return;
+      }
 
-  // Format the balance with proper sign convention
-  const formatBalance = (amount: number, type: string) => {
-    const absAmount = Math.abs(amount);
-    if (type === "vendor") {
-      // For vendors: negative amount means money payable TO vendor
-      return amount < 0
-        ? `₹${absAmount.toLocaleString()} payable`
-        : `₹${amount.toLocaleString()} advance`;
-    } else {
-      // For customers: positive amount means money receivable FROM customer
-      return amount > 0
-        ? `₹${amount.toLocaleString()} receivable`
-        : `₹${absAmount.toLocaleString()} advance`;
-    }
-  };
+      setLoading(true);
+      setError(null);
 
-  return (
-    <Box sx={{ mt: 0.5 }}>
-      <Typography
-        variant="caption"
-        sx={{
-          color: "success.main",
-          fontSize: "0.75rem",
-          fontWeight: 500,
-          display: "block",
-        }}
-      >
-        Current Balance: {formatBalance(outstandingAmount, accountType)}
-      </Typography>
-    </Box>
-  );
+      try {
+        const fetchedBalance = await getEntityBalance(entityType, String(entityId));
+        setBalance(fetchedBalance);
+      } catch (err: any) {
+        console.error('Error fetching entity balance:', err);
+        setError(err.message || 'Failed to fetch balance');
+        setBalance(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBalance();
+  }, [entityType, entityId]);
+
+  return { balance, loading, error };
 };
 
-export default BalanceDisplay;
+// Format balance for display (up to 8 digits as specified)
+export const formatBalance = (balance: number): string => {
+  const absBalance = Math.abs(balance);
+  if (absBalance > 99999999) {
+    // More than 8 digits, show in crores
+    return `₹${(balance / 10000000).toFixed(2)}Cr`;
+  }
+  return `₹${balance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+};
+
+// Get balance display text with sign
+export const getBalanceDisplayText = (balance: number): string => {
+  if (balance === 0) return '₹0';
+  const sign = balance > 0 ? '+' : '-';
+  return `${sign}${formatBalance(Math.abs(balance))}`;
+};
+
+// Get color for balance: red for payable (negative), green for receivable (positive)
+export const getBalanceColor = (balance: number): string => {
+  if (balance === 0) return 'black';
+  return balance > 0 ? 'green' : 'red';
+};

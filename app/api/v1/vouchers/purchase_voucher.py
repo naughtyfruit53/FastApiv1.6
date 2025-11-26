@@ -20,11 +20,11 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["purchase-vouchers"])
 
-@router.get("", response_model=List[PurchaseVoucherInDB])
-@router.get("/", response_model=List[PurchaseVoucherInDB])
+@router.get("", response_model=dict)
+@router.get("/", response_model=dict)
 async def get_purchase_vouchers(
-    skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
-    limit: int = Query(5, ge=1, le=500, description="Maximum number of records to return (default 5 for UI standard)"),
+    page: int = Query(1, ge=1, description="Page number for pagination"),
+    per_page: int = Query(50, ge=1, le=500, description="Number of records per page"),
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
@@ -33,6 +33,9 @@ async def get_purchase_vouchers(
 ):
     """Get all purchase vouchers"""
     current_user, org_id = auth
+    
+    # Compute skip from page and per_page
+    skip = (page - 1) * per_page if page > 0 else 0
     
     stmt = select(PurchaseVoucher).options(
         joinedload(PurchaseVoucher.vendor),
@@ -55,10 +58,25 @@ async def get_purchase_vouchers(
     else:
         stmt = stmt.order_by(PurchaseVoucher.created_at.desc())
     
-    result = await db.execute(stmt.offset(skip).limit(limit))
-    invoices = result.unique().scalars().all()
+    # Get total count for pagination
+    total_stmt = select(func.count(PurchaseVoucher.id)).where(
+        PurchaseVoucher.organization_id == org_id
+    )
+    if status:
+        total_stmt = total_stmt.where(PurchaseVoucher.status == status)
+    total_result = await db.execute(total_stmt)
+    total = total_result.scalar() or 0
     
-    return invoices
+    # Get paginated results
+    result = await db.execute(stmt.offset(skip).limit(per_page))
+    vouchers = result.unique().scalars().all()
+    
+    return {
+        'vouchers': vouchers,
+        'total': total,
+        'page': page,
+        'per_page': per_page
+    }
 
 @router.get("/next-number", response_model=str)
 async def get_next_purchase_voucher_number(
