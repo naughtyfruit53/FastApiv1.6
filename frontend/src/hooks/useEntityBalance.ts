@@ -30,7 +30,11 @@ export const useEntityBalance = (
       setError(null);
 
       try {
-        const fetchedBalance = await getEntityBalance(entityType, String(entityId));
+        let fetchedBalance = await getEntityBalance(entityType, String(entityId));
+        // Negate for vendors to make payable positive internally (to match page color logic)
+        if (entityType === 'vendor') {
+          fetchedBalance = -fetchedBalance;
+        }
         setBalance(fetchedBalance);
       } catch (err: any) {
         console.error('Error fetching entity balance:', err);
@@ -57,14 +61,15 @@ export const formatBalance = (balance: number): string => {
   return `₹${balance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 };
 
-// Get balance display text without Dr/Cr indicator
+// Get balance display text with sign
 export const getBalanceDisplayText = (balance: number): string => {
   if (balance === 0) return '₹0';
-  return formatBalance(Math.abs(balance));
+  const sign = balance > 0 ? '-' : '';  // Add '-' for positive (payable after negation)
+  return `${sign}${formatBalance(Math.abs(balance))}`;
 };
 
-// Get color for balance: red for payable (negative), green for receivable (positive)
+// Get color for balance: red for payable (positive after negation), green otherwise
 export const getBalanceColor = (balance: number): string => {
   if (balance === 0) return 'black';
-  return balance > 0 ? 'green' : 'red';
+  return balance > 0 ? 'red' : 'green';
 };
