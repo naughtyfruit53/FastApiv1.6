@@ -32,7 +32,14 @@ class ApiClient {
   constructor() {
     // Use centralized config to get the full API URL including /api/v1
     // getApiUrl() returns the complete URL (e.g., http://localhost:8000/api/v1)
-    const baseURL = getApiUrl();
+    let baseURL = getApiUrl();
+    
+    // Force HTTPS in production
+    if (process.env.NODE_ENV === 'production' && baseURL.startsWith('http://')) {
+      console.warn('[API Client] Forcing HTTPS in production baseURL');
+      baseURL = baseURL.replace('http://', 'https://');
+    }
+
     const isDev = process.env.NODE_ENV === 'development';
 
     this.client = axios.create({
@@ -76,6 +83,17 @@ class ApiClient {
           } else {
             console.warn('[API Client] Invalid JWT format detected, skipping auth header');
           }
+        }
+
+        // Force HTTPS for all requests in production
+        if (process.env.NODE_ENV === 'production' && config.url && !config.url.startsWith('https://')) {
+          if (config.url.startsWith('http://')) {
+            config.url = config.url.replace('http://', 'https://');
+          } else if (!config.url.startsWith('http')) {
+            // If relative, prepend baseURL which is already HTTPS
+            config.url = `${baseURL}${config.url.startsWith('/') ? '' : '/'}${config.url}`;
+          }
+          console.log('[API Client] Forced HTTPS for request:', config.url);
         }
 
         // Development mode logging
@@ -159,6 +177,11 @@ class ApiClient {
                 refreshUrl = `${baseURL.replace(/\/+$/, '')}/auth/refresh-token`;
               }
               
+              // Force HTTPS for refresh URL
+              if (process.env.NODE_ENV === 'production' && refreshUrl.startsWith('http://')) {
+                refreshUrl = refreshUrl.replace('http://', 'https://');
+              }
+
               const response = await axios.post(
                 refreshUrl,
                 { refresh_token: refreshToken }
