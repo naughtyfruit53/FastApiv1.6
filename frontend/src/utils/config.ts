@@ -2,19 +2,22 @@
 
 /**
  * Get the base API URL without /api/v1
- * @returns Base URL (e.g., http://localhost:8000)
+ * @returns Base URL (e.g., https://localhost:8000)
  */
 export const getApiBaseUrl = (): string => {
-  let baseUrl;
+  let baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   
-  // Force HTTPS in production regardless of env var
-  if (process.env.NODE_ENV === 'development' || typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  } else {
-    baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://fastapiv16-production.up.railway.app";
-    // Ensure HTTPS protocol
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // In production, force HTTPS
+  if (isProduction) {
     if (baseUrl.startsWith('http://')) {
       baseUrl = baseUrl.replace('http://', 'https://');
+      console.warn('[Config] Forced HTTPS in production for API base URL');
+    } else if (!baseUrl.startsWith('https://') && !baseUrl.startsWith('http://')) {
+      // If no protocol, add https://
+      baseUrl = `https://${baseUrl}`;
+      console.warn('[Config] Added HTTPS protocol in production for API base URL');
     }
   }
   
@@ -36,7 +39,7 @@ export const getApiBaseUrl = (): string => {
 
 /**
  * Get the full API URL with /api/v1
- * @returns Full API URL (e.g., http://localhost:8000/api/v1)
+ * @returns Full API URL (e.g., https://localhost:8000/api/v1)
  */
 export const getApiUrl = (): string => {
   return `${getApiBaseUrl()}/api/v1`;
