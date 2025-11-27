@@ -1,8 +1,8 @@
 // Service Worker for TRITIQ BOS PWA
-const CACHE_NAME = 'tritiq-erp-v1.6.2'; // Updated version to bust old cache
-const RUNTIME_CACHE = 'tritiq-runtime-v1.6.2';
+const CACHE_NAME = 'tritiq-erp-v1.6.3'; // Bump version to bust old caches
+const RUNTIME_CACHE = 'tritiq-runtime-v1.6.3';
 
-// Assets to cache on install
+// Assets to cache on install (static only, no API)
 const PRECACHE_ASSETS = [
   '/',
   '/mobile/dashboard',
@@ -34,12 +34,14 @@ self.addEventListener('activate', (event) => {
         return Promise.all(
           cacheNames
             .filter((cacheName) => {
-              return cacheName.startsWith('tritiq-') && cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE;
+              // Delete any old caches starting with 'tritiq-'
+              if (cacheName.startsWith('tritiq-') && cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
+                console.log('[Service Worker] Deleting old cache:', cacheName);
+                return true;
+              }
+              return false;
             })
-            .map((cacheName) => {
-              console.log('[Service Worker] Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            })
+            .map((cacheName) => caches.delete(cacheName))
         );
       })
       .then(() => self.clients.claim())
@@ -48,33 +50,26 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-  let request = event.request;
-  let url = new URL(request.url);
+  const request = event.request;
+  const url = new URL(request.url);
 
-  // Skip cross-origin requests unless it's our API
+  console.log('[Service Worker] Fetch intercepted for:', url.href);
+
+  // Skip cross-origin requests unless it's our API domain
   if (url.origin !== location.origin && !url.hostname.includes('fastapiv16-production.up.railway.app')) {
+    console.log('[Service Worker] Skipping non-origin request:', url.href);
     return;
   }
 
-  // Force HTTPS for all requests in production
-  if (url.protocol === 'http:' && url.hostname !== 'localhost') {
-    url.protocol = 'https:';
-    request = new Request(url.toString(), {
-      method: request.method,
-      headers: request.headers,
-      mode: request.mode,
-      credentials: request.credentials,
-      redirect: request.redirect
-    });
-    console.log('[Service Worker] Forced HTTPS for request:', request.url);
-  }
-
-  // For API requests, always use network-first and do not cache
+  // For API requests (/api/), always use network-only - no caching, no offline fallback
   if (url.pathname.startsWith('/api/')) {
+    console.log('[Service Worker] Network-only for API request:', url.href);
     event.respondWith(
-      fetch(request).catch(() => {
-        // If offline, return custom offline response for API
-        return new Response(JSON.stringify({ error: 'Offline' }), {
+      fetch(request).catch((error) => {
+        console.error('[Service Worker] Network request failed for API:', error);
+        // Custom offline response for API
+        return new Response(JSON.stringify({ error: 'Offline - API unavailable' }), {
+          status: 503,
           headers: { 'Content-Type': 'application/json' }
         });
       })
@@ -82,20 +77,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle navigation requests
+  // Handle navigation requests (HTML pages)
   if (request.mode === 'navigate') {
+    console.log('[Service Worker] Navigation request:', url.href);
     event.respondWith(networkFirstStrategy(request));
     return;
   }
 
-  // Handle static assets
+  // Handle static assets (cache-first)
+  console.log('[Service Worker] Static asset request:', url.href);
   event.respondWith(cacheFirstStrategy(request));
 });
 
-// Network-first strategy for dynamic content
+// Network-first strategy for dynamic content (e.g., navigation)
 async function networkFirstStrategy(request) {
   try {
-    return await fetch(request);
+    const response = await fetch(request);
+    return response;
   } catch (error) {
     console.error('[Service Worker] Network request failed:', error);
     
@@ -105,9 +103,9 @@ async function networkFirstStrategy(request) {
       return cached;
     }
 
-    // Return offline page for navigation requests
+    // Fallback to offline page for navigation
     if (request.mode === 'navigate') {
-      return cache.match('/offline.html');
+      return await cache.match('/offline.html');
     }
     
     throw error;
@@ -125,103 +123,26 @@ async function cacheFirstStrategy(request) {
 
   try {
     const response = await fetch(request);
-    if (response.status === 200) {
+    if (response.status === 200 && response.type === 'basic') {
       cache.put(request, response.clone());
     }
     return response;
   } catch (error) {
     console.error('[Service Worker] Fetch failed:', error);
     
-    // Return offline page for navigation requests
+    // Fallback for navigation if applicable
     if (request.mode === 'navigate') {
-      return cache.match('/offline.html');
+      return await cache.match('/offline.html');
     }
     
     throw error;
   }
 }
 
-// Background sync for offline actions
-self.addEventListener('sync', (event) => {
-  console.log('[Service Worker] Background sync:', event.tag);
-  
-  if (event.tag === 'sync-offline-actions') {
-    event.waitUntil(syncOfflineActions());
-  }
-});
+// Remove background sync and IndexedDB - not needed for API, simplifies SW
+// If offline actions are required in future, re-add with HTTPS enforcement
 
-async function syncOfflineActions() {
-  try {
-    // Get offline actions from IndexedDB and sync
-    const db = await openIndexedDB();
-    const actions = await getOfflineActions(db);
-    
-    for (const action of actions) {
-      try {
-        // Force HTTPS for sync requests
-        let syncUrl = new URL(action.url);
-        if (syncUrl.protocol === 'http:' && syncUrl.hostname !== 'localhost') {
-          syncUrl.protocol = 'https:';
-          action.url = syncUrl.toString();
-        }
-
-        await fetch(action.url, {
-          method: action.method,
-          headers: action.headers,
-          body: action.body,
-        });
-        
-        // Remove synced action
-        await removeOfflineAction(db, action.id);
-      } catch (error) {
-        console.error('[Service Worker] Failed to sync action:', error);
-      }
-    }
-  } catch (error) {
-    console.error('[Service Worker] Sync failed:', error);
-  }
-}
-
-// IndexedDB helpers (basic implementation)
-function openIndexedDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('tritiq-offline-db', 1);
-    
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-    
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains('offlineActions')) {
-        db.createObjectStore('offlineActions', { keyPath: 'id', autoIncrement: true });
-      }
-    };
-  });
-}
-
-function getOfflineActions(db) {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['offlineActions'], 'readonly');
-    const store = transaction.objectStore('offlineActions');
-    const request = store.getAll();
-    
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-  });
-}
-
-function removeOfflineAction(db, id) {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['offlineActions'], 'readwrite');
-    const store = transaction.objectStore('offlineActions');
-    const request = store.delete(id);
-    
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve();
-  });
-}
-
-// Push notification handler
+// Push notification handler (keep if needed)
 self.addEventListener('push', (event) => {
   console.log('[Service Worker] Push notification received');
   
