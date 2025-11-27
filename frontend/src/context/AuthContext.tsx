@@ -377,6 +377,11 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       // Only redirect if not already on login page to prevent loop
       if (router.pathname !== "/login") {
         console.log("[AuthProvider] Redirecting to login");
+        // Save current path as return URL before redirect
+        if (router.pathname !== '/login' && !sessionStorage.getItem("returnUrlAfterLogin")) {
+          console.log("[AuthProvider] Saving current URL as returnUrlAfterLogin:", router.asPath);
+          sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
+        }
         router.push("/login");
       } else {
         console.log("[AuthProvider] Already on login - no redirect needed");
@@ -619,6 +624,11 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   // Handle unauthorized state - redirect if no user and not loading
   if (!loading && !user && router.pathname !== "/login") {
     console.log("[AuthProvider] No user after loading - redirecting to login");
+    // Save current path as return URL before redirect
+    if (router.pathname !== '/login' && !sessionStorage.getItem("returnUrlAfterLogin")) {
+      console.log("[AuthProvider] Saving current URL as returnUrlAfterLogin:", router.asPath);
+      sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
+    }
     router.push("/login");
     return null;
   }
