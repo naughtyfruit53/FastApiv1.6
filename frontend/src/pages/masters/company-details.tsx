@@ -15,7 +15,7 @@ import CompanyDetailsModal from "../../components/CompanyDetailsModal";
 import Grid from "@mui/material/Grid";
 import { ProtectedPage } from "../../components/ProtectedPage";
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 const CompanyDetails: React.FC = () => {
   const [openModal, setOpenModal] = useState(false);

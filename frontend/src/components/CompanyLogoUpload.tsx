@@ -20,7 +20,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { companyService } from "../services/authService";
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface CompanyLogoUploadProps {
   companyId: number;
