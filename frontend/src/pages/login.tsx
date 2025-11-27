@@ -76,8 +76,21 @@ const LoginPage = () => {
         console.log("[Login] Password change required - redirecting to password reset");
         router.push(getMobileRoute("/password-reset"));
       } else {
-        console.log("[Login] Login complete - redirecting to dashboard");
-        router.push(getMobileRoute("/dashboard"));
+        // NEW: Validate returnUrl before redirecting
+        let returnUrl = sessionStorage.getItem("returnUrlAfterLogin");
+        if (returnUrl && returnUrl.includes('/404')) {
+          console.warn("[Login] Invalid returnUrl detected (404) - clearing and falling back to dashboard");
+          sessionStorage.removeItem("returnUrlAfterLogin");
+          returnUrl = null;
+        }
+        
+        if (returnUrl) {
+          console.log("[Login] Redirecting to valid returnUrl:", returnUrl);
+          router.push(returnUrl);
+        } else {
+          console.log("[Login] Login complete - redirecting to dashboard");
+          router.push(getMobileRoute("/dashboard"));
+        }
       }
     } catch (err) {
       console.error("Failed to establish secure session:", err);
@@ -105,7 +118,8 @@ const LoginPage = () => {
           gutterBottom
           color="textSecondary"
         >
-                  </Typography>
+          Business Made Simple
+        </Typography>
         <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: "stretch", mt: 2, gap: 2 }}>
           <Box sx={{ flex: 1 }}>
             <Box sx={{ p: 3 }}>

@@ -55,38 +55,6 @@ class MaterialIssueItem(VoucherItemBase):
     # Relationships
     material_issue = relationship("MaterialIssue", back_populates="items")
 
-class ProductionEntry(BaseVoucher):
-    __tablename__ = "production_entries"
-    
-    # Reference to Manufacturing Order
-    manufacturing_order_id = Column(Integer, ForeignKey("manufacturing_orders.id"), nullable=False)
-    
-    # Production Details
-    shift = Column(String)
-    operator = Column(String)
-    machine_used = Column(String)
-    
-    # Quality
-    good_quantity = Column(Float, default=0.0)
-    rejected_quantity = Column(Float, default=0.0)
-    rework_quantity = Column(Float, default=0.0)
-    
-    # Relationships
-    manufacturing_order = relationship("ManufacturingOrder", back_populates="production_entries")
-    items = relationship("ProductionEntryItem", back_populates="production_entry", cascade="all, delete-orphan")
-    
-    __table_args__ = (
-        UniqueConstraint('organization_id', 'voucher_number', name='uq_pe_org_voucher_number'),
-        Index('idx_pe_org_mo', 'organization_id', 'manufacturing_order_id'),
-        Index('idx_pe_org_date', 'organization_id', 'date'),
-    )
-
-class ProductionEntryItem(VoucherItemBase):
-    __tablename__ = "production_entry_items"
-    
-    production_entry_id = Column(Integer, ForeignKey("production_entries.id"), nullable=False)
-    production_entry = relationship("ProductionEntry", back_populates="items")
-
 # Manufacturing Journal Voucher - NEW
 class ManufacturingJournalVoucher(BaseVoucher):
     __tablename__ = "manufacturing_journal_vouchers"

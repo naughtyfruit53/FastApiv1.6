@@ -1,10 +1,10 @@
-# app/api/v1/manufacturing/material_issues.py
+# app/api/v1/manufacturing/material_issue.py
 """
 Material Issue module - Handles material issue vouchers
 Extracted from monolithic manufacturing.py
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Optional
@@ -12,11 +12,12 @@ from datetime import datetime
 import logging
 
 from app.core.database import get_db
-from app.api.v1.auth import get_current_active_user
 from app.core.enforcement import require_access
 from app.models.vouchers import MaterialIssue, MaterialIssueItem
 from app.services.voucher_service import VoucherNumberService
 from pydantic import BaseModel
+from app.models.user_models import User
+from app.core.tenant import get_current_org_user, require_current_organization_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -57,10 +58,10 @@ async def get_material_issues(
     skip: int = 0,
     limit: int = 100,
     auth: tuple = Depends(require_access("manufacturing", "read")),
-
+    org_id: int = Depends(require_current_organization_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get list of material issues at /api/v1/material-issues"""
+    """Get list of material issues at /api/v1/manufacturing/material-issues"""
     try:
         stmt = select(MaterialIssue).where(
             MaterialIssue.organization_id == org_id
@@ -75,14 +76,15 @@ async def get_material_issues(
 
 @router.get("/next-number")
 async def get_next_material_issue_number(
+    voucher_date: Optional[datetime] = Query(None),
     auth: tuple = Depends(require_access("manufacturing", "read")),
-
+    org_id: int = Depends(require_current_organization_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get next material issue number at /api/v1/material-issues/next-number"""
+    """Get next material issue number at /api/v1/manufacturing/material-issues/next-number"""
     try:
         next_number = await VoucherNumberService.generate_voucher_number_async(
-            db, "MI", org_id, MaterialIssue
+            db, "MI", org_id, MaterialIssue, voucher_date=voucher_date
         )
         logger.info(f"Generated next material issue number: {next_number} for organization {org_id}")
         return next_number
@@ -90,14 +92,33 @@ async def get_next_material_issue_number(
         logger.error(f"Error generating material issue number: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate material issue number")
 
+@router.get("/check-backdated-conflict")
+async def check_backdated_conflict(
+    voucher_date: datetime = Query(...),
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+    org_id: int = Depends(require_current_organization_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """Check for backdated voucher conflicts at /api/v1/manufacturing/material-issues/check-backdated-conflict"""
+    try:
+        conflict_check = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "MI", org_id, MaterialIssue, voucher_date
+        )
+        logger.info(f"Checked backdated conflict for date {voucher_date} in organization {org_id}: has_conflict={conflict_check['has_conflict']}")
+        return conflict_check
+    except Exception as e:
+        logger.error(f"Error checking backdated conflict: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to check backdated conflict")
+
 @router.post("")
 async def create_material_issue(
     issue_data: MaterialIssueCreate,
     auth: tuple = Depends(require_access("manufacturing", "read")),
-
+    current_user: User = Depends(get_current_org_user),
+    org_id: int = Depends(require_current_organization_id),
     db: AsyncSession = Depends(get_db)
 ):
-    """Create new material issue at /api/v1/material-issues"""
+    """Create new material issue at /api/v1/manufacturing/material-issues"""
     try:
         # Generate voucher number
         voucher_number = await VoucherNumberService.generate_voucher_number_async(

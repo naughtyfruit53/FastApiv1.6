@@ -103,21 +103,27 @@ class Permission:
 
     # NEW: Inventory permissions
     INVENTORY_READ = "inventory.read"
-    INVENTORY_CREATE = "inventory.create"
+    INVENTORY_WRITE = "inventory.write"
     INVENTORY_UPDATE = "inventory.update"
     INVENTORY_DELETE = "inventory.delete"
 
     # NEW: Products permissions
     PRODUCTS_READ = "products.read"
-    PRODUCTS_CREATE = "products.create"
+    PRODUCTS_WRITE = "products.write"
     PRODUCTS_UPDATE = "products.update"
     PRODUCTS_DELETE = "products.delete"
 
     # NEW: Master Data permissions
     MASTER_DATA_READ = "master_data.read"
-    MASTER_DATA_CREATE = "master_data.create"
+    MASTER_DATA_WRITE = "master_data.write"
     MASTER_DATA_UPDATE = "master_data.update"
     MASTER_DATA_DELETE = "master_data.delete"
+
+    # NEW: Manufacturing permissions
+    MANUFACTURING_READ = "manufacturing.read"
+    MANUFACTURING_WRITE = "manufacturing.write"
+    MANUFACTURING_UPDATE = "manufacturing.update"
+    MANUFACTURING_DELETE = "manufacturing.delete"
 
 
 class PermissionChecker:
@@ -149,17 +155,22 @@ class PermissionChecker:
             Permission.MANAGE_VOUCHERS,
             # NEW: Add inventory/products/master_data for super_admin
             Permission.INVENTORY_READ,
-            Permission.INVENTORY_CREATE,
+            Permission.INVENTORY_WRITE,
             Permission.INVENTORY_UPDATE,
             Permission.INVENTORY_DELETE,
             Permission.PRODUCTS_READ,
-            Permission.PRODUCTS_CREATE,
+            Permission.PRODUCTS_WRITE,
             Permission.PRODUCTS_UPDATE,
             Permission.PRODUCTS_DELETE,
             Permission.MASTER_DATA_READ,
-            Permission.MASTER_DATA_CREATE,
+            Permission.MASTER_DATA_WRITE,
             Permission.MASTER_DATA_UPDATE,
             Permission.MASTER_DATA_DELETE,
+            # NEW: Add manufacturing for super_admin
+            Permission.MANUFACTURING_READ,
+            Permission.MANUFACTURING_WRITE,
+            Permission.MANUFACTURING_UPDATE,
+            Permission.MANUFACTURING_DELETE,
             # Note: App Super Admins don't have ACCESS_ORG_SETTINGS (per requirements)
         ],
         'org_admin': [
@@ -177,17 +188,22 @@ class PermissionChecker:
             Permission.MANAGE_VOUCHERS,
             # NEW: Add inventory/products/master_data for org_admin
             Permission.INVENTORY_READ,
-            Permission.INVENTORY_CREATE,
+            Permission.INVENTORY_WRITE,
             Permission.INVENTORY_UPDATE,
             Permission.INVENTORY_DELETE,
             Permission.PRODUCTS_READ,
-            Permission.PRODUCTS_CREATE,
+            Permission.PRODUCTS_WRITE,
             Permission.PRODUCTS_UPDATE,
             Permission.PRODUCTS_DELETE,
             Permission.MASTER_DATA_READ,
-            Permission.MASTER_DATA_CREATE,
+            Permission.MASTER_DATA_WRITE,
             Permission.MASTER_DATA_UPDATE,
             Permission.MASTER_DATA_DELETE,
+            # NEW: Add manufacturing for org_admin
+            Permission.MANUFACTURING_READ,
+            Permission.MANUFACTURING_WRITE,
+            Permission.MANUFACTURING_UPDATE,
+            Permission.MANUFACTURING_DELETE,
         ],
         'management': [
             Permission.MANAGE_USERS,
@@ -204,17 +220,22 @@ class PermissionChecker:
             Permission.MANAGE_VOUCHERS,
             # NEW: Add inventory/products/master_data for management
             Permission.INVENTORY_READ,
-            Permission.INVENTORY_CREATE,
+            Permission.INVENTORY_WRITE,
             Permission.INVENTORY_UPDATE,
             Permission.INVENTORY_DELETE,
             Permission.PRODUCTS_READ,
-            Permission.PRODUCTS_CREATE,
+            Permission.PRODUCTS_WRITE,
             Permission.PRODUCTS_UPDATE,
             Permission.PRODUCTS_DELETE,
             Permission.MASTER_DATA_READ,
-            Permission.MASTER_DATA_CREATE,
+            Permission.MASTER_DATA_WRITE,
             Permission.MASTER_DATA_UPDATE,
             Permission.MASTER_DATA_DELETE,
+            # NEW: Add manufacturing for management
+            Permission.MANUFACTURING_READ,
+            Permission.MANUFACTURING_WRITE,
+            Permission.MANUFACTURING_UPDATE,
+            Permission.MANUFACTURING_DELETE,
         ],
         'manager': [
             Permission.VIEW_USERS,  # Can view users (their executives)
@@ -227,6 +248,8 @@ class PermissionChecker:
             Permission.INVENTORY_READ,
             Permission.PRODUCTS_READ,
             Permission.MASTER_DATA_READ,
+            # NEW: Add read-only for manufacturing
+            Permission.MANUFACTURING_READ,
         ],
         'executive': [
             Permission.RESET_OWN_PASSWORD,
@@ -236,6 +259,8 @@ class PermissionChecker:
             Permission.INVENTORY_READ,
             Permission.PRODUCTS_READ,
             Permission.MASTER_DATA_READ,
+            # NEW: Add read-only for manufacturing
+            Permission.MANUFACTURING_READ,
         ],
     }
     

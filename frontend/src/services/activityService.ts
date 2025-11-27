@@ -46,7 +46,7 @@ const activityService = {
   formatActivityTime: (timestamp: string): string => {
     if (!timestamp) {
       console.warn('Missing timestamp for activity');
-      return 'Recent';
+      return 'Unknown time';  // Changed to return a default string instead of throwing error
     }
 
     const activityTime = new Date(timestamp);

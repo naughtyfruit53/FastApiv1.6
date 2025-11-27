@@ -1,7 +1,7 @@
 # app/api/v1/manufacturing/bom.py
 """Bill of Materials module"""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List, Optional
@@ -35,6 +35,7 @@ class BOMResponse(BaseModel):
 async def get_boms(
     skip: int = 0,
     limit: int = 100,
+    product_id: Optional[int] = Query(None, description="Filter by output product ID"),
     auth: tuple = Depends(require_access("manufacturing", "read")),
     db: AsyncSession = Depends(get_db)
 ):
@@ -43,9 +44,18 @@ async def get_boms(
     
     stmt = select(BillOfMaterials).where(
         BillOfMaterials.organization_id == org_id
-    ).offset(skip).limit(limit)
+    )
+    
+    if product_id:
+        stmt = stmt.where(BillOfMaterials.output_item_id == product_id)
+    
+    stmt = stmt.offset(skip).limit(limit)
     result = await db.execute(stmt)
     boms = result.scalars().all()
+    
+    if product_id and not boms:
+        raise HTTPException(status_code=404, detail="No BOM found for this product")
+    
     return boms
 
 @router.post("/{bom_id}/clone")

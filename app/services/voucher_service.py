@@ -146,8 +146,6 @@ class VoucherNumberService:
         elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
             quarter = ((current_month - 1) // 3) + 1
             period_segment = f"Q{quarter}"
-        elif reset_period == VoucherCounterResetPeriod.ANNUALLY:
-            period_segment = ""
         
         if period_segment:
             search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
@@ -201,7 +199,9 @@ class VoucherNumberService:
             dict with keys:
                 - has_conflict: bool
                 - later_vouchers: list of vouchers with later dates in same period
+                - later_voucher_count: int
                 - suggested_date: datetime of the last voucher in the period
+                - period: str
         """
         current_year = voucher_date.year
         current_month = voucher_date.month

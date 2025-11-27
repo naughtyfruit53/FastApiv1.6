@@ -15,9 +15,8 @@ from .presales import Quotation, QuotationItem, ProformaInvoice, ProformaInvoice
 
 from .sales import DeliveryChallan, DeliveryChallanItem, SalesVoucher, SalesVoucherItem, SalesReturn, SalesReturnItem
 
-from .manufacturing_planning import BillOfMaterials, BOMComponent, ManufacturingOrder
+from .manufacturing_planning import BillOfMaterials, BOMComponent, ManufacturingOrder, Machine, PreventiveMaintenanceSchedule, BreakdownMaintenance, MachinePerformanceLog, SparePart, QCTemplate, QCInspection, Rejection, InventoryAdjustment, ProductionEntry
 
-from .manufacturing_operations import MaterialIssue, MaterialIssueItem, ProductionEntry, ProductionEntryItem, \
-    ManufacturingJournalVoucher, ManufacturingJournalFinishedProduct, ManufacturingJournalMaterial, \
+from .manufacturing_operations import MaterialIssue, MaterialIssueItem, ManufacturingJournalVoucher, ManufacturingJournalFinishedProduct, ManufacturingJournalMaterial, \
     ManufacturingJournalByproduct, MaterialReceiptVoucher, MaterialReceiptItem, JobCardVoucher, \
     JobCardSuppliedMaterial, JobCardReceivedOutput, StockJournal, StockJournalEntry

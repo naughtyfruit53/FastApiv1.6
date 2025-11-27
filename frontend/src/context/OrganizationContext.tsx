@@ -28,7 +28,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../services/api/client';
+import apiClient from '../services/api/client';
 
 interface OrganizationContextType {
   /** Current organization ID */

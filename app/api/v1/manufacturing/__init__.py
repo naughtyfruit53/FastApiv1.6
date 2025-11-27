@@ -31,6 +31,9 @@ from .bom import router as bom_router
 from .mrp import router as mrp_router
 from .production_planning import router as production_planning_router
 from .shop_floor import router as shop_floor_router
+from .maintenance import router as maintenance_router
+from .quality_control import router as quality_control_router
+from .inventory_adjustment import router as inventory_adjustment_router
 # Comment out the test_router import and inclusion to avoid ModuleNotFoundError in deployment
 # from .test_router import router as test_router
 
@@ -153,6 +156,39 @@ try:
     logger.debug("Included shop_floor_router")
 except Exception as e:
     logger.error(f"Failed to include shop_floor_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    router.include_router(maintenance_router, prefix="/maintenance", tags=["Maintenance"])
+    for route in maintenance_router.routes:
+        if isinstance(route, APIRoute):
+            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
+            logger.debug(f"Registered maintenance endpoint: {methods} /maintenance{route.path}")
+    logger.debug("Included maintenance_router")
+except Exception as e:
+    logger.error(f"Failed to include maintenance_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    router.include_router(quality_control_router, prefix="/quality-control", tags=["Quality Control"])
+    for route in quality_control_router.routes:
+        if isinstance(route, APIRoute):
+            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
+            logger.debug(f"Registered quality_control endpoint: {methods} /quality-control{route.path}")
+    logger.debug("Included quality_control_router")
+except Exception as e:
+    logger.error(f"Failed to include quality_control_router: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+try:
+    router.include_router(inventory_adjustment_router, prefix="/inventory-adjustment", tags=["Inventory Adjustment"])
+    for route in inventory_adjustment_router.routes:
+        if isinstance(route, APIRoute):
+            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
+            logger.debug(f"Registered inventory_adjustment endpoint: {methods} /inventory-adjustment{route.path}")
+    logger.debug("Included inventory_adjustment_router")
+except Exception as e:
+    logger.error(f"Failed to include inventory_adjustment_router: {str(e)}\n{traceback.format_exc()}")
     raise
 
 # Comment out test_router to avoid ModuleNotFoundError in deployment

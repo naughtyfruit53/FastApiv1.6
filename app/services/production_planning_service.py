@@ -6,6 +6,7 @@ This service handles advanced production planning, resource allocation,
 scheduling, capacity management, and order prioritization.
 """
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, case
 from typing import List, Dict, Optional, Tuple
@@ -13,8 +14,9 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import logging
 
-from app.models.vouchers.manufacturing_planning import ManufacturingOrder, BillOfMaterials
+from app.models.vouchers.manufacturing_planning import ManufacturingOrder, BillOfMaterials, Machine, PreventiveMaintenanceSchedule, BreakdownMaintenance, MachinePerformanceLog, SparePart, ProductionEntry, QCTemplate, QCInspection, Rejection, InventoryAdjustment  # UPDATED: Added all new models
 from app.models.product_models import Product
+from app.schemas.manufacturing import MachineCreate, MachineResponse, PreventiveMaintenanceScheduleCreate, PreventiveMaintenanceScheduleResponse, BreakdownMaintenanceCreate, BreakdownMaintenanceResponse, MachinePerformanceLogCreate, MachinePerformanceLogResponse, SparePartCreate, SparePartResponse, ProductionEntryCreate, ProductionEntryResponse, QCTemplateCreate, QCTemplateResponse, QCInspectionCreate, QCInspectionResponse, RejectionCreate, RejectionResponse, InventoryAdjustmentCreate, InventoryAdjustmentResponse  # NEW: Added all new schemas
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,207 @@ class ProductionPlanningService:
         'medium': 50,
         'low': 25
     }
+
+    @staticmethod
+    async def get_machines(
+        db: AsyncSession,
+        organization_id: int
+    ) -> List[Machine]:
+        """
+        Get all machines for the organization
+        """
+        try:
+            stmt = select(Machine).where(Machine.organization_id == organization_id)
+            result = await db.execute(stmt)
+            machines = result.scalars().all()
+            logger.info(f"Retrieved {len(machines)} machines for organization {organization_id}")
+            return machines
+        except Exception as e:
+            logger.error(f"Error retrieving machines: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to retrieve machines")
+
+    @staticmethod
+    async def create_machine(
+        db: AsyncSession,
+        organization_id: int,
+        machine_data: MachineCreate
+    ) -> MachineResponse:
+        """
+        Create a new machine entry
+        """
+        try:
+            db_machine = Machine(
+                organization_id=organization_id,
+                **machine_data.dict()
+            )
+            db.add(db_machine)
+            await db.commit()
+            await db.refresh(db_machine)
+            logger.info(f"Created machine {db_machine.code} for organization {organization_id}")
+            return db_machine
+        except Exception as e:
+            logger.error(f"Error creating machine: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create machine")
+
+    @staticmethod
+    async def create_preventive_schedule(
+        db: AsyncSession,
+        organization_id: int,
+        schedule_data: PreventiveMaintenanceScheduleCreate
+    ) -> PreventiveMaintenanceScheduleResponse:
+        try:
+            db_schedule = PreventiveMaintenanceSchedule(
+                organization_id=organization_id,
+                **schedule_data.dict()
+            )
+            db.add(db_schedule)
+            await db.commit()
+            await db.refresh(db_schedule)
+            logger.info(f"Created preventive schedule for machine {schedule_data.machine_id}")
+            return db_schedule
+        except Exception as e:
+            logger.error(f"Error creating preventive schedule: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create preventive schedule")
+
+    @staticmethod
+    async def create_breakdown(
+        db: AsyncSession,
+        organization_id: int,
+        breakdown_data: BreakdownMaintenanceCreate
+    ) -> BreakdownMaintenanceResponse:
+        try:
+            db_breakdown = BreakdownMaintenance(
+                organization_id=organization_id,
+                **breakdown_data.dict()
+            )
+            db.add(db_breakdown)
+            await db.commit()
+            await db.refresh(db_breakdown)
+            logger.info(f"Created breakdown record for machine {breakdown_data.machine_id}")
+            return db_breakdown
+        except Exception as e:
+            logger.error(f"Error creating breakdown record: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create breakdown record")
+
+    @staticmethod
+    async def create_performance_log(
+        db: AsyncSession,
+        organization_id: int,
+        log_data: MachinePerformanceLogCreate
+    ) -> MachinePerformanceLogResponse:
+        try:
+            db_log = MachinePerformanceLog(
+                organization_id=organization_id,
+                **log_data.dict()
+            )
+            db.add(db_log)
+            await db.commit()
+            await db.refresh(db_log)
+            logger.info(f"Created performance log for machine {log_data.machine_id}")
+            return db_log
+        except Exception as e:
+            logger.error(f"Error creating performance log: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create performance log")
+
+    @staticmethod
+    async def create_spare_part(
+        db: AsyncSession,
+        organization_id: int,
+        spare_data: SparePartCreate
+    ) -> SparePartResponse:
+        try:
+            db_spare = SparePart(
+                organization_id=organization_id,
+                **spare_data.dict()
+            )
+            db.add(db_spare)
+            await db.commit()
+            await db.refresh(db_spare)
+            logger.info(f"Created spare part {db_spare.code} for machine {spare_data.machine_id}")
+            return db_spare
+        except Exception as e:
+            logger.error(f"Error creating spare part: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create spare part")
+
+    @staticmethod
+    async def create_qc_template(
+        db: AsyncSession,
+        organization_id: int,
+        template_data: QCTemplateCreate
+    ) -> QCTemplateResponse:
+        try:
+            db_template = QCTemplate(
+                organization_id=organization_id,
+                **template_data.dict()
+            )
+            db.add(db_template)
+            await db.commit()
+            await db.refresh(db_template)
+            logger.info(f"Created QC template for product {template_data.product_id}")
+            return db_template
+        except Exception as e:
+            logger.error(f"Error creating QC template: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create QC template")
+
+    @staticmethod
+    async def create_qc_inspection(
+        db: AsyncSession,
+        organization_id: int,
+        inspection_data: QCInspectionCreate
+    ) -> QCInspectionResponse:
+        try:
+            db_inspection = QCInspection(
+                organization_id=organization_id,
+                **inspection_data.dict()
+            )
+            db.add(db_inspection)
+            await db.commit()
+            await db.refresh(db_inspection)
+            logger.info(f"Created QC inspection {db_inspection.id}")
+            return db_inspection
+        except Exception as e:
+            logger.error(f"Error creating QC inspection: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create QC inspection")
+
+    @staticmethod
+    async def create_rejection(
+        db: AsyncSession,
+        organization_id: int,
+        rejection_data: RejectionCreate
+    ) -> RejectionResponse:
+        try:
+            db_rejection = Rejection(
+                organization_id=organization_id,
+                **rejection_data.dict()
+            )
+            db.add(db_rejection)
+            await db.commit()
+            await db.refresh(db_rejection)
+            logger.info(f"Created rejection for inspection {rejection_data.qc_inspection_id}")
+            return db_rejection
+        except Exception as e:
+            logger.error(f"Error creating rejection: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create rejection")
+
+    @staticmethod
+    async def create_inventory_adjustment(
+        db: AsyncSession,
+        organization_id: int,
+        adjustment_data: InventoryAdjustmentCreate
+    ) -> InventoryAdjustmentResponse:
+        try:
+            db_adjustment = InventoryAdjustment(
+                organization_id=organization_id,
+                **adjustment_data.dict()
+            )
+            db.add(db_adjustment)
+            await db.commit()
+            await db.refresh(db_adjustment)
+            logger.info(f"Created inventory adjustment {db_adjustment.id}")
+            return db_adjustment
+        except Exception as e:
+            logger.error(f"Error creating inventory adjustment: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create inventory adjustment")
 
     @staticmethod
     async def calculate_order_priority_score(
@@ -470,3 +673,4 @@ class ProductionPlanningService:
             current_time = suggested_end + timedelta(hours=1)  # 1 hour buffer between orders
         
         return scheduled_orders
+        

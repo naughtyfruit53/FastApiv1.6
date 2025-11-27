@@ -107,6 +107,43 @@ def get_comprehensive_permissions() -> List[Tuple[str, str, str, str, str]]:
         "read"
     ))
     
+    # NEW: Add manufacturing permissions
+    permissions.append((
+        "manufacturing.read",
+        "Read Manufacturing",
+        "View manufacturing data",
+        "manufacturing",
+        "read"
+    ))
+    permissions.append((
+        "manufacturing.write",
+        "Write Manufacturing",
+        "Create manufacturing orders",
+        "manufacturing",
+        "write"
+    ))
+    permissions.append((
+        "manufacturing.update",
+        "Update Manufacturing",
+        "Update manufacturing data",
+        "manufacturing",
+        "update"
+    ))
+    permissions.append((
+        "manufacturing.delete",
+        "Delete Manufacturing",
+        "Delete manufacturing data",
+        "manufacturing",
+        "delete"
+    ))
+    permissions.append((
+        "manufacturing.view",
+        "View Manufacturing",
+        "View manufacturing module",
+        "manufacturing",
+        "view"
+    ))
+    
     return permissions
 
 
@@ -136,5 +173,5 @@ def get_default_role_permissions() -> Dict[str, List[str]]:
             if "read" in p or "view" in p
         ],
         # Explicitly add permissions for org_admin role
-        "org_admin": all_permissions + ["settings.view", "settings.update", "dashboard.read"],  # Explicitly add dashboard.read
+        "org_admin": all_permissions + ["settings.view", "settings.update", "dashboard.read", "manufacturing.read", "manufacturing.write", "manufacturing.update", "manufacturing.delete", "manufacturing.view"],  # Explicitly add dashboard.read and manufacturing
     }

@@ -7,14 +7,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src/**/*.{ts,tsx} --fix",
-    "lint:check": "eslint src/**/*.{ts,tsx}",
+    "lint": "eslint src//*.{ts,tsx} --fix",
+    "lint:check": "eslint src//*.{ts,tsx}",
     "test": "jest",
     "test:watch": "jest --watch"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@hookform/resolvers": "^3.9.0",
     "@mui/icons-material": "^7.3.1",
     "@mui/material": "^7.3.1",
     "@mui/types": "^7.3.1",
@@ -50,7 +51,8 @@
     "react-quill": "^0.0.2",
     "react-toastify": "^11.0.5",
     "recharts": "^2.12.7",
-    "swr": "^2.3.6"
+    "swr": "^2.3.6",
+    "yup": "^1.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

@@ -18,7 +18,7 @@ import { useState, useEffect } from "react"; // Added import for useState and us
 import Head from 'next/head';  // Added import for Head to handle meta tags
 import AppLayout from "../components/AppLayout"; // Global layout with MegaMenu
 // Removed ChatbotNavigator import as it may be causing the undefined component error
-import CompanySetupGuard from "../components/CompanySetupGuard";  // NEW: Import CompanySetupGuard
+import CompanySetupGuard from "../components/CompanySetupGuard";  // NEW: Import CompanySetupGuard to show modal on login if company details missing
 
 // Create modern theme using our design system
 const theme = createTheme({
@@ -181,18 +181,17 @@ function MyApp({ Component, pageProps }: AppProps) {
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />  {/* Updated for iOS safe area support */}
       </Head>
-      <AuthProvider>
-        <OrganizationProvider>  {/* NEW: Wrapped with OrganizationProvider to provide context */}
-          <QueryClientProvider client={queryClient}>
-            <PermissionProvider>
-              <CompanyProvider>
-                <EmailProvider>
-                  <ThemeProvider theme={theme}>
-                    <CssBaseline />
-                    <ClientOnly>
-                      {/* Global AppLayout wraps all pages and conditionally shows MegaMenu */}
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <ClientOnly>
+          <AuthProvider>
+            <OrganizationProvider>
+              <QueryClientProvider client={queryClient}>
+                <PermissionProvider>
+                  <CompanyProvider>
+                    <EmailProvider>
                       <AppLayout>
-                        <CompanySetupGuard>  {/* NEW: Wrapped with CompanySetupGuard to show modal on login if company details missing */}
+                        <CompanySetupGuard>
                           {getLayout(<Component {...pageProps} />)}
                         </CompanySetupGuard>
                       </AppLayout>
@@ -207,14 +206,14 @@ function MyApp({ Component, pageProps }: AppProps) {
                         draggable
                         pauseOnHover
                       />
-                    </ClientOnly>
-                  </ThemeProvider>
-                </EmailProvider>
-              </CompanyProvider>
-            </PermissionProvider>
-          </QueryClientProvider>
-        </OrganizationProvider>
-      </AuthProvider>
+                    </EmailProvider>
+                  </CompanyProvider>
+                </PermissionProvider>
+              </QueryClientProvider>
+            </OrganizationProvider>
+          </AuthProvider>
+        </ClientOnly>
+      </ThemeProvider>
     </>
   );
 }

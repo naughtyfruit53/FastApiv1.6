@@ -15,6 +15,7 @@ import { markAuthReady, resetAuthReady } from "../lib/api";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY } from "../constants/auth";
 import { Role } from "../types/rbac.types";
 import { rbacService } from "../services/rbacService";
+
 interface UserPermissions {
   role: string;
   roles: Role[];
@@ -22,6 +23,7 @@ interface UserPermissions {
   modules: string[];
   submodules: Record<string, string[]>;
 }
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -36,7 +38,9 @@ interface AuthContextType {
   getAuthHeaders: () => { Authorization?: string };
   refreshPermissions: () => Promise<void>;
 }
+
 export const AuthContext = createContext<AuthContextType | undefined>(undefined); // Changed to named export
+
 export function AuthProvider({ children }: { children: ReactNode }): any {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   const hasFetched = useRef(false); // Prevent multiple fetches
   const isFetching = useRef(false); // Prevent concurrent fetches
   const isMounted = useRef(true);  // NEW: Track if component is mounted to prevent memory leaks
+
   const computeRoleBasedPermissions = (user: User | null): UserPermissions => {
     if (!user) {
       return {
@@ -187,6 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       submodules,
     };
   };
+
   // Fetch user permissions from RBAC service with timeout
   const fetchUserPermissions = async (userId: number) => {
     setPermissionsLoading(true);
@@ -254,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       setPermissionsLoading(false);
     }
   };
+
   // Fetch the current user from API using the token in localStorage with timeout
   const fetchUser = async (retryCount = 0) => {
     if (isFetching.current || !isMounted.current) return; // NEW: Prevent concurrent and unmounted fetches
@@ -378,9 +385,16 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       if (router.pathname !== "/login") {
         console.log("[AuthProvider] Redirecting to login");
         // Save current path as return URL before redirect
-        if (router.pathname !== '/login' && !sessionStorage.getItem("returnUrlAfterLogin")) {
-          console.log("[AuthProvider] Saving current URL as returnUrlAfterLogin:", router.asPath);
+        // NEW: Don't save if pathname includes '404' or invalid
+        if (
+          router.pathname !== '/login' && 
+          !router.pathname.includes('404') && 
+          !sessionStorage.getItem("returnUrlAfterLogin")
+        ) {
+          console.log("[AuthProvider] Saving valid URL as returnUrlAfterLogin:", router.asPath);
           sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
+        } else if (router.pathname.includes('404')) {
+          console.log("[AuthProvider] Skipping save returnUrl for 404 path");
         }
         router.push("/login");
       } else {
@@ -392,6 +406,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       setPermissionsLoading(false); // NEW: Ensure permissionsLoading false even on error
     }
   };
+
   // On mount, check for token and initialize user session
   useEffect(() => {
     console.log("[AuthProvider] Component mounted, initializing auth state");
@@ -419,6 +434,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       isMounted.current = false;  // NEW: Set unmounted on cleanup to prevent async updates
     };
   }, [router]); // NEW: Added router to dependency list to handle path changes properly
+
   // Handle post-login redirect with state preservation
   const handlePostLoginRedirect = () => {
     try {
@@ -442,6 +458,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       router.push("/dashboard");
     }
   };
+
   // Attempt to restore form data after login
   const restoreFormData = () => {
     try {
@@ -477,6 +494,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       console.warn("[AuthProvider] Could not restore form data:", err);
     }
   };
+
   // Force password reset if required
   useEffect(() => {
     if (
@@ -488,13 +506,14 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       router.push("/password-reset");
     }
   }, [user, router]);
+
   // Login: store token, hydrate user, and mark ready
   const login = async (loginResponse: any) => {
     console.log("[AuthProvider] Login process started:", {
       hasToken: !!loginResponse.access_token,
       hasRefresh: !!loginResponse.refresh_token,
       userRole: loginResponse.user_role,
-      isSuperAdmin: loginResponse.user?.is_super_admin,
+      isSuperAdmin: false,
       hasOrgId: !!loginResponse.organization_id,
       timestamp: new Date().toISOString(),
     });
@@ -556,6 +575,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       "[AuthProvider] Login process completed successfully - user context established from login response",
     );
   };
+
   // Logout: clear all sensitive data and redirect
   const logout = () => {
     console.log("[AuthProvider] Logout initiated");
@@ -574,20 +594,24 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       console.log("[AuthProvider] Already on login - no redirect needed");
     }
   };
+
   // Manual refresh of user (e.g., after profile update)
   const refreshUser = async () => {
     await fetchUser();
   };
+
   // Refresh permissions without fetching full user data
   const refreshPermissions = async () => {
     if (user) {
       await fetchUserPermissions(user.id);
     }
   };
+
   // Update the user object in memory only
   const updateUser = (updatedData: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...updatedData } : null));
   };
+
   // Get auth headers for API requests
   const getAuthHeaders = () => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -600,6 +624,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     }
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
+
   // Only ready if user is super admin or has org context
   const isOrgContextReady =
     !user || user.is_super_admin || !!user.organization_id;
@@ -611,6 +636,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     willRenderChildren: !loading,
     timestamp: new Date().toISOString(),
   });
+
   // Timeout for loading
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -621,17 +647,27 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     }, 15000); // Increased timeout to 15 seconds
     return () => clearTimeout(timeout);
   }, [loading]);
-  // Handle unauthorized state - redirect if no user and not loading
-  if (!loading && !user && router.pathname !== "/login") {
-    console.log("[AuthProvider] No user after loading - redirecting to login");
-    // Save current path as return URL before redirect
-    if (router.pathname !== '/login' && !sessionStorage.getItem("returnUrlAfterLogin")) {
-      console.log("[AuthProvider] Saving current URL as returnUrlAfterLogin:", router.asPath);
-      sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
+
+  // NEW: Handle unauthorized redirect in useEffect to prevent side effects in render
+  useEffect(() => {
+    if (!loading && !user && router.pathname !== "/login") {
+      console.log("[AuthProvider] No user after loading - redirecting to login");
+      // Save current path as return URL before redirect
+      // NEW: Don't save if pathname includes '404' or invalid
+      if (
+        router.pathname !== '/login' && 
+        !router.pathname.includes('404') && 
+        !sessionStorage.getItem("returnUrlAfterLogin")
+      ) {
+        console.log("[AuthProvider] Saving valid URL as returnUrlAfterLogin:", router.asPath);
+        sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
+      } else if (router.pathname.includes('404')) {
+        console.log("[AuthProvider] Skipping save returnUrl for 404 path");
+      }
+      router.push("/login");
     }
-    router.push("/login");
-    return null;
-  }
+  }, [loading, user, router]);
+
   // Show loading spinner while auth state is being determined
   if (loading || permissionsLoading) {  // NEW: Added permissionsLoading to prevent premature render
     console.log("[AuthProvider] Auth or permissions still loading - showing spinner");
@@ -721,6 +757,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       </>
     );
   }
+
   return (
     <AuthContext.Provider
       value={{
@@ -744,6 +781,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     </AuthContext.Provider>
   );
 }
+
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -751,6 +789,7 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
 export const useAuthWithOrgContext = (): any => {
   const auth = useAuth();
   return {

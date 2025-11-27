@@ -21,7 +21,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include chart_of_accounts_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .expense_account import router as expense_account_router
@@ -33,7 +32,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include expense_account_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .vouchers.journal_voucher import router as journal_voucher_router
@@ -45,7 +43,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include journal_voucher_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .vouchers.contra_voucher import router as contra_voucher_router
@@ -57,7 +54,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include contra_voucher_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .vouchers.credit_note import router as credit_note_router
@@ -69,7 +65,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include credit_note_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .vouchers.debit_note import router as debit_note_router
@@ -81,7 +76,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include debit_note_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .vouchers.non_sales_credit_note import router as non_sales_credit_note_router
@@ -93,7 +87,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include non_sales_credit_note_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .user import router as user_router
@@ -105,7 +98,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include user_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .organizations.routes import router as organizations_router
@@ -117,7 +109,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include organizations_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .hr import router as hr_router
@@ -129,7 +120,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include hr_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .payroll import router as payroll_router
@@ -141,7 +131,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include payroll_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .oauth import router as oauth_router
@@ -153,7 +142,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include oauth_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .ledger import router as ledger_router
@@ -165,7 +153,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include ledger_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .master_data import router as master_data_router
@@ -177,7 +164,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include master_data_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .email import router as email_router
@@ -189,7 +175,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include email_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .voucher_email_templates import router as voucher_email_templates_router
@@ -201,7 +186,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include voucher_email_templates_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .voucher_format_templates import router as voucher_format_templates_router
@@ -213,7 +197,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include voucher_format_templates_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .chatbot import router as chatbot_router
@@ -225,7 +208,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include chatbot_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .ai import router as ai_router
@@ -237,7 +219,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include ai_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .manufacturing import router as manufacturing_router
@@ -249,7 +230,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include manufacturing_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .bom import router as bom_router
@@ -261,7 +241,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include bom_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .transport import router as transport_router
@@ -273,7 +252,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include transport_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .crm import router as crm_router
@@ -285,7 +263,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include crm_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .contacts import router as contacts_router
@@ -297,7 +274,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include contacts_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .accounts import router as accounts_router
@@ -309,7 +285,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include accounts_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .pincode import router as pincode_router
@@ -321,7 +296,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include pincode_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .website_agent import router as website_agent_router
@@ -333,7 +307,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include website_agent_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .ab_testing import router as ab_testing_router
@@ -345,7 +318,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include ab_testing_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .streaming_analytics import router as streaming_analytics_router
@@ -357,7 +329,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include streaming_analytics_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .vouchers import router as vouchers_router
@@ -369,7 +340,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include vouchers_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .products import router as products_router  # CHANGED: from ..products to .products
@@ -381,7 +351,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include products_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .finance_analytics import router as finance_analytics_router
@@ -393,7 +362,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include finance_analytics_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .order_book import router as order_book_router
@@ -405,7 +373,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include order_book_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .exhibition import router as exhibition_router
@@ -417,7 +384,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include exhibition_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Entitlements API (app-level, read-only)
     try:
@@ -430,7 +396,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include entitlements_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Admin Entitlements API (admin-only, write)
     try:
@@ -443,7 +408,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include admin_entitlements_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Admin Categories API (admin-only, category-based entitlement management)
     try:
@@ -456,7 +420,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include admin_categories_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Role Delegation API (org_admin and management)
     try:
@@ -469,7 +432,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include role_delegation_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Customer Analytics API
     try:
@@ -482,7 +444,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include customer_analytics_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Management Reports API
     try:
@@ -495,7 +456,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include management_reports_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Notifications API
     try:
@@ -508,7 +468,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include notifications_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Platform API
     try:
@@ -521,7 +480,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include platform_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Settings API
     try:
@@ -534,7 +492,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include settings_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Organization User Management API (NEW 4-role system)
     try:
@@ -547,7 +504,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include org_user_management_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Reports API (NEW: Added to fix 404 on /reports endpoints)
     try:
@@ -560,7 +516,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include reports_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # Purchase Order API (NEW: Added to fix 404 on /purchase-orders/next-number)
     try:
@@ -573,7 +528,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include purchase_order_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # GST Search API (NEW: Added to fix 404 on /gst/search/{gst_number})
     try:
@@ -586,7 +540,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include gst_search_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     # ERP API (NEW: Added to fix 404 on /erp/bank-accounts)
     try:
@@ -599,7 +552,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include erp_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
     try:
         from .pdf_extraction import router as pdf_extraction_router
@@ -611,6 +563,5 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include pdf_extraction_router: {str(e)}\n{traceback.format_exc()}")
-        raise
 
 register_subrouters()

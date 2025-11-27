@@ -2,13 +2,23 @@
 
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Box, Container, Typography, Button, Paper } from "@mui/material";
 import { Home, ArrowBack } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 
 const NotFoundPage: React.FC = () => {
   const router = useRouter();
+
+  // NEW: Check if current path matches returnUrl and clear it to prevent loop
+  useEffect(() => {
+    const returnUrl = sessionStorage.getItem("returnUrlAfterLogin");
+    const currentPath = window.location.pathname;
+    if (returnUrl && returnUrl === currentPath) {
+      console.warn("[404] Current path matches invalid returnUrl - clearing to prevent login loop");
+      sessionStorage.removeItem("returnUrlAfterLogin");
+    }
+  }, []);
 
   const handleGoHome = () => {
     router.push("/");

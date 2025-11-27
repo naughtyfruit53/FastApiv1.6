@@ -1,3 +1,4 @@
+// frontend/src/services/api/client.ts
 /**
  * API Client - Centralized HTTP client for API communication
  * 
@@ -368,4 +369,4 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient();
+export default new ApiClient();

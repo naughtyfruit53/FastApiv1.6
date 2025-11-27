@@ -183,7 +183,7 @@ class BOMRevision(Base):
         Index('idx_bom_rev_status', 'approval_status'),
     )
 
-# Manufacturing Order
+# Manufacturing Order - Enhanced with new fields for Production Entry
 class ManufacturingOrder(BaseVoucher):
     __tablename__ = "manufacturing_orders"
     
@@ -207,7 +207,7 @@ class ManufacturingOrder(BaseVoucher):
     production_department = Column(String)
     production_location = Column(String)
     
-    # Resource Allocation
+    # Resource Allocation - NEW fields
     assigned_operator = Column(String)
     assigned_supervisor = Column(String)
     machine_id = Column(String)
@@ -225,6 +225,13 @@ class ManufacturingOrder(BaseVoucher):
     completion_percentage = Column(Float, default=0.0)
     last_updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
+    # NEW: For Production Entry
+    shift = Column(String)
+    wastage_percentage = Column(Float, default=0.0)
+    time_taken = Column(Float, default=0.0)  # Total time
+    power_consumption = Column(Float, default=0.0)
+    downtime_events = Column(Text)  # JSON string of events
+    
     # Relationships
     bom = relationship("BillOfMaterials")
     material_issues = relationship("MaterialIssue", back_populates="manufacturing_order", cascade="all, delete-orphan")
@@ -236,3 +243,222 @@ class ManufacturingOrder(BaseVoucher):
         Index('idx_mo_org_status', 'organization_id', 'production_status'),
         Index('idx_mo_org_date', 'organization_id', 'date'),
     )
+
+# NEW: ProductionEntry Model
+class ProductionEntry(Base):
+    __tablename__ = "production_entries"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    manufacturing_order_id = Column(Integer, ForeignKey("manufacturing_orders.id"), nullable=False)
+    production_order_no = Column(String, nullable=False)
+    date = Column(DateTime(timezone=True), nullable=False)
+    shift = Column(String)
+    machine_id = Column(Integer, ForeignKey("machines.id"))
+    operator_id = Column(Integer, ForeignKey("users.id"))
+    status = Column(String, nullable=False)  # Planned / In-progress / Completed / Rework
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    planned_quantity = Column(Float, nullable=False)
+    actual_quantity = Column(Float, nullable=False)
+    wastage_percentage = Column(Float, default=0.0)
+    batch_number = Column(String, nullable=False)
+    rejected_quantity = Column(Float, default=0.0)
+    time_taken = Column(Float, nullable=False)
+    labor_hours = Column(Float, nullable=False)
+    machine_hours = Column(Float, nullable=False)
+    power_consumption = Column(Float, default=0.0)
+    downtime_events = Column(Text)  # JSON
+    notes = Column(Text)
+    attachments = Column(Text)  # JSON of file paths
+    qc_approval = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    manufacturing_order = relationship("ManufacturingOrder", back_populates="production_entries")
+    machine = relationship("Machine")
+    operator = relationship("User")
+    product = relationship("Product")
+
+    __table_args__ = {'extend_existing': True}
+
+# NEW: Machine Model for Maintenance
+class Machine(Base):
+    __tablename__ = "machines"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    code = Column(String, unique=True, nullable=False)
+    location = Column(String, nullable=False)
+    model = Column(String, nullable=False)
+    serial_no = Column(String)
+    supplier = Column(String)
+    amc_details = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    spare_parts = relationship("SparePart", back_populates="machine")
+    preventive_schedules = relationship("PreventiveMaintenanceSchedule", back_populates="machine")
+    breakdowns = relationship("BreakdownMaintenance", back_populates="machine")
+    performance_logs = relationship("MachinePerformanceLog", back_populates="machine")
+
+    __table_args__ = {'extend_existing': True}
+
+# NEW: Preventive Maintenance Schedule
+class PreventiveMaintenanceSchedule(Base):
+    __tablename__ = "preventive_maintenance_schedules"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    machine_id = Column(Integer, ForeignKey("machines.id"), nullable=False)
+    frequency = Column(String, nullable=False)  # daily, weekly, etc.
+    tasks = Column(Text, nullable=False)  # JSON checklist
+    assigned_technician = Column(String)
+    next_due_date = Column(DateTime(timezone=True))
+    overdue = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    machine = relationship("Machine", back_populates="preventive_schedules")
+
+    __table_args__ = {'extend_existing': True}
+
+# NEW: Breakdown Maintenance
+class BreakdownMaintenance(Base):
+    __tablename__ = "breakdown_maintenances"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    machine_id = Column(Integer, ForeignKey("machines.id"), nullable=False)
+    breakdown_type = Column(String, nullable=False)
+    date = Column(DateTime(timezone=True), nullable=False)
+    reported_by = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    root_cause = Column(Text)
+    time_to_fix = Column(Float)
+    spare_parts_used = Column(Text)  # JSON list
+    cost = Column(Float, default=0.0)
+    downtime_hours = Column(Float, default=0.0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    machine = relationship("Machine", back_populates="breakdowns")
+
+    __table_args__ = {'extend_existing': True}
+
+# NEW: Machine Performance Log
+class MachinePerformanceLog(Base):
+    __tablename__ = "machine_performance_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    machine_id = Column(Integer, ForeignKey("machines.id"), nullable=False)
+    date = Column(DateTime(timezone=True), nullable=False)
+    runtime_hours = Column(Float, default=0.0)
+    idle_hours = Column(Float, default=0.0)
+    efficiency_percentage = Column(Float, default=0.0)
+    error_codes = Column(Text)  # JSON list
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    machine = relationship("Machine", back_populates="performance_logs")
+
+    __table_args__ = {'extend_existing': True}
+
+# NEW: Spare Part
+class SparePart(Base):
+    __tablename__ = "spare_parts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    machine_id = Column(Integer, ForeignKey("machines.id"), nullable=False)
+    name = Column(String, nullable=False)
+    code = Column(String, unique=True, nullable=False)
+    quantity = Column(Float, nullable=False)
+    min_level = Column(Float, default=0.0)
+    reorder_level = Column(Float, default=0.0)
+    unit_cost = Column(Float, default=0.0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    machine = relationship("Machine", back_populates="spare_parts")
+
+    __table_args__ = {'extend_existing': True}
+
+# NEW: QC Template
+class QCTemplate(Base):
+    __tablename__ = "qc_templates"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    test_name = Column(String, nullable=False)
+    tolerance_min = Column(Float)
+    tolerance_max = Column(Float)
+    unit = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    product = relationship("Product")
+
+    __table_args__ = {'extend_existing': True}
+
+# NEW: QC Inspection
+class QCInspection(Base):
+    __tablename__ = "qc_inspections"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    batch_id = Column(Integer, nullable=False)  # Link to batch
+    inspector = Column(String, nullable=False)
+    test_results = Column(Text, nullable=False)  # JSON of tests
+    overall_status = Column(String, nullable=False)  # pass/fail
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = {'extend_existing': True}
+
+# NEW: Rejection
+class Rejection(Base):
+    __tablename__ = "rejections"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    qc_inspection_id = Column(Integer, ForeignKey("qc_inspections.id"), nullable=False)
+    reason = Column(Text, nullable=False)
+    rework_required = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    qc_inspection = relationship("QCInspection")
+
+    __table_args__ = {'extend_existing': True}
+
+# NEW: Inventory Adjustment
+class InventoryAdjustment(Base):
+    __tablename__ = "inventory_adjustments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    type = Column(String, nullable=False)  # increase, decrease, etc.
+    item_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    batch_number = Column(String)
+    old_quantity = Column(Float, nullable=False)
+    new_quantity = Column(Float, nullable=False)
+    reason = Column(String, nullable=False)
+    documents = Column(Text)  # JSON paths
+    approved_by = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    item = relationship("Product")
+
+    __table_args__ = {'extend_existing': True}
