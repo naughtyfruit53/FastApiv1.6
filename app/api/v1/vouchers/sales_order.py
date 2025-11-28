@@ -25,7 +25,7 @@ from app.utils.voucher_gst_helper import get_state_codes_for_sales
 import re  # Added for filename sanitization
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["sales-orders"])
+router = APIRouter(prefix="/vouchers/sales-orders", tags=["sales-orders"])
 
 @router.get("", response_model=List[SalesOrderInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[SalesOrderInDB])
@@ -178,7 +178,7 @@ async def create_sales_order(
             voucher_type="sales order"
         )
         
-        logger.info(f"Sales Order GST: Company State={company_state_code}, Customer State={customer_state_code}")
+        logger.info(f"Sales Order GST: Company State={company_state_code}, state_code={customer_state_code}")
         
         # Initialize sums for header
         total_amount = 0.0

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models import Company, User, Vendor, Organization
 from app.models.erp_models import BankAccount
+from app.models.vouchers.manufacturing_planning import BillOfMaterials, BOMComponent  # NEW: Import for BOM
 import logging
 import base64
 import re
@@ -343,6 +344,37 @@ class VoucherPDFGenerator:
         grand_total = 0.0
         round_off = 0.0
         
+        # NEW: For production_order, fetch BOM checklist
+        bom_checklist = None
+        if voucher_type == 'production_order' and voucher_data.get('bom_id'):
+            try:
+                # Fetch BOM
+                stmt_bom = select(BillOfMaterials).where(
+                    BillOfMaterials.id == voucher_data['bom_id']
+                )
+                result_bom = await db.execute(stmt_bom)
+                bom = result_bom.scalar_one_or_none()
+                
+                if bom:
+                    # Fetch components
+                    stmt_components = select(BOMComponent).where(
+                        BOMComponent.bom_id == bom.id
+                    )
+                    result_components = await db.execute(stmt_components)
+                    components = result_components.scalars().all()
+                    
+                    bom_checklist = [
+                        {
+                            'component_name': comp.component_item.product_name if comp.component_item else 'Unknown',
+                            'quantity_required': comp.quantity_required,
+                            'unit': comp.unit,
+                            'checked': False,  # Placeholder for checklist
+                            'notes': comp.notes or ''
+                        } for comp in components
+                    ]
+            except Exception as e:
+                logger.error(f"Error fetching BOM checklist: {str(e)}")
+        
         if voucher_type == 'grn':
             # For GRN, include only quantity-related fields
             for item in items:
@@ -482,7 +514,7 @@ class VoucherPDFGenerator:
             'total_cgst': total_cgst,
             'total_sgst': total_sgst,
             'total_igst': total_igst,
-            'round_off': round_off,
+            'total_round_off': round_off,
             'grand_total': grand_total,
             'total_quantity': total_quantity,
             'is_interstate': is_interstate,
@@ -492,7 +524,8 @@ class VoucherPDFGenerator:
             'generated_at': datetime.now(),
             'page_count': 1,
             'party': party,
-            'org': org.__dict__ if org else {}
+            'org': org.__dict__ if org else {},
+            'bom_checklist': bom_checklist  # NEW: Add BOM checklist to template data
         }
         
         return template_data
@@ -581,6 +614,8 @@ class VoucherPDFGenerator:
                 template_name = 'credit_note.html'
             elif voucher_type == 'debit-note':
                 template_name = 'debit_note.html'
+            elif voucher_type == 'production_order':  # NEW: Handle production_order
+                template_name = 'production_order.html'
             else:
                 template_name = f"{voucher_type}_voucher.html"
             

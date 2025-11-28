@@ -10,7 +10,7 @@ interface ShortageItem {
   available: number;
   shortage: number;
   unit: string;
-  severity?: "critical" | "warning";
+  severity?: "no_po" | "po_no_dispatch" | "po_dispatch_grn_pending";
   purchase_order_status?: {
     has_order: boolean;
     on_order_quantity: number;
@@ -20,6 +20,8 @@ interface ShortageItem {
       quantity: number;
       status: string;
       delivery_date?: string;
+      has_dispatch: boolean;
+      grn_status: string;
     }>;
   };
 }
@@ -55,7 +57,7 @@ export const useManufacturingShortages = (moId?: number | null) => {
     queryFn: async () => {
       if (!moId) throw new Error("No manufacturing order ID provided");
       const response = await api.get(
-        `/manufacturing-orders/${moId}/check-shortages`,
+        `/manufacturing/manufacturing-orders/${moId}/check-shortages`,
       );
       return response.data;
     },

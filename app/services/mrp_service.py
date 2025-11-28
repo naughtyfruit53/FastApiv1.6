@@ -8,16 +8,16 @@ purchase requisitions as needed.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func
+from sqlalchemy import select, func
 from typing import List, Dict, Optional, Tuple
-from datetime import datetime, timedelta
-from decimal import Decimal
+from datetime import datetime, date
 import logging
+import math
 
 from app.models.vouchers.manufacturing_planning import (
     ManufacturingOrder, BillOfMaterials, BOMComponent
 )
-from app.models.product_models import Product, Stock
+from app.models.product_models import Product, Stock  # FIXED: Import Stock from product_models.py where it's defined
 from app.models.enhanced_inventory_models import InventoryAlert
 from app.schemas.inventory import AlertType, AlertStatus, AlertPriority
 
@@ -169,6 +169,155 @@ class MRPService:
             requirements_list.append(material_req)
         
         return requirements_list
+
+    @staticmethod
+    async def calculate_max_producible(
+        db: AsyncSession,
+        organization_id: int,
+        bom_id: int
+    ) -> int:
+        """Calculate maximum producible units based on current stock"""
+        try:
+            stmt = select(BillOfMaterials).where(
+                BillOfMaterials.id == bom_id,
+                BillOfMaterials.organization_id == organization_id
+            )
+            result = await db.execute(stmt)
+            bom = result.scalar_one_or_none()
+            
+            if not bom:
+                raise HTTPException(status_code=404, detail="BOM not found")
+            
+            stmt = select(BOMComponent).where(BOMComponent.bom_id == bom_id)
+            result = await db.execute(stmt)
+            components = result.scalars().all()
+            
+            if not components:
+                return 0
+            
+            max_p = float('inf')
+            
+            for component in components:
+                if component.quantity_required <= 0:
+                    continue
+                
+                wastage_factor = 1 + (component.wastage_percentage / 100)
+                req_per_unit = component.quantity_required * wastage_factor
+                
+                stmt = select(func.sum(Stock.quantity)).where(
+                    Stock.product_id == component.component_item_id,
+                    Stock.organization_id == organization_id
+                )
+                result = await db.execute(stmt)
+                available = result.scalar() or 0
+                
+                producible = math.floor(available / req_per_unit)
+                max_p = min(max_p, producible)
+            
+            return int(max_p) if max_p != float('inf') else 0
+            
+        except Exception as e:
+            logger.error(f"Error calculating max producible: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to calculate max producible")
+
+    @staticmethod
+    async def check_producible(
+        db: AsyncSession,
+        organization_id: int,
+        bom_id: int,
+        quantity: float
+    ) -> Dict:
+        """Check if quantity is producible and get shortages if not"""
+        try:
+            max_p = await MRPService.calculate_max_producible(db, organization_id, bom_id)
+            is_possible = quantity <= max_p
+            
+            if is_possible:
+                return {
+                    "is_possible": True,
+                    "max_producible": max_p,
+                    "shortages": []
+                }
+            
+            # Calculate shortages
+            stmt = select(BillOfMaterials).where(
+                BillOfMaterials.id == bom_id,
+                BillOfMaterials.organization_id == organization_id
+            )
+            result = await db.execute(stmt)
+            bom = result.scalar_one_or_none()
+            
+            if not bom:
+                raise HTTPException(status_code=404, detail="BOM not found")
+            
+            stmt = select(BOMComponent).where(BOMComponent.bom_id == bom_id)
+            result = await db.execute(stmt)
+            components = result.scalars().all()
+            
+            multiplier = quantity / bom.output_quantity
+            shortages = []
+            product_ids = []
+            
+            for component in components:
+                wastage_factor = 1 + (component.wastage_percentage / 100)
+                req = component.quantity_required * multiplier * wastage_factor
+                
+                stmt = select(func.sum(Stock.quantity)).where(
+                    Stock.product_id == component.component_item_id,
+                    Stock.organization_id == organization_id
+                )
+                result = await db.execute(stmt)
+                available = result.scalar() or 0
+                
+                shortage_qty = max(0, req - available)
+                
+                if shortage_qty > 0:
+                    stmt = select(Product).where(Product.id == component.component_item_id)
+                    result = await db.execute(stmt)
+                    product = result.scalar_one_or_none()
+                    
+                    shortages.append({
+                        'product_id': component.component_item_id,
+                        'product_name': product.product_name if product else 'Unknown',
+                        'required': req,
+                        'available': available,
+                        'shortage': shortage_qty,
+                        'unit': component.unit
+                    })
+                    product_ids.append(component.component_item_id)
+            
+            # Get PO info if shortages
+            if product_ids:
+                po_info = await MRPService.check_purchase_orders_for_products(db, organization_id, product_ids)
+                
+                for shortage in shortages:
+                    pid = shortage['product_id']
+                    if pid in po_info:
+                        shortage['purchase_order_status'] = po_info[pid]
+                        
+                        # Determine severity
+                        pos = po_info[pid]['purchase_orders']
+                        has_pending_with_dispatch = any(
+                            p['has_dispatch'] and p['grn_status'] in ['pending', 'partial'] for p in pos
+                        )
+                        has_any_po = len(pos) > 0
+                        
+                        if has_pending_with_dispatch:
+                            shortage['severity'] = 'po_dispatch_grn_pending'
+                        elif has_any_po:
+                            shortage['severity'] = 'po_no_dispatch'
+                        else:
+                            shortage['severity'] = 'no_po'
+            
+            return {
+                "is_possible": False,
+                "max_producible": max_p,
+                "shortages": shortages
+            }
+            
+        except Exception as e:
+            logger.error(f"Error checking producible: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to check producible")
 
     @staticmethod
     async def create_shortage_alerts(
@@ -343,20 +492,23 @@ class MRPService:
         # Aggregate by product
         po_info = {}
         for item, po in po_items:
-            if item.product_id not in po_info:
-                po_info[item.product_id] = {
+            pid = item.product_id
+            if pid not in po_info:
+                po_info[pid] = {
                     'has_order': True,
                     'total_on_order': 0.0,
                     'purchase_orders': []
                 }
             
-            po_info[item.product_id]['total_on_order'] += item.pending_quantity
-            po_info[item.product_id]['purchase_orders'].append({
+            po_info[pid]['total_on_order'] += item.pending_quantity
+            po_info[pid]['purchase_orders'].append({
                 'po_number': po.voucher_number,
                 'po_id': po.id,
                 'quantity': item.pending_quantity,
                 'status': po.status,
-                'delivery_date': po.delivery_date.isoformat() if po.delivery_date else None
+                'delivery_date': po.delivery_date.isoformat() if po.delivery_date else None,
+                'has_dispatch': po.has_dispatch if hasattr(po, 'has_dispatch') else False,  # Assume field
+                'grn_status': po.grn_status if hasattr(po, 'grn_status') else 'pending'  # Assume field
             })
         
         # Add entries for products without orders
@@ -416,24 +568,24 @@ class MRPService:
                 db, organization_id, shortage_product_ids
             )
             
-            # Add PO info to shortage details
             for shortage in shortages:
-                product_id = shortage['product_id']
-                if product_id in po_info:
-                    shortage['purchase_order_status'] = {
-                        'has_order': po_info[product_id]['has_order'],
-                        'on_order_quantity': po_info[product_id]['total_on_order'],
-                        'orders': po_info[product_id]['purchase_orders']
-                    }
-                    # Color coding: yellow if order placed, red if no order
-                    shortage['severity'] = 'warning' if po_info[product_id]['has_order'] else 'critical'
-                else:
-                    shortage['purchase_order_status'] = {
-                        'has_order': False,
-                        'on_order_quantity': 0.0,
-                        'orders': []
-                    }
-                    shortage['severity'] = 'critical'
+                pid = shortage['product_id']
+                if pid in po_info:
+                    shortage['purchase_order_status'] = po_info[pid]
+                    
+                    # Determine severity
+                    pos = po_info[pid]['purchase_orders']
+                    has_pending_with_dispatch = any(
+                        p['has_dispatch'] and p['grn_status'] in ['pending', 'partial'] for p in pos
+                    )
+                    has_any_po = len(pos) > 0
+                    
+                    if has_pending_with_dispatch:
+                        shortage['severity'] = 'po_dispatch_grn_pending'
+                    elif has_any_po:
+                        shortage['severity'] = 'po_no_dispatch'
+                    else:
+                        shortage['severity'] = 'no_po'
         
         return (not has_shortage, shortages)
 
@@ -507,3 +659,4 @@ class MRPService:
             result['purchase_requisition_data'] = pr_data
         
         return result
+    

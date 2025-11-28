@@ -87,6 +87,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const [discountDialogFor, setDiscountDialogFor] = useState<
     "line" | "total" | null
   >(null);
+  const [deleteRemarkDialogOpen, setDeleteRemarkDialogOpen] = useState(false);  // NEW: For delete remark
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);  // NEW
+  const [deleteRemark, setDeleteRemark] = useState("");  // NEW
 
   useEffect(() => {
     const savedLineType = localStorage.getItem("voucherLineDiscountType");
@@ -349,11 +352,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     totalDiscountWatch,
   ]);
 
-  const {
-    data: voucherList,
-    isLoading: isLoadingList,
-    refetch: refetchVoucherList,
-  } = useQuery({
+  const { data: voucherList, isLoading: isLoadingList, refetch: refetchVoucherList } = useQuery({
     queryKey: [config.voucherType, currentPage, pageSize],
     queryFn: () =>
       voucherService.getVouchers(config.voucherType, {
@@ -665,29 +664,36 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
 
   const handleDelete = useCallback(
     async (voucher: any) => {
-      if (
-        window.confirm(
-          getDynamicMessage.confirmDelete("voucher", voucher.voucher_number),
-        )
-      ) {
-        try {
-          await voucherService.deleteVoucher(
-            config.apiEndpoint || config.voucherType,
-            voucher.id,
-          );
-          queryClient.invalidateQueries({ queryKey: [config.voucherType] });
-          refetchVoucherList();
-          showSuccessToast(
-            getDynamicMessage.voucherDeleted(voucher.voucher_number),
-          );
-        } catch (error: any) {
-          console.error("Error deleting voucher:", error);
-          handleVoucherError(error, "delete");
-        }
-      }
+      setPendingDeleteId(voucher.id);
+      setDeleteRemarkDialogOpen(true);
     },
-    [config.voucherType, config.apiEndpoint, queryClient, refetchVoucherList],
+    [],
   );
+
+  const handleConfirmDelete = async () => {
+    if (pendingDeleteId && deleteRemark) {
+      try {
+        await api.patch(`${config.apiEndpoint || config.voucherType}/${pendingDeleteId}`, {
+          is_deleted: true,
+          deletion_remark: deleteRemark
+        });
+        queryClient.invalidateQueries({ queryKey: [config.voucherType] });
+        refetchVoucherList();
+        showSuccessToast(
+          getDynamicMessage.voucherDeleted(voucher.voucher_number),
+        );
+      } catch (error: any) {
+        console.error("Error soft-deleting voucher:", error);
+        handleVoucherError(error, "delete");
+      } finally {
+        setDeleteRemarkDialogOpen(false);
+        setPendingDeleteId(null);
+        setDeleteRemark("");
+      }
+    } else {
+      alert("Remark is required for deletion");
+    }
+  };
 
   const refreshMasterData = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["vendors"] });
@@ -956,6 +962,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     handleModalClose,
     handleGeneratePDF,
     handleDelete,
+    deleteRemarkDialogOpen,  // NEW
+    setDeleteRemarkDialogOpen,  // NEW
+    deleteRemark,  // NEW
+    setDeleteRemark,  // NEW
+    handleConfirmDelete,  // NEW
     handleAddCustomer,
     handleAddVendor,
     handleAddProduct,

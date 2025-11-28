@@ -469,22 +469,11 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
           "[AuthProvider] Attempting to restore form data:",
           formData,
         );
-        Object.entries(formData).forEach(
-          ([formKey, formValues]: [string, any]) => {
-            const formDataObj = new FormData(form);
-            const formEntries: { [key: string]: any } = {};
-            for (const [key, value] of formDataObj.entries()) {
-              if (typeof value === "string" && value.trim()) {
-                formEntries[key] = value;
-              }
-            }
-            if (Object.keys(formEntries).length > 0) {
-              formData[`form_${index}`] = formEntries;
-            }
-          },
-        );
+        // FIXED: Removed broken inner loop that caused ReferenceError (undefined 'form' and 'index'). 
+        // Simplified to just clear storage and notify user, as full form restoration requires specific form IDs and elements, which aren't implemented here.
+        // If needed, expand with document.getElementById('specific-form-id') and set values accordingly.
         sessionStorage.removeItem("formDataBeforeExpiry");
-        toast.info("Form data has been restored from before session expiry.", {
+        toast.info("Form data from previous session detected and cleared. Please re-enter if needed.", {
           position: "top-right",
           autoClose: 5000,
         });

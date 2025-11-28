@@ -16,6 +16,7 @@ import {
   TrackChanges,  // For tracking details
   AddShoppingCart as CreatePurchaseVoucherIcon,
   RemoveShoppingCart as CreateRejectionNoteIcon,
+  ChangeHistory as ChangeStatusIcon,  // NEW: For change status
 } from '@mui/icons-material';
 
 interface VoucherContextMenuProps {
@@ -33,6 +34,7 @@ interface VoucherContextMenuProps {
   onEditTracking?: (voucher: any) => void;  // New prop for tracking details
   onCreatePurchaseVoucher?: (voucher: any) => void;  // New prop for creating purchase voucher from GRN
   onCreateRejectionNote?: (voucher: any) => void;  // New prop for creating rejection note from GRN
+  onChangeStatus?: (voucher: any) => void;  // NEW: For change status
   showKebab?: boolean;
   contextMenu?: { mouseX: number; mouseY: number; voucher?: any } | null;
   onClose: () => void;
@@ -53,6 +55,7 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
   onEditTracking,
   onCreatePurchaseVoucher,
   onCreateRejectionNote,
+  onChangeStatus,  // NEW
   showKebab = false,
   contextMenu = null,
   onClose,
@@ -179,6 +182,11 @@ const VoucherContextMenu: React.FC<VoucherContextMenuProps> = ({
         {isGoodsReceiptNote && onCreateRejectionNote && (
           <MenuItem onClick={handleAction(onCreateRejectionNote)}>
             <CreateRejectionNoteIcon sx={{ mr: 1 }} /> Create Rejection Note
+          </MenuItem>
+        )}
+        {onChangeStatus && (  // NEW: Change Status option
+          <MenuItem onClick={handleAction(onChangeStatus)}>
+            <ChangeStatusIcon sx={{ mr: 1 }} /> Change Status
           </MenuItem>
         )}
       </Menu>

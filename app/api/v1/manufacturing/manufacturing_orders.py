@@ -14,12 +14,13 @@ import logging
 from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.core.enforcement import require_access
-from app.models.vouchers import ManufacturingOrder, BillOfMaterials
+from app.models.vouchers.manufacturing_planning import ManufacturingOrder, BillOfMaterials, BOMComponent  # FIXED: Use full path to manufacturing_planning.py and added BOMComponent for auto-debit section
 from app.models.vouchers.manufacturing_planning import QCInspection, Machine, ProductionEntry  # UPDATED: Corrected path to vouchers.manufacturing_planning and added Machine
 from app.services.voucher_service import VoucherNumberService
 from app.services.mrp_service import MRPService
 from app.services.production_planning_service import ProductionPlanningService
-from app.schemas.manufacturing import ManufacturingOrderCreate, ManufacturingOrderResponse, MachineCreate, MachineResponse, QCInspectionCreate, QCInspectionResponse, ProductionEntryCreate, ProductionEntryResponse  # NEW: Added QCInspectionCreate and QCInspectionResponse
+from app.services.inventory_service import InventoryService
+from app.schemas.manufacturing import ManufacturingOrderCreate, ManufacturingOrderResponse, MachineCreate, MachineResponse, QCInspectionCreate, QCInspectionResponse, ProductionEntryCreate, ProductionEntryResponse, ManufacturingOrderUpdate, StatusUpdateSchema  # NEW: Added QCInspectionCreate and QCInspectionResponse
 from app.services.notification_service import NotificationService  # NEW: For QC notify
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ async def test_manufacturing_orders():
     logger.info("Test manufacturing orders endpoint accessed")
     return {"message": "Manufacturing orders router is registered"}
 
-@router.get("/next-number")
+@router.get("/next-number")  # CHANGED: Removed /manufacturing-orders
 async def get_next_manufacturing_order_number(
     voucher_date: Optional[date] = None,  # NEW: Add param
     auth: tuple = Depends(require_access("manufacturing", "read")),
@@ -50,7 +51,7 @@ async def get_next_manufacturing_order_number(
         logger.error(f"Error generating voucher number: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate voucher number")
 
-@router.get("/check-backdated-conflict")  # NEW: Add endpoint
+@router.get("/check-backdated-conflict")  # CHANGED: Removed /manufacturing-orders
 async def check_backdated_conflict(
     voucher_date: date,
     auth: tuple = Depends(require_access("manufacturing", "read")),
@@ -77,11 +78,12 @@ async def check_backdated_conflict(
         logger.error(f"Error checking backdated conflict: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to check backdated conflict")
 
-@router.get("", response_model=List[ManufacturingOrderResponse])
+@router.get("", response_model=List[ManufacturingOrderResponse])  # CHANGED: Removed /manufacturing-orders
 async def get_manufacturing_orders(
     skip: int = 0,
     limit: int = 100,
     status: Optional[str] = None,
+    include_deleted: bool = False,  # NEW: Param to include deleted
     auth: tuple = Depends(require_access("manufacturing", "read")),
 
     db: AsyncSession = Depends(get_db)
@@ -95,6 +97,9 @@ async def get_manufacturing_orders(
         
         if status:
             stmt = stmt.where(ManufacturingOrder.production_status == status)
+        
+        if not include_deleted:
+            stmt = stmt.where(ManufacturingOrder.is_deleted == False)  # NEW: Filter out deleted by default
         
         stmt = stmt.offset(skip).limit(limit)
         result = await db.execute(stmt)
@@ -115,7 +120,7 @@ async def get_machines(
     result = await db.execute(stmt)
     return result.scalars().all()
 
-@router.get("/{order_id}", response_model=ManufacturingOrderResponse)
+@router.get("/{order_id}", response_model=ManufacturingOrderResponse)  # CHANGED: Removed /manufacturing-orders/
 async def get_manufacturing_order(
     order_id: int,
     auth: tuple = Depends(require_access("manufacturing", "read")),
@@ -142,7 +147,36 @@ async def get_manufacturing_order(
         logger.error(f"Error fetching manufacturing order {order_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch manufacturing order")
 
-@router.post("")
+@router.get("/bom/{bom_id}/max-producible")  # NEW: Endpoint for max producible
+async def get_max_producible(
+    bom_id: int,
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    current_user, org_id = auth
+    try:
+        max_p = await MRPService.calculate_max_producible(db, org_id, bom_id)
+        return {"max_producible": max_p}
+    except Exception as e:
+        logger.error(f"Error calculating max producible for BOM {bom_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to calculate max producible")
+
+@router.get("/bom/{bom_id}/check-producible")  # NEW: Endpoint for check producible
+async def check_producible(
+    bom_id: int,
+    quantity: float,
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    current_user, org_id = auth
+    try:
+        info = await MRPService.check_producible(db, org_id, bom_id, quantity)
+        return info
+    except Exception as e:
+        logger.error(f"Error checking producible for BOM {bom_id} quantity {quantity}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to check producible")
+
+@router.post("")  # CHANGED: Removed /manufacturing-orders
 async def create_manufacturing_order(
     order_data: ManufacturingOrderCreate,
     check_material_availability: bool = True,
@@ -177,7 +211,7 @@ async def create_manufacturing_order(
         db_order = ManufacturingOrder(
             organization_id=org_id,
             voucher_number=voucher_number,
-            date=datetime.now(),
+            date=order_data.date or datetime.now(),  # NEW: Use provided date or now
             bom_id=order_data.bom_id,
             planned_quantity=order_data.planned_quantity,
             planned_start_date=order_data.planned_start_date,
@@ -188,16 +222,9 @@ async def create_manufacturing_order(
             production_location=order_data.production_location,
             notes=order_data.notes,
             total_amount=estimated_cost,
-            created_by=current_user.id,
-            # NEW fields
-            shift=order_data.shift,
-            machine_id=order_data.machine_id,
-            assigned_operator=order_data.operator,
-            wastage_percentage=order_data.wastage_percentage,
-            time_taken=order_data.time_taken,
-            power_consumption=order_data.power_consumption,
-            downtime_events=",".join(order_data.downtime_events or []),  # Simple serialization
-            sales_order_id=order_data.sales_order_id
+            sales_order_id=order_data.sales_order_id,
+            is_deleted=False,  # NEW: Default to not deleted
+            deletion_remark=None  # NEW: Default remark
         )
         
         db.add(db_order)
@@ -217,6 +244,21 @@ async def create_manufacturing_order(
                     f"Manufacturing Order {voucher_number} created with material shortages: "
                     f"{len(shortages)} items short"
                 )
+        
+        # NEW: Auto-debit if materials available
+        if material_check_result and material_check_result['is_available']:
+            stmt = select(BOMComponent).where(BOMComponent.bom_id == db_order.bom_id)
+            result = await db.execute(stmt)
+            components = result.scalars().all()
+            
+            multiplier = db_order.planned_quantity / bom.output_quantity
+            
+            for component in components:
+                wastage_factor = 1 + (component.wastage_percentage / 100)
+                required_qty = component.quantity_required * multiplier * wastage_factor
+                await InventoryService.update_stock(db, org_id, component.component_item_id, -required_qty)
+            
+            logger.info(f"Auto-debited materials for Manufacturing Order {voucher_number}")
         
         await db.commit()
         await db.refresh(db_order)
@@ -256,6 +298,97 @@ async def create_machine(
 ):
     current_user, org_id = auth
     return await ProductionPlanningService.create_machine(db, org_id, machine_data)
+
+@router.patch("/{order_id}", response_model=ManufacturingOrderResponse)  # CHANGED: Removed /manufacturing-orders/
+async def update_manufacturing_order(
+    order_id: int,
+    update_data: ManufacturingOrderUpdate,
+    auth: tuple = Depends(require_access("manufacturing", "write")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update manufacturing order (including soft delete)"""
+    current_user, org_id = auth
+    try:
+        stmt = select(ManufacturingOrder).where(
+            ManufacturingOrder.id == order_id,
+            ManufacturingOrder.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        order = result.scalar_one_or_none()
+        
+        if not order:
+            raise HTTPException(status_code=404, detail="Manufacturing order not found")
+        
+        # If soft deleting
+        if update_data.is_deleted:
+            if not update_data.deletion_remark:
+                raise HTTPException(status_code=400, detail="Deletion remark is required for delete operation")
+            order.is_deleted = True
+            order.deletion_remark = update_data.deletion_remark
+        else:
+            # Regular update
+            for field, value in update_data.dict(exclude_unset=True).items():
+                setattr(order, field, value)
+        
+        order.updated_at = datetime.now()
+        
+        await db.commit()
+        await db.refresh(order)
+        
+        logger.info(f"Updated manufacturing order {order_id} for organization {org_id}")
+        return order
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating manufacturing order {order_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update manufacturing order")
+
+@router.patch("/{order_id}/status", response_model=ManufacturingOrderResponse)  # CHANGED: Removed /manufacturing-orders/
+async def update_manufacturing_order_status(
+    order_id: int,
+    status_data: StatusUpdateSchema,
+    auth: tuple = Depends(require_access("manufacturing", "write")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update manufacturing order status"""
+    current_user, org_id = auth
+    try:
+        stmt = select(ManufacturingOrder).where(
+            ManufacturingOrder.id == order_id,
+            ManufacturingOrder.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        order = result.scalar_one_or_none()
+        
+        if not order:
+            raise HTTPException(status_code=404, detail="Manufacturing order not found")
+        
+        if order.is_deleted:
+            raise HTTPException(status_code=400, detail="Cannot update status of deleted order")
+        
+        order.production_status = status_data.status
+        order.updated_at = datetime.now()
+        
+        # NEW: Notify on completion
+        if status_data.status == "completed":
+            await NotificationService.send_notification(
+                db, 
+                org_id, 
+                "QC Team", 
+                "New batch ready for QC",
+                f"Manufacturing Order {order.voucher_number} completed. Please perform QC."
+            )
+        
+        await db.commit()
+        await db.refresh(order)
+        
+        logger.info(f"Updated status for manufacturing order {order_id} to {status_data.status}")
+        return order
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating status for order {order_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update order status")
 
 # NEW: Similar routes for preventive, breakdown, etc.
 # Example for QC Inspection

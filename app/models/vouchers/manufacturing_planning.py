@@ -201,6 +201,8 @@ class ManufacturingOrder(BaseVoucher):
     
     # Status
     production_status = Column(String, default="planned")  # planned, in_progress, completed, cancelled
+    
+    # Priority
     priority = Column(String, default="medium")  # low, medium, high, urgent
     
     # Department/Location
@@ -235,6 +237,10 @@ class ManufacturingOrder(BaseVoucher):
     # NEW: Link to sales order
     sales_order_id = Column(Integer, ForeignKey("sales_orders.id"), nullable=True)
     
+    # NEW: Soft delete fields
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    deletion_remark = Column(Text, nullable=True)
+    
     # Relationships
     bom = relationship("BillOfMaterials")
     material_issues = relationship("MaterialIssue", back_populates="manufacturing_order", cascade="all, delete-orphan")
@@ -246,6 +252,7 @@ class ManufacturingOrder(BaseVoucher):
         Index('idx_mo_org_bom', 'organization_id', 'bom_id'),
         Index('idx_mo_org_status', 'organization_id', 'production_status'),
         Index('idx_mo_org_date', 'organization_id', 'date'),
+        Index('idx_mo_deleted', 'is_deleted')  # NEW: Index for deleted
     )
 
 # NEW: ProductionEntry Model

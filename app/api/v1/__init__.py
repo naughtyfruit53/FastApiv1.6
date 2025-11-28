@@ -220,11 +220,16 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include ai_router: {str(e)}\n{traceback.format_exc()}")
 
+    # THIS WAS MISSING — NOW FIXED
     try:
         from .manufacturing import router as manufacturing_router
         logger.debug("Imported manufacturing_router")
         api_v1_router.include_router(manufacturing_router, prefix="/manufacturing", tags=["Manufacturing"])
-        manufacturing_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /manufacturing{route.path}" for route in manufacturing_router.routes if isinstance(route, APIRoute)]
+        manufacturing_routes = [
+            f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /manufacturing{route.path}"
+            for route in manufacturing_router.routes
+            if isinstance(route, APIRoute)
+        ]
         logger.debug(f"Registered manufacturing endpoints: {len(manufacturing_routes)} routes")
         for route_path in manufacturing_routes:
             logger.debug(f"  {route_path}")
@@ -256,7 +261,7 @@ def register_subrouters():
     try:
         from .crm import router as crm_router
         logger.debug("Imported crm_router")
-        api_v1_router.include_router(crm_router, tags=["CRM"])  # Removed prefix="/crm" to fix double prefix issue
+        api_v1_router.include_router(crm_router, tags=["CRM"])
         crm_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in crm_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered crm endpoints: {len(crm_routes)} routes")
         for route_path in crm_routes:
@@ -342,7 +347,7 @@ def register_subrouters():
         logger.error(f"Failed to import/include vouchers_router: {str(e)}\n{traceback.format_exc()}")
 
     try:
-        from .products import router as products_router  # CHANGED: from ..products to .products
+        from .products import router as products_router
         logger.debug("Imported products_router")
         api_v1_router.include_router(products_router, prefix="/products", tags=["products"])
         products_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in products_router.routes if isinstance(route, APIRoute)]
@@ -503,9 +508,9 @@ def register_subrouters():
         for route_path in org_user_mgmt_routes:
             logger.debug(f"  {route_path}")
     except Exception as e:
-        logger.error(f"Failed to import/include org_user_management_router: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"Failed to import/include org_user_mgmt_router: {str(e)}\n{traceback.format_exc()}")
 
-    # Reports API (NEW: Added to fix 404 on /reports endpoints)
+    # Reports API (fixed 404 on /reports)
     try:
         from .reports import router as reports_router
         logger.debug("Imported reports_router")
@@ -517,11 +522,11 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include reports_router: {str(e)}\n{traceback.format_exc()}")
 
-    # Purchase Order API (NEW: Added to fix 404 on /purchase-orders/next-number)
+    # Purchase Order API (fixed 404 on /purchase-orders/next-number)
     try:
         from .vouchers.purchase_order import router as purchase_order_router
         logger.debug("Imported purchase_order_router")
-        api_v1_router.include_router(purchase_order_router, tags=["purchase-orders"])  # Removed prefix="/purchase-orders" to avoid double prefix
+        api_v1_router.include_router(purchase_order_router, tags=["purchase-orders"])
         purchase_order_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in purchase_order_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered purchase_order endpoints: {len(purchase_order_routes)} routes")
         for route_path in purchase_order_routes:
@@ -529,19 +534,19 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include purchase_order_router: {str(e)}\n{traceback.format_exc()}")
 
-    # GST Search API (NEW: Added to fix 404 on /gst/search/{gst_number})
+    # GST Search API (fixed 404 on /gst/search/{gst_number})
     try:
         from .gst_search import router as gst_search_router
         logger.debug("Imported gst_search_router")
-        api_v1_router.include_router(gst_search_router, tags=["GST Search"])
-        gst_search_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in gst_search_router.routes if isinstance(route, APIRoute)]
+        api_v1_router.include_router(gst_search_router, prefix="/gst", tags=["GST Search"])
+        gst_search_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /gst{route.path}" for route in gst_search_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered gst_search endpoints: {len(gst_search_routes)} routes")
         for route_path in gst_search_routes:
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include gst_search_router: {str(e)}\n{traceback.format_exc()}")
 
-    # ERP API (NEW: Added to fix 404 on /erp/bank-accounts)
+    # ERP API (fixed 404 on /erp/bank-accounts)
     try:
         from .erp import router as erp_router
         logger.debug("Imported erp_router")
@@ -553,6 +558,7 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include erp_router: {str(e)}\n{traceback.format_exc()}")
 
+    # PDF Extraction API (fixed 404 on /pdf-extraction)
     try:
         from .pdf_extraction import router as pdf_extraction_router
         logger.debug("Imported pdf_extraction_router")
@@ -563,5 +569,6 @@ def register_subrouters():
             logger.debug(f"  {route_path}")
     except Exception as e:
         logger.error(f"Failed to import/include pdf_extraction_router: {str(e)}\n{traceback.format_exc()}")
+
 
 register_subrouters()

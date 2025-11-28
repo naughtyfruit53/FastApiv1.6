@@ -7,6 +7,7 @@ from datetime import datetime, date
 
 # Manufacturing Order Schemas - Enhanced
 class ManufacturingOrderCreate(BaseModel):
+    date: Optional[datetime] = None  # NEW: Added date field
     bom_id: int
     planned_quantity: float
     planned_start_date: Optional[datetime] = None
@@ -26,6 +27,30 @@ class ManufacturingOrderCreate(BaseModel):
     downtime_events: Optional[List[str]] = None
     sales_order_id: Optional[int] = None
 
+class ManufacturingOrderUpdate(BaseModel):  # NEW: For general updates including soft delete
+    bom_id: Optional[int] = None
+    planned_quantity: Optional[float] = None
+    planned_start_date: Optional[datetime] = None
+    planned_end_date: Optional[datetime] = None
+    production_status: Optional[str] = None
+    priority: Optional[str] = None
+    production_department: Optional[str] = None
+    production_location: Optional[str] = None
+    notes: Optional[str] = None
+    shift: Optional[str] = None
+    machine_id: Optional[str] = None
+    operator: Optional[str] = None
+    wastage_percentage: Optional[float] = None
+    time_taken: Optional[float] = None
+    power_consumption: Optional[float] = None
+    downtime_events: Optional[List[str]] = None
+    sales_order_id: Optional[int] = None
+    is_deleted: Optional[bool] = False  # NEW
+    deletion_remark: Optional[str] = None  # NEW: Required if is_deleted=True
+
+class StatusUpdateSchema(BaseModel):  # NEW: For status updates
+    status: str
+
 class ManufacturingOrderResponse(BaseModel):
     id: int
     voucher_number: str
@@ -33,7 +58,6 @@ class ManufacturingOrderResponse(BaseModel):
     bom_id: int
     planned_quantity: float
     produced_quantity: float
-    scrap_quantity: float
     production_status: str
     priority: str
     total_amount: float
@@ -47,6 +71,8 @@ class ManufacturingOrderResponse(BaseModel):
     power_consumption: float
     downtime_events: Optional[List[str]]
     sales_order_id: Optional[int]
+    is_deleted: bool  # NEW
+    deletion_remark: Optional[str]  # NEW
 
     class Config:
         from_attributes = True
@@ -308,6 +334,41 @@ class InventoryAdjustmentResponse(BaseModel):
     approved_by: Optional[str]
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# NEW: Added missing schemas for BOM
+class BOMComponentCreate(BaseModel):
+    component_item_id: int
+    quantity_required: float
+    unit: str
+    wastage_percentage: float = 0.0
+    is_optional: bool = False
+    sequence: int = 0
+    notes: Optional[str] = None
+
+class BillOfMaterialsCreate(BaseModel):
+    bom_name: str
+    output_item_id: int
+    output_quantity: float
+    version: str = "1.0"
+    description: Optional[str] = None
+    components: Optional[List[BOMComponentCreate]] = None
+
+class BillOfMaterialsResponse(BaseModel):
+    id: int
+    bom_name: str
+    output_item_id: int
+    output_quantity: float
+    version: str
+    is_active: bool
+    description: Optional[str] = None
+    material_cost: float
+    labor_cost: float
+    overhead_cost: float
+    total_cost: float
+    created_by: int
 
     class Config:
         from_attributes = True

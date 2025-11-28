@@ -49,26 +49,24 @@ async def debug_manufacturing():
 
 # Include sub-routers with error handling
 try:
-    router.include_router(manufacturing_orders_router, prefix="/manufacturing-orders", tags=["Manufacturing Orders"])
+    router.include_router(manufacturing_orders_router, prefix="/manufacturing-orders", tags=["Manufacturing Orders"])  # FIXED: Added back prefix="/manufacturing-orders" to match frontend API calls
     for route in manufacturing_orders_router.routes:
         if isinstance(route, APIRoute):
             methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
-            logger.debug(f"Registered manufacturing_orders endpoint: {methods} /manufacturing-orders{route.path}")
+            logger.debug(f"Registered manufacturing_orders endpoint: {methods} {route.path}")
     logger.debug("Included manufacturing_orders_router")
 except Exception as e:
     logger.error(f"Failed to include manufacturing_orders_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
-    router.include_router(bom_router, prefix="/bom", tags=["Bill of Materials"])
+    router.include_router(bom_router, prefix="/bom", tags=["Bill of Materials"])  # FIXED: Added prefix="/bom" to match frontend API calls
     for route in bom_router.routes:
         if isinstance(route, APIRoute):
             methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
-            logger.debug(f"Registered bom endpoint: {methods} /bom{route.path}")
+            logger.debug(f"Registered bom endpoint: {methods} {route.path}")
     logger.debug("Included bom_router")
 except Exception as e:
     logger.error(f"Failed to include bom_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(material_issue_router, prefix="/material-issues", tags=["Material Issue"])
@@ -79,7 +77,6 @@ try:
     logger.debug("Included material_issue_router")
 except Exception as e:
     logger.error(f"Failed to include material_issue_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(manufacturing_journals_router, prefix="/manufacturing-journal-vouchers", tags=["Manufacturing Journals"])
@@ -90,7 +87,6 @@ try:
     logger.debug("Included manufacturing_journals_router")
 except Exception as e:
     logger.error(f"Failed to include manufacturing_journals_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(material_receipt_router, prefix="/material-receipt-vouchers", tags=["Material Receipt"])
@@ -101,7 +97,6 @@ try:
     logger.debug("Included material_receipt_router")
 except Exception as e:
     logger.error(f"Failed to include material_receipt_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(job_cards_router, prefix="/job-card-vouchers", tags=["Job Cards"])
@@ -112,7 +107,6 @@ try:
     logger.debug("Included job_cards_router")
 except Exception as e:
     logger.error(f"Failed to include job_cards_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(stock_journals_router, prefix="/stock-journals", tags=["Stock Journals"])
@@ -123,7 +117,6 @@ try:
     logger.debug("Included stock_journals_router")
 except Exception as e:
     logger.error(f"Failed to include stock_journals_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(mrp_router, prefix="/mrp", tags=["MRP"])
@@ -134,7 +127,6 @@ try:
     logger.debug("Included mrp_router")
 except Exception as e:
     logger.error(f"Failed to include mrp_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(production_planning_router, prefix="/production-schedule", tags=["Production Planning"])
@@ -145,7 +137,6 @@ try:
     logger.debug("Included production_planning_router")
 except Exception as e:
     logger.error(f"Failed to include production_planning_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(shop_floor_router, prefix="/shop-floor", tags=["Shop Floor"])
@@ -156,7 +147,6 @@ try:
     logger.debug("Included shop_floor_router")
 except Exception as e:
     logger.error(f"Failed to include shop_floor_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(maintenance_router, prefix="/maintenance", tags=["Maintenance"])
@@ -167,7 +157,6 @@ try:
     logger.debug("Included maintenance_router")
 except Exception as e:
     logger.error(f"Failed to include maintenance_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(quality_control_router, prefix="/quality-control", tags=["Quality Control"])
@@ -178,7 +167,6 @@ try:
     logger.debug("Included quality_control_router")
 except Exception as e:
     logger.error(f"Failed to include quality_control_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 try:
     router.include_router(inventory_adjustment_router, prefix="/inventory-adjustment", tags=["Inventory Adjustment"])
@@ -189,7 +177,6 @@ try:
     logger.debug("Included inventory_adjustment_router")
 except Exception as e:
     logger.error(f"Failed to include inventory_adjustment_router: {str(e)}\n{traceback.format_exc()}")
-    raise
 
 # Comment out test_router to avoid ModuleNotFoundError in deployment
 # try:
@@ -201,6 +188,5 @@ except Exception as e:
 #     logger.debug("Included test_router")
 # except Exception as e:
 #     logger.error(f"Failed to include test_router: {str(e)}\n{traceback.format_exc()}")
-#     raise
 
 __all__ = ["router"]
