@@ -24,6 +24,7 @@ class ManufacturingOrderCreate(BaseModel):
     time_taken: Optional[float] = 0.0
     power_consumption: Optional[float] = 0.0
     downtime_events: Optional[List[str]] = None
+    sales_order_id: Optional[int] = None
 
 class ManufacturingOrderResponse(BaseModel):
     id: int
@@ -45,6 +46,7 @@ class ManufacturingOrderResponse(BaseModel):
     time_taken: float
     power_consumption: float
     downtime_events: Optional[List[str]]
+    sales_order_id: Optional[int]
 
     class Config:
         from_attributes = True

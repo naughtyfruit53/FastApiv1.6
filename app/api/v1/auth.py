@@ -1,7 +1,5 @@
 # app/api/v1/auth.py
 
-# app/api/v1/auth.py
-
 import logging
 from typing import Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response

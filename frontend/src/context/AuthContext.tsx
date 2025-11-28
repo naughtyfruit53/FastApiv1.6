@@ -277,7 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     try {
       const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
       // Validate token format before proceeding
-      if (accessToken === 'null' || (accessToken && accessToken.split('.').length !== 3)) {
+      if (accessToken === 'null' || accessToken === 'undefined' || (accessToken && accessToken.split('.').length !== 3)) {
         console.log('[AuthProvider] Invalid token format detected - clearing storage');
         localStorage.removeItem(ACCESS_TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
@@ -376,10 +376,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
           autoClose: 5000,
         });
       } else {
-        toast.error(
-          "Failed to establish secure session. Please log in again.",
-          { position: "top-right", autoClose: 5000 },
-        );
+        toast.error("Failed to establish secure session. Please log in again.", {
+          position: "top-right",
+          autoClose: 5000,
+        });
       }
       // Only redirect if not already on login page to prevent loop
       if (router.pathname !== "/login") {
@@ -471,16 +471,15 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         );
         Object.entries(formData).forEach(
           ([formKey, formValues]: [string, any]) => {
-            if (formValues && typeof formValues === "object") {
-              Object.entries(formValues).forEach(([fieldName, fieldValue]) => {
-                const field = document.querySelector(
-                  `[name="${fieldName}"]`,
-                ) as HTMLInputElement;
-                if (field && typeof fieldValue === "string") {
-                  field.value = fieldValue;
-                  field.dispatchEvent(new Event("input", { bubbles: true }));
-                }
-              });
+            const formDataObj = new FormData(form);
+            const formEntries: { [key: string]: any } = {};
+            for (const [key, value] of formDataObj.entries()) {
+              if (typeof value === "string" && value.trim()) {
+                formEntries[key] = value;
+              }
+            }
+            if (Object.keys(formEntries).length > 0) {
+              formData[`form_${index}`] = formEntries;
             }
           },
         );
@@ -517,6 +516,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       hasOrgId: !!loginResponse.organization_id,
       timestamp: new Date().toISOString(),
     });
+    if (!loginResponse.access_token || loginResponse.access_token.split('.').length !== 3) {
+      console.error("[AuthProvider] Invalid access token received from server");
+      throw new Error('Invalid access token received');
+    }
     localStorage.setItem(ACCESS_TOKEN_KEY, loginResponse.access_token);
     if (loginResponse.refresh_token) {
       localStorage.setItem(REFRESH_TOKEN_KEY, loginResponse.refresh_token);
@@ -617,7 +620,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
       console.warn("[AuthProvider] No token found when getting auth headers");
-    } else if (token.split('.').length !== 3) {
+    } else if (token === 'null' || token === 'undefined' || token.split('.').length !== 3) {
       console.error("[AuthProvider] Malformed token when getting auth headers:", token.substring(0, 20) + '...');
     } else {
       console.log("[AuthProvider] Valid token format for auth headers");

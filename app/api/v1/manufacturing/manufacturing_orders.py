@@ -196,7 +196,8 @@ async def create_manufacturing_order(
             wastage_percentage=order_data.wastage_percentage,
             time_taken=order_data.time_taken,
             power_consumption=order_data.power_consumption,
-            downtime_events=",".join(order_data.downtime_events or [])  # Simple serialization
+            downtime_events=",".join(order_data.downtime_events or []),  # Simple serialization
+            sales_order_id=order_data.sales_order_id
         )
         
         db.add(db_order)

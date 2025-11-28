@@ -1,799 +1,804 @@
-// frontend/src/context/AuthContext.tsx
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useRef,
-} from "react";
+// frontend/src/pages/vouchers/Manufacturing-Vouchers/production-order.tsx
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { toast } from "react-toastify";
-import { authService } from "../services/authService";
-import { User, getDisplayRole } from "../types/user.types";
-import { markAuthReady, resetAuthReady } from "../lib/api";
-import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY } from "../constants/auth";
-import { Role } from "../types/rbac.types";
-import { rbacService } from "../services/rbacService";
+import { useForm } from "react-hook-form";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  CircularProgress,
+  Container,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Autocomplete,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  Card,
+  CardContent,
+} from "@mui/material";
 
-interface UserPermissions {
-  role: string;
-  roles: Role[];
-  permissions: string[];
-  modules: string[];
-  submodules: Record<string, string[]>;
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "../../../lib/api";
+import VoucherContextMenu from "../../../components/VoucherContextMenu";
+import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
+import AddBOMModal from "../../../components/AddBOMModal";
+import ManufacturingShortageAlert from "../../../components/ManufacturingShortageAlert";
+import useManufacturingShortages from "../../../hooks/useManufacturingShortages";
+import { voucherService } from "../../../services/vouchersService";
+
+import { ProtectedPage } from '../../../components/ProtectedPage';
+interface ManufacturingOrder {
+  id?: number;
+  voucher_number?: string;
+  date: string;
+  bom_id: number;
+  planned_quantity: number;
+  produced_quantity?: number;
+  scrap_quantity?: number;
+  planned_start_date?: string;
+  planned_end_date?: string;
+  actual_start_date?: string;
+  actual_end_date?: string;
+  production_status: "planned" | "in_progress" | "completed" | "cancelled";
+  priority: "low" | "medium" | "high" | "urgent";
+  production_department?: string;
+  production_location?: string;
+  notes?: string;
+  total_amount: number;
+  sales_order_id?: number;
 }
 
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  permissionsLoading: boolean;
-  displayRole: string | null;
-  userPermissions: UserPermissions | null;
-  login: (loginResponse: any) => Promise<void>;
-  logout: () => void;
-  refreshUser: () => Promise<void>;
-  updateUser: (updatedData: Partial<User>) => void;
-  isOrgContextReady: boolean;
-  getAuthHeaders: () => { Authorization?: string };
-  refreshPermissions: () => Promise<void>;
-}
+const defaultValues: ManufacturingOrder = {
+  date: new Date().toISOString().slice(0, 10),
+  bom_id: 0,
+  planned_quantity: 1,
+  produced_quantity: 0,
+  scrap_quantity: 0,
+  production_status: "planned",
+  priority: "medium",
+  total_amount: 0,
+  sales_order_id: 0,
+};
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined); // Changed to named export
-
-export function AuthProvider({ children }: { children: ReactNode }): any {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [permissionsLoading, setPermissionsLoading] = useState(true);
-  const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
+const ProductionOrder: React.FC = () => {
   const router = useRouter();
-  const hasFetched = useRef(false); // Prevent multiple fetches
-  const isFetching = useRef(false); // Prevent concurrent fetches
-  const isMounted = useRef(true);  // NEW: Track if component is mounted to prevent memory leaks
+  const { id, mode: queryMode, from_sales_order } = router.query;
+  const [mode, setMode] = useState<"create" | "edit" | "view">(
+    (queryMode as "create" | "edit" | "view") || "create",
+  );
+  const [selectedId, setSelectedId] = useState<number | null>(
+    id ? Number(id) : null,
+  );
+  const [contextMenu, setContextMenu] = useState<{
+    mouseX: number;
+    mouseY: number;
+    voucher: any;
+  } | null>(null);
+  const [selectedBOM, setSelectedBOM] = useState<any>(null);
+  const [bomCostBreakdown, setBomCostBreakdown] = useState<any>(null);
+  const [showAddBOMModal, setShowAddBOMModal] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<ManufacturingOrder | null>(null);
+  
+  // State for voucher date conflict detection
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  
+  // Shortage checking hook
+  const {
+    shortageData,
+    shortageCheck: checkShortages,
+    shortageDialog: showShortageDialog,
+    setShortageDialog: setShowShortageDialog,
+  } = useManufacturingShortages(selectedId);
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<ManufacturingOrder>({
+    defaultValues,
+  });
+  const watchedBomId = watch("bom_id");
+  const watchedQuantity = watch("planned_quantity");
+  const watchedDate = watch("date");
+  // Fetch manufacturing orders
+  const { data: orderList, isLoading: isLoadingList } = useQuery({
+    queryKey: ["manufacturing-orders"],
+    queryFn: () => api.get("/manufacturing/manufacturing-orders").then((res) => res.data),
+  });
+  // Fetch BOMs
+  const { data: bomList } = useQuery({
+    queryKey: ["boms"],
+    queryFn: () => api.get("/manufacturing/bom").then((res) => res.data),
+  });
+  // Enhanced BOM options with "Create New"
+  const enhancedBOMOptions = [
+    ...(bomList || []),
+    { id: null, bom_name: "Create New BOM...", version: "" },
+  ];
+  // Fetch specific manufacturing order
+  const { data: orderData, isLoading } = useQuery({
+    queryKey: ["manufacturing-order", selectedId],
+    queryFn: () =>
+      api.get(`/manufacturing/manufacturing-orders/${selectedId}`).then((res) => res.data),
+    enabled: !!selectedId,
+  });
+  // Fetch next voucher number
+  const { data: nextVoucherNumber, refetch: refetchNextNumber } = useQuery({
+    queryKey: ["nextManufacturingOrderNumber"],
+    queryFn: () =>
+      api.get("/manufacturing/manufacturing-orders/next-number").then((res) => res.data),
+    enabled: mode === "create",
+  });
+  // Fetch BOM cost breakdown
+  const { data: costBreakdown } = useQuery({
+    queryKey: ["bom-cost-breakdown", watchedBomId, watchedQuantity],
+    queryFn: () =>
+      api
+        .get(
+          `/manufacturing/bom/${watchedBomId}/cost-breakdown?production_quantity=${watchedQuantity}`,
+        )
+        .then((res) => res.data),
+    enabled: !!watchedBomId && watchedQuantity > 0,
+  });
+  const sortedOrders = orderList
+    ? [...orderList].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+    : [];
+  const latestOrders = sortedOrders.slice(0, 10);
+  useEffect(() => {
+    if (mode === "create" && nextVoucherNumber) {
+      setValue("voucher_number", nextVoucherNumber);
+    } else if (orderData) {
+      reset(orderData);
+    } else if (mode === "create") {
+      reset(defaultValues);
+    }
+  }, [orderData, mode, reset, nextVoucherNumber, setValue]);
+  useEffect(() => {
+    if (watchedBomId && bomList) {
+      const bom = bomList.find((b: any) => b.id === watchedBomId);
+      setSelectedBOM(bom);
+    }
+  }, [watchedBomId, bomList]);
+  useEffect(() => {
+    if (costBreakdown) {
+      setBomCostBreakdown(costBreakdown);
+      setValue("total_amount", costBreakdown.cost_breakdown.total_cost);
+    }
+  }, [costBreakdown, setValue]);
 
-  const computeRoleBasedPermissions = (user: User | null): UserPermissions => {
-    if (!user) {
-      return {
-        role: 'user',
-        roles: [],
-        permissions: [],
-        modules: [],
-        submodules: {},
-      };
-    }
-    // STRICT ENFORCEMENT: No computed permissions for super admins
-    // All permissions must come from backend RBAC system
-    const isOrgSuperAdmin = ['super_admin', 'admin', 'management'].includes(user.role || '');
-    let permissions: string[] = [];
-    let modules: string[] = [];
-    let submodules: Record<string, string[]> = {};
-    if (isOrgSuperAdmin) {
-      // Organization admin has most permissions except super admin functions
-      permissions = [
-        'dashboard.*',
-        'finance.*',
-        'sales.*',
-        'crm.*',
-        'inventory.*',
-        'hr.*',
-        'service.*',
-        'reports.*',
-        'settings.view',
-        'settings.manageUsers',
-        'settings.manageRoles',
-        'settings.manageOrganization',
-        'master_data.*',
-        'manufacturing.*',
-        'vouchers.*',
-        'accounting.*',
-        'reportsAnalytics.*',
-        'aiAnalytics.*',
-        'marketing.*',
-        'projects.*',
-        'tasks_calendar.*',
-        'email.*',
-      ];
-      modules = [
-        'dashboard', 'finance', 'sales', 'crm', 'inventory', 'hr', 'service', 'reports', 'settings',
-        'master_data', 'manufacturing', 'vouchers', 'accounting', 'reportsAnalytics', 'aiAnalytics',
-        'marketing', 'projects', 'tasks_calendar', 'email'
-      ];
-      submodules = modules.reduce((acc, mod) => {
-        acc[mod] = ['all'];
-        return acc;
-      }, {} as Record<string, string[]>);
-    } else {
-      // Regular user - permissions based on role
-      switch (user.role) {
-        case 'finance_manager':
-          permissions = ['dashboard.view', 'finance.*', 'reports.viewFinancial'];
-          modules = ['dashboard', 'finance', 'reports'];
-          submodules = {
-            dashboard: ['view'],
-            finance: ['view', 'create', 'edit', 'delete', 'viewReports', 'manageBanks'],
-            reports: ['viewFinancial'],
-          };
-          break;
-        case 'sales_manager':
-          permissions = ['dashboard.view', 'sales.*', 'crm.*', 'reports.viewOperational'];
-          modules = ['dashboard', 'sales', 'crm', 'reports'];
-          submodules = {
-            dashboard: ['view'],
-            sales: ['view', 'create', 'edit', 'delete', 'manageCustomers', 'viewAnalytics'],
-            crm: ['view', 'create', 'edit', 'delete', 'manageContacts', 'viewAnalytics'],
-            reports: ['viewOperational'],
-          };
-          break;
-        case 'inventory_manager':
-          permissions = ['dashboard.view', 'inventory.*', 'reports.viewOperational'];
-          modules = ['dashboard', 'inventory', 'reports'];
-          submodules = {
-            dashboard: ['view'],
-            inventory: ['view', 'create', 'edit', 'delete', 'manageStock', 'viewReports'],
-            reports: ['viewOperational'],
-          };
-          break;
-        case 'hr_manager':
-          permissions = ['dashboard.view', 'hr.*', 'reports.viewOperational'];
-          modules = ['dashboard', 'hr', 'reports'];
-          submodules = {
-            dashboard: ['view'],
-            hr: ['view', 'create', 'edit', 'delete', 'manageEmployees', 'viewPayroll'],
-            reports: ['viewOperational'],
-          };
-          break;
-        case 'service_manager':
-          permissions = ['dashboard.view', 'service.*', 'reports.viewOperational'];
-          modules = ['dashboard', 'service', 'reports'];
-          submodules = {
-            dashboard: ['view'],
-            service: ['view', 'create', 'edit', 'delete', 'manageTickets', 'viewAnalytics'],
-            reports: ['viewOperational'],
-          };
-          break;
-        case 'user':
-        case 'employee':
-        default:
-          permissions = [
-            'dashboard.view',
-            'master_data.view',
-            'inventory.view',
-            'manufacturing.view',
-            'vouchers.view',
-            'finance.view',
-            'accounting.view',
-            'reportsAnalytics.view',
-            'aiAnalytics.view',
-            'sales.view',
-            'marketing.view',
-            'service.view',
-            'projects.view',
-            'hrManagement.view',
-            'tasks_calendar.view',
-            'email.view',
-          ];
-          modules = [
-            'dashboard', 'master_data', 'inventory', 'manufacturing', 'vouchers',
-            'finance', 'accounting', 'reportsAnalytics', 'aiAnalytics', 'sales',
-            'marketing', 'service', 'projects', 'hrManagement', 'tasks_calendar', 'email'
-          ];
-          submodules = modules.reduce((acc, mod) => {
-            acc[mod] = ['view'];
-            return acc;
-          }, {} as Record<string, string[]>);
-          break;
+  // Fetch voucher number when date changes and check for conflicts
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      if (watchedDate && mode === 'create') {
+        try {
+          // Fetch new voucher number based on date
+          const response = await api.get(
+            `/manufacturing/manufacturing-orders/next-number?voucher_date=${watchedDate}`
+          );
+          setValue('voucher_number', response.data);
+          
+          // Check for backdated conflicts
+          const conflictResponse = await api.get(
+            `/manufacturing/manufacturing-orders/check-backdated-conflict?voucher_date=${watchedDate}`
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(watchedDate);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
       }
-    }
-    return {
-      role: user.role || 'user',
-      roles: [],
-      permissions,
-      modules,
-      submodules,
     };
-  };
+    
+    fetchVoucherNumber();
+  }, [watchedDate, mode, setValue]);
 
-  // Fetch user permissions from RBAC service with timeout
-  const fetchUserPermissions = async (userId: number) => {
-    setPermissionsLoading(true);
-    try {
-      console.log("[AuthProvider] Fetching user permissions for user:", userId);
-     
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Permissions fetch timeout')), 30000) // Increased timeout to 30s
-      );
-     
-      // Race the API call with timeout
-      const permissionsData = await Promise.race([
-        timeoutPromise,
-        rbacService.getUserPermissions(userId)
-      ]) as { permissions: string[]; modules: string[]; submodules: Record<string, string[]> } || { permissions: [], modules: [], submodules: {} };
-     
-      const rolesData = await Promise.race([
-        timeoutPromise,
-        rbacService.getUserServiceRoles(userId)
-      ]) as Role[] || [];
-     
-      // Compute fallback
-      const fallback = computeRoleBasedPermissions(user);
-     
-      // Ensure submodules are objects
-      const safePermissionsSubmodules = permissionsData.submodules || {};
-      const safeFallbackSubmodules = fallback.submodules || {};
-     
-      // Merge fetched with fallback
-      const mergedPermissions = [...new Set([...fallback.permissions, ...(permissionsData.permissions || [])])];
-      const mergedModules = [...new Set([...fallback.modules, ...(permissionsData.modules || [])])];
-      const mergedSubmodules: Record<string, string[]> = {};
-     
-      // Merge submodules
-      const allKeys = new Set([...Object.keys(safeFallbackSubmodules), ...Object.keys(safePermissionsSubmodules)]);
-      allKeys.forEach(key => {
-        mergedSubmodules[key] = [...new Set([
-          ...(safeFallbackSubmodules[key] || []),
-          ...(safePermissionsSubmodules[key] || [])
-        ])];
-      });
-      // Process and structure the permissions
-      const permissions: UserPermissions = {
-        role: permissionsData.role || fallback.role,
-        roles: [...new Set([...fallback.roles, ...rolesData])],
-        permissions: mergedPermissions,
-        modules: mergedModules,
-        submodules: mergedSubmodules,
-      };
-      setUserPermissions(permissions);
-      console.log("[AuthProvider] User permissions fetched and merged successfully");
-      return permissions;
-    } catch (error) {
-      console.error("[AuthProvider] Error fetching user permissions:", error);
-      // Set fallback permissions on error
-      const fallbackPermissions = computeRoleBasedPermissions(user);
-      setUserPermissions(fallbackPermissions);
-      toast.error('Failed to load user permissions - using default access. Some features may be unavailable.', {
-        position: "top-right",
-        autoClose: 5000,
-      });
-      return fallbackPermissions;
-    } finally {
-      setPermissionsLoading(false);
-    }
-  };
+  // Handle pre-filling from sales order
+  useEffect(() => {
+    const prefillFromSalesOrder = async () => {
+      if (from_sales_order && mode === 'create') {
+        try {
+          const salesOrder = await voucherService.getVoucherById('sales-orders', Number(from_sales_order));
+          // Assume single item for simplicity
+          const mainItem = salesOrder.items[0];
+          setValue('planned_quantity', mainItem.quantity);
+          setValue('notes', `Created from sales order ${salesOrder.voucher_number}`);
+          
+          // Find matching BOM
+          const bomsResponse = await api.get("/manufacturing/bom");
+          const boms = bomsResponse.data;
+          const matchingBom = boms.find((bom: any) => bom.output_item_id === mainItem.product_id);
+          if (matchingBom) {
+            setValue('bom_id', matchingBom.id);
+          }
+        } catch (error) {
+          console.error('Error pre-filling from sales order:', error);
+        }
+      }
+    };
+    
+    prefillFromSalesOrder();
+  }, [from_sales_order, mode, setValue]);
 
-  // Fetch the current user from API using the token in localStorage with timeout
-  const fetchUser = async (retryCount = 0) => {
-    if (isFetching.current || !isMounted.current) return; // NEW: Prevent concurrent and unmounted fetches
-    isFetching.current = true;
-    const maxRetries = 2;
-    console.log(
-      `[AuthProvider] fetchUser started - attempt ${retryCount + 1}/${maxRetries + 1}`,
-      {
-        hasToken: !!localStorage.getItem(ACCESS_TOKEN_KEY),
-        hasRefreshToken: !!localStorage.getItem(REFRESH_TOKEN_KEY),
-        timestamp: new Date().toISOString(),
-      },
-    );
-    try {
-      const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-      // Validate token format before proceeding
-      if (accessToken === 'null' || (accessToken && accessToken.split('.').length !== 3)) {
-        console.log('[AuthProvider] Invalid token format detected - clearing storage');
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
-        throw new Error('Invalid token format');
+  // Mutations
+  const createMutation = useMutation({
+    mutationFn: (data: ManufacturingOrder) => {
+      if (from_sales_order) {
+        data.sales_order_id = Number(from_sales_order);
       }
-      if (!accessToken) {
-        console.log("[AuthProvider] No token found in localStorage");
-        throw new Error("No token found");
-      }
-      console.log("[AuthProvider] Token found, fetching user data from API");
-      const userData = await authService.getCurrentUser();
-      console.log("[AuthProvider] User data received from API:", {
-        userId: userData.id,
-        email: userData.email,
-        role: userData.role,
-        isSuperAdmin: userData.is_super_admin,
-        hasOrgId: !!userData.organization_id,
-        mustChangePassword: userData.must_change_password,
-      });
-      // Defensive: org ID should never be leaked between users
-      const newUser = {
-        id: userData.id,
-        email: userData.email,
-        role: userData.role,
-        is_super_admin: userData.is_super_admin,
-        organization_id: userData.organization_id, // note: it's from loginResponse, not user
-        must_change_password: userData.must_change_password,
-      };
-      setUser(newUser);
-      console.log("[AuthProvider] User state updated successfully");
-     
-      // Fetch user permissions from RBAC service
-      await fetchUserPermissions(userData.id);
-     
-      // Check org context for non-super-admins
-      if (!userData.is_super_admin && !userData.organization_id) {
-        console.error(
-          "[AuthProvider] Organization context missing for regular user",
-        );
-        throw new Error(
-          "User account is not properly configured with organization context",
-        );
-      }
-      markAuthReady();
-      console.log("[AuthProvider] Auth context marked as ready");
-      // If on login page after successful fetch, redirect to dashboard
-      if (router.pathname === "/login") {
-        handlePostLoginRedirect();
-      }
-    } catch (error: any) {
-      console.error(
-        `[AuthProvider] fetchUser error on attempt ${retryCount + 1}:`,
-        {
-          error: error.message,
-          status: error?.status,
-          willRetry:
-            retryCount < maxRetries &&
-            error?.status !== 401 &&
-            error?.status !== 403,
-        },
-      );
-      // Attempt token refresh before giving up
-      if (retryCount < maxRetries && (error?.status === 401 || error?.status === 403)) {
-        console.log("[AuthProvider] Attempting token refresh before retry");
-        const refreshResult = await authService.refreshToken();
-        if (refreshResult) {
-          console.log("[AuthProvider] Token refresh successful, retrying fetchUser");
-          await fetchUser(retryCount + 1);
+      return api.post("/manufacturing/manufacturing-orders", data);
+    },
+    onSuccess: async (newOrder) => {
+      queryClient.invalidateQueries({ queryKey: ["manufacturing-orders"] });
+      setMode("create");
+      setSelectedId(null);
+      reset(defaultValues);
+      const { data: newNextNumber } = await refetchNextNumber();
+      setValue("voucher_number", newNextNumber);
+    },
+    onError: (error: any) => {
+      console.error("Error creating manufacturing order:", error);
+    },
+  });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: ManufacturingOrder }) =>
+      api.put(`/manufacturing/manufacturing-orders/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["manufacturing-orders"] });
+      setMode("create");
+      setSelectedId(null);
+      reset(defaultValues);
+    },
+    onError: (error: any) => {
+      console.error("Error updating manufacturing order:", error);
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/manufacturing/manufacturing-orders/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["manufacturing-orders"] });
+    },
+    onError: (error: any) => {
+      console.error("Error deleting manufacturing order:", error);
+    },
+  });
+  const onSubmit = async (data: ManufacturingOrder) => {
+    // For edit mode with an existing order, check shortages before proceeding
+    if (mode === "edit" && selectedId) {
+      try {
+        const shortageInfo = await checkShortages();
+        if (shortageInfo && !shortageInfo.is_material_available) {
+          // Show shortage dialog and wait for user decision
+          setPendingSubmitData({ id: selectedId, data });
+          setShowShortageDialog(true);
           return;
         }
+      } catch (error) {
+        console.error("Error checking shortages:", error);
+        // Proceed with submission if shortage check fails
       }
-      // Only retry on non-auth errors
-      if (
-        retryCount < maxRetries &&
-        error?.status !== 401 &&
-        error?.status !== 403
-      ) {
-        const retryDelay = Math.pow(2, retryCount) * 1000;
-        console.log(`[AuthProvider] Retrying fetchUser in ${retryDelay}ms`);
-        setTimeout(() => fetchUser(retryCount + 1), retryDelay);
-        return;
-      }
-      // On error, clear sensitive data and force re-auth
-      console.log("[AuthProvider] Auth error - clearing data");
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      localStorage.removeItem(USER_ROLE_KEY);
-      localStorage.removeItem(IS_SUPER_ADMIN_KEY);
-      // Preserve refresh_token for potential recovery
-      console.log("[AuthProvider] Preserving refresh_token for potential recovery");
-      setUser(null);
-      resetAuthReady();
-      if (error?.userMessage) {
-        toast.error(`Authentication failed: ${error.userMessage}`, {
-          position: "top-right",
-          autoClose: 5000,
-        });
-      } else {
-        toast.error(
-          "Failed to establish secure session. Please log in again.",
-          { position: "top-right", autoClose: 5000 },
-        );
-      }
-      // Only redirect if not already on login page to prevent loop
-      if (router.pathname !== "/login") {
-        console.log("[AuthProvider] Redirecting to login");
-        // Save current path as return URL before redirect
-        // NEW: Don't save if pathname includes '404' or invalid
-        if (
-          router.pathname !== '/login' && 
-          !router.pathname.includes('404') && 
-          !sessionStorage.getItem("returnUrlAfterLogin")
-        ) {
-          console.log("[AuthProvider] Saving valid URL as returnUrlAfterLogin:", router.asPath);
-          sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
-        } else if (router.pathname.includes('404')) {
-          console.log("[AuthProvider] Skipping save returnUrl for 404 path");
-        }
-        router.push("/login");
-      } else {
-        console.log("[AuthProvider] Already on login - no redirect needed");
-      }
-    } finally {
-      isFetching.current = false;
-      setLoading(false); // Ensure loading is set to false in finally
-      setPermissionsLoading(false); // NEW: Ensure permissionsLoading false even on error
+    }
+    
+    // Proceed with submission
+    if (mode === "create") {
+      createMutation.mutate(data);
+    } else if (mode === "edit" && selectedId) {
+      updateMutation.mutate({ id: selectedId, data });
     }
   };
-
-  // On mount, check for token and initialize user session
-  useEffect(() => {
-    console.log("[AuthProvider] Component mounted, initializing auth state");
-    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-    console.log("[AuthProvider] Token check result:", {
-      hasToken: !!token,
-      hasRefreshToken: !!localStorage.getItem(REFRESH_TOKEN_KEY),
-      pathname: router.pathname,
-      timestamp: new Date().toISOString(),
-    });
-    if (token && !hasFetched.current) {
-      hasFetched.current = true; // Mark as fetched to prevent multiple calls
-      console.log("[AuthProvider] Token found - starting user fetch");
-      fetchUser();
-    } else {
-      console.log(
-        "[AuthProvider] No token found - marking auth ready and stopping loading",
-      );
-      markAuthReady();
-      setLoading(false);
-      setPermissionsLoading(false); // NEW: Critical fix for no-token case (e.g., login page)
-    }
-
-    return () => {
-      isMounted.current = false;  // NEW: Set unmounted on cleanup to prevent async updates
-    };
-  }, [router]); // NEW: Added router to dependency list to handle path changes properly
-
-  // Handle post-login redirect with state preservation
-  const handlePostLoginRedirect = () => {
-    try {
-      // Check for return URL
-      const returnUrl = sessionStorage.getItem("returnUrlAfterLogin");
-      if (returnUrl) {
-        console.log("[AuthProvider] Redirecting to saved URL:", returnUrl);
-        sessionStorage.removeItem("returnUrlAfterLogin");
-        router.replace(returnUrl);
-        setTimeout(() => {
-          restoreFormData();
-        }, 500);
-        return;
+  
+  const handleProceedWithShortage = () => {
+    setShowShortageDialog(false);
+    if (pendingSubmitData) {
+      if (mode === "edit" && selectedId) {
+        updateMutation.mutate({ id: selectedId, data: pendingSubmitData.data });
+      } else if (mode === "create") {
+        createMutation.mutate(pendingSubmitData.data);
       }
-      console.log(
-        "[AuthProvider] No return URL found, redirecting to dashboard",
-      );
-      router.push("/dashboard");
-    } catch (err) {
-      console.error("[AuthProvider] Error in post-login redirect:", err);
-      router.push("/dashboard");
+      setPendingSubmitData(null);
     }
   };
-
-  // Attempt to restore form data after login
-  const restoreFormData = () => {
-    try {
-      const savedFormData = sessionStorage.getItem("formDataBeforeExpiry");
-      if (savedFormData) {
-        const formData = JSON.parse(savedFormData);
-        console.log(
-          "[AuthProvider] Attempting to restore form data:",
-          formData,
-        );
-        Object.entries(formData).forEach(
-          ([formKey, formValues]: [string, any]) => {
-            if (formValues && typeof formValues === "object") {
-              Object.entries(formValues).forEach(([fieldName, fieldValue]) => {
-                const field = document.querySelector(
-                  `[name="${fieldName}"]`,
-                ) as HTMLInputElement;
-                if (field && typeof fieldValue === "string") {
-                  field.value = fieldValue;
-                  field.dispatchEvent(new Event("input", { bubbles: true }));
-                }
-              });
-            }
-          },
-        );
-        sessionStorage.removeItem("formDataBeforeExpiry");
-        toast.info("Form data has been restored from before session expiry.", {
-          position: "top-right",
-          autoClose: 5000,
-        });
-      }
-    } catch (err) {
-      console.warn("[AuthProvider] Could not restore form data:", err);
-    }
+  const handleEdit = (order: any) => {
+    setSelectedId(order.id);
+    setMode("edit");
   };
-
-  // Force password reset if required
-  useEffect(() => {
+  const handleView = (order: any) => {
+    setSelectedId(order.id);
+    setMode("view");
+  };
+  const handleContextMenuClose = () => {
+    setContextMenu(null);
+  };
+  const handleDeleteOrder = async (id: number) => {
     if (
-      user &&
-      user.must_change_password &&
-      router.pathname !== "/password-reset"
+      window.confirm(
+        "Are you sure you want to delete this manufacturing order?",
+      )
     ) {
-      console.log("[AuthProvider] Must change password - redirecting to password-reset");
-      router.push("/password-reset");
-    }
-  }, [user, router]);
-
-  // Login: store token, hydrate user, and mark ready
-  const login = async (loginResponse: any) => {
-    console.log("[AuthProvider] Login process started:", {
-      hasToken: !!loginResponse.access_token,
-      hasRefresh: !!loginResponse.refresh_token,
-      userRole: loginResponse.user_role,
-      isSuperAdmin: false,
-      hasOrgId: !!loginResponse.organization_id,
-      timestamp: new Date().toISOString(),
-    });
-    localStorage.setItem(ACCESS_TOKEN_KEY, loginResponse.access_token);
-    if (loginResponse.refresh_token) {
-      localStorage.setItem(REFRESH_TOKEN_KEY, loginResponse.refresh_token);
-      console.log("[AuthProvider] Stored refresh token");
-    } else {
-      console.warn("[AuthProvider] No refresh token in login response");
-    }
-    console.log("[AuthProvider] Token stored in localStorage");
-    if (loginResponse.user_role) {
-      localStorage.setItem(USER_ROLE_KEY, loginResponse.user_role);
-      console.log("[AuthProvider] Stored user_role:", loginResponse.user_role);
-    }
-    localStorage.setItem(
-      IS_SUPER_ADMIN_KEY,
-      loginResponse.user?.is_super_admin ? "true" : "false",
-    );
-    console.log(
-      "[AuthProvider] Stored is_super_admin:",
-      loginResponse.user?.is_super_admin,
-    );
-    // Clear any OTP-related fields
-    console.log("[AuthProvider] Clearing OTP-related fields");
-    // Defensive: never store org_id in localStorage
-    const userData = loginResponse.user;
-    // Validate org context for regular users
-    if (!userData.is_super_admin && !userData.organization_id) {
-      console.error(
-        "[AuthProvider] Organization context validation failed for regular user",
-      );
-      throw new Error(
-        "Login failed: User account is not properly configured with organization context",
-      );
-    }
-    const newUser = {
-      id: userData.id,
-      email: userData.email,
-      role: userData.role,
-      is_super_admin: userData.is_super_admin,
-      organization_id: loginResponse.organization_id, // note: it's from loginResponse, not user
-      must_change_password: loginResponse.must_change_password,
-    };
-    setUser(newUser);
-    console.log("[AuthProvider] User state set from login response");
-    // Verify session immediately after setting token and user
-    await refreshUser();
-   
-    // Fetch user permissions
-    await fetchUserPermissions(userData.id);
-   
-    resetAuthReady();
-    markAuthReady();
-    console.log("[AuthProvider] Auth ready state reset and marked");
-    // Handle post-login redirect and form state restoration
-    handlePostLoginRedirect();
-    console.log(
-      "[AuthProvider] Login process completed successfully - user context established from login response",
-    );
-  };
-
-  // Logout: clear all sensitive data and redirect
-  const logout = () => {
-    console.log("[AuthProvider] Logout initiated");
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(USER_ROLE_KEY);
-    localStorage.removeItem(IS_SUPER_ADMIN_KEY);
-    setUser(null);
-    setUserPermissions(null);
-    resetAuthReady();
-    console.log("[AuthProvider] Auth data cleared");
-    if (router.pathname !== "/login") {
-      console.log("[AuthProvider] Redirecting to login");
-      router.push("/login");
-    } else {
-      console.log("[AuthProvider] Already on login - no redirect needed");
+      deleteMutation.mutate(id);
     }
   };
-
-  // Manual refresh of user (e.g., after profile update)
-  const refreshUser = async () => {
-    await fetchUser();
-  };
-
-  // Refresh permissions without fetching full user data
-  const refreshPermissions = async () => {
-    if (user) {
-      await fetchUserPermissions(user.id);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "planned":
+        return "default";
+      case "in_progress":
+        return "warning";
+      case "completed":
+        return "success";
+      case "cancelled":
+        return "error";
+      default:
+        return "default";
     }
   };
-
-  // Update the user object in memory only
-  const updateUser = (updatedData: Partial<User>) => {
-    setUser((prev) => (prev ? { ...prev, ...updatedData } : null));
-  };
-
-  // Get auth headers for API requests
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-    if (!token) {
-      console.warn("[AuthProvider] No token found when getting auth headers");
-    } else if (token.split('.').length !== 3) {
-      console.error("[AuthProvider] Malformed token when getting auth headers:", token.substring(0, 20) + '...');
-    } else {
-      console.log("[AuthProvider] Valid token format for auth headers");
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "low":
+        return "success";
+      case "medium":
+        return "default";
+      case "high":
+        return "warning";
+      case "urgent":
+        return "error";
+      default:
+        return "default";
     }
-    return token ? { Authorization: `Bearer ${token}` } : {};
   };
-
-  // Only ready if user is super admin or has org context
-  const isOrgContextReady =
-    !user || user.is_super_admin || !!user.organization_id;
-  console.log("[AuthProvider] Render phase:", {
-    loading,
-    hasUser: !!user,
-    userEmail: user?.email,
-    isOrgContextReady,
-    willRenderChildren: !loading,
-    timestamp: new Date().toISOString(),
-  });
-
-  // Timeout for loading
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
-        toast.error('Loading timeout. Please refresh the page or check your connection.');
-      }
-    }, 15000); // Increased timeout to 15 seconds
-    return () => clearTimeout(timeout);
-  }, [loading]);
-
-  // NEW: Handle unauthorized redirect in useEffect to prevent side effects in render
-  useEffect(() => {
-    if (!loading && !user && router.pathname !== "/login" && router.pathname !== "/404") { // NEW: Added && router.pathname !== "/404" to prevent redirect on 404 page
-      console.log("[AuthProvider] No user after loading - redirecting to login");
-      // Save current path as return URL before redirect
-      // NEW: Don't save if pathname includes '404' or invalid
-      if (
-        router.pathname !== '/login' && 
-        !router.pathname.includes('404') && 
-        !sessionStorage.getItem("returnUrlAfterLogin")
-      ) {
-        console.log("[AuthProvider] Saving valid URL as returnUrlAfterLogin:", router.asPath);
-        sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
-      } else if (router.pathname.includes('404')) {
-        console.log("[AuthProvider] Skipping save returnUrl for 404 path");
-      }
-      router.push("/login");
-    }
-  }, [loading, user, router]);
-
-  // Show loading spinner while auth state is being determined
-  if (loading || permissionsLoading) {  // NEW: Added permissionsLoading to prevent premature render
-    console.log("[AuthProvider] Auth or permissions still loading - showing spinner");
-    const spinnerStyles = `
-      @keyframes authSpinner {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      .auth-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #3498db;
-        border-radius: 50%;
-        animation: authSpinner 2s linear infinite;
-        margin-bottom: 15px;
-      }
-      @keyframes pulse {
-        0% { opacity: 0.6; }
-        50% { opacity: 1; }
-        100% { opacity: 0.6; }
-      }
-      .auth-pulse {
-        animation: pulse 2s ease-in-out infinite;
-      }
-    `;
-    return (
-      <>
-        <style dangerouslySetInnerHTML={{ __html: spinnerStyles }} />
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            height: "100vh",
-            flexDirection: "column",
-            backgroundColor: "#f8fafc",
-            backgroundImage:
-              "linear-gradient(to bottom right, #f8fafc, #e2e8f0)",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "24px",
-              fontWeight: 600,
-              marginBottom: "10px",
-              color: "#1e293b",
-              textAlign: "center",
-            }}
-          >
-            TRITIQ BOS
-          </div>
-          <div
-            style={{
-              fontSize: "14px",
-              marginBottom: "30px",
-              color: "#64748b",
-              textAlign: "center",
-            }}
-          >
-            Business Made Simple
-          </div>
-          <div className="auth-spinner"></div>
-          <div
-            style={{
-              marginTop: "20px",
-              fontSize: "14px",
-              color: "#475569",
-              fontWeight: 500,
-              textAlign: "center",
-            }}
-            className="auth-pulse"
-          >
-            Verifying access...
-          </div>
-          <div
-            style={{
-              marginTop: "5px",
-              fontSize: "12px",
-              color: "#94a3b8",
-              textAlign: "center",
-            }}
-          >
-            Establishing secure connection
-          </div>
-        </div>
-      </>
-    );
-  }
-
+  const handleAddBOM = (newBOM: any) => {
+    setValue("bom_id", newBOM.id);
+    setShowAddBOMModal(false);
+  };
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        permissionsLoading,
-        displayRole: user
-          ? getDisplayRole(user.role, user.is_super_admin)
-          : null,
-        userPermissions,
-        login,
-        logout,
-        refreshUser,
-        updateUser,
-        isOrgContextReady,
-        getAuthHeaders,
-        refreshPermissions,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <ProtectedPage moduleKey="manufacturing" action="write">
+      <Container maxWidth="xl">
+      <Grid container spacing={3}>
+        {/* Left Panel - Order List */}
+        <Grid size={5}>
+          <Box>
+            <VoucherHeaderActions
+              mode={mode}
+              voucherType="Production Order"
+              voucherRoute="/vouchers/Manufacturing-Vouchers/production-order"
+              currentId={selectedId || undefined}
+              onModeChange={setMode}
+              onModalOpen={() => setShowFullModal(true)}
+              voucherList={sortedOrders}
+              onEdit={handleEdit}
+              onView={handleView}
+              isLoading={isLoadingList}
+            />
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Recent Orders
+              </Typography>
+              <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Order #</TableCell>
+                      <TableCell>BOM</TableCell>
+                      <TableCell>Qty</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Priority</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {latestOrders.map((order) => (
+                      <TableRow
+                        key={order.id}
+                        hover
+                        onClick={() => handleEdit(order)}
+                        sx={{ cursor: "pointer" }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setContextMenu({
+                            mouseX: e.clientX - 2,
+                            mouseY: e.clientY - 4,
+                            voucher: order,
+                          });
+                        }}
+                      >
+                        <TableCell>{order.voucher_number}</TableCell>
+                        <TableCell>{order.bom?.bom_name || "N/A"}</TableCell>
+                        <TableCell>{order.planned_quantity}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={order.production_status}
+                            color={getStatusColor(order.production_status)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={order.priority}
+                            color={getPriorityColor(order.priority)}
+                            size="small"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          </Box>
+        </Grid>
+        {/* Right Panel - Form */}
+        <Grid size={7}>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                {mode === "create"
+                  ? "Create Production Order"
+                  : mode === "edit"
+                    ? "Edit Production Order"
+                    : "View Production Order"}
+              </Typography>
+              <Grid container spacing={2}>
+                {/* Basic Information */}
+                <Grid size={4}>
+                  <TextField
+                    {...control.register("voucher_number")}
+                    label="Order Number"
+                    fullWidth
+                    disabled
+                    size="small"
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
+                </Grid>
+                <Grid size={4}>
+                  <TextField
+                    {...control.register("date", { required: true })}
+                    label="Date"
+                    type="date"
+                    fullWidth
+                    error={!!errors.date}
+                    disabled={mode === "view"}
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
+                </Grid>
+                <Grid size={4}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Priority</InputLabel>
+                    <Select
+                      {...control.register("priority")}
+                      value={watch("priority")}
+                      onChange={(e) =>
+                        setValue(
+                          "priority",
+                          e.target.value as
+                            | "low"
+                            | "medium"
+                            | "high"
+                            | "urgent",
+                        )
+                      }
+                      disabled={mode === "view"}
+                      sx={{ height: 27 }}
+                    >
+                      <MenuItem value="low">Low</MenuItem>
+                      <MenuItem value="medium">Medium</MenuItem>
+                      <MenuItem value="high">High</MenuItem>
+                      <MenuItem value="urgent">Urgent</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                {/* BOM Selection */}
+                <Grid size={6}>
+                  <Autocomplete
+                    options={enhancedBOMOptions}
+                    getOptionLabel={(option: any) =>
+                      option.id === null
+                        ? option.bom_name
+                        : `${option.bom_name} v${option.version}`
+                    }
+                    value={
+                      enhancedBOMOptions.find(
+                        (b: any) => b.id === watch("bom_id"),
+                      ) || null
+                    }
+                    onChange={(_, newValue) => {
+                      if (newValue?.id === null) {
+                        setShowAddBOMModal(true);
+                      } else {
+                        setValue("bom_id", newValue?.id || 0);
+                      }
+                    }}
+                    disabled={mode === "view"}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Bill of Materials"
+                        error={!!errors.bom_id}
+                        size="small"
+                        sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={3}>
+                  <TextField
+                    {...control.register("planned_quantity", {
+                      required: true,
+                      min: 0.01,
+                    })}
+                    label="Planned Quantity"
+                    type="number"
+                    fullWidth
+                    error={!!errors.planned_quantity}
+                    disabled={mode === "view"}
+                    size="small"
+                    InputProps={{ inputProps: { step: 0.01 } }}
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
+                </Grid>
+                <Grid size={3}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                      {...control.register("production_status")}
+                      value={watch("production_status")}
+                      onChange={(e) =>
+                        setValue(
+                          "production_status",
+                          e.target.value as
+                            | "planned"
+                            | "in_progress"
+                            | "completed"
+                            | "cancelled",
+                        )
+                      }
+                      disabled={mode === "view"}
+                      sx={{ height: 27 }}
+                    >
+                      <MenuItem value="planned">Planned</MenuItem>
+                      <MenuItem value="in_progress">In Progress</MenuItem>
+                      <MenuItem value="completed">Completed</MenuItem>
+                      <MenuItem value="cancelled">Cancelled</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                {/* Planning Dates */}
+                <Grid size={6}>
+                  <TextField
+                    {...control.register("planned_start_date")}
+                    label="Planned Start Date"
+                    type="date"
+                    fullWidth
+                    disabled={mode === "view"}
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
+                </Grid>
+                <Grid size={6}>
+                  <TextField
+                    {...control.register("planned_end_date")}
+                    label="Planned End Date"
+                    type="date"
+                    fullWidth
+                    disabled={mode === "view"}
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
+                </Grid>
+                {/* Location Information */}
+                <Grid size={6}>
+                  <TextField
+                    {...control.register("production_department")}
+                    label="Department"
+                    fullWidth
+                    disabled={mode === "view"}
+                    size="small"
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
+                </Grid>
+                <Grid size={6}>
+                  <TextField
+                    {...control.register("production_location")}
+                    label="Location"
+                    fullWidth
+                    disabled={mode === "view"}
+                    size="small"
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
+                </Grid>
+                <Grid size={12}>
+                  <TextField
+                    {...control.register("notes")}
+                    label="Notes"
+                    fullWidth
+                    multiline
+                    rows={2}
+                    disabled={mode === "view"}
+                    size="small"
+                  />
+                </Grid>
+                {/* BOM Details */}
+                {selectedBOM && (
+                  <Grid size={12}>
+                    <Card variant="outlined" sx={{ mt: 2 }}>
+                      <CardContent>
+                        <Typography variant="subtitle1" gutterBottom>
+                          BOM Details: {selectedBOM.bom_name} v
+                          {selectedBOM.version}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Output Item:{" "}
+                          {selectedBOM.output_item?.product_name || "Unknown"}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Components: {selectedBOM.components?.length || 0}
+                        </Typography>
+                        {bomCostBreakdown && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="body2">
+                              Estimated Cost:{" "}
+                              {bomCostBreakdown.cost_breakdown.total_cost.toFixed(
+                                2,
+                              )}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Material:{" "}
+                              {bomCostBreakdown.cost_breakdown.material_cost.toFixed(
+                                2,
+                              )}{" "}
+                              | Labor:{" "}
+                              {bomCostBreakdown.cost_breakdown.labor_cost.toFixed(
+                                2,
+                              )}{" "}
+                              | Overhead:{" "}
+                              {bomCostBreakdown.cost_breakdown.overhead_cost.toFixed(
+                                2,
+                              )}
+                            </Typography>
+                          </Box>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                )}
+                {/* Action Buttons */}
+                {mode !== "view" && (
+                  <Grid size={12}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 2,
+                        justifyContent: "space-between",
+                        mt: 2,
+                      }}
+                    >
+                      <Box>
+                        {mode === "edit" && selectedId && (
+                          <Button
+                            variant="outlined"
+                            color="warning"
+                            onClick={async () => {
+                              await checkShortages();
+                              setShowShortageDialog(true);
+                            }}
+                          >
+                            Check Material Shortages
+                          </Button>
+                        )}
+                      </Box>
+                      <Box sx={{ display: "flex", gap: 2 }}>
+                        <Button
+                          variant="outlined"
+                          onClick={() => {
+                            setMode("create");
+                            setSelectedId(null);
+                            reset(defaultValues);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          variant="contained"
+                          disabled={
+                            createMutation.isPending || updateMutation.isPending
+                          }
+                        >
+                          {createMutation.isPending ||
+                          updateMutation.isPending ? (
+                            <CircularProgress size={20} />
+                          ) : mode === "create" ? (
+                            "Create Order"
+                          ) : (
+                            "Update Order"
+                          )}
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+            </Paper>
+          </form>
+        </Grid>
+      </Grid>
+      {/* Context Menu */}
+      <VoucherContextMenu
+        voucherType="Production Order"
+        contextMenu={contextMenu}
+        onClose={handleContextMenuClose}
+        onEdit={() => {
+          if (contextMenu?.voucher) {
+            handleEdit(contextMenu.voucher);
+          }
+          setContextMenu(null);
+        }}
+        onView={() => {
+          if (contextMenu?.voucher) {
+            handleView(contextMenu.voucher);
+          }
+          setContextMenu(null);
+        }}
+        onDelete={() => {
+          if (contextMenu?.voucher) {
+            handleDeleteOrder(contextMenu.voucher.id);
+          }
+          setContextMenu(null);
+        }}
+      />
+      {/* Add BOM Modal */}
+      <AddBOMModal
+        open={showAddBOMModal}
+        onClose={() => setShowAddBOMModal(false)}
+        onAdd={handleAddBOM}
+        mode="create"
+      />
+      {/* Shortage Alert Dialog */}
+      {shortageData && (
+        <ManufacturingShortageAlert
+          open={showShortageDialog}
+          onClose={() => {
+            setShowShortageDialog(false);
+            setPendingSubmitData(null);
+          }}
+          onProceed={handleProceedWithShortage}
+          moNumber={shortageData.voucher_number}
+          isAvailable={shortageData.is_material_available}
+          shortages={shortageData.shortages || []}
+          recommendations={shortageData.recommendations || []}
+          title="Material Shortage Detected"
+          proceedButtonText="Proceed Anyway"
+          showProceedButton={true}
+        />
+      )}
+    </Container>
+    </ProtectedPage>
   );
-}
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
 };
-
-export const useAuthWithOrgContext = (): any => {
-  const auth = useAuth();
-  return {
-    ...auth,
-    isReady: !auth.loading && !auth.permissionsLoading && auth.isOrgContextReady,
-  };
-};
+export default ProductionOrder;

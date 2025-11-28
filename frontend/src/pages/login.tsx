@@ -42,6 +42,12 @@ const LoginPage = () => {
       timestamp: new Date().toISOString(),
     });
 
+    if (!token || token === 'undefined' || token.split('.').length !== 3) {
+      console.error("[Login] Invalid token received from server");
+      toast.error("Invalid authentication token received. Please try logging in again.");
+      return;
+    }
+
     if (token) {
       localStorage.setItem(ACCESS_TOKEN_KEY, token);
       console.log("[Login] Stored access token in localStorage");

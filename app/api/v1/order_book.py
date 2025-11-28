@@ -4,8 +4,8 @@ Order Book API endpoints - Order management and workflow tracking
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, or_, desc, func
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 from decimal import Decimal
@@ -51,31 +51,34 @@ async def get_orders(
     end_date: Optional[date] = Query(None, description="Filter by order date (end)"),
     auth: tuple = Depends(require_access("order", "read")),
 
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
 
     """Get all orders with optional filters"""
 
     current_user, organization_id = auth
     try:
-        query = db.query(Order).filter(Order.organization_id == organization_id)
+        stmt = select(Order).where(Order.organization_id == organization_id)
         
         if status:
-            query = query.filter(Order.status == status)
+            stmt = stmt.where(Order.status == status)
         
         if workflow_stage:
-            query = query.filter(Order.workflow_stage == workflow_stage)
+            stmt = stmt.where(Order.workflow_stage == workflow_stage)
         
         if customer_id:
-            query = query.filter(Order.customer_id == customer_id)
+            stmt = stmt.where(Order.customer_id == customer_id)
         
         if start_date:
-            query = query.filter(Order.order_date >= start_date)
+            stmt = stmt.where(Order.order_date >= start_date)
         
         if end_date:
-            query = query.filter(Order.order_date <= end_date)
+            stmt = stmt.where(Order.order_date <= end_date)
         
-        orders = query.order_by(desc(Order.order_date)).all()
+        stmt = stmt.order_by(desc(Order.order_date))
+        
+        result = await db.execute(stmt)
+        orders = result.scalars().all()
         
         # Convert to schema if needed, but assuming OrderSchema.from_orm works
         return orders
@@ -89,16 +92,19 @@ async def get_order(
     order_id: int,
     auth: tuple = Depends(require_access("order", "read")),
 
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
 
     """Get order details by ID"""
 
     current_user, organization_id = auth
     try:
-        order = db.query(Order).filter(
+        stmt = select(Order).where(
             and_(Order.id == order_id, Order.organization_id == organization_id)
-        ).first()
+        )
+        
+        result = await db.execute(stmt)
+        order = result.scalars().first()
         
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
@@ -116,7 +122,7 @@ async def create_order(
     order_data: OrderCreateSchema,
     auth: tuple = Depends(require_access("order", "create")),
 
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
 
     """Create a new order"""
@@ -124,7 +130,9 @@ async def create_order(
     current_user, organization_id = auth
     try:
         # Generate unique order number (simple example, improve as needed)
-        last_order = db.query(Order).filter(Order.organization_id == organization_id).order_by(desc(Order.id)).first()
+        stmt = select(Order).where(Order.organization_id == organization_id).order_by(desc(Order.id))
+        result = await db.execute(stmt)
+        last_order = result.scalars().first()
         order_number = f"ORD-{organization_id}-{ (last_order.id + 1) if last_order else 1 }"
         
         new_order = Order(
@@ -140,8 +148,8 @@ async def create_order(
         )
         
         db.add(new_order)
-        db.commit()
-        db.refresh(new_order)
+        await db.commit()
+        await db.refresh(new_order)
         
         # Add items
         for item in order_data.items:
@@ -164,14 +172,14 @@ async def create_order(
         )
         db.add(initial_history)
         
-        db.commit()
-        db.refresh(new_order)
+        await db.commit()
+        await db.refresh(new_order)
         
         logger.info(f"Order created: {new_order.order_number}")
         return new_order
     
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error creating order: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -181,16 +189,19 @@ async def update_workflow_stage(
     stage_data: WorkflowUpdateSchema,
     auth: tuple = Depends(require_access("order", "update")),
 
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
 
     """Update order workflow stage"""
 
     current_user, organization_id = auth
     try:
-        order = db.query(Order).filter(
+        stmt = select(Order).where(
             and_(Order.id == order_id, Order.organization_id == organization_id)
-        ).first()
+        )
+        
+        result = await db.execute(stmt)
+        order = result.scalars().first()
         
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
@@ -211,15 +222,15 @@ async def update_workflow_stage(
         order.workflow_stage = stage_data.workflow_stage
         order.updated_at = datetime.now()
         
-        db.commit()
-        db.refresh(order)
+        await db.commit()
+        await db.refresh(order)
         
         return order
     
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating workflow for order {order_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -229,16 +240,19 @@ async def update_order_status(
     status_data: StatusUpdateSchema,
     auth: tuple = Depends(require_access("order", "update")),
 
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
 
     """Update order status"""
 
     current_user, organization_id = auth
     try:
-        order = db.query(Order).filter(
+        stmt = select(Order).where(
             and_(Order.id == order_id, Order.organization_id == organization_id)
-        ).first()
+        )
+        
+        result = await db.execute(stmt)
+        order = result.scalars().first()
         
         if not order:
             raise HTTPException(status_code=404, detail="Order not found")
@@ -249,15 +263,15 @@ async def update_order_status(
         order.status = status_data.status
         order.updated_at = datetime.now()
         
-        db.commit()
-        db.refresh(order)
+        await db.commit()
+        await db.refresh(order)
         
         return order
     
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error(f"Error updating status for order {order_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -302,7 +316,7 @@ async def get_order_statuses(
 async def get_dashboard_stats(
     auth: tuple = Depends(require_access("order", "read")),
 
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
 
     """Get order book dashboard statistics"""
@@ -310,52 +324,68 @@ async def get_dashboard_stats(
     current_user, organization_id = auth
     try:
         # Total orders
-        total_orders = db.query(func.count(Order.id)).filter(Order.organization_id == organization_id).scalar()
+        stmt = select(func.count(Order.id)).where(Order.organization_id == organization_id)
+        result = await db.execute(stmt)
+        total_orders = result.scalar()
         
         # Active orders
-        active_orders = db.query(func.count(Order.id)).filter(
-            and_(Order.organization_id == organization_id, Order.status.not_in(["completed", "cancelled"]))
-        ).scalar()
+        stmt = select(func.count(Order.id)).where(
+            and_(Order.organization_id == organization_id, ~Order.status.in_(["completed", "cancelled"]))
+        )
+        result = await db.execute(stmt)
+        active_orders = result.scalar()
         
         # Completed orders
-        completed_orders = db.query(func.count(Order.id)).filter(
+        stmt = select(func.count(Order.id)).where(
             and_(Order.organization_id == organization_id, Order.status == "completed")
-        ).scalar()
+        )
+        result = await db.execute(stmt)
+        completed_orders = result.scalar()
         
         # Cancelled orders
-        cancelled_orders = db.query(func.count(Order.id)).filter(
+        stmt = select(func.count(Order.id)).where(
             and_(Order.organization_id == organization_id, Order.status == "cancelled")
-        ).scalar()
+        )
+        result = await db.execute(stmt)
+        cancelled_orders = result.scalar()
         
         # Total value
-        total_value = db.query(func.sum(Order.total_amount)).filter(Order.organization_id == organization_id).scalar() or 0
+        stmt = select(func.sum(Order.total_amount)).where(Order.organization_id == organization_id)
+        result = await db.execute(stmt)
+        total_value = result.scalar() or 0
         
         # By stage
         by_stage = {}
         for stage in WORKFLOW_STAGES:
-            by_stage[stage] = db.query(func.count(Order.id)).filter(
+            stmt = select(func.count(Order.id)).where(
                 and_(Order.organization_id == organization_id, Order.workflow_stage == stage)
-            ).scalar()
+            )
+            result = await db.execute(stmt)
+            by_stage[stage] = result.scalar()
         
         # Overdue orders
-        overdue_orders = db.query(func.count(Order.id)).filter(
+        stmt = select(func.count(Order.id)).where(
             and_(
                 Order.organization_id == organization_id,
                 Order.due_date < date.today(),
                 Order.status != "completed"
             )
-        ).scalar()
+        )
+        result = await db.execute(stmt)
+        overdue_orders = result.scalar()
         
         # Due this week
         this_week_end = date.today() + timedelta(days=7)
-        due_this_week = db.query(func.count(Order.id)).filter(
+        stmt = select(func.count(Order.id)).where(
             and_(
                 Order.organization_id == organization_id,
                 Order.due_date >= date.today(),
                 Order.due_date <= this_week_end,
                 Order.status != "completed"
             )
-        ).scalar()
+        )
+        result = await db.execute(stmt)
+        due_this_week = result.scalar()
         
         return {
             "total_orders": total_orders,

@@ -232,10 +232,14 @@ class ManufacturingOrder(BaseVoucher):
     power_consumption = Column(Float, default=0.0)
     downtime_events = Column(Text)  # JSON string of events
     
+    # NEW: Link to sales order
+    sales_order_id = Column(Integer, ForeignKey("sales_orders.id"), nullable=True)
+    
     # Relationships
     bom = relationship("BillOfMaterials")
     material_issues = relationship("MaterialIssue", back_populates="manufacturing_order", cascade="all, delete-orphan")
     production_entries = relationship("ProductionEntry", back_populates="manufacturing_order", cascade="all, delete-orphan")
+    sales_order = relationship("SalesOrder")
     
     __table_args__ = (
         UniqueConstraint('organization_id', 'voucher_number', name='uq_mo_org_voucher_number'),

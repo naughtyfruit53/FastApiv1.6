@@ -123,12 +123,7 @@ const waitForAuthIfNeeded = async (config: any) => {
   if (!isAuthReady && authReadyPromise) {
     console.log("[API] Waiting for auth context to be ready for:", config.url);
     const authTimeout = new Promise<void>((_, reject) => {
-      setTimeout(() => {
-        console.warn(
-          "[API] Auth wait timeout - proceeding without auth ready state",
-        );
-        reject(new Error("Auth wait timeout"));
-      }, 10000);
+      setTimeout(() => reject(new Error("Auth wait timeout")), 10000);
     });
     try {
       await Promise.race([authReadyPromise, authTimeout]);
@@ -177,8 +172,12 @@ api.interceptors.request.use(
       authReady: isAuthReady,
       timestamp: new Date().toISOString(),
     });
-    if (token) {
+    if (token && token !== 'undefined' && token.split('.').length === 3) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else if (token) {
+      console.error("[API] Invalid token format - clearing storage");
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
     }
     const fullUrl = `${config.baseURL}${config.url}`;
     console.log(`[API] Request URL: ${fullUrl}`, {

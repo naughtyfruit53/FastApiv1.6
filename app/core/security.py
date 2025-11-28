@@ -43,6 +43,7 @@ def create_access_token(
     }
 
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.ALGORITHM)
+    logger.info(f"Generated access token: {encoded_jwt[:20]}...")
     return encoded_jwt
 
 def create_refresh_token(
@@ -69,6 +70,7 @@ def create_refresh_token(
     }
 
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.ALGORITHM)
+    logger.info(f"Generated refresh token: {encoded_jwt[:20]}...")
     return encoded_jwt
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -80,6 +82,10 @@ def get_password_hash(password: str) -> str:
 def verify_token(token: str, expected_type: Optional[str] = None) -> tuple[Union[str, None], Union[int, None], Union[str, None], Union[str, None]]:
     """Verify token and return email, organization_id, user_role, and user_type"""
     try:
+        if not token:
+            raise exceptions.JWTError("Token is empty or missing")
+        if token.count('.') != 2:
+            raise exceptions.JWTError("Invalid token format: Not enough segments")
         logger.debug("Token to decode: %s...", token[:20])
         payload = jwt.decode(
             token, settings.jwt_secret, algorithms=[settings.ALGORITHM]
