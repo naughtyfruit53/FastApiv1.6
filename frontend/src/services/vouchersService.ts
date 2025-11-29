@@ -40,7 +40,7 @@ export const voucherService = {
   ): Promise<any> => {
     const endpoint = `/${type}/${id}`;
     console.log(`[voucherService] Updating voucher at: ${endpoint}`);
-    const response = await api.put(endpoint, data);
+    const response = await api.patch(endpoint, data);
     return response.data;
   },
   getNextVoucherNumber: async (endpoint: string): Promise<any> => {

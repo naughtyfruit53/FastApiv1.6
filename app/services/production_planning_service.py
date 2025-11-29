@@ -14,7 +14,8 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import logging
 
-from app.models.vouchers.manufacturing_planning import ManufacturingOrder, BillOfMaterials, Machine, PreventiveMaintenanceSchedule, BreakdownMaintenance, MachinePerformanceLog, SparePart, ProductionEntry, QCTemplate, QCInspection, Rejection, InventoryAdjustment  # UPDATED: Added all new models
+from app.models.vouchers.manufacturing_planning import ManufacturingOrder, BillOfMaterials, Machine, PreventiveMaintenanceSchedule, BreakdownMaintenance, MachinePerformanceLog, SparePart, QCTemplate, QCInspection, Rejection, InventoryAdjustment  # UPDATED: Removed ProductionEntry from this import
+from app.models.vouchers.manufacturing_operations import ProductionEntry  # NEW: Import ProductionEntry from correct module
 from app.models.product_models import Product
 from app.schemas.manufacturing import MachineCreate, MachineResponse, PreventiveMaintenanceScheduleCreate, PreventiveMaintenanceScheduleResponse, BreakdownMaintenanceCreate, BreakdownMaintenanceResponse, MachinePerformanceLogCreate, MachinePerformanceLogResponse, SparePartCreate, SparePartResponse, ProductionEntryCreate, ProductionEntryResponse, QCTemplateCreate, QCTemplateResponse, QCInspectionCreate, QCInspectionResponse, RejectionCreate, RejectionResponse, InventoryAdjustmentCreate, InventoryAdjustmentResponse  # NEW: Added all new schemas
 
@@ -530,7 +531,7 @@ class ProductionPlanningService:
         
         return {
             'success': True,
-            'mo_id': mo_id,
+            'mo_id': mo.id,
             'voucher_number': mo.voucher_number,
             'allocated_resources': {
                 'operator': mo.assigned_operator,

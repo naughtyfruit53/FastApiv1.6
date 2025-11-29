@@ -15,7 +15,8 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_active_user
 from app.core.enforcement import require_access
 from app.models.vouchers.manufacturing_planning import ManufacturingOrder, BillOfMaterials, BOMComponent  # FIXED: Use full path to manufacturing_planning.py and added BOMComponent for auto-debit section
-from app.models.vouchers.manufacturing_planning import QCInspection, Machine, ProductionEntry  # UPDATED: Corrected path to vouchers.manufacturing_planning and added Machine
+from app.models.vouchers.manufacturing_planning import QCInspection, Machine  # UPDATED: Corrected path to vouchers.manufacturing_planning and added Machine
+from app.models.vouchers.manufacturing_operations import ProductionEntry  # FIXED: Import ProductionEntry from manufacturing_operations
 from app.services.voucher_service import VoucherNumberService
 from app.services.mrp_service import MRPService
 from app.services.production_planning_service import ProductionPlanningService

@@ -34,6 +34,10 @@ def create_access_token(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
+    # Ensure organization_id is int or None
+    organization_id = int(organization_id) if organization_id is not None else None
+    logger.debug(f"Creating token with organization_id: {organization_id} (type: {type(organization_id)})")
+
     to_encode = {
         "exp": expire,
         "sub": str(subject),
@@ -59,6 +63,10 @@ def create_refresh_token(
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES
         )
+
+    # Ensure organization_id is int or None
+    organization_id = int(organization_id) if organization_id is not None else None
+    logger.debug(f"Creating refresh token with organization_id: {organization_id} (type: {type(organization_id)})")
 
     to_encode = {
         "exp": expire,
@@ -94,7 +102,19 @@ def verify_token(token: str, expected_type: Optional[str] = None) -> tuple[Union
         if expected_type and payload.get("token_type") != expected_type:
             raise exceptions.JWTError("Invalid token type")
         email = payload.get("sub")
-        organization_id = payload.get("organization_id")
+        org_id = payload.get("organization_id")
+        # Cast organization_id to int, handling str or int
+        try:
+            if isinstance(org_id, str):
+                organization_id = int(org_id)
+            elif isinstance(org_id, (int, float)):
+                organization_id = int(org_id)
+            else:
+                organization_id = None
+            logger.debug(f"Parsed organization_id: {organization_id} (original type: {type(org_id)})")
+        except (ValueError, TypeError):
+            logger.error(f"Invalid organization_id in token: {org_id} (type: {type(org_id)})")
+            raise exceptions.JWTError("Invalid organization_id in token")
         user_role = payload.get("user_role")
         user_type = payload.get("user_type", "organization")
         return email, organization_id, user_role, user_type

@@ -244,7 +244,7 @@ class ManufacturingOrder(BaseVoucher):
     # Relationships
     bom = relationship("BillOfMaterials")
     material_issues = relationship("MaterialIssue", back_populates="manufacturing_order", cascade="all, delete-orphan")
-    production_entries = relationship("ProductionEntry", back_populates="manufacturing_order", cascade="all, delete-orphan")
+    production_entries = relationship("ProductionEntry", back_populates="production_order", cascade="all, delete-orphan")
     sales_order = relationship("SalesOrder")
     
     __table_args__ = (
@@ -254,44 +254,6 @@ class ManufacturingOrder(BaseVoucher):
         Index('idx_mo_org_date', 'organization_id', 'date'),
         Index('idx_mo_deleted', 'is_deleted')  # NEW: Index for deleted
     )
-
-# NEW: ProductionEntry Model
-class ProductionEntry(Base):
-    __tablename__ = "production_entries"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
-    manufacturing_order_id = Column(Integer, ForeignKey("manufacturing_orders.id"), nullable=False)
-    production_order_no = Column(String, nullable=False)
-    date = Column(DateTime(timezone=True), nullable=False)
-    shift = Column(String)
-    machine_id = Column(Integer, ForeignKey("machines.id"))
-    operator_id = Column(Integer, ForeignKey("users.id"))
-    status = Column(String, nullable=False)  # Planned / In-progress / Completed / Rework
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    planned_quantity = Column(Float, nullable=False)
-    actual_quantity = Column(Float, nullable=False)
-    wastage_percentage = Column(Float, default=0.0)
-    batch_number = Column(String, nullable=False)
-    rejected_quantity = Column(Float, default=0.0)
-    time_taken = Column(Float, nullable=False)
-    labor_hours = Column(Float, nullable=False)
-    machine_hours = Column(Float, nullable=False)
-    power_consumption = Column(Float, default=0.0)
-    downtime_events = Column(Text)  # JSON
-    notes = Column(Text)
-    attachments = Column(Text)  # JSON of file paths
-    qc_approval = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    # Relationships
-    manufacturing_order = relationship("ManufacturingOrder", back_populates="production_entries")
-    machine = relationship("Machine")
-    operator = relationship("User")
-    product = relationship("Product")
-
-    __table_args__ = {'extend_existing': True}
 
 # NEW: Machine Model for Maintenance
 class Machine(Base):

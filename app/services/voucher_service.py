@@ -83,9 +83,14 @@ class VoucherNumberService:
         if latest_voucher:
             voucher_num = latest_voucher.voucher_number.split(' Rev ')[0]
             try:
-                last_sequence = int(voucher_num.split('/')[-1])
+                last_sequence_str = voucher_num.split('/')[-1]
+                logger.debug(f"last_sequence_str: {last_sequence_str} (type: {type(last_sequence_str)})")
+                if not last_sequence_str.isdigit():
+                    raise ValueError(f"Non-numeric sequence: {last_sequence_str}")
+                last_sequence = int(last_sequence_str)
                 next_sequence = last_sequence + 1
-            except (ValueError, IndexError):
+            except (ValueError, IndexError) as e:
+                logger.warning(f"Invalid voucher number format for {voucher_num}: {str(e)}. Starting from 1.")
                 next_sequence = 1
         else:
             next_sequence = 1
@@ -120,6 +125,7 @@ class VoucherNumberService:
         Args:
             voucher_date: If provided, uses this date for period calculation instead of system date
         """
+        logger.debug(f"generate_voucher_number_async called with organization_id: {organization_id} (type: {type(organization_id)})")
         current_date = voucher_date if voucher_date else datetime.now()
         current_year = current_date.year
         current_month = current_date.month
@@ -164,9 +170,14 @@ class VoucherNumberService:
         if latest_voucher:
             voucher_num = latest_voucher.voucher_number.split(' Rev ')[0]
             try:
-                last_sequence = int(voucher_num.split('/')[-1])
+                last_sequence_str = voucher_num.split('/')[-1]
+                logger.debug(f"last_sequence_str: {last_sequence_str} (type: {type(last_sequence_str)})")
+                if not last_sequence_str.isdigit():
+                    raise ValueError(f"Non-numeric sequence: {last_sequence_str}")
+                last_sequence = int(last_sequence_str)
                 next_sequence = last_sequence + 1
-            except (ValueError, IndexError):
+            except (ValueError, IndexError) as e:
+                logger.warning(f"Invalid voucher number format for {voucher_num}: {str(e)}. Starting from 1.")
                 next_sequence = 1
         else:
             next_sequence = 1
@@ -203,6 +214,7 @@ class VoucherNumberService:
                 - suggested_date: datetime of the last voucher in the period
                 - period: str
         """
+        logger.debug(f"check_backdated_voucher_conflict called with organization_id: {organization_id} (type: {type(organization_id)})")
         current_year = voucher_date.year
         current_month = voucher_date.month
         
@@ -352,6 +364,7 @@ class VoucherAutoPopulationService:
         grn_data = {
             "voucher_number": grn_voucher_number,
             "purchase_order_id": purchase_order.id,
+            "purchase_order": purchase_order,
             "vendor_id": purchase_order.vendor_id,
             "grn_date": datetime.now(),
             "date": datetime.now(),
@@ -394,7 +407,6 @@ class VoucherAutoPopulationService:
         
         pv_data = {
             "voucher_number": pv_voucher_number,
-            "vendor_id": grn.vendor_id,
             "purchase_order_id": grn.purchase_order_id,
             "grn_id": grn.id,
             "date": datetime.now(),

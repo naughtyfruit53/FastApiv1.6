@@ -78,52 +78,75 @@ class ManufacturingOrderResponse(BaseModel):
         from_attributes = True
 
 # NEW: ProductionEntry Schemas
+class ProductionEntryConsumptionCreate(BaseModel):
+    component_id: int
+    actual_qty: float
+    wastage_qty: float = 0.0
+
 class ProductionEntryCreate(BaseModel):
-    manufacturing_order_id: int
-    production_order_no: str
+    production_order_id: int
     date: date
     shift: Optional[str]
-    machine_id: int
-    operator_id: int
-    status: str
-    product_id: int
-    planned_quantity: float
-    actual_quantity: float
-    wastage_percentage: float = 0.0
+    machine: Optional[str]
+    operator: Optional[str]
     batch_number: str
+    actual_quantity: float
     rejected_quantity: float = 0.0
     time_taken: float
     labor_hours: float
     machine_hours: float
     power_consumption: float = 0.0
-    downtime_events: Optional[str]  # JSON string
+    downtime_events: Optional[List[str]] = None
     notes: Optional[str]
-    attachments: Optional[str]  # JSON string
-    qc_approval: bool = False
+    # attachments: Optional[List[str]] = None  # List of file paths or URLs
+    bom_consumption: List[ProductionEntryConsumptionCreate]
+
+class ProductionEntryUpdate(BaseModel):
+    date: Optional[date]
+    shift: Optional[str]
+    machine: Optional[str]
+    operator: Optional[str]
+    batch_number: Optional[str]
+    actual_quantity: Optional[float]
+    rejected_quantity: Optional[float]
+    time_taken: Optional[float]
+    labor_hours: Optional[float]
+    machine_hours: Optional[float]
+    power_consumption: Optional[float]
+    downtime_events: Optional[List[str]]
+    notes: Optional[str]
+    # attachments: Optional[List[str]]
+    bom_consumption: Optional[List[ProductionEntryConsumptionCreate]]
+    is_deleted: Optional[bool] = False
+    deletion_remark: Optional[str]
+
+class ProductionEntryConsumptionResponse(BaseModel):
+    id: int
+    component_id: int
+    actual_qty: float
+    wastage_qty: float
 
 class ProductionEntryResponse(BaseModel):
     id: int
-    manufacturing_order_id: int
-    production_order_no: str
+    voucher_number: str
+    production_order_id: int
     date: date
     shift: Optional[str]
-    machine_id: int
-    operator_id: int
-    status: str
-    product_id: int
-    planned_quantity: float
-    actual_quantity: float
-    wastage_percentage: float
+    machine: Optional[str]
+    operator: Optional[str]
     batch_number: str
+    actual_quantity: float
     rejected_quantity: float
     time_taken: float
     labor_hours: float
     machine_hours: float
     power_consumption: float
-    downtime_events: Optional[str]
+    downtime_events: Optional[List[str]]
     notes: Optional[str]
-    attachments: Optional[str]
-    qc_approval: bool
+    # attachments: Optional[List[str]]
+    bom_consumption: List[ProductionEntryConsumptionResponse]
+    is_deleted: bool
+    deletion_remark: Optional[str]
     created_at: datetime
     updated_at: datetime
 

@@ -12,6 +12,7 @@ This module is organized into logical submodules for better maintainability:
 - mrp.py: Material Requirements Planning
 - production_planning.py: Production scheduling and planning
 - shop_floor.py: Shop floor operations and barcode scanning
+- production_entries.py: Production entry operations  # NEW: Added
 """
 
 from fastapi import APIRouter, FastAPI
@@ -34,6 +35,7 @@ from .shop_floor import router as shop_floor_router
 from .maintenance import router as maintenance_router
 from .quality_control import router as quality_control_router
 from .inventory_adjustment import router as inventory_adjustment_router
+from .production_entries import router as production_entries_router  # NEW: Added import
 # Comment out the test_router import and inclusion to avoid ModuleNotFoundError in deployment
 # from .test_router import router as test_router
 
@@ -177,6 +179,17 @@ try:
     logger.debug("Included inventory_adjustment_router")
 except Exception as e:
     logger.error(f"Failed to include inventory_adjustment_router: {str(e)}\n{traceback.format_exc()}")
+
+# NEW: Added inclusion for production_entries_router
+try:
+    router.include_router(production_entries_router, prefix="/production-entries", tags=["Production Entries"])
+    for route in production_entries_router.routes:
+        if isinstance(route, APIRoute):
+            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
+            logger.debug(f"Registered production_entries endpoint: {methods} /production-entries{route.path}")
+    logger.debug("Included production_entries_router")
+except Exception as e:
+    logger.error(f"Failed to include production_entries_router: {str(e)}\n{traceback.format_exc()}")
 
 # Comment out test_router to avoid ModuleNotFoundError in deployment
 # try:
