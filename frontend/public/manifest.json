@@ -1,11 +1,11 @@
 {
-  "name": "Tritiq BOS",
-  "short_name": "Tritiq BOS",
-  "description": "Complete Business Operating System for modern enterprises",
+  "name": "TritIQ BOS",
+  "short_name": "TritIQ BOS",
+  "description": "Business Made Simple - Complete Business Operating System for modern enterprises",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1976d2",
+  "background_color": "#F7FAFC",
+  "theme_color": "#0A2A43",
   "orientation": "any",
   "icons": [
     {
