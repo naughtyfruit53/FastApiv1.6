@@ -148,7 +148,7 @@ const UnifiedLoginForm: React.FC<UnifiedLoginFormProps> = ({ onLogin, onForgotPa
   };
   const steps = ["Login Details", "Verify OTP"];
   return (
-    <Card>
+    <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
       <CardContent sx={{ p: 4 }}>
         <Typography variant="h5" component="h2" gutterBottom align="center">
           {useOTP ? "OTP Login" : "Login"}

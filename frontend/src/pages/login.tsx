@@ -108,7 +108,7 @@ const LoginPage = () => {
   };
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="lg" sx={{ backgroundColor: '#F7FAFC', minHeight: '100vh', py: 4 }}>
       <Box sx={{ mt: 4, textAlign: "center" }}>
         <Image
           src="/Tritiq.png"
@@ -118,14 +118,6 @@ const LoginPage = () => {
           style={{ maxWidth: "100%", height: "auto", marginBottom: "16px" }}
           priority
         />
-        <Typography
-          variant="h6"
-          component="h2"
-          gutterBottom
-          color="textSecondary"
-        >
-          Business Made Simple
-        </Typography>
         <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: "stretch", mt: 2, gap: 2 }}>
           <Box sx={{ flex: 1 }}>
             <Box sx={{ p: 3 }}>
