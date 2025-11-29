@@ -31,7 +31,7 @@ import { useAuth } from './AuthContext';
 import rbacService from '../services/rbacService';
 
 interface PermissionContextType {
-  /** List of all permissions the current user has */
+  /** User's all permissions */
   permissions: string[];
   
   /** Check if user has a specific permission */
@@ -100,14 +100,9 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
       setPermissions(userPermissions);
       setIsSuperAdmin(user.is_super_admin || false);
       
-      console.log('[PermissionContext] Loaded permissions:', userPermissions.length, 'permissions');
-      if (user.is_super_admin) {
-        console.log('[PermissionContext] User is super admin - all permissions granted');
-      }
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to load user permissions';
       setError(errorMessage);
-      console.error('[PermissionContext] Error loading permissions:', err);
       
       // On error, set empty permissions (fail closed)
       setPermissions([]);
@@ -127,7 +122,7 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
   /**
    * Check if user has a specific permission
    * STRICT ENFORCEMENT: No bypass for super admins
-   * @param module - Module name (e.g., 'voucher', 'inventory', 'admin')
+   * @param module - Module name (e.g., 'naughty', 'inventory', 'admin')
    * @param action - Action name (e.g., 'read', 'create', 'update', 'delete')
    * @returns true if user has the explicit permission
    */
@@ -141,8 +136,6 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     const hasPerm = permissions.includes(permUnderscore) || 
                     permissions.includes(permColon) || 
                     permissions.includes(permDot);
-    
-    console.log(`Checking permission: ${permUnderscore} or ${permColon} or ${permDot} - Result: ${hasPerm} (isSuperAdmin: ${isSuperAdmin})`);
     
     return hasPerm;
   }, [permissions, isSuperAdmin]);

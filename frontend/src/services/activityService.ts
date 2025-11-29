@@ -45,14 +45,12 @@ const activityService = {
 
   formatActivityTime: (timestamp: string): string => {
     if (!timestamp) {
-      console.warn('Missing timestamp for activity');
       return 'Unknown time';  // Changed to return a default string instead of throwing error
     }
 
     const activityTime = new Date(timestamp);
     
     if (isNaN(activityTime.getTime())) {
-      console.error('Invalid timestamp format:', timestamp);
       return 'Invalid Date';
     }
     

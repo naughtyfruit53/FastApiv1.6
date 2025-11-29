@@ -25,6 +25,7 @@ import {
   Card,
   CardContent,
   IconButton,
+  Divider,
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 
@@ -43,6 +44,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
 import { useAuth } from "../../../context/AuthContext";
+import voucherFormStyles from "../../../styles/voucherFormStyles";  // Assume this exists or create similar to purchase-order
 
 const schema = yup.object().shape({
   production_order_id: yup.number().required(),
@@ -426,55 +428,70 @@ const ProductionEntryPage: React.FC = () => {
     setPendingDate(null);
   };
 
+  // Enhanced options for machines and operators
+  const enhancedMachines = [
+    { id: null, name: "Add New Machine..." },
+    ...machines
+  ];
+
+  const enhancedOperators = [
+    { id: null, name: "Add New Operator..." },
+    ...operators
+  ];
+
   const indexContent = (
     <>
-      <Typography variant="h6" gutterBottom>
+      <Typography variant="h6" gutterBottom sx={{ fontSize: 16, fontWeight: "bold" }}>
         Recent Entries
       </Typography>
       <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
         <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell>Entry #</TableCell>
-              <TableCell>Order</TableCell>
-              <TableCell>Qty</TableCell>
-              <TableCell>Date</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Entry #</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Order</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Qty</TableCell>
+              <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Date</TableCell>
               <TableCell align="right" sx={{ p: 0, width: 40 }}></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {latestEntries.map((entry: any) => (
-              <TableRow
-                key={entry.id}
-                hover
-                sx={{ cursor: "pointer", textDecoration: entry.is_deleted ? 'line-through' : 'none' }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setContextMenu({
-                    mouseX: e.clientX - 2,
-                    mouseY: e.clientY - 4,
-                    voucher: entry,
-                  });
-                }}
-              >
-                <TableCell>{entry.voucher_number}</TableCell>
-                <TableCell>{entry.production_order?.voucher_number || "N/A"}</TableCell>
-                <TableCell>{entry.actual_quantity}</TableCell>
-                <TableCell>{entry.date}</TableCell>
-                <TableCell align="right" sx={{ p: 0 }}>
-                  <VoucherContextMenu
-                    voucher={entry}
-                    voucherType="Production Entry"
-                    onView={handleView}
-                    onEdit={handleEdit}
-                    onDelete={handleDeleteEntry}
-                    onPrint={handlePrintEntry}
-                    showKebab={true}
-                    onClose={() => {}}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
+            {latestEntries.map((entry: any) => {
+              const dateStr = entry.date ? entry.date.split('T')[0] : '';
+              const displayDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A';
+              return (
+                <TableRow
+                  key={entry.id}
+                  hover
+                  sx={{ cursor: "pointer", textDecoration: entry.is_deleted ? 'line-through' : 'none' }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({
+                      mouseX: e.clientX - 2,
+                      mouseY: e.clientY - 4,
+                      voucher: entry,
+                    });
+                  }}
+                >
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{entry.voucher_number}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{entry.production_order?.voucher_number || "N/A"}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{entry.actual_quantity}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{displayDate}</TableCell>
+                  <TableCell align="right" sx={{ p: 0 }}>
+                    <VoucherContextMenu
+                      voucher={entry}
+                      voucherType="Production Entry"
+                      onView={handleView}
+                      onEdit={handleEdit}
+                      onDelete={handleDeleteEntry}
+                      onPrint={handlePrintEntry}
+                      showKebab={true}
+                      onClose={() => {}}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>
@@ -502,385 +519,363 @@ const ProductionEntryPage: React.FC = () => {
           setMode("view");
           if (entryData) reset(entryData);
         }}
+        onSave={handleSubmit(onSubmit)}
         showPDFButton={false}
       />
     </Box>
   );
 
   const formContent = (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <Paper sx={{ p: 3 }}>
-        <Grid container spacing={2}>
-          {/* Order Details */}
-          <Grid item xs={12}>
-            <Typography variant="h6">Order Details</Typography>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <TextField
-              {...control.register("voucher_number")}
-              label="Entry Number"
-              fullWidth
-              disabled
-              size="small"
-              sx={{ "& .MuiInputBase-root": { height: 27 } }}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Controller
-              name="production_order_id"
-              control={control}
-              render={({ field }) => (
-                <Autocomplete
-                  {...field}
-                  options={productionOrders}
-                  getOptionLabel={(option: any) => option.voucher_number}
-                  value={productionOrders.find((o: any) => o.id === field.value) || null}
-                  onChange={(_, value) => field.onChange(value?.id || 0)}
-                  disabled={mode === "view"}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Production Order No."
-                      error={!!errors.production_order_id}
-                      helperText={errors.production_order_id?.message}
-                      size="small"
-                      sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                    />
-                  )}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Controller
-              name="date"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Date"
-                  type="date"
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.date}
-                  helperText={errors.date?.message}
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Controller
-              name="shift"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Shift"
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.shift}
-                  helperText={errors.shift?.message}
-                  size="small"
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Controller
-              name="machine"
-              control={control}
-              render={({ field }) => (
-                <Autocomplete
-                  {...field}
-                  options={machines}
-                  getOptionLabel={(option) => option.name}
-                  value={machines.find((m: any) => m.id === field.value) || null}
-                  onChange={(_, value) => field.onChange(value?.id || '')}
-                  disabled={mode === "view"}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Machine"
-                      error={!!errors.machine}
-                      helperText={errors.machine?.message}
-                      size="small"
-                      sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: mode !== "view" ? (
-                          <>
-                            {params.InputProps.endAdornment}
-                            <IconButton onClick={handleAddMachine}>
-                              <AddIcon />
-                            </IconButton>
-                          </>
-                        ) : params.InputProps.endAdornment,
-                      }}
-                    />
-                  )}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Controller
-              name="operator"
-              control={control}
-              render={({ field }) => (
-                <Autocomplete
-                  {...field}
-                  options={operators}
-                  getOptionLabel={(option) => option.user?.full_name || option.employee_code}
-                  value={operators.find((o: any) => o.id === field.value) || null}
-                  onChange={(_, value) => field.onChange(value?.id || '')}
-                  disabled={mode === "view"}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Operator"
-                      error={!!errors.operator}
-                      helperText={errors.operator?.message}
-                      size="small"
-                      sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: mode !== "view" ? (
-                          <>
-                            {params.InputProps.endAdornment}
-                            <IconButton onClick={handleAddOperator}>
-                              <AddIcon />
-                            </IconButton>
-                          </>
-                        ) : params.InputProps.endAdornment,
-                      }}
-                    />
-                  )}
-                />
-              )}
-            />
-          </Grid>
-          {/* BOM Consumption Button */}
-          <Grid item xs={12} sx={{ textAlign: 'center' }}>
+    <Paper sx={{ p: 3, width: '100%' }}>
+      <Grid container spacing={2}>
+        {/* First row: 3 fields */}
+        <Grid size={4}>
+          <TextField
+            {...control.register("voucher_number")}
+            label="Entry Number"
+            fullWidth
+            disabled
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            sx={{ "& .MuiInputBase-root": { height: 27 } }}
+          />
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="date"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Date"
+                type="date"
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.date}
+                helperText={errors.date?.message}
+                size="small"
+                InputLabelProps={{ shrink: true }}
+                sx={{ "& .MuiInputBase-root": { height: 27 } }}
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="production_order_id"
+            control={control}
+            render={({ field }) => (
+              <Autocomplete
+                {...field}
+                options={productionOrders}
+                getOptionLabel={(option: any) => option.voucher_number}
+                value={productionOrders.find((o: any) => o.id === field.value) || null}
+                onChange={(_, value) => field.onChange(value?.id || 0)}
+                disabled={mode === "view"}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Production Order No."
+                    error={!!errors.production_order_id}
+                    helperText={errors.production_order_id?.message}
+                    size="small"
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
+                )}
+              />
+            )}
+          />
+        </Grid>
+        {/* Divider */}
+        <Grid size={12}>
+          <Divider sx={{ my: 2 }} />
+        </Grid>
+        {/* Centered BOM button with width 4 */}
+        <Grid size={12} container justifyContent="center">
+          <Grid size={4}>
             <Button 
               variant="contained" 
               onClick={() => setShowBOMModal(true)}
               disabled={mode === "view" || !selectedProductionOrder || !bomData}
+              fullWidth
+              sx={{ height: 27 }}
             >
               Manage BOM Consumption
             </Button>
           </Grid>
-          {/* Finished Goods Output */}
-          <Grid item xs={12}>
-            <Typography variant="h6">Finished Goods Output</Typography>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Controller
-              name="actual_quantity"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Actual Output"
-                  type="number"
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.actual_quantity}
-                  helperText={errors.actual_quantity?.message}
-                  size="small"
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                />
-              )}
-            />
-            {maxProducible !== null && (
-              <Typography 
-                variant="caption" 
-                color={watchedActualQuantity > maxProducible ? 'error' : 'success'}
-                sx={{ mt: 0.5, display: 'block' }}
-              >
-                Max producible: {maxProducible}
-              </Typography>
-            )}
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Controller
-              name="batch_number"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Batch Number"
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.batch_number}
-                  helperText={errors.batch_number?.message}
-                  size="small"
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Controller
-              name="rejected_quantity"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Rejected Quantity"
-                  type="number"
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.rejected_quantity}
-                  helperText={errors.rejected_quantity?.message}
-                  size="small"
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Controller
-              name="time_taken"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Time Taken (hours)"
-                  type="number"
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.time_taken}
-                  helperText={errors.time_taken?.message}
-                  size="small"
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                />
-              )}
-            />
-          </Grid>
-          {/* Resource Utilization */}
-          <Grid item xs={12}>
-            <Typography variant="h6">Resource Utilization</Typography>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Controller
-              name="labor_hours"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Labor Hours"
-                  type="number"
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.labor_hours}
-                  helperText={errors.labor_hours?.message}
-                  size="small"
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Controller
-              name="machine_hours"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Machine Hours"
-                  type="number"
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.machine_hours}
-                  helperText={errors.machine_hours?.message}
-                  size="small"
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Controller
-              name="power_consumption"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Power Consumption"
-                  type="number"
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.power_consumption}
-                  helperText={errors.power_consumption?.message}
-                  size="small"
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Controller
-              name="downtime_events"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Downtime Events (comma-separated)"
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.downtime_events}
-                  helperText={errors.downtime_events?.message}
-                  size="small"
-                  sx={{ "& .MuiInputBase-root": { height: 27 } }}
-                />
-              )}
-            />
-          </Grid>
-          {/* Attachments & Notes */}
-          <Grid item xs={12}>
-            <Typography variant="h6">Attachments & Notes</Typography>
-          </Grid>
-          <Grid item xs={12}>
-            <Controller
-              name="notes"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Notes"
-                  multiline
-                  rows={2}
-                  fullWidth
-                  disabled={mode === "view"}
-                  error={!!errors.notes}
-                  helperText={errors.notes?.message}
-                  size="small"
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <input
-              type="file"
-              multiple
-              disabled={mode === "view"}
-              onChange={(e) => setValue("attachments", Array.from(e.target.files || []))}
-            />
-          </Grid>
         </Grid>
-      </Paper>
-      {mode !== "view" && (
-        <Box sx={{ mt: 2, textAlign: 'right' }}>
-          <Button type="submit" variant="contained">
-            Submit
-          </Button>
-        </Box>
-      )}
-    </form>
+        {/* Next row: Shift, Machine, Operator */}
+        <Grid size={4}>
+          <Controller
+            name="shift"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Shift"
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.shift}
+                helperText={errors.shift?.message}
+                size="small"
+                sx={{ "& .MuiInputBase-root": { height: 27 } }}
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="machine"
+            control={control}
+            render={({ field }) => (
+              <Autocomplete
+                {...field}
+                options={enhancedMachines}
+                getOptionLabel={(option) => option.name}
+                value={enhancedMachines.find((m: any) => m.id === field.value) || null}
+                onChange={(_, value) => {
+                  if (value?.id === null) {
+                    handleAddMachine();
+                  } else {
+                    field.onChange(value?.id || '');
+                  }
+                }}
+                disabled={mode === "view"}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Machine"
+                    error={!!errors.machine}
+                    helperText={errors.machine?.message}
+                    size="small"
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
+                )}
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="operator"
+            control={control}
+            render={({ field }) => (
+              <Autocomplete
+                {...field}
+                options={enhancedOperators}
+                getOptionLabel={(option) => option.id === null ? option.name : option.user?.full_name || option.employee_code}
+                value={enhancedOperators.find((o: any) => o.id === field.value) || null}
+                onChange={(_, value) => {
+                  if (value?.id === null) {
+                    handleAddOperator();
+                  } else {
+                    field.onChange(value?.id || '');
+                  }
+                }}
+                disabled={mode === "view"}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Operator"
+                    error={!!errors.operator}
+                    helperText={errors.operator?.message}
+                    size="small"
+                    sx={{ "& .MuiInputBase-root": { height: 27 } }}
+                  />
+                )}
+              />
+            )}
+          />
+        </Grid>
+        {/* Remaining fields */}
+        <Grid size={4}>
+          <Controller
+            name="actual_quantity"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Actual Output"
+                type="number"
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.actual_quantity}
+                helperText={errors.actual_quantity?.message}
+                size="small"
+                sx={{ "& .MuiInputBase-root": { height: 27 } }}
+              />
+            )}
+          />
+          {maxProducible !== null && (
+            <Typography 
+              variant="caption" 
+              color={watchedActualQuantity > maxProducible ? 'error' : 'success'}
+              sx={{ mt: 0.5, display: 'block' }}
+            >
+              Max producible: {maxProducible}
+            </Typography>
+          )}
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="batch_number"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Batch Number"
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.batch_number}
+                helperText={errors.batch_number?.message}
+                size="small"
+                sx={{ "& .MuiInputBase-root": { height: 27 } }}
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="rejected_quantity"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Rejected Quantity"
+                type="number"
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.rejected_quantity}
+                helperText={errors.rejected_quantity?.message}
+                size="small"
+                sx={{ "& .MuiInputBase-root": { height: 27 } }}
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="time_taken"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Time Taken (hours)"
+                type="number"
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.time_taken}
+                helperText={errors.time_taken?.message}
+                size="small"
+                sx={{ "& .MuiInputBase-root": { height: 27 } }}
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="labor_hours"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Labor Hours"
+                type="number"
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.labor_hours}
+                helperText={errors.labor_hours?.message}
+                size="small"
+                sx={{ "& .MuiInputBase-root": { height: 27 } }}
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="machine_hours"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Machine Hours"
+                type="number"
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.machine_hours}
+                helperText={errors.machine_hours?.message}
+                size="small"
+                sx={{ "& .MuiInputBase-root": { height: 27 } }}
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="power_consumption"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Power Consumption"
+                type="number"
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.power_consumption}
+                helperText={errors.power_consumption?.message}
+                size="small"
+                sx={{ "& .MuiInputBase-root": { height: 27 } }}
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={4}>
+          <Controller
+            name="downtime_events"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Downtime Events (comma-separated)"
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.downtime_events}
+                helperText={errors.downtime_events?.message}
+                size="small"
+                sx={{ "& .MuiInputBase-root": { height: 27 } }}
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={12}>
+          <Controller
+            name="notes"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="Notes"
+                multiline
+                rows={2}
+                fullWidth
+                disabled={mode === "view"}
+                error={!!errors.notes}
+                helperText={errors.notes?.message}
+                size="small"
+              />
+            )}
+          />
+        </Grid>
+        <Grid size={12}>
+          <input
+            type="file"
+            multiple
+            disabled={mode === "view"}
+            onChange={(e) => setValue("attachments", Array.from(e.target.files || []))}
+          />
+        </Grid>
+      </Grid>
+    </Paper>
   );
 
   return (
@@ -922,6 +917,7 @@ const ProductionEntryPage: React.FC = () => {
           }
           setContextMenu(null);
         }}
+        showKebab={true}
       />
       <VoucherListModal
         open={showVoucherListModal}

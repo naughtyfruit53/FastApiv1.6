@@ -14,7 +14,6 @@ const getAccessToken = (): string | null => {
     // Check legacy key for backward compatibility
     token = localStorage.getItem(LEGACY_TOKEN_KEY);
     if (token) {
-      console.log('[API] Migrating token from legacy key to new key');
       localStorage.setItem(ACCESS_TOKEN_KEY, token);
       localStorage.removeItem(LEGACY_TOKEN_KEY);
     }
@@ -38,7 +37,6 @@ axiosRetry(axios, {
   },
 });
 const handleTokenExpiry = () => {
-  console.log("[API] Handling token expiry - preserving application state");
   const currentPath = window.location.pathname;
   const currentSearch = window.location.search;
   const currentHash = window.location.hash;
@@ -59,11 +57,9 @@ const handleTokenExpiry = () => {
   });
   if (Object.keys(formData).length > 0) {
     sessionStorage.setItem("formDataBeforeExpiry", JSON.stringify(formData));
-    console.log("[API] Preserved form data before logout");
   }
   if (returnUrl !== "/" && !returnUrl.includes("/login")) {
     sessionStorage.setItem("returnUrlAfterLogin", returnUrl);
-    console.log("[API] Stored return URL:", returnUrl);
   }
   // Clear all token-related storage using standardized keys
   localStorage.removeItem(ACCESS_TOKEN_KEY);
@@ -71,7 +67,6 @@ const handleTokenExpiry = () => {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_ROLE_KEY);
   localStorage.removeItem(IS_SUPER_ADMIN_KEY);
-  console.log("[API] Cleared all authentication tokens");
   resetAuthReady();
   setTimeout(() => {
     window.location.href = "/login";
@@ -89,7 +84,6 @@ const initializeAuthPromise = () => {
 };
 initializeAuthPromise();
 export const markAuthReady = (): any => {
-  console.log("[API] Auth context marked as ready");
   isAuthReady = true;
   if (authReadyResolve) {
     authReadyResolve();
@@ -97,7 +91,6 @@ export const markAuthReady = (): any => {
   }
 };
 export const resetAuthReady = (): any => {
-  console.log("[API] Auth context reset");
   isAuthReady = false;
   initializeAuthPromise();
 };
@@ -117,25 +110,15 @@ const waitForAuthIfNeeded = async (config: any) => {
     config.url?.includes(endpoint),
   );
   if (isPublicEndpoint) {
-    console.log("[API] Public endpoint, skipping auth wait:", config.url);
     return;
   }
   if (!isAuthReady && authReadyPromise) {
-    console.log("[API] Waiting for auth context to be ready for:", config.url);
-    const authTimeout = new Promise<void>((_, reject) => {
+    const timeoutPromise = new Promise<void>((_, reject) => {
       setTimeout(() => reject(new Error("Auth wait timeout")), 10000);
     });
     try {
-      await Promise.race([authReadyPromise, authTimeout]);
-      console.log(
-        "[API] Auth context ready, proceeding with request:",
-        config.url,
-      );
+      await Promise.race([authReadyPromise, timeoutPromise]);
     } catch (error: any) {
-      console.warn(
-        "[API] Auth wait failed or timed out, proceeding anyway:",
-        error?.message || error,
-      );
     }
   }
 };
@@ -166,43 +149,20 @@ api.interceptors.request.use(
   async (config) => {
     await waitForAuthIfNeeded(config);
     const token = getAccessToken();
-    console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, {
-      hasToken: !!token,
-      hasRefreshToken: !!getRefreshToken(),
-      authReady: isAuthReady,
-      timestamp: new Date().toISOString(),
-    });
     if (token && token !== 'undefined' && token.split('.').length === 3) {
       config.headers.Authorization = `Bearer ${token}`;
     } else if (token) {
-      console.error("[API] Invalid token format - clearing storage");
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
     }
-    const fullUrl = `${config.baseURL}${config.url}`;
-    console.log(`[API] Request URL: ${fullUrl}`, {
-      method: config.method?.toUpperCase(),
-      hasAuth: !!token,
-    });
     return config;
   },
   (error) => {
-    console.error("[API] Request interceptor error:", error);
     return Promise.reject(error);
   },
 );
 api.interceptors.response.use(
   (response) => {
-    if (response.config.headers?.Authorization) {
-      console.log(
-        `[API] Success ${response.config.method?.toUpperCase()} ${response.config.url}`,
-        {
-          status: response.status,
-          hasData: !!response.data,
-          timestamp: new Date().toISOString(),
-        },
-      );
-    }
     return response;
   },
   async (error) => {
@@ -210,13 +170,7 @@ api.interceptors.response.use(
     const method = error.config?.method?.toUpperCase();
     const url = error.config?.url;
     const status = error.response?.status;
-    console.error(`[API] Error ${method} ${url}`, {
-      status,
-      error: error.response?.data,
-      timestamp: new Date().toISOString(),
-    });
     if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
-      console.error("[API] Request timed out");
       toast.error("Request timed out. Please try again.", {
         position: "top-right",
         autoClose: 3000,
@@ -229,16 +183,6 @@ api.interceptors.response.use(
       const requiredPermission = data?.required_permission || 'unknown';
       const module = data?.module || 'this resource';
       const action = data?.action || 'perform this action';
-     
-      console.warn('[API] Permission denied:', {
-        endpoint: url,
-        method,
-        requiredPermission,
-        module,
-        action,
-        user: localStorage.getItem('user_email') || 'unknown',
-        timestamp: new Date().toISOString(),
-      });
      
       // Show user-friendly error message
       toast.error(
@@ -264,7 +208,6 @@ api.interceptors.response.use(
    
     if (status === 401 && !originalRequest._retry) {
       if (originalRequest.headers?.Authorization) {
-        console.log(`[API] ${status} Auth error - attempting token refresh`);
         originalRequest._retry = true;
         try {
           const refreshToken = getRefreshToken();
@@ -279,14 +222,11 @@ api.interceptors.response.use(
           if (refreshData.refresh_token) {
             localStorage.setItem(REFRESH_TOKEN_KEY, refreshData.refresh_token);
           }
-          console.log("[API] Token refreshed successfully");
           originalRequest.headers.Authorization = `Bearer ${refreshData.access_token}`;
           return api(originalRequest);
         } catch (refreshError) {
-          console.error("[API] Token refresh failed:", refreshError);
           const errorDetail = error.response?.data?.detail;
           if (errorDetail && typeof errorDetail === "string") {
-            console.log(`[API] ${status} Error reason:`, errorDetail);
             toast.error(`Session expired: ${errorDetail}`, {
               position: "top-right",
               autoClose: 3000,
@@ -300,13 +240,9 @@ api.interceptors.response.use(
           handleTokenExpiry();
         }
       } else {
-        console.log(`[API] ${status} Error - No token present, not refreshing`);
         return Promise.reject(error);
       }
     } else if (status === 404 && url?.includes("/companies/current")) {
-      console.log(
-        "[API] 404 on /companies/current - company setup required, not an auth error",
-      );
       const enhancedError = {
         ...error,
         isCompanySetupRequired: true,
@@ -332,7 +268,6 @@ api.interceptors.response.use(
     } else if (error.message) {
       errorMessage = error.message;
     }
-    console.error("[API] Processed error message:", errorMessage);
     return Promise.reject({
       ...error,
       userMessage: errorMessage,

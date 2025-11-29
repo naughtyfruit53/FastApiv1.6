@@ -97,13 +97,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     refetchOnWindowFocus: true,
     refetchInterval: 10000,
     onSuccess: (data) => {
-      console.log('Organization data fetched:', {
-        enabled_modules: data.enabled_modules,
-        timestamp: new Date().toISOString(),
-      });
     },
     onError: (error) => {
-      console.error('Error fetching organization data:', error);
     },
   });
 
@@ -264,11 +259,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     // STRICT ENFORCEMENT: No super admin bypass, default to false if unknown
     const normalizedModule = module.toUpperCase();
     const enabled = organizationData?.enabled_modules?.[normalizedModule] ?? false;
-    console.log(`Module check - ${module} (normalized: ${normalizedModule}):`, enabled, {
-      allModules: organizationData?.enabled_modules,
-      isSuperAdmin,
-      timestamp: new Date().toISOString(),
-    });
     return enabled;
   };
 
@@ -279,7 +269,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   const requestModuleActivation = () => {
     window.location.href =
-      'mailto:support@tritiq.com?subject=Module Activation Request&body=Please activate the Service CRM module for my organization.';
+      'mailto:naughtyfruit53@gmail.com?subject=naughty Activation Request&body=Please activate the naughty CRM module for my organization.';
   };
 
   const handleSubClose = () => {
@@ -364,7 +354,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           if (item.superAdminOnly && !isSuperAdmin) {
             return false;
           }
-          // Filter out items that require org_admin access (unless they are org_admin or higher)
+          // Filter out items that require orgadmin access (unless they are org_admin or higher)
           if (item.orgAdminOnly && !isAdminLike && !isSuperAdmin) {
             return false;
           }
@@ -385,7 +375,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           if (item.permission) {
             const [module, action] = item.permission.split('.');
             if (!hasPermission(module, action)) {
-              console.log(`Permission check failed for item ${item.name}: requires ${item.permission}`);
               return true; // Still show, but will be disabled below
             }
           }
@@ -452,7 +441,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
       }); // Keep all sections visible
 
     if (filteredSections.length === 0) {
-      console.warn(`No items in submenu for ${activeMenu} - user may not have required permissions or modules enabled`);
       // Show a helpful message instead of returning null
       return (
         <Popover
@@ -959,7 +947,6 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         open={createLicenseModalOpen}
         onClose={() => setCreateLicenseModalOpen(false)}
         onSuccess={(result) => {
-          console.log('License created:', result);
         }}
       />
     </>

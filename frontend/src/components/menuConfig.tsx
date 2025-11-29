@@ -699,8 +699,6 @@ export const menuItems = {
 // Create main menu sections dynamically
 // Email is NOT included here - it's a top-level menu item now
 export const mainMenuSections = (isSuperAdmin: boolean) => {
-  // Debug logging
-  console.log("menuConfig.tsx - Rendering menu for isSuperAdmin:", isSuperAdmin);
   return isSuperAdmin
     ? [
         {
@@ -718,8 +716,8 @@ export const mainMenuSections = (isSuperAdmin: boolean) => {
     : [
         { title: 'Master Data', subSections: menuItems.master_data.sections },
         { title: 'Inventory', subSections: menuItems.inventory.sections },
-        { title: 'Manufacturing', subSections: menuItems.manufacturing.sections },
         { title: 'Vouchers', subSections: menuItems.vouchers.sections },
+        { title: 'Manufacturing', subSections: menuItems.manufacturing.sections },
         { title: 'Finance', subSections: menuItems.finance.sections },
         { title: 'Accounting', subSections: menuItems.accounting.sections },
         { title: 'Reports & Analytics', subSections: menuItems.reports_analytics.sections },

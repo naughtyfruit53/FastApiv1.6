@@ -91,7 +91,6 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({ chil
       }
       
       keysToRemove.forEach(key => {
-        console.log('[OrganizationContext] Clearing cache:', key);
         localStorage.removeItem(key);
       });
     }
@@ -117,11 +116,9 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({ chil
       setOrganizationId(orgId);
       setOrganizationName(orgName);
       
-      console.log('[OrganizationContext] Loaded organization:', orgName, `(ID: ${orgId})`);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to load organization';
       setError(errorMessage);
-      console.error('[OrganizationContext] Error loading organization:', err);
       
       // On error, clear organization data
       setOrganizationId(null);
@@ -151,7 +148,6 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({ chil
    */
   const switchOrganization = useCallback(async (orgId: number) => {
     try {
-      console.log('[OrganizationContext] Switching to organization:', orgId);
       
       // Clear organization-specific cached data
       clearOrganizationCache();
@@ -167,7 +163,6 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({ chil
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to switch organization';
       setError(errorMessage);
-      console.error('[OrganizationContext] Error switching organization:', err);
       throw err;
     }
   }, [clearOrganizationCache]);
@@ -201,11 +196,9 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({ chil
  */
 export const useOrganization = (): OrganizationContextType => {
   const context = useContext(OrganizationContext);
-  
   if (!context) {
     throw new Error('useOrganization must be used within an OrganizationProvider');
   }
-  
   return context;
 };
 

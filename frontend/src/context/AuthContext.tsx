@@ -110,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
           modules = ['dashboard', 'finance', 'reports'];
           submodules = {
             dashboard: ['view'],
+            dashboard: ['view'],
             finance: ['view', 'create', 'edit', 'delete', 'viewReports', 'manageBanks'],
             reports: ['viewFinancial'],
           };
@@ -197,7 +198,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   const fetchUserPermissions = async (userId: number) => {
     setPermissionsLoading(true);
     try {
-      console.log("[AuthProvider] Fetching user permissions for user:", userId);
      
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
@@ -244,10 +244,8 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         submodules: mergedSubmodules,
       };
       setUserPermissions(permissions);
-      console.log("[AuthProvider] User permissions fetched and merged successfully");
       return permissions;
     } catch (error) {
-      console.error("[AuthProvider] Error fetching user permissions:", error);
       // Set fallback permissions on error
       const fallbackPermissions = computeRoleBasedPermissions(user);
       setUserPermissions(fallbackPermissions);
@@ -266,37 +264,18 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     if (isFetching.current || !isMounted.current) return; // NEW: Prevent concurrent and unmounted fetches
     isFetching.current = true;
     const maxRetries = 2;
-    console.log(
-      `[AuthProvider] fetchUser started - attempt ${retryCount + 1}/${maxRetries + 1}`,
-      {
-        hasToken: !!localStorage.getItem(ACCESS_TOKEN_KEY),
-        hasRefreshToken: !!localStorage.getItem(REFRESH_TOKEN_KEY),
-        timestamp: new Date().toISOString(),
-      },
-    );
     try {
       const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
       // Validate token format before proceeding
       if (accessToken === 'null' || accessToken === 'undefined' || (accessToken && accessToken.split('.').length !== 3)) {
-        console.log('[AuthProvider] Invalid token format detected - clearing storage');
         localStorage.removeItem(ACCESS_TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
         throw new Error('Invalid token format');
       }
       if (!accessToken) {
-        console.log("[AuthProvider] No token found in localStorage");
         throw new Error("No token found");
       }
-      console.log("[AuthProvider] Token found, fetching user data from API");
       const userData = await authService.getCurrentUser();
-      console.log("[AuthProvider] User data received from API:", {
-        userId: userData.id,
-        email: userData.email,
-        role: userData.role,
-        isSuperAdmin: userData.is_super_admin,
-        hasOrgId: !!userData.organization_id,
-        mustChangePassword: userData.must_change_password,
-      });
       // Defensive: org ID should never be leaked between users
       const newUser = {
         id: userData.id,
@@ -307,48 +286,22 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         must_change_password: userData.must_change_password,
       };
       setUser(newUser);
-      console.log("[AuthProvider] User state updated successfully");
      
       // Fetch user permissions from RBAC service
       await fetchUserPermissions(userData.id);
      
       // Check org context for non-super-admins
       if (!userData.is_super_admin && !userData.organization_id) {
-        console.error(
-          "[AuthProvider] Organization context missing for regular user",
-        );
         throw new Error(
           "User account is not properly configured with organization context",
         );
       }
       markAuthReady();
-      console.log("[AuthProvider] Auth context marked as ready");
       // If on login page after successful fetch, redirect to dashboard
       if (router.pathname === "/login") {
         handlePostLoginRedirect();
       }
     } catch (error: any) {
-      console.error(
-        `[AuthProvider] fetchUser error on attempt ${retryCount + 1}:`,
-        {
-          error: error.message,
-          status: error?.status,
-          willRetry:
-            retryCount < maxRetries &&
-            error?.status !== 401 &&
-            error?.status !== 403,
-        },
-      );
-      // Attempt token refresh before giving up
-      if (retryCount < maxRetries && (error?.status === 401 || error?.status === 403)) {
-        console.log("[AuthProvider] Attempting token refresh before retry");
-        const refreshResult = await authService.refreshToken();
-        if (refreshResult) {
-          console.log("[AuthProvider] Token refresh successful, retrying fetchUser");
-          await fetchUser(retryCount + 1);
-          return;
-        }
-      }
       // Only retry on non-auth errors
       if (
         retryCount < maxRetries &&
@@ -356,18 +309,15 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         error?.status !== 403
       ) {
         const retryDelay = Math.pow(2, retryCount) * 1000;
-        console.log(`[AuthProvider] Retrying fetchUser in ${retryDelay}ms`);
         setTimeout(() => fetchUser(retryCount + 1), retryDelay);
         return;
       }
       // On error, clear sensitive data and force re-auth
-      console.log("[AuthProvider] Auth error - clearing data");
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem(USER_ROLE_KEY);
       localStorage.removeItem(IS_SUPER_ADMIN_KEY);
       // Preserve refresh_token for potential recovery
-      console.log("[AuthProvider] Preserving refresh_token for potential recovery");
       setUser(null);
       resetAuthReady();
       if (error?.userMessage) {
@@ -383,7 +333,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       }
       // Only redirect if not already on login page to prevent loop
       if (router.pathname !== "/login") {
-        console.log("[AuthProvider] Redirecting to login");
         // Save current path as return URL before redirect
         // NEW: Don't save if pathname includes '404' or invalid
         if (
@@ -391,14 +340,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
           !router.pathname.includes('404') && 
           !sessionStorage.getItem("returnUrlAfterLogin")
         ) {
-          console.log("[AuthProvider] Saving valid URL as returnUrlAfterLogin:", router.asPath);
           sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
         } else if (router.pathname.includes('404')) {
-          console.log("[AuthProvider] Skipping save returnUrl for 404 path");
         }
         router.push("/login");
-      } else {
-        console.log("[AuthProvider] Already on login - no redirect needed");
       }
     } finally {
       isFetching.current = false;
@@ -409,22 +354,11 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
 
   // On mount, check for token and initialize user session
   useEffect(() => {
-    console.log("[AuthProvider] Component mounted, initializing auth state");
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-    console.log("[AuthProvider] Token check result:", {
-      hasToken: !!token,
-      hasRefreshToken: !!localStorage.getItem(REFRESH_TOKEN_KEY),
-      pathname: router.pathname,
-      timestamp: new Date().toISOString(),
-    });
     if (token && !hasFetched.current) {
       hasFetched.current = true; // Mark as fetched to prevent multiple calls
-      console.log("[AuthProvider] Token found - starting user fetch");
       fetchUser();
     } else {
-      console.log(
-        "[AuthProvider] No token found - marking auth ready and stopping loading",
-      );
       markAuthReady();
       setLoading(false);
       setPermissionsLoading(false); // NEW: Critical fix for no-token case (e.g., login page)
@@ -441,7 +375,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       // Check for return URL
       const returnUrl = sessionStorage.getItem("returnUrlAfterLogin");
       if (returnUrl) {
-        console.log("[AuthProvider] Redirecting to saved URL:", returnUrl);
         sessionStorage.removeItem("returnUrlAfterLogin");
         router.replace(returnUrl);
         setTimeout(() => {
@@ -449,12 +382,8 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         }, 500);
         return;
       }
-      console.log(
-        "[AuthProvider] No return URL found, redirecting to dashboard",
-      );
       router.push("/dashboard");
     } catch (err) {
-      console.error("[AuthProvider] Error in post-login redirect:", err);
       router.push("/dashboard");
     }
   };
@@ -465,13 +394,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       const savedFormData = sessionStorage.getItem("formDataBeforeExpiry");
       if (savedFormData) {
         const formData = JSON.parse(savedFormData);
-        console.log(
-          "[AuthProvider] Attempting to restore form data:",
-          formData,
-        );
-        // FIXED: Removed broken inner loop that caused ReferenceError (undefined 'form' and 'index'). 
-        // Simplified to just clear storage and notify user, as full form restoration requires specific form IDs and elements, which aren't implemented here.
-        // If needed, expand with document.getElementById('specific-form-id') and set values accordingly.
         sessionStorage.removeItem("formDataBeforeExpiry");
         toast.info("Form data from previous session detected and cleared. Please re-enter if needed.", {
           position: "top-right",
@@ -479,7 +401,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         });
       }
     } catch (err) {
-      console.warn("[AuthProvider] Could not restore form data:", err);
     }
   };
 
@@ -490,54 +411,32 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       user.must_change_password &&
       router.pathname !== "/password-reset"
     ) {
-      console.log("[AuthProvider] Must change password - redirecting to password-reset");
       router.push("/password-reset");
     }
   }, [user, router]);
 
-  // Login: store token, hydrate user, and mark ready
   const login = async (loginResponse: any) => {
-    console.log("[AuthProvider] Login process started:", {
-      hasToken: !!loginResponse.access_token,
-      hasRefresh: !!loginResponse.refresh_token,
-      userRole: loginResponse.user_role,
-      isSuperAdmin: false,
-      hasOrgId: !!loginResponse.organization_id,
-      timestamp: new Date().toISOString(),
-    });
     if (!loginResponse.access_token || loginResponse.access_token.split('.').length !== 3) {
-      console.error("[AuthProvider] Invalid access token received from server");
       throw new Error('Invalid access token received');
     }
     localStorage.setItem(ACCESS_TOKEN_KEY, loginResponse.access_token);
+    // Store refresh token if provided
     if (loginResponse.refresh_token) {
       localStorage.setItem(REFRESH_TOKEN_KEY, loginResponse.refresh_token);
-      console.log("[AuthProvider] Stored refresh token");
-    } else {
-      console.warn("[AuthProvider] No refresh token in login response");
     }
-    console.log("[AuthProvider] Token stored in localStorage");
+    // Store authentication context data (NOT organization_id - that stays in memory)
     if (loginResponse.user_role) {
       localStorage.setItem(USER_ROLE_KEY, loginResponse.user_role);
-      console.log("[AuthProvider] Stored user_role:", loginResponse.user_role);
     }
     localStorage.setItem(
       IS_SUPER_ADMIN_KEY,
       loginResponse.user?.is_super_admin ? "true" : "false",
     );
-    console.log(
-      "[AuthProvider] Stored is_super_admin:",
-      loginResponse.user?.is_super_admin,
-    );
     // Clear any OTP-related fields
-    console.log("[AuthProvider] Clearing OTP-related fields");
     // Defensive: never store org_id in localStorage
     const userData = loginResponse.user;
     // Validate org context for regular users
     if (!userData.is_super_admin && !userData.organization_id) {
-      console.error(
-        "[AuthProvider] Organization context validation failed for regular user",
-      );
       throw new Error(
         "Login failed: User account is not properly configured with organization context",
       );
@@ -551,7 +450,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       must_change_password: loginResponse.must_change_password,
     };
     setUser(newUser);
-    console.log("[AuthProvider] User state set from login response");
     // Verify session immediately after setting token and user
     await refreshUser();
    
@@ -560,17 +458,12 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
    
     resetAuthReady();
     markAuthReady();
-    console.log("[AuthProvider] Auth ready state reset and marked");
     // Handle post-login redirect and form state restoration
     handlePostLoginRedirect();
-    console.log(
-      "[AuthProvider] Login process completed successfully - user context established from login response",
-    );
   };
 
   // Logout: clear all sensitive data and redirect
   const logout = () => {
-    console.log("[AuthProvider] Logout initiated");
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_ROLE_KEY);
@@ -578,12 +471,8 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     setUser(null);
     setUserPermissions(null);
     resetAuthReady();
-    console.log("[AuthProvider] Auth data cleared");
     if (router.pathname !== "/login") {
-      console.log("[AuthProvider] Redirecting to login");
       router.push("/login");
-    } else {
-      console.log("[AuthProvider] Already on login - no redirect needed");
     }
   };
 
@@ -608,11 +497,8 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   const getAuthHeaders = () => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) {
-      console.warn("[AuthProvider] No token found when getting auth headers");
     } else if (token === 'null' || token === 'undefined' || token.split('.').length !== 3) {
-      console.error("[AuthProvider] Malformed token when getting auth headers:", token.substring(0, 20) + '...');
     } else {
-      console.log("[AuthProvider] Valid token format for auth headers");
     }
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
@@ -620,14 +506,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   // Only ready if user is super admin or has org context
   const isOrgContextReady =
     !user || user.is_super_admin || !!user.organization_id;
-  console.log("[AuthProvider] Render phase:", {
-    loading,
-    hasUser: !!user,
-    userEmail: user?.email,
-    isOrgContextReady,
-    willRenderChildren: !loading,
-    timestamp: new Date().toISOString(),
-  });
 
   // Timeout for loading
   useEffect(() => {
@@ -643,7 +521,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   // NEW: Handle unauthorized redirect in useEffect to prevent side effects in render
   useEffect(() => {
     if (!loading && !user && router.pathname !== "/login") {
-      console.log("[AuthProvider] No user after loading - redirecting to login");
       // Save current path as return URL before redirect
       // NEW: Don't save if pathname includes '404' or invalid
       if (
@@ -651,105 +528,36 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         !router.pathname.includes('404') && 
         !sessionStorage.getItem("returnUrlAfterLogin")
       ) {
-        console.log("[AuthProvider] Saving valid URL as returnUrlAfterLogin:", router.asPath);
         sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
       } else if (router.pathname.includes('404')) {
-        console.log("[AuthProvider] Skipping save returnUrl for 404 path");
       }
       router.push("/login");
     }
   }, [loading, user, router]);
 
-  // Show loading spinner while auth state is being determined
-  if (loading || permissionsLoading) {  // NEW: Added permissionsLoading to prevent premature render
-    console.log("[AuthProvider] Auth or permissions still loading - showing spinner");
-    const spinnerStyles = `
-      @keyframes authSpinner {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      .auth-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #3498db;
-        border-radius: 50%;
-        animation: authSpinner 2s linear infinite;
-        margin-bottom: 15px;
-      }
-      @keyframes pulse {
-        0% { opacity: 0.6; }
-        50% { opacity: 1; }
-        100% { opacity: 0.6; }
-      }
-      .auth-pulse {
-        animation: pulse 2s ease-in-out infinite;
-      }
-    `;
-    return (
-      <>
-        <style dangerouslySetInnerHTML={{ __html: spinnerStyles }} />
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            height: "100vh",
-            flexDirection: "column",
-            backgroundColor: "#f8fafc",
-            backgroundImage:
-              "linear-gradient(to bottom right, #f8fafc, #e2e8f0)",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "24px",
-              fontWeight: 600,
-              marginBottom: "10px",
-              color: "#1e293b",
-              textAlign: "center",
-            }}
-          >
-            TRITIQ BOS
-          </div>
-          <div
-            style={{
-              fontSize: "14px",
-              marginBottom: "30px",
-              color: "#64748b",
-              textAlign: "center",
-            }}
-          >
-            Business Made Simple
-          </div>
-          <div className="auth-spinner"></div>
-          <div
-            style={{
-              marginTop: "20px",
-              fontSize: "14px",
-              color: "#475569",
-              fontWeight: 500,
-              textAlign: "center",
-            }}
-            className="auth-pulse"
-          >
-            Verifying access...
-          </div>
-          <div
-            style={{
-              marginTop: "5px",
-              fontSize: "12px",
-              color: "#94a3b8",
-              textAlign: "center",
-            }}
-          >
-            Establishing secure connection
-          </div>
-        </div>
-      </>
-    );
-  }
-
+  const spinnerStyles = `
+    @keyframes authSpinner {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .auth-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      animation: authSpinner 2s linear infinite;
+      margin-bottom: 15px;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
+    }
+    .auth-pulse {
+      animation: pulse 2s ease-in-out infinite;
+    }
+  `;
   return (
     <AuthContext.Provider
       value={{

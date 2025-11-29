@@ -1,7 +1,8 @@
 // frontend/src/context/CompanyContext.tsx
-import React, { createContext, useContext, useEffect, useState } from "react";
+
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { companyService } from "../services/authService";
+import { authService } from "../services/authService";
 import { useAuth } from "./AuthContext";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
@@ -36,17 +37,11 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
   } = useQuery({
     queryKey: ["currentCompany"],
     queryFn: async () => {
-      const response = await companyService.getCurrentCompany();
+      const response = await authService.getCurrentCompany();
       const companyData = {
         ...response,
         state_code: response.state_code || response.gst_number?.slice(0, 2) || null,
       };
-      console.log("[CompanyContext] Company data fetched:", {
-        companyData,
-        state_code: companyData.state_code,
-        gst_number: companyData.gst_number,
-        timestamp: new Date().toISOString(),
-      });
       return companyData;
     },
     enabled,
@@ -67,23 +62,15 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     },
     onError: (err: any) => {
-      console.error("[CompanyContext] Error fetching company:", {
-        error: err.message,
-        status: err.response?.status,
-        timestamp: new Date().toISOString(),
-      });
       const status = err.response?.status;
       if (status === 401) {
-        console.log("[CompanyContext] 401 Unauthorized - redirecting to login");
         router.push("/login");
       } else if (status === 404) {
-        console.log("[CompanyContext] Company not found (404) - setup needed");
         setIsCompanySetupNeeded(true);
         toast.error("Company details not found. Please complete company setup.", {
           toastId: "company-setup-not-found",
         });
       } else if (status === 400 && err.message.includes("state code or GST number")) {
-        console.log("[CompanyContext] 400 Setup required - setup needed");
         setIsCompanySetupNeeded(true);
         toast.error("Company setup incomplete. Please update company details.", {
           toastId: "company-setup-incomplete",
@@ -101,17 +88,6 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
       setIsCompanySetupNeeded(true);
     }
   }, [enabled, isLoading, error, company, router]);
-
-  useEffect(() => {
-    if (company) {
-      console.log("[CompanyContext] Company state updated:", {
-        company,
-        state_code: company.state_code,
-        gst_number: company.gst_number,
-        timestamp: new Date().toISOString(),
-      });
-    }
-  }, [company]);
 
   return (
     <CompanyContext.Provider

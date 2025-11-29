@@ -8,16 +8,11 @@ export const voucherService = {
     params?: Record<string, any>,
   ): Promise<any> => {
     const endpoint = `/${type}`;
-    console.log(
-      `[voucherService] Fetching vouchers from endpoint: ${endpoint}`,
-    );
     const response = await api.get(endpoint, { params });
-    console.log(`[voucherService] Received data for ${type}:`, response.data);
     return response.data;
   },
   getVoucherById: async (type: string, id: number): Promise<any> => {
     const endpoint = `/${type}/${id}`;
-    console.log(`[voucherService] Fetching voucher by ID from: ${endpoint}`);
     const response = await api.get(endpoint);
     return response.data;
   },
@@ -27,7 +22,6 @@ export const voucherService = {
     sendEmail: boolean = false,
   ): Promise<any> => {
     const endpoint = `/${type}`;
-    console.log(`[voucherService] Creating voucher at: ${endpoint}`);
     const response = await api.post(endpoint, data, {
       params: { send_email: sendEmail },
     });
@@ -39,12 +33,10 @@ export const voucherService = {
     data: Record<string, any>,
   ): Promise<any> => {
     const endpoint = `/${type}/${id}`;
-    console.log(`[voucherService] Updating voucher at: ${endpoint}`);
     const response = await api.patch(endpoint, data);
     return response.data;
   },
   getNextVoucherNumber: async (endpoint: string): Promise<any> => {
-    console.log(`[voucherService] Fetching next number from: ${endpoint}`);
     const response = await api.get(endpoint);
     return response.data;
   },
@@ -71,12 +63,7 @@ export const voucherService = {
   },
   // Purchase Orders
   getPurchaseOrderById: async (id: number): Promise<any> => {
-    console.log(`[voucherService] Fetching purchase order by ID: ${id}`);
     const response = await api.get(`/purchase-orders/${id}`);
-    console.log(`[voucherService] Purchase order data:`, response.data);
-    if (!response.data.items || !Array.isArray(response.data.items)) {
-      console.warn(`[voucherService] Purchase order ${id} has no valid items array`);
-    }
     return response.data;
   },
   createPurchaseOrder: async (
@@ -199,11 +186,9 @@ export const voucherService = {
   getHasTracking: async (type: string, id: number): Promise<boolean> => {
     try {
       const response = await api.get(`/${type}/${id}/tracking`);
-      console.log(`[voucherService] Tracking response for ${type} ${id}:`, response.data);
       // Check if tracking details are present and non-empty
       return !!response.data && !!response.data.tracking_number && response.data.tracking_number.trim() !== '';
     } catch (error) {
-      console.error(`Error checking tracking for ${type} ${id}:`, error);
       return false;
     }
   },
