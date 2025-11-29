@@ -29,20 +29,20 @@ import {
   CircularProgress,
   Alert,
   Tooltip,
-  Card,
-  CardContent,
+  Stack,
+  Divider,
 } from "@mui/material";
 import {
   Add,
   Edit,
   Delete,
-  Visibility,
   FileDownload,
   Refresh,
   Build,
   Warning,
   CheckCircle,
   Timeline,
+  AttachFile,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -59,8 +59,12 @@ interface Machine {
   model: string;
   make?: string;
   serial_no?: string;
+  commissioning_date?: string;
   status: string;
   criticality: string;
+  mtbf?: number;
+  mttr?: number;
+  attachments?: string;
   created_at: string;
 }
 
@@ -132,8 +136,12 @@ const MachineMasterTab: React.FC = () => {
       model: "",
       make: "",
       serial_no: "",
+      commissioning_date: "",
       status: "active",
       criticality: "medium",
+      mtbf: 0,
+      mttr: 0,
+      attachments: "",
       amc_details: "",
     },
   });
@@ -179,8 +187,12 @@ const MachineMasterTab: React.FC = () => {
       model: machine.model,
       make: machine.make || "",
       serial_no: machine.serial_no || "",
+      commissioning_date: machine.commissioning_date || "",
       status: machine.status,
       criticality: machine.criticality,
+      mtbf: machine.mtbf || 0,
+      mttr: machine.mttr || 0,
+      attachments: machine.attachments || "",
     });
     setDialogOpen(true);
   };
@@ -279,112 +291,227 @@ const MachineMasterTab: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Create/Edit Dialog */}
+      {/* Create/Edit Dialog - Stacked Fields Layout */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogTitle>{selectedMachine ? "Edit Machine" : "Add Machine"}</DialogTitle>
           <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="code"
-                  control={control}
-                  rules={{ required: "Code is required" }}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Machine Code" error={!!errors.code} />
-                  )}
-                />
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              {/* Basic Information Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Basic Information
+              </Typography>
+
+              <Controller
+                name="code"
+                control={control}
+                rules={{ required: "Machine code is required" }}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Machine Code *" 
+                    error={!!errors.code}
+                    helperText={errors.code?.message as string}
+                  />
+                )}
+              />
+
+              <Controller
+                name="name"
+                control={control}
+                rules={{ required: "Machine name is required" }}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Machine Name *" 
+                    error={!!errors.name}
+                    helperText={errors.name?.message as string}
+                  />
+                )}
+              />
+
+              <Controller
+                name="location"
+                control={control}
+                rules={{ required: "Location is required" }}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Location *" 
+                    error={!!errors.location}
+                    helperText={errors.location?.message as string}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Make/Model Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Make & Model
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Controller
+                    name="make"
+                    control={control}
+                    render={({ field }) => <TextField {...field} fullWidth label="Make" />}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Controller
+                    name="model"
+                    control={control}
+                    rules={{ required: "Model is required" }}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="Model *" 
+                        error={!!errors.model}
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="name"
-                  control={control}
-                  rules={{ required: "Name is required" }}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Machine Name" error={!!errors.name} />
-                  )}
-                />
+
+              <Controller
+                name="serial_no"
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label="Serial Number" />}
+              />
+
+              <Controller
+                name="commissioning_date"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Commissioning Date" 
+                    type="date"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Status & Criticality Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Status & Criticality
+              </Typography>
+
+              <Controller
+                name="status"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Status</InputLabel>
+                    <Select {...field} label="Status">
+                      <MenuItem value="active">Active</MenuItem>
+                      <MenuItem value="inactive">Inactive</MenuItem>
+                      <MenuItem value="under_maintenance">Under Maintenance</MenuItem>
+                      <MenuItem value="decommissioned">Decommissioned</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Controller
+                name="criticality"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Criticality</InputLabel>
+                    <Select {...field} label="Criticality">
+                      <MenuItem value="low">Low</MenuItem>
+                      <MenuItem value="medium">Medium</MenuItem>
+                      <MenuItem value="high">High</MenuItem>
+                      <MenuItem value="critical">Critical</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* MTBF/MTTR Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Reliability Metrics
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Controller
+                    name="mtbf"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="MTBF (hours)" 
+                        type="number"
+                        helperText="Mean Time Between Failures"
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Controller
+                    name="mttr"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="MTTR (hours)" 
+                        type="number"
+                        helperText="Mean Time To Repair"
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="location"
-                  control={control}
-                  rules={{ required: "Location is required" }}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Location" error={!!errors.location} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="model"
-                  control={control}
-                  rules={{ required: "Model is required" }}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Model" error={!!errors.model} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="make"
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label="Make" />}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="serial_no"
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label="Serial Number" />}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>Status</InputLabel>
-                      <Select {...field} label="Status">
-                        <MenuItem value="active">Active</MenuItem>
-                        <MenuItem value="inactive">Inactive</MenuItem>
-                        <MenuItem value="under_maintenance">Under Maintenance</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="criticality"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>Criticality</InputLabel>
-                      <Select {...field} label="Criticality">
-                        <MenuItem value="low">Low</MenuItem>
-                        <MenuItem value="medium">Medium</MenuItem>
-                        <MenuItem value="high">High</MenuItem>
-                        <MenuItem value="critical">Critical</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="amc_details"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="AMC Details" multiline rows={2} />
-                  )}
-                />
-              </Grid>
-            </Grid>
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Attachments Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Attachments
+              </Typography>
+
+              <Controller
+                name="attachments"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Attachment References"
+                    helperText="Enter document references, manual URLs, etc. (comma-separated)"
+                    InputProps={{
+                      startAdornment: <AttachFile fontSize="small" sx={{ mr: 1, color: "action.active" }} />
+                    }}
+                  />
+                )}
+              />
+
+              <Controller
+                name="amc_details"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label="AMC Details" multiline rows={2} />
+                )}
+              />
+            </Stack>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
             <Button type="submit" variant="contained" disabled={createMutation.isPending || updateMutation.isPending}>
               {createMutation.isPending || updateMutation.isPending ? <CircularProgress size={24} /> : "Save"}
             </Button>
@@ -530,97 +657,144 @@ const PreventiveScheduleTab: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Create Dialog */}
+      {/* Create Dialog - Stacked Fields Layout */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>Add Preventive Maintenance Schedule</DialogTitle>
+          <DialogTitle>Add Schedule</DialogTitle>
           <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="machine_id"
-                  control={control}
-                  rules={{ required: "Machine is required" }}
-                  render={({ field }) => (
-                    <FormControl fullWidth error={!!errors.machine_id}>
-                      <InputLabel>Machine</InputLabel>
-                      <Select {...field} label="Machine">
-                        {machines?.map((machine: Machine) => (
-                          <MenuItem key={machine.id} value={machine.id}>
-                            {machine.name} ({machine.code})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="frequency"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>Frequency</InputLabel>
-                      <Select {...field} label="Frequency">
-                        <MenuItem value="daily">Daily</MenuItem>
-                        <MenuItem value="weekly">Weekly</MenuItem>
-                        <MenuItem value="monthly">Monthly</MenuItem>
-                        <MenuItem value="quarterly">Quarterly</MenuItem>
-                        <MenuItem value="annually">Annually</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="assigned_technician"
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label="Assigned Technician" />}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="next_due_date"
-                  control={control}
-                  rules={{ required: "Next due date is required" }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="Next Due Date"
-                      type="date"
-                      InputLabelProps={{ shrink: true }}
-                      error={!!errors.next_due_date}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="tasks"
-                  control={control}
-                  rules={{ required: "Tasks are required" }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="Tasks (Checklist)"
-                      multiline
-                      rows={4}
-                      helperText="Enter tasks as JSON or comma-separated list"
-                      error={!!errors.tasks}
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              {/* Machine Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Machine
+              </Typography>
+
+              <Controller
+                name="machine_id"
+                control={control}
+                rules={{ required: "Machine is required" }}
+                render={({ field }) => (
+                  <FormControl fullWidth error={!!errors.machine_id}>
+                    <InputLabel>Machine *</InputLabel>
+                    <Select {...field} label="Machine *">
+                      {machines?.map((machine: Machine) => (
+                        <MenuItem key={machine.id} value={machine.id}>
+                          {machine.name} ({machine.code})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Task/Checklist Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Task/Checklist
+              </Typography>
+
+              <Controller
+                name="tasks"
+                control={control}
+                rules={{ required: "Tasks are required" }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Tasks (Checklist) *"
+                    multiline
+                    rows={4}
+                    helperText="Enter maintenance tasks to be performed"
+                    error={!!errors.tasks}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Frequency Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Frequency
+              </Typography>
+
+              <Controller
+                name="frequency"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Frequency</InputLabel>
+                    <Select {...field} label="Frequency">
+                      <MenuItem value="daily">Daily</MenuItem>
+                      <MenuItem value="weekly">Weekly</MenuItem>
+                      <MenuItem value="bi-weekly">Bi-Weekly</MenuItem>
+                      <MenuItem value="monthly">Monthly</MenuItem>
+                      <MenuItem value="quarterly">Quarterly</MenuItem>
+                      <MenuItem value="semi-annually">Semi-Annually</MenuItem>
+                      <MenuItem value="annually">Annually</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Assignee Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Assignee
+              </Typography>
+
+              <Controller
+                name="assigned_technician"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label="Assigned Technician" />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Planned Dates Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Planned Dates
+              </Typography>
+
+              <Controller
+                name="next_due_date"
+                control={control}
+                rules={{ required: "Next due date is required" }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Next Due Date *"
+                    type="date"
+                    InputLabelProps={{ shrink: true }}
+                    error={!!errors.next_due_date}
+                    helperText={errors.next_due_date?.message as string}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Notes Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Notes
+              </Typography>
+
+              <TextField
+                fullWidth
+                label="Additional Notes"
+                multiline
+                rows={2}
+                placeholder="Add any additional notes or instructions"
+              />
+            </Stack>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
             <Button type="submit" variant="contained" disabled={createMutation.isPending}>
-              {createMutation.isPending ? <CircularProgress size={24} /> : "Create"}
+              {createMutation.isPending ? <CircularProgress size={24} /> : "Save"}
             </Button>
           </DialogActions>
         </form>
@@ -654,11 +828,17 @@ const BreakdownTab: React.FC = () => {
     defaultValues: {
       machine_id: 0,
       breakdown_type: "",
-      date: "",
+      start_time: new Date().toISOString().slice(0, 16),
+      end_time: "",
+      cause: "",
+      downtime_hours: 0,
+      corrective_action: "",
+      parts_used: "",
+      sla_breach: false,
       reported_by: "",
       description: "",
       root_cause: "",
-      downtime_hours: 0,
+      notes: "",
     },
   });
 
@@ -770,115 +950,249 @@ const BreakdownTab: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Create Dialog */}
+      {/* Create Dialog - Stacked Fields Layout */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogTitle>Report Breakdown</DialogTitle>
           <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="machine_id"
-                  control={control}
-                  rules={{ required: "Machine is required" }}
-                  render={({ field }) => (
-                    <FormControl fullWidth error={!!errors.machine_id}>
-                      <InputLabel>Machine</InputLabel>
-                      <Select {...field} label="Machine">
-                        {machines?.map((machine: Machine) => (
-                          <MenuItem key={machine.id} value={machine.id}>
-                            {machine.name} ({machine.code})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                />
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              {/* Machine Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Machine
+              </Typography>
+
+              <Controller
+                name="machine_id"
+                control={control}
+                rules={{ required: "Machine is required" }}
+                render={({ field }) => (
+                  <FormControl fullWidth error={!!errors.machine_id}>
+                    <InputLabel>Machine *</InputLabel>
+                    <Select {...field} label="Machine *">
+                      {machines?.map((machine: Machine) => (
+                        <MenuItem key={machine.id} value={machine.id}>
+                          {machine.name} ({machine.code})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Start/End Time Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Start/End Time
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Controller
+                    name="start_time"
+                    control={control}
+                    rules={{ required: "Start time is required" }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="Start Time *"
+                        type="datetime-local"
+                        InputLabelProps={{ shrink: true }}
+                        error={!!errors.start_time}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Controller
+                    name="end_time"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="End Time"
+                        type="datetime-local"
+                        InputLabelProps={{ shrink: true }}
+                        helperText="Leave empty if still ongoing"
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="breakdown_type"
-                  control={control}
-                  rules={{ required: "Type is required" }}
-                  render={({ field }) => (
-                    <FormControl fullWidth error={!!errors.breakdown_type}>
-                      <InputLabel>Breakdown Type</InputLabel>
-                      <Select {...field} label="Breakdown Type">
-                        <MenuItem value="mechanical">Mechanical</MenuItem>
-                        <MenuItem value="electrical">Electrical</MenuItem>
-                        <MenuItem value="software">Software</MenuItem>
-                        <MenuItem value="other">Other</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="date"
-                  control={control}
-                  rules={{ required: "Date is required" }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="Date"
-                      type="datetime-local"
-                      InputLabelProps={{ shrink: true }}
-                      error={!!errors.date}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="reported_by"
-                  control={control}
-                  rules={{ required: "Reporter is required" }}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Reported By" error={!!errors.reported_by} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="description"
-                  control={control}
-                  rules={{ required: "Description is required" }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="Description"
-                      multiline
-                      rows={3}
-                      error={!!errors.description}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="root_cause"
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label="Root Cause (if known)" />}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="downtime_hours"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Estimated Downtime (hours)" type="number" />
-                  )}
-                />
-              </Grid>
-            </Grid>
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Cause Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Cause
+              </Typography>
+
+              <Controller
+                name="breakdown_type"
+                control={control}
+                rules={{ required: "Breakdown type is required" }}
+                render={({ field }) => (
+                  <FormControl fullWidth error={!!errors.breakdown_type}>
+                    <InputLabel>Breakdown Type *</InputLabel>
+                    <Select {...field} label="Breakdown Type *">
+                      <MenuItem value="mechanical">Mechanical</MenuItem>
+                      <MenuItem value="electrical">Electrical</MenuItem>
+                      <MenuItem value="hydraulic">Hydraulic</MenuItem>
+                      <MenuItem value="pneumatic">Pneumatic</MenuItem>
+                      <MenuItem value="software">Software</MenuItem>
+                      <MenuItem value="operator_error">Operator Error</MenuItem>
+                      <MenuItem value="other">Other</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Controller
+                name="cause"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label="Cause Details" multiline rows={2} />
+                )}
+              />
+
+              <Controller
+                name="root_cause"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label="Root Cause (if known)" />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Downtime Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Downtime
+              </Typography>
+
+              <Controller
+                name="downtime_hours"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Estimated Downtime (hours)" 
+                    type="number"
+                    helperText="Estimated or actual downtime in hours"
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Corrective Action Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Corrective Action
+              </Typography>
+
+              <Controller
+                name="corrective_action"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Corrective Action" 
+                    multiline 
+                    rows={3}
+                    helperText="Describe the corrective actions taken"
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Parts Used Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Parts Used
+              </Typography>
+
+              <Controller
+                name="parts_used"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Parts Used" 
+                    multiline 
+                    rows={2}
+                    helperText="List spare parts used for repair"
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* SLA Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                SLA
+              </Typography>
+
+              <Alert severity="info" sx={{ mb: 1 }}>
+                SLA Status: To be computed based on downtime thresholds
+              </Alert>
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Reported By & Notes Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Reported By & Notes
+              </Typography>
+
+              <Controller
+                name="reported_by"
+                control={control}
+                rules={{ required: "Reporter is required" }}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Reported By *" 
+                    error={!!errors.reported_by}
+                    helperText={errors.reported_by?.message as string}
+                  />
+                )}
+              />
+
+              <Controller
+                name="description"
+                control={control}
+                rules={{ required: "Description is required" }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Description *"
+                    multiline
+                    rows={3}
+                    error={!!errors.description}
+                    helperText={errors.description?.message as string}
+                  />
+                )}
+              />
+
+              <Controller
+                name="notes"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label="Additional Notes" multiline rows={2} />
+                )}
+              />
+            </Stack>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
             <Button type="submit" variant="contained" color="error" disabled={createMutation.isPending}>
-              {createMutation.isPending ? <CircularProgress size={24} /> : "Report"}
+              {createMutation.isPending ? <CircularProgress size={24} /> : "Save"}
             </Button>
           </DialogActions>
         </form>
@@ -911,11 +1225,17 @@ const PerformanceLogsTab: React.FC = () => {
   const { control, handleSubmit, reset, formState: { errors } } = useForm({
     defaultValues: {
       machine_id: 0,
-      date: "",
+      date: new Date().toISOString().slice(0, 10),
+      shift: "",
       runtime_hours: 0,
       idle_hours: 0,
+      output_quantity: 0,
+      reject_quantity: 0,
+      energy_consumption: 0,
+      operator: "",
       efficiency_percentage: 0,
       error_codes: "",
+      notes: "",
     },
   });
 
@@ -1027,81 +1347,231 @@ const PerformanceLogsTab: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Create Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+      {/* Create Dialog - Stacked Fields Layout */}
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>Add Performance Log</DialogTitle>
+          <DialogTitle>Add Log</DialogTitle>
           <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <Controller
-                  name="machine_id"
-                  control={control}
-                  rules={{ required: "Machine is required" }}
-                  render={({ field }) => (
-                    <FormControl fullWidth error={!!errors.machine_id}>
-                      <InputLabel>Machine</InputLabel>
-                      <Select {...field} label="Machine">
-                        {machines?.map((machine: Machine) => (
-                          <MenuItem key={machine.id} value={machine.id}>
-                            {machine.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                />
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              {/* Date/Shift Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Date/Shift
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Controller
+                    name="date"
+                    control={control}
+                    rules={{ required: "Date is required" }}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        fullWidth
+                        label="Date *"
+                        type="date"
+                        InputLabelProps={{ shrink: true }}
+                        error={!!errors.date}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Controller
+                    name="shift"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControl fullWidth>
+                        <InputLabel>Shift</InputLabel>
+                        <Select {...field} label="Shift">
+                          <MenuItem value="day">Day Shift</MenuItem>
+                          <MenuItem value="night">Night Shift</MenuItem>
+                          <MenuItem value="general">General Shift</MenuItem>
+                          <MenuItem value="morning">Morning Shift</MenuItem>
+                          <MenuItem value="evening">Evening Shift</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="date"
-                  control={control}
-                  rules={{ required: "Date is required" }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="Date"
-                      type="datetime-local"
-                      InputLabelProps={{ shrink: true }}
-                      error={!!errors.date}
-                    />
-                  )}
-                />
+
+              <Controller
+                name="machine_id"
+                control={control}
+                rules={{ required: "Machine is required" }}
+                render={({ field }) => (
+                  <FormControl fullWidth error={!!errors.machine_id}>
+                    <InputLabel>Machine *</InputLabel>
+                    <Select {...field} label="Machine *">
+                      {machines?.map((machine: Machine) => (
+                        <MenuItem key={machine.id} value={machine.id}>
+                          {machine.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Uptime Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Uptime
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Controller
+                    name="runtime_hours"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="Runtime Hours" 
+                        type="number"
+                        InputProps={{ inputProps: { step: 0.1 } }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Controller
+                    name="idle_hours"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="Idle Hours" 
+                        type="number"
+                        InputProps={{ inputProps: { step: 0.1 } }}
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={6}>
-                <Controller
-                  name="runtime_hours"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Runtime Hours" type="number" />
-                  )}
-                />
+
+              <Controller
+                name="efficiency_percentage"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Efficiency %" 
+                    type="number"
+                    helperText="Overall Equipment Effectiveness (OEE)"
+                    InputProps={{ inputProps: { min: 0, max: 100 } }}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Output Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Output
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Controller
+                    name="output_quantity"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="Output Quantity" 
+                        type="number"
+                        helperText="Total units produced"
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Controller
+                    name="reject_quantity"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="Reject Quantity" 
+                        type="number"
+                        helperText="Units rejected/scrapped"
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={6}>
-                <Controller
-                  name="idle_hours"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Idle Hours" type="number" />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="efficiency_percentage"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Efficiency %" type="number" />
-                  )}
-                />
-              </Grid>
-            </Grid>
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Energy Use Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Energy Use
+              </Typography>
+
+              <Controller
+                name="energy_consumption"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Energy Consumption (kWh)" 
+                    type="number"
+                    helperText="Electricity consumed during the period"
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Operator Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Operator
+              </Typography>
+
+              <Controller
+                name="operator"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label="Operator Name" />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Notes Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Notes
+              </Typography>
+
+              <Controller
+                name="notes"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Notes" 
+                    multiline 
+                    rows={3}
+                    helperText="Any observations or comments about this period"
+                  />
+                )}
+              />
+            </Stack>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
             <Button type="submit" variant="contained" disabled={createMutation.isPending}>
-              {createMutation.isPending ? <CircularProgress size={24} /> : "Add"}
+              {createMutation.isPending ? <CircularProgress size={24} /> : "Save"}
             </Button>
           </DialogActions>
         </form>
@@ -1144,8 +1614,10 @@ const SparePartsTab: React.FC = () => {
       machine_id: 0,
       name: "",
       code: "",
+      description: "",
       quantity: 0,
       min_level: 0,
+      max_level: 0,
       reorder_level: 0,
       unit_cost: 0,
       location_bin: "",
@@ -1245,100 +1717,205 @@ const SparePartsTab: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Create Dialog */}
+      {/* Create Dialog - Stacked Fields Layout */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>Add Spare Part</DialogTitle>
+          <DialogTitle>Add Spare Parts</DialogTitle>
           <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="code"
-                  control={control}
-                  rules={{ required: "Code is required" }}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Part Code" error={!!errors.code} />
-                  )}
-                />
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              {/* Part Details Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Part Details
+              </Typography>
+
+              <Controller
+                name="code"
+                control={control}
+                rules={{ required: "Part number is required" }}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Part No *" 
+                    error={!!errors.code}
+                    helperText={errors.code?.message as string || "Unique part number/code"}
+                  />
+                )}
+              />
+
+              <Controller
+                name="name"
+                control={control}
+                rules={{ required: "Part name is required" }}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Part Name *" 
+                    error={!!errors.name}
+                    helperText={errors.name?.message as string}
+                  />
+                )}
+              />
+
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Description" 
+                    multiline
+                    rows={2}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Machines Applicable Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Machines Applicable
+              </Typography>
+
+              <Controller
+                name="machine_id"
+                control={control}
+                rules={{ required: "At least one machine is required" }}
+                render={({ field }) => (
+                  <FormControl fullWidth error={!!errors.machine_id}>
+                    <InputLabel>Applicable Machine(s) *</InputLabel>
+                    <Select {...field} label="Applicable Machine(s) *">
+                      {machines?.map((machine: Machine) => (
+                        <MenuItem key={machine.id} value={machine.id}>
+                          {machine.name} ({machine.code})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Min/Max Stock Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Min/Max Stock Levels
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={4}>
+                  <Controller
+                    name="min_level"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="Min Level" 
+                        type="number"
+                        helperText="Minimum stock"
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={4}>
+                  <Controller
+                    name="max_level"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="Max Level" 
+                        type="number"
+                        helperText="Maximum stock"
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={4}>
+                  <Controller
+                    name="reorder_level"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="Reorder Level" 
+                        type="number"
+                        helperText="Trigger reorder alert"
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="name"
-                  control={control}
-                  rules={{ required: "Name is required" }}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Part Name" error={!!errors.name} />
-                  )}
-                />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Current Stock Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Current Stock
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Controller
+                    name="quantity"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="Current Stock" 
+                        type="number"
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Controller
+                    name="unit_cost"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField 
+                        {...field} 
+                        fullWidth 
+                        label="Unit Cost" 
+                        type="number"
+                        InputProps={{ inputProps: { step: 0.01 } }}
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="machine_id"
-                  control={control}
-                  rules={{ required: "Machine is required" }}
-                  render={({ field }) => (
-                    <FormControl fullWidth error={!!errors.machine_id}>
-                      <InputLabel>Applicable Machine</InputLabel>
-                      <Select {...field} label="Applicable Machine">
-                        {machines?.map((machine: Machine) => (
-                          <MenuItem key={machine.id} value={machine.id}>
-                            {machine.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="location_bin"
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label="Location/Bin" />}
-                />
-              </Grid>
-              <Grid item xs={6} md={3}>
-                <Controller
-                  name="quantity"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Current Stock" type="number" />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={6} md={3}>
-                <Controller
-                  name="min_level"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Min Level" type="number" />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={6} md={3}>
-                <Controller
-                  name="reorder_level"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Reorder Level" type="number" />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={6} md={3}>
-                <Controller
-                  name="unit_cost"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Unit Cost" type="number" />
-                  )}
-                />
-              </Grid>
-            </Grid>
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Location/Bin Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Location/Bin
+              </Typography>
+
+              <Controller
+                name="location_bin"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Location/Bin"
+                    helperText="Warehouse location, bin number, or shelf position"
+                  />
+                )}
+              />
+            </Stack>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
             <Button type="submit" variant="contained" disabled={createMutation.isPending}>
-              {createMutation.isPending ? <CircularProgress size={24} /> : "Add"}
+              {createMutation.isPending ? <CircularProgress size={24} /> : "Save"}
             </Button>
           </DialogActions>
         </form>

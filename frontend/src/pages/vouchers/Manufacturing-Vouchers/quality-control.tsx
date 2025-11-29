@@ -1,5 +1,5 @@
 // frontend/src/pages/vouchers/Manufacturing-Vouchers/quality-control.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Typography,
   Container,
@@ -31,6 +31,8 @@ import {
   FormControlLabel,
   Switch,
   Tooltip,
+  Divider,
+  Stack,
 } from "@mui/material";
 import {
   Add,
@@ -41,6 +43,8 @@ import {
   CheckCircle,
   Cancel,
   Refresh,
+  AttachFile,
+  PhotoCamera,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -62,6 +66,8 @@ interface QCTemplate {
   sampling_size?: number;
   version: string;
   is_active: boolean;
+  attachments?: string;
+  specifications?: string;
   created_at: string;
 }
 
@@ -70,6 +76,7 @@ interface QCInspection {
   batch_id: number;
   work_order_id?: number;
   item_id?: number;
+  operation_id?: number;
   template_id?: number;
   inspector: string;
   scheduled_date?: string;
@@ -131,6 +138,7 @@ const QCTemplatesTab: React.FC = () => {
       test_name: "",
       description: "",
       parameters: "",
+      specifications: "",
       tolerance_min: 0,
       tolerance_max: 0,
       unit: "",
@@ -138,6 +146,7 @@ const QCTemplatesTab: React.FC = () => {
       sampling_size: 1,
       version: "1.0",
       is_active: true,
+      attachments: "",
     },
   });
 
@@ -180,6 +189,7 @@ const QCTemplatesTab: React.FC = () => {
       test_name: template.test_name,
       description: template.description || "",
       parameters: template.parameters || "",
+      specifications: template.specifications || "",
       tolerance_min: template.tolerance_min || 0,
       tolerance_max: template.tolerance_max || 0,
       unit: template.unit || "",
@@ -187,6 +197,7 @@ const QCTemplatesTab: React.FC = () => {
       sampling_size: template.sampling_size || 1,
       version: template.version,
       is_active: template.is_active,
+      attachments: template.attachments || "",
     });
     setDialogOpen(true);
   };
@@ -279,130 +290,216 @@ const QCTemplatesTab: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Create/Edit Dialog */}
+      {/* Create/Edit Dialog - Stacked Fields Layout */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>{selectedTemplate ? "Edit QC Template" : "Create QC Template"}</DialogTitle>
+          <DialogTitle>{selectedTemplate ? "Edit QC Template" : "Add Template"}</DialogTitle>
           <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="product_id"
-                  control={control}
-                  rules={{ required: "Product is required" }}
-                  render={({ field }) => (
-                    <FormControl fullWidth error={!!errors.product_id}>
-                      <InputLabel>Product</InputLabel>
-                      <Select {...field} label="Product">
-                        {products?.map((product: any) => (
-                          <MenuItem key={product.id} value={product.id}>
-                            {product.product_name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                />
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              {/* Basic Information Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Basic Information
+              </Typography>
+              
+              <Controller
+                name="test_name"
+                control={control}
+                rules={{ required: "Template name is required" }}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Template Name *" 
+                    error={!!errors.test_name}
+                    helperText={errors.test_name?.message as string}
+                  />
+                )}
+              />
+
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label="Description" multiline rows={3} />
+                )}
+              />
+
+              <Controller
+                name="product_id"
+                control={control}
+                rules={{ required: "Product is required" }}
+                render={({ field }) => (
+                  <FormControl fullWidth error={!!errors.product_id}>
+                    <InputLabel>Product *</InputLabel>
+                    <Select {...field} label="Product *">
+                      {products?.map((product: any) => (
+                        <MenuItem key={product.id} value={product.id}>
+                          {product.product_name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Parameters & Specifications Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Parameters & Specifications
+              </Typography>
+
+              <Controller
+                name="parameters"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Parameters"
+                    multiline
+                    rows={3}
+                    helperText="Enter test parameters (JSON format or comma-separated)"
+                  />
+                )}
+              />
+
+              <Controller
+                name="specifications"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Specifications"
+                    multiline
+                    rows={2}
+                    helperText="Quality specifications and requirements"
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Tolerances Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Tolerances
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={4}>
+                  <Controller
+                    name="tolerance_min"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField {...field} fullWidth label="Min Tolerance" type="number" />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={4}>
+                  <Controller
+                    name="tolerance_max"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField {...field} fullWidth label="Max Tolerance" type="number" />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={4}>
+                  <Controller
+                    name="unit"
+                    control={control}
+                    render={({ field }) => <TextField {...field} fullWidth label="Unit" />}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="test_name"
-                  control={control}
-                  rules={{ required: "Test name is required" }}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Test Name" error={!!errors.test_name} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="description"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Description" multiline rows={2} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="tolerance_min"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Min Tolerance" type="number" />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="tolerance_max"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Max Tolerance" type="number" />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="unit"
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label="Unit" />}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="method"
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label="Test Method" />}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="sampling_size"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Sampling Size" type="number" />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Controller
-                  name="version"
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label="Version" />}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="parameters"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="Parameters (JSON)"
-                      multiline
-                      rows={3}
-                      helperText="JSON format: target values, tolerances, specs"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="is_active"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={<Switch checked={field.value} onChange={field.onChange} />}
-                      label="Active"
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Sampling & Method Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Sampling & Method
+              </Typography>
+
+              <Controller
+                name="sampling_size"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Sampling Size" 
+                    type="number" 
+                    helperText="Number of samples to test"
+                  />
+                )}
+              />
+
+              <Controller
+                name="method"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Test Method" 
+                    multiline 
+                    rows={2}
+                    helperText="Describe the testing procedure"
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Attachments Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Attachments
+              </Typography>
+
+              <Controller
+                name="attachments"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Attachment References"
+                    helperText="Enter document references or URLs (comma-separated)"
+                    InputProps={{
+                      startAdornment: <AttachFile fontSize="small" sx={{ mr: 1, color: "action.active" }} />
+                    }}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Version & Status Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Version & Status
+              </Typography>
+
+              <Controller
+                name="version"
+                control={control}
+                render={({ field }) => <TextField {...field} fullWidth label="Version" />}
+              />
+
+              <Controller
+                name="is_active"
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={<Switch checked={field.value} onChange={field.onChange} />}
+                    label="Active"
+                  />
+                )}
+              />
+            </Stack>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
             <Button type="submit" variant="contained" disabled={createMutation.isPending || updateMutation.isPending}>
               {createMutation.isPending || updateMutation.isPending ? <CircularProgress size={24} /> : "Save"}
             </Button>
@@ -417,7 +514,7 @@ const QCTemplatesTab: React.FC = () => {
 const InspectionsTab: React.FC = () => {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedInspection, setSelectedInspection] = useState<QCInspection | null>(null);
+  const [_selectedInspection, setSelectedInspection] = useState<QCInspection | null>(null);
   const [filters, setFilters] = useState({ status: "", overall_status: "" });
 
   const { data: inspections, isLoading, refetch } = useQuery({
@@ -439,18 +536,51 @@ const InspectionsTab: React.FC = () => {
     },
   });
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm({
+  const { data: products } = useQuery({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const response = await api.get("/products");
+      return response.data;
+    },
+  });
+
+  const { data: workOrders } = useQuery({
+    queryKey: ["work-orders"],
+    queryFn: async () => {
+      const response = await api.get("/manufacturing/manufacturing-orders");
+      return response.data;
+    },
+  });
+
+  const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
     defaultValues: {
       batch_id: 0,
       work_order_id: 0,
+      operation_id: 0,
+      item_id: 0,
       template_id: 0,
       inspector: "",
+      scheduled_date: new Date().toISOString().slice(0, 10),
+      photos: "",
       test_results: "{}",
       overall_status: "pending",
       status: "draft",
       notes: "",
     },
   });
+
+  const watchTemplateId = watch("template_id");
+
+  // Auto-compute pass/fail when template is selected
+  useEffect(() => {
+    if (watchTemplateId && Array.isArray(templates) && templates.length > 0) {
+      const selectedTemplate = templates.find((t: QCTemplate) => t.id === watchTemplateId);
+      if (selectedTemplate) {
+        // Template-based status initialization
+        setValue("overall_status", "pending");
+      }
+    }
+  }, [watchTemplateId, templates, setValue]);
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post("/manufacturing/quality-control/inspections", data),
@@ -602,129 +732,251 @@ const InspectionsTab: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Create Dialog */}
+      {/* Create Inspection Dialog - Stacked Fields Layout */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogTitle>Create Inspection</DialogTitle>
           <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="batch_id"
-                  control={control}
-                  rules={{ required: "Batch ID is required" }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="Batch ID"
-                      type="number"
-                      error={!!errors.batch_id}
-                    />
-                  )}
-                />
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              {/* Work Order & Operation Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Work Order & Operation
+              </Typography>
+
+              <Controller
+                name="work_order_id"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Work Order</InputLabel>
+                    <Select {...field} label="Work Order">
+                      <MenuItem value={0}>Select Work Order...</MenuItem>
+                      {workOrders?.map((wo: any) => (
+                        <MenuItem key={wo.id} value={wo.id}>
+                          {wo.voucher_number || wo.order_number || `WO-${wo.id}`}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Controller
+                name="operation_id"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label="Operation/Stage ID" type="number" />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Item & Batch Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Item & Batch
+              </Typography>
+
+              <Controller
+                name="item_id"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Item</InputLabel>
+                    <Select {...field} label="Item">
+                      <MenuItem value={0}>Select Item...</MenuItem>
+                      {products?.map((product: any) => (
+                        <MenuItem key={product.id} value={product.id}>
+                          {product.product_name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Controller
+                name="batch_id"
+                control={control}
+                rules={{ required: "Batch ID is required" }}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Batch/Lot ID *"
+                    type="number"
+                    error={!!errors.batch_id}
+                    helperText={errors.batch_id?.message as string}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Template Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                QC Template
+              </Typography>
+
+              <Controller
+                name="template_id"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>QC Template</InputLabel>
+                    <Select {...field} label="QC Template">
+                      <MenuItem value={0}>Select Template...</MenuItem>
+                      {templates?.map((template: QCTemplate) => (
+                        <MenuItem key={template.id} value={template.id}>
+                          {template.test_name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              {watchTemplateId > 0 && (
+                <Alert severity="info" sx={{ mt: 1 }}>
+                  Pass/Fail will be computed based on template criteria when test results are entered.
+                </Alert>
+              )}
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Inspector & Schedule Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Inspector & Schedule
+              </Typography>
+
+              <Controller
+                name="inspector"
+                control={control}
+                rules={{ required: "Inspector is required" }}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Inspector Name *" 
+                    error={!!errors.inspector}
+                    helperText={errors.inspector?.message as string}
+                  />
+                )}
+              />
+
+              <Controller
+                name="scheduled_date"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Scheduled Date"
+                    type="date"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Photos & Documentation Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Photos & Documentation
+              </Typography>
+
+              <Controller
+                name="photos"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Photo References"
+                    helperText="Enter photo URLs or references (comma-separated)"
+                    InputProps={{
+                      startAdornment: <PhotoCamera fontSize="small" sx={{ mr: 1, color: "action.active" }} />
+                    }}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Test Results Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Test Results
+              </Typography>
+
+              <Controller
+                name="test_results"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Test Results (JSON)"
+                    multiline
+                    rows={3}
+                    helperText="Enter measurements and test results"
+                  />
+                )}
+              />
+
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Controller
+                    name="overall_status"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControl fullWidth>
+                        <InputLabel>Result</InputLabel>
+                        <Select {...field} label="Result">
+                          <MenuItem value="pending">Pending</MenuItem>
+                          <MenuItem value="pass">Pass</MenuItem>
+                          <MenuItem value="fail">Fail</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Controller
+                    name="status"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControl fullWidth>
+                        <InputLabel>Status</InputLabel>
+                        <Select {...field} label="Status">
+                          <MenuItem value="draft">Draft</MenuItem>
+                          <MenuItem value="in_progress">In Progress</MenuItem>
+                          <MenuItem value="completed">Completed</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="work_order_id"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Work Order ID (Optional)" type="number" />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="template_id"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>QC Template</InputLabel>
-                      <Select {...field} label="QC Template">
-                        <MenuItem value={0}>None</MenuItem>
-                        {templates?.map((template: any) => (
-                          <MenuItem key={template.id} value={template.id}>
-                            {template.test_name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="inspector"
-                  control={control}
-                  rules={{ required: "Inspector is required" }}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Inspector Name" error={!!errors.inspector} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="overall_status"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>Result</InputLabel>
-                      <Select {...field} label="Result">
-                        <MenuItem value="pending">Pending</MenuItem>
-                        <MenuItem value="pass">Pass</MenuItem>
-                        <MenuItem value="fail">Fail</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>Status</InputLabel>
-                      <Select {...field} label="Status">
-                        <MenuItem value="draft">Draft</MenuItem>
-                        <MenuItem value="in_progress">In Progress</MenuItem>
-                        <MenuItem value="completed">Completed</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="test_results"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="Test Results (JSON)"
-                      multiline
-                      rows={3}
-                      helperText="Enter test results in JSON format"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="notes"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Notes" multiline rows={2} />
-                  )}
-                />
-              </Grid>
-            </Grid>
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Notes Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Notes
+              </Typography>
+
+              <Controller
+                name="notes"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label="Notes" multiline rows={3} />
+                )}
+              />
+            </Stack>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
             <Button type="submit" variant="contained" disabled={createMutation.isPending}>
-              {createMutation.isPending ? <CircularProgress size={24} /> : "Create"}
+              {createMutation.isPending ? <CircularProgress size={24} /> : "Save"}
             </Button>
           </DialogActions>
         </form>
@@ -746,6 +998,14 @@ const RejectionsTab: React.FC = () => {
     },
   });
 
+  const { data: inspections } = useQuery({
+    queryKey: ["qc-inspections"],
+    queryFn: async () => {
+      const response = await api.get("/manufacturing/quality-control/inspections");
+      return response.data;
+    },
+  });
+
   const { control, handleSubmit, reset, formState: { errors } } = useForm({
     defaultValues: {
       qc_inspection_id: 0,
@@ -753,6 +1013,7 @@ const RejectionsTab: React.FC = () => {
       reason_code: "",
       quantity: 0,
       ncr_reference: "",
+      mrb_reference: "",
       disposition: "",
       rework_required: false,
       notes: "",
@@ -894,105 +1155,195 @@ const RejectionsTab: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Create Dialog */}
+      {/* Create Dialog - Stacked Fields Layout */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogTitle>Log Rejection</DialogTitle>
           <DialogContent>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="qc_inspection_id"
-                  control={control}
-                  rules={{ required: "Inspection ID is required" }}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      fullWidth
-                      label="QC Inspection ID"
-                      type="number"
-                      error={!!errors.qc_inspection_id}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="quantity"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Rejected Quantity" type="number" />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="reason"
-                  control={control}
-                  rules={{ required: "Reason is required" }}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Reason" multiline rows={2} error={!!errors.reason} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="reason_code"
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label="Reason Code" />}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="disposition"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>Disposition</InputLabel>
-                      <Select {...field} label="Disposition">
-                        <MenuItem value="">Select...</MenuItem>
-                        <MenuItem value="rework">Rework</MenuItem>
-                        <MenuItem value="scrap">Scrap</MenuItem>
-                        <MenuItem value="return">Return to Vendor</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="ncr_reference"
-                  control={control}
-                  render={({ field }) => <TextField {...field} fullWidth label="NCR Reference" />}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Controller
-                  name="rework_required"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={<Switch checked={field.value} onChange={field.onChange} />}
-                      label="Rework Required"
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="notes"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} fullWidth label="Notes" multiline rows={2} />
-                  )}
-                />
-              </Grid>
-            </Grid>
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              {/* Inspection Reference Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Inspection Reference
+              </Typography>
+
+              <Controller
+                name="qc_inspection_id"
+                control={control}
+                rules={{ required: "Inspection reference is required" }}
+                render={({ field }) => (
+                  <FormControl fullWidth error={!!errors.qc_inspection_id}>
+                    <InputLabel>QC Inspection *</InputLabel>
+                    <Select {...field} label="QC Inspection *">
+                      <MenuItem value={0}>Select Inspection...</MenuItem>
+                      {inspections?.map((insp: QCInspection) => (
+                        <MenuItem key={insp.id} value={insp.id}>
+                          Inspection #{insp.id} - {insp.inspector} ({insp.overall_status})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Reason Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Reason Details
+              </Typography>
+
+              <Controller
+                name="reason_code"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Reason Code</InputLabel>
+                    <Select {...field} label="Reason Code">
+                      <MenuItem value="">Select Reason Code...</MenuItem>
+                      <MenuItem value="DEFECT">DEFECT - Manufacturing Defect</MenuItem>
+                      <MenuItem value="DIM">DIM - Dimensional Variance</MenuItem>
+                      <MenuItem value="MAT">MAT - Material Issue</MenuItem>
+                      <MenuItem value="VISUAL">VISUAL - Visual Defect</MenuItem>
+                      <MenuItem value="FUNC">FUNC - Functional Failure</MenuItem>
+                      <MenuItem value="OTHER">OTHER - Other</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Controller
+                name="reason"
+                control={control}
+                rules={{ required: "Reason description is required" }}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Reason Description *" 
+                    multiline 
+                    rows={3} 
+                    error={!!errors.reason}
+                    helperText={errors.reason?.message as string}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Quantity Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Quantity
+              </Typography>
+
+              <Controller
+                name="quantity"
+                control={control}
+                rules={{ required: "Quantity is required", min: { value: 1, message: "Quantity must be at least 1" } }}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="Rejected Quantity *" 
+                    type="number"
+                    error={!!errors.quantity}
+                    helperText={errors.quantity?.message as string}
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Disposition Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Disposition
+              </Typography>
+
+              <Controller
+                name="disposition"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Disposition</InputLabel>
+                    <Select {...field} label="Disposition">
+                      <MenuItem value="">Select Disposition...</MenuItem>
+                      <MenuItem value="rework">Rework</MenuItem>
+                      <MenuItem value="scrap">Scrap</MenuItem>
+                      <MenuItem value="return">Return to Vendor</MenuItem>
+                      <MenuItem value="use_as_is">Use As Is</MenuItem>
+                      <MenuItem value="hold">Hold for Review</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+
+              <Controller
+                name="rework_required"
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={<Switch checked={field.value} onChange={field.onChange} />}
+                    label="Rework Required"
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* NCR/MRB References Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                NCR/MRB References
+              </Typography>
+
+              <Controller
+                name="ncr_reference"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="NCR Reference"
+                    helperText="Non-Conformance Report reference number"
+                  />
+                )}
+              />
+
+              <Controller
+                name="mrb_reference"
+                control={control}
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    fullWidth 
+                    label="MRB Reference"
+                    helperText="Material Review Board reference number"
+                  />
+                )}
+              />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Notes Section */}
+              <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600 }}>
+                Notes
+              </Typography>
+
+              <Controller
+                name="notes"
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} fullWidth label="Additional Notes" multiline rows={3} />
+                )}
+              />
+
+              <Alert severity="info" sx={{ mt: 1 }}>
+                Rejections may require approval before disposition is executed.
+              </Alert>
+            </Stack>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <DialogActions sx={{ px: 3, py: 2 }}>
+            <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
             <Button type="submit" variant="contained" disabled={createMutation.isPending}>
-              {createMutation.isPending ? <CircularProgress size={24} /> : "Log Rejection"}
+              {createMutation.isPending ? <CircularProgress size={24} /> : "Save"}
             </Button>
           </DialogActions>
         </form>
