@@ -1,12 +1,8 @@
 // frontend/src/pages/vouchers/Manufacturing-Vouchers/maintenance.tsx
-import React, { useState, useEffect } from "react";
-import { Typography, Container, Box, Button, Grid, TextField, Select, MenuItem, FormControl, InputLabel, CircularProgress, Tabs, Tab } from "@mui/material";
-import { useForm, Controller } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
+import React, { useState } from "react";
+import { Typography, Container, Box, Tabs, Tab } from "@mui/material";
 import * as yup from "yup";
 import { ProtectedPage } from "../../../components/ProtectedPage";
-import { useAuth } from "../../../context/AuthContext";
-import api from "../../../services/api/client";
 
 const machineSchema = yup.object().shape({
   name: yup.string().required(),

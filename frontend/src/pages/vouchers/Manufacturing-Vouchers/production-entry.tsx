@@ -8,7 +8,6 @@ import {
   TextField,
   Typography,
   Grid,
-  CircularProgress,
   Table,
   TableBody,
   TableCell,
@@ -17,17 +16,8 @@ import {
   TableRow,
   Paper,
   Autocomplete,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  Card,
-  CardContent,
-  IconButton,
   Divider,
 } from "@mui/material";
-import AddIcon from '@mui/icons-material/Add';
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../../lib/api";
@@ -35,7 +25,6 @@ import VoucherContextMenu from "../../../components/VoucherContextMenu";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import VoucherLayout from "../../../components/VoucherLayout";
 import VoucherListModal from "../../../components/VoucherListModal";
-import ManufacturingShortageAlert from "../../../components/ManufacturingShortageAlert";
 import VoucherDateConflictModal from "../../../components/VoucherDateConflictModal";
 import { voucherService } from "../../../services/vouchersService";
 import BOMConsumptionModal from "../../../components/BOMConsumptionModal";
@@ -44,7 +33,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
 import { useAuth } from "../../../context/AuthContext";
-import voucherFormStyles from "../../../styles/voucherFormStyles";  // Assume this exists or create similar to purchase-order
+// Assume this exists or create similar to purchase-order
 
 const schema = yup.object().shape({
   production_order_id: yup.number().required(),

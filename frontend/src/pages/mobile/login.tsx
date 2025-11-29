@@ -8,6 +8,9 @@ import {
 } from '../../components/mobile';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
+// TritIQ BOS Brand Tagline
+const TRITIQ_TAGLINE = "Business Made Simple";
+
 const MobileLogin: React.FC = () => {
   const { isMobile } = useMobileDetection();
   const [showPassword, setShowPassword] = useState(false);
@@ -59,14 +62,14 @@ const MobileLogin: React.FC = () => {
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Typography variant="h3" sx={{ 
             fontWeight: 'bold', 
-            color: 'primary.main',
+            color: '#0A2A43',
             fontSize: '2.5rem',
             mb: 1
           }}>
-            FastAPI
+            TritIQ BOS
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            ERP Management System v1.6
+          <Typography variant="body1" sx={{ color: '#4A5568', fontStyle: 'italic' }}>
+            {TRITIQ_TAGLINE}
           </Typography>
         </Box>
 
@@ -209,10 +212,13 @@ const MobileLogin: React.FC = () => {
           </Typography>
         </Box>
 
-        {/* Version Info */}
-        <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Typography variant="caption" color="text.secondary">
-            Version 1.6.0 • Build 2024.01.15
+        {/* Footer with Tagline */}
+        <Box sx={{ textAlign: 'center', mt: 3 }}>
+          <Typography variant="body2" sx={{ color: '#4A5568' }}>
+            TritIQ BOS — {TRITIQ_TAGLINE}
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#A0AEC0' }}>
+            © {new Date().getFullYear()} TritIQ. All rights reserved.
           </Typography>
         </Box>
       </Box>

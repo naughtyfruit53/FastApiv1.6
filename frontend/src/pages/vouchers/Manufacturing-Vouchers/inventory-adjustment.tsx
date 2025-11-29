@@ -1,7 +1,7 @@
 // frontend/src/pages/vouchers/Manufacturing-Vouchers/inventory-adjustment.tsx
 import React, { useState, useEffect } from "react";
-import { Typography, Container, Box, Button, Grid, TextField, Select, MenuItem, FormControl, InputLabel, CircularProgress } from "@mui/material";
-import { useForm, Controller } from "react-hook-form";
+import { Typography, Container, Box, Button, Grid, CircularProgress } from "@mui/material";
+import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { ProtectedPage } from "../../../components/ProtectedPage";

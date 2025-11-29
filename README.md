@@ -1,6 +1,6 @@
-# TritIQ BOS - FastAPI Migration
+# TritIQ BOS - Business Made Simple
 
-A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the TRITIQ BOS system.
+> **Business Made Simple** — A modern, scalable FastAPI-based backend with Next.js Turbopack frontend for the TritIQ BOS system.
 
 ## 🚀 Quick Start
 

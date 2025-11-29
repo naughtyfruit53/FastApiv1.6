@@ -1,4 +1,5 @@
 // frontend/src/pages/_app.tsx
+// TritIQ BOS Brand Kit v1
 import { AppProps } from "next/app";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -20,54 +21,68 @@ import AppLayout from "../components/AppLayout"; // Global layout with MegaMenu
 // Removed ChatbotNavigator import as it may be causing the undefined component error
 import CompanySetupGuard from "../components/CompanySetupGuard";  // NEW: Import CompanySetupGuard to show modal on login if company details missing
 
-// Create modern theme using our design system
+// TritIQ BOS Brand Tokens
+const tritiqBrandTokens = {
+  blue: "#0A2A43",
+  cyan: "#18E0B5",
+  slate: "#4A5568",
+  cloud: "#F7FAFC",
+  black: "#0D0D0D",
+  success: "#16A34A",
+  warning: "#F59E0B",
+  danger: "#EF4444",
+  info: "#3B82F6",
+};
+
+// Create modern theme using TritIQ BOS design system
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#2563eb", // var(--primary-600)
-      light: "#3b82f6", // var(--primary-500)
-      dark: "#1d4ed8", // var(--primary-700) - fixed typo from "#1dasc"
+      main: tritiqBrandTokens.blue, // TritIQ Blue
+      light: "#0D3A5C",
+      dark: "#081F33",
+      contrastText: "#FFFFFF",
     },
     secondary: {
-      main: "#7c3aed", // var(--secondary-600)
-      light: "#8b5cf6", // var(--secondary-500)
-      dark: "#6d28d9", // var(--secondary-700)
+      main: tritiqBrandTokens.cyan, // TritIQ Cyan
+      light: "#3DE6C2",
+      dark: "#10A888",
+      contrastText: tritiqBrandTokens.black,
     },
     success: {
-      main: "#059669", // var(--success-600)
-      light: "#10b981", // var(--success-500)
-      dark: "#047857", // var(--success-700)
+      main: tritiqBrandTokens.success,
+      light: "#22C55E",
+      dark: "#15803D",
     },
     warning: {
-      main: "#d97706", // var(--warning-600)
-      light: "#f59e0b", // var(--warning-500)
-      dark: "#b45309", // var(--warning-700)
+      main: tritiqBrandTokens.warning,
+      light: "#FBBF24",
+      dark: "#D97706",
     },
     error: {
-      main: "#dc2626", // var(--error-600)
-      light: "#ef4444", // var(--error-500)
-      dark: "#b91c1c", // var(--error-700)
+      main: tritiqBrandTokens.danger,
+      light: "#F87171",
+      dark: "#DC2626",
     },
     info: {
-      main: "#0891b2", // var(--info-600)
-      light: "#06b6d4", // var(--info-500)
-      dark: "#0e7490", // var(--info-700)
+      main: tritiqBrandTokens.info,
+      light: "#60A5FA",
+      dark: "#2563EB",
     },
     background: {
-      default: "#f8fafc", // var(--bg-secondary)
-      paper: "#ffffff", // var(--bg-surface)
+      default: tritiqBrandTokens.cloud, // TritIQ Cloud
+      paper: "#FFFFFF",
     },
     text: {
-      primary: "#111827", // var(--text-primary)
-      secondary: "#4b5563", // var(--text-secondary)
+      primary: tritiqBrandTokens.black, // TritIQ Black
+      secondary: tritiqBrandTokens.slate, // TritIQ Slate
     },
   },
   typography: {
-    fontFamily:
-      'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
+    fontFamily: '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
     h1: {
       fontSize: "2.25rem", // var(--font-size-4xl)
-      fontWeight: 700,
+      fontWeight: 700, // Heading primary weight
       lineHeight: 1.25, // var(--leading-tight)
     },
     h2: {
@@ -179,7 +194,17 @@ function MyApp({ Component, pageProps }: AppProps) {
   return (
     <>
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />  {/* Updated for iOS safe area support */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        {/* TritIQ BOS Brand Kit - Favicon and Icons */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0A2A43" />
+        <meta name="description" content="TritIQ BOS - Business Made Simple" />
+        {/* Inter Font from Google Fonts */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
       </Head>
       <ThemeProvider theme={theme}>
         <CssBaseline />

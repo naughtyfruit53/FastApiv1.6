@@ -1,4 +1,5 @@
 // frontend/src/pages/login.tsx
+// TritIQ BOS Brand Kit v1
 "use client";
 import React, { useState, useEffect } from "react";
 import { Box, Typography, Container, Button, Divider } from "@mui/material";
@@ -13,6 +14,9 @@ import useMobileRouting from "../hooks/mobile/useMobileRouting";
 import { ACCESS_TOKEN_KEY } from "../constants/auth";
 import { useCompany } from "../context/CompanyContext"; // Added to refetch company data to ensure CompanyContext is updated
 import { useRouter } from "next/router";  // Fixed: Added missing import for useRouter
+
+// TritIQ BOS Brand Tagline
+const TRITIQ_TAGLINE = "Business Made Simple";
 
 const LoginPage = () => {
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
@@ -111,13 +115,25 @@ const LoginPage = () => {
     <Container maxWidth="lg" sx={{ backgroundColor: '#F7FAFC', minHeight: '100vh', py: 4 }}>
       <Box sx={{ mt: 4, textAlign: "center" }}>
         <Image
-          src="/Tritiq.png"
-          alt="TRITIQ BOS"
+          src="/logo.png"
+          alt="TritIQ BOS"
           width={200}
           height={160}
-          style={{ maxWidth: "100%", height: "auto", marginBottom: "16px" }}
+          style={{ maxWidth: "100%", height: "auto", marginBottom: "8px" }}
           priority
         />
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            color: '#4A5568', 
+            fontWeight: 300, 
+            mb: 3,
+            fontStyle: 'italic',
+            letterSpacing: '0.05em'
+          }}
+        >
+          {TRITIQ_TAGLINE}
+        </Typography>
         <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: "stretch", mt: 2, gap: 2 }}>
           <Box sx={{ flex: 1 }}>
             <Box sx={{ p: 3 }}>
@@ -150,6 +166,15 @@ const LoginPage = () => {
             </Button>
           </Box>
         </Box>
+      </Box>
+      {/* Footer with Tagline */}
+      <Box sx={{ mt: 4, pt: 2, borderTop: '1px solid #E2E8F0', textAlign: 'center' }}>
+        <Typography variant="body2" sx={{ color: '#4A5568' }}>
+          TritIQ BOS — {TRITIQ_TAGLINE}
+        </Typography>
+        <Typography variant="caption" sx={{ color: '#A0AEC0' }}>
+          © {new Date().getFullYear()} TritIQ. All rights reserved.
+        </Typography>
       </Box>
       <ForgotPasswordModal
         open={forgotPasswordOpen}

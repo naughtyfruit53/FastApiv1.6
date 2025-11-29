@@ -759,7 +759,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         position="static"
         className="modern-nav"
         sx={{
-          backgroundColor: '#808080',
+          backgroundColor: '#0A2A43', // TritIQ Blue
           color: 'white',
           boxShadow: 'var(--shadow-sm)',
           borderBottom: '1px solid var(--border-primary)',
@@ -831,8 +831,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           >
             <Box
               component="img"
-              src="/Tritiq.png"
-              alt="TritiQ"
+              src="/logo.png"
+              alt="TritIQ BOS"
               sx={{
                 width: 60,
                 height: 60,

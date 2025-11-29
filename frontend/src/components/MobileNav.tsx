@@ -1,4 +1,5 @@
 // frontend/src/components/MobileNav.tsx
+// TritIQ BOS Brand Kit v1
 'use client';
 
 import React, { useState } from 'react';
@@ -37,6 +38,9 @@ import { useRouter } from 'next/navigation';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { isAppSuperAdmin } from '../types/user.types';
 import { mainMenuSections } from './menuConfig';
+
+// TritIQ BOS Brand Tagline
+const TRITIQ_TAGLINE = "Business Made Simple";
 
 interface MobileNavProps {
   open: boolean;  // Changed to controlled open prop
@@ -275,16 +279,20 @@ const MobileNav: React.FC<MobileNavProps> = ({
         {/* Header */}
         <Box sx={{ 
           display: 'flex', 
+          flexDirection: 'column',
           alignItems: 'center', 
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           p: 2,
           borderBottom: '1px solid',
           borderColor: 'divider',
-          backgroundColor: 'primary.main',
-          color: 'primary.contrastText'
+          backgroundColor: '#0A2A43',
+          color: 'white'
         }}>
           <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-            FastAPI v1.6
+            TritIQ BOS
+          </Typography>
+          <Typography variant="caption" sx={{ fontWeight: 300, opacity: 0.9, fontStyle: 'italic' }}>
+            {TRITIQ_TAGLINE}
           </Typography>
         </Box>
 
@@ -352,6 +360,17 @@ const MobileNav: React.FC<MobileNavProps> = ({
               }}
             />
           </ListItemButton>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              display: 'block', 
+              textAlign: 'center', 
+              mt: 2, 
+              color: 'text.secondary' 
+            }}
+          >
+            TritIQ BOS — {TRITIQ_TAGLINE}
+          </Typography>
         </Box>
       </Box>
     </Drawer>

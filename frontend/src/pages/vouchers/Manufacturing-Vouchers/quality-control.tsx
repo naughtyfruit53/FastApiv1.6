@@ -1,12 +1,7 @@
 // frontend/src/pages/vouchers/Manufacturing-Vouchers/quality-control.tsx
-import React, { useState, useEffect } from "react";
-import { Typography, Container, Box, Button, Grid, TextField, Select, MenuItem, FormControl, InputLabel, CircularProgress, Tabs, Tab } from "@mui/material";
-import { useForm, Controller } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
+import React, { useState } from "react";
+import { Typography, Container, Box, Tabs, Tab } from "@mui/material";
 import { ProtectedPage } from "../../../components/ProtectedPage";
-import { useAuth } from "../../../context/AuthContext";
-import api from "../../../services/api/client"; 
 
 // Schemas for each type
 // ... implement tabs for Incoming QC, In-Process, Finished Goods
