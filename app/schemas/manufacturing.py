@@ -159,9 +159,36 @@ class MachineCreate(BaseModel):
     code: str
     location: str
     model: str
+    make: Optional[str] = None
     serial_no: Optional[str] = None
     supplier: Optional[str] = None
+    commissioning_date: Optional[datetime] = None
+    status: str = "active"  # active, inactive, under_maintenance
+    criticality: str = "medium"  # low, medium, high, critical
     amc_details: Optional[str] = None
+    attachments: Optional[str] = None  # JSON string of attachment URLs
+    mtbf: Optional[float] = None  # Mean Time Between Failures
+    mttr: Optional[float] = None  # Mean Time To Repair
+    last_service_date: Optional[datetime] = None
+    next_service_due: Optional[datetime] = None
+
+class MachineUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    location: Optional[str] = None
+    model: Optional[str] = None
+    make: Optional[str] = None
+    serial_no: Optional[str] = None
+    supplier: Optional[str] = None
+    commissioning_date: Optional[datetime] = None
+    status: Optional[str] = None
+    criticality: Optional[str] = None
+    amc_details: Optional[str] = None
+    attachments: Optional[str] = None
+    mtbf: Optional[float] = None
+    mttr: Optional[float] = None
+    last_service_date: Optional[datetime] = None
+    next_service_due: Optional[datetime] = None
 
 class MachineResponse(BaseModel):
     id: int
@@ -169,11 +196,20 @@ class MachineResponse(BaseModel):
     code: str
     location: str
     model: str
-    serial_no: Optional[str]
-    supplier: Optional[str]
-    amc_details: Optional[str]
+    make: Optional[str] = None
+    serial_no: Optional[str] = None
+    supplier: Optional[str] = None
+    commissioning_date: Optional[datetime] = None
+    status: str = "active"
+    criticality: str = "medium"
+    amc_details: Optional[str] = None
+    attachments: Optional[str] = None
+    mtbf: Optional[float] = None
+    mttr: Optional[float] = None
+    last_service_date: Optional[datetime] = None
+    next_service_due: Optional[datetime] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -181,21 +217,34 @@ class MachineResponse(BaseModel):
 # NEW: PreventiveMaintenanceSchedule Schemas
 class PreventiveMaintenanceScheduleCreate(BaseModel):
     machine_id: int
-    frequency: str
-    tasks: str  # JSON string
+    frequency: str  # daily, weekly, monthly, quarterly, annually
+    tasks: str  # JSON string checklist
     assigned_technician: Optional[str] = None
+    planned_date: Optional[datetime] = None
     next_due_date: datetime
+
+class PreventiveMaintenanceScheduleUpdate(BaseModel):
+    machine_id: Optional[int] = None
+    frequency: Optional[str] = None
+    tasks: Optional[str] = None
+    assigned_technician: Optional[str] = None
+    planned_date: Optional[datetime] = None
+    next_due_date: Optional[datetime] = None
+    overdue: Optional[bool] = None
+    last_completed_at: Optional[datetime] = None
 
 class PreventiveMaintenanceScheduleResponse(BaseModel):
     id: int
     machine_id: int
     frequency: str
     tasks: str
-    assigned_technician: Optional[str]
+    assigned_technician: Optional[str] = None
+    planned_date: Optional[datetime] = None
     next_due_date: datetime
-    overdue: bool
+    overdue: bool = False
+    last_completed_at: Optional[datetime] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -205,13 +254,33 @@ class BreakdownMaintenanceCreate(BaseModel):
     machine_id: int
     breakdown_type: str
     date: datetime
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
     reported_by: str
     description: str
     root_cause: Optional[str] = None
+    corrective_actions: Optional[str] = None
     time_to_fix: Optional[float] = None
     spare_parts_used: Optional[str] = None  # JSON string
     cost: Optional[float] = 0.0
     downtime_hours: Optional[float] = 0.0
+    status: str = "open"  # open, in_progress, closed
+
+class BreakdownMaintenanceUpdate(BaseModel):
+    machine_id: Optional[int] = None
+    breakdown_type: Optional[str] = None
+    date: Optional[datetime] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    reported_by: Optional[str] = None
+    description: Optional[str] = None
+    root_cause: Optional[str] = None
+    corrective_actions: Optional[str] = None
+    time_to_fix: Optional[float] = None
+    spare_parts_used: Optional[str] = None
+    cost: Optional[float] = None
+    downtime_hours: Optional[float] = None
+    status: Optional[str] = None
 
 class BreakdownMaintenanceResponse(BaseModel):
     id: int
@@ -258,22 +327,40 @@ class SparePartCreate(BaseModel):
     machine_id: int
     name: str
     code: str
+    description: Optional[str] = None
     quantity: float
     min_level: float = 0.0
+    max_level: float = 0.0
     reorder_level: float = 0.0
     unit_cost: float = 0.0
+    location_bin: Optional[str] = None
+
+class SparePartUpdate(BaseModel):
+    machine_id: Optional[int] = None
+    name: Optional[str] = None
+    code: Optional[str] = None
+    description: Optional[str] = None
+    quantity: Optional[float] = None
+    min_level: Optional[float] = None
+    max_level: Optional[float] = None
+    reorder_level: Optional[float] = None
+    unit_cost: Optional[float] = None
+    location_bin: Optional[str] = None
 
 class SparePartResponse(BaseModel):
     id: int
     machine_id: int
     name: str
     code: str
+    description: Optional[str] = None
     quantity: float
-    min_level: float
-    reorder_level: float
-    unit_cost: float
+    min_level: float = 0.0
+    max_level: float = 0.0
+    reorder_level: float = 0.0
+    unit_cost: float = 0.0
+    location_bin: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -282,19 +369,44 @@ class SparePartResponse(BaseModel):
 class QCTemplateCreate(BaseModel):
     product_id: int
     test_name: str
+    description: Optional[str] = None
+    parameters: Optional[str] = None  # JSON string of specs with target values
     tolerance_min: Optional[float] = None
     tolerance_max: Optional[float] = None
     unit: Optional[str] = None
+    method: Optional[str] = None
+    sampling_size: Optional[int] = None
+    version: str = "1.0"
+    is_active: bool = True
+
+class QCTemplateUpdate(BaseModel):
+    product_id: Optional[int] = None
+    test_name: Optional[str] = None
+    description: Optional[str] = None
+    parameters: Optional[str] = None
+    tolerance_min: Optional[float] = None
+    tolerance_max: Optional[float] = None
+    unit: Optional[str] = None
+    method: Optional[str] = None
+    sampling_size: Optional[int] = None
+    version: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class QCTemplateResponse(BaseModel):
     id: int
     product_id: int
     test_name: str
+    description: Optional[str] = None
+    parameters: Optional[str] = None
     tolerance_min: Optional[float]
     tolerance_max: Optional[float]
     unit: Optional[str]
+    method: Optional[str] = None
+    sampling_size: Optional[int] = None
+    version: str = "1.0"
+    is_active: bool = True
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -302,18 +414,50 @@ class QCTemplateResponse(BaseModel):
 # NEW: QCInspection Schemas
 class QCInspectionCreate(BaseModel):
     batch_id: int
+    work_order_id: Optional[int] = None
+    item_id: Optional[int] = None
+    template_id: Optional[int] = None
     inspector: str
+    scheduled_date: Optional[datetime] = None
     test_results: str  # JSON string
-    overall_status: str
+    measurements: Optional[str] = None  # JSON string of measurements vs template specs
+    photos: Optional[str] = None  # JSON string of photo URLs
+    overall_status: str = "pending"  # pending, pass, fail
+    status: str = "draft"  # draft, in_progress, completed
+    notes: Optional[str] = None
+
+class QCInspectionUpdate(BaseModel):
+    batch_id: Optional[int] = None
+    work_order_id: Optional[int] = None
+    item_id: Optional[int] = None
+    template_id: Optional[int] = None
+    inspector: Optional[str] = None
+    scheduled_date: Optional[datetime] = None
+    test_results: Optional[str] = None
+    measurements: Optional[str] = None
+    photos: Optional[str] = None
+    overall_status: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
 
 class QCInspectionResponse(BaseModel):
     id: int
     batch_id: int
+    work_order_id: Optional[int] = None
+    item_id: Optional[int] = None
+    template_id: Optional[int] = None
     inspector: str
+    scheduled_date: Optional[datetime] = None
     test_results: str
+    measurements: Optional[str] = None
+    photos: Optional[str] = None
     overall_status: str
+    status: str = "draft"
+    notes: Optional[str] = None
+    signed_off_by: Optional[int] = None
+    signed_off_at: Optional[datetime] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -321,42 +465,97 @@ class QCInspectionResponse(BaseModel):
 # NEW: Rejection Schemas
 class RejectionCreate(BaseModel):
     qc_inspection_id: int
+    work_order_id: Optional[int] = None
+    lot_number: Optional[str] = None
     reason: str
+    reason_code: Optional[str] = None
+    quantity: float = 0.0
+    ncr_reference: Optional[str] = None  # Non-Conformance Report reference
+    mrb_reference: Optional[str] = None  # Material Review Board reference
+    disposition: Optional[str] = None  # rework, scrap, return
     rework_required: bool = False
+    notes: Optional[str] = None
+
+class RejectionUpdate(BaseModel):
+    qc_inspection_id: Optional[int] = None
+    work_order_id: Optional[int] = None
+    lot_number: Optional[str] = None
+    reason: Optional[str] = None
+    reason_code: Optional[str] = None
+    quantity: Optional[float] = None
+    ncr_reference: Optional[str] = None
+    mrb_reference: Optional[str] = None
+    disposition: Optional[str] = None
+    rework_required: Optional[bool] = None
+    notes: Optional[str] = None
+    approval_status: Optional[str] = None
 
 class RejectionResponse(BaseModel):
     id: int
     qc_inspection_id: int
+    work_order_id: Optional[int] = None
+    lot_number: Optional[str] = None
     reason: str
+    reason_code: Optional[str] = None
+    quantity: float = 0.0
+    ncr_reference: Optional[str] = None
+    mrb_reference: Optional[str] = None
+    disposition: Optional[str] = None
     rework_required: bool
+    notes: Optional[str] = None
+    approval_status: str = "pending"
+    approved_by: Optional[int] = None
+    approved_at: Optional[datetime] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 # NEW: InventoryAdjustment Schemas
 class InventoryAdjustmentCreate(BaseModel):
+    type: str  # increase, decrease, conversion, wip, write-off
+    item_id: int
+    batch_number: Optional[str] = None
+    old_quantity: float
+    new_quantity: float
+    reason: str  # audit, damage, wastage, theft, error, remeasure
+    reason_code: Optional[str] = None
+    reference_doc: Optional[str] = None
+    documents: Optional[str] = None  # JSON string
+    comment: Optional[str] = None
+
+class InventoryAdjustmentSubmit(BaseModel):
+    """Schema for submitting inventory adjustment with confirmation"""
+    type: str  # increase, decrease, conversion, wip, write-off
+    item_id: int
+    batch_number: Optional[str] = None
+    old_quantity: float
+    new_quantity: float
+    reason: str  # audit, damage, wastage, theft, error, remeasure
+    reason_code: Optional[str] = None
+    reference_doc: Optional[str] = None
+    documents: Optional[str] = None  # JSON string
+    comment: str  # Required for submission
+
+class InventoryAdjustmentResponse(BaseModel):
+    id: int
     type: str
     item_id: int
     batch_number: Optional[str] = None
     old_quantity: float
     new_quantity: float
     reason: str
-    documents: Optional[str] = None  # JSON string
-
-class InventoryAdjustmentResponse(BaseModel):
-    id: int
-    type: str
-    item_id: int
-    batch_number: Optional[str]
-    old_quantity: float
-    new_quantity: float
-    reason: str
-    documents: Optional[str]
-    approved_by: Optional[str]
+    reason_code: Optional[str] = None
+    reference_doc: Optional[str] = None
+    documents: Optional[str] = None
+    comment: Optional[str] = None
+    status: str = "pending"
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    created_by: Optional[int] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
