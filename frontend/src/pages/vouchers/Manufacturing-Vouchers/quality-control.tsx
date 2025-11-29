@@ -425,7 +425,7 @@ const InspectionsTab: React.FC = () => {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.status) params.append("status", filters.status);
-      if (filters.overall_status) params.append("status", filters.overall_status);
+      if (filters.overall_status) params.append("overall_status", filters.overall_status);
       const response = await api.get(`/manufacturing/quality-control/inspections?${params.toString()}`);
       return response.data;
     },

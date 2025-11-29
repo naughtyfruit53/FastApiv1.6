@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import datetime
+from datetime import datetime, timezone
 import csv
 import io
 from app.core.database import get_db
@@ -120,7 +120,8 @@ async def delete_qc_template(
 
 @router.get("/inspections", response_model=List[QCInspectionResponse])
 async def list_qc_inspections(
-    status: Optional[str] = Query(None, description="Filter by status (pass/fail/pending)"),
+    status: Optional[str] = Query(None, description="Filter by workflow status (draft/in_progress/completed)"),
+    overall_status: Optional[str] = Query(None, description="Filter by result status (pass/fail/pending)"),
     work_order_id: Optional[int] = Query(None, description="Filter by work order ID"),
     item_id: Optional[int] = Query(None, description="Filter by item ID"),
     start_date: Optional[datetime] = Query(None, description="Filter by start date"),
@@ -134,7 +135,9 @@ async def list_qc_inspections(
     _, org_id = auth
     stmt = select(QCInspection).where(QCInspection.organization_id == org_id)
     if status is not None:
-        stmt = stmt.where(QCInspection.overall_status == status)
+        stmt = stmt.where(QCInspection.status == status)
+    if overall_status is not None:
+        stmt = stmt.where(QCInspection.overall_status == overall_status)
     if work_order_id is not None:
         stmt = stmt.where(QCInspection.work_order_id == work_order_id)
     if item_id is not None:
@@ -219,7 +222,7 @@ async def sign_off_inspection(
         raise HTTPException(status_code=404, detail="QC inspection not found")
     
     inspection.signed_off_by = current_user.id
-    inspection.signed_off_at = datetime.utcnow()
+    inspection.signed_off_at = datetime.now(timezone.utc)
     inspection.status = "completed"
     await db.commit()
     return {"message": "Inspection signed off successfully"}
@@ -324,7 +327,7 @@ async def approve_rejection(
         raise HTTPException(status_code=404, detail="Rejection not found")
     
     rejection.approved_by = current_user.id
-    rejection.approved_at = datetime.utcnow()
+    rejection.approved_at = datetime.now(timezone.utc)
     rejection.approval_status = "approved"
     await db.commit()
     return {"message": "Rejection approved successfully"}

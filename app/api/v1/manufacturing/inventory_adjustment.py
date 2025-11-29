@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.database import get_db
 from app.core.enforcement import require_access
 from app.services.production_planning_service import ProductionPlanningService
@@ -125,7 +125,7 @@ async def submit_inventory_adjustment(
         documents=adjustment_data.documents,
         status="approved",  # Auto-approve for now
         approved_by=str(current_user.id),
-        approved_at=datetime.utcnow(),
+        approved_at=datetime.now(timezone.utc),
         created_by=current_user.id
     )
     

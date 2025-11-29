@@ -174,7 +174,7 @@ const InventoryAdjustment: React.FC = () => {
       toast.success("Inventory adjustment submitted successfully!");
     },
     onError: (error: any) => {
-      const message = error?.response?.data?.detail || error?.userMessage || "Failed to submit adjustment";
+      const message = error?.response?.data?.detail || error?.message || "Failed to submit adjustment";
       toast.error(message);
     },
   });

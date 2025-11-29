@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import datetime
+from datetime import datetime, timezone
 import csv
 import io
 from app.core.database import get_db
@@ -214,7 +214,7 @@ async def complete_preventive_maintenance(
     if not schedule:
         raise HTTPException(status_code=404, detail="Preventive schedule not found")
     
-    schedule.last_completed_at = datetime.utcnow()
+    schedule.last_completed_at = datetime.now(timezone.utc)
     schedule.overdue = False
     # Update next due date based on frequency
     await db.commit()
@@ -320,7 +320,7 @@ async def close_breakdown(
         raise HTTPException(status_code=404, detail="Breakdown record not found")
     
     breakdown.status = "closed"
-    breakdown.end_time = datetime.utcnow()
+    breakdown.end_time = datetime.now(timezone.utc)
     await db.commit()
     return {"message": "Breakdown closed successfully"}
 
