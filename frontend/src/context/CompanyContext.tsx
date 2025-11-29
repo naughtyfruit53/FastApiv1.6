@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { authService } from "../services/authService";
+import { authService, companyService } from "../services/authService";
 import { useAuth } from "./AuthContext";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
@@ -37,7 +37,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
   } = useQuery({
     queryKey: ["currentCompany"],
     queryFn: async () => {
-      const response = await authService.getCurrentCompany();
+      const response = await companyService.getCurrentCompany();
       const companyData = {
         ...response,
         state_code: response.state_code || response.gst_number?.slice(0, 2) || null,
