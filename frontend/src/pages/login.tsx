@@ -122,18 +122,6 @@ const LoginPage = () => {
           style={{ maxWidth: "100%", height: "auto", marginBottom: "8px" }}
           priority
         />
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: '#4A5568', 
-            fontWeight: 300, 
-            mb: 3,
-            fontStyle: 'italic',
-            letterSpacing: '0.05em'
-          }}
-        >
-          {TRITIQ_TAGLINE}
-        </Typography>
         <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: "stretch", mt: 2, gap: 2 }}>
           <Box sx={{ flex: 1 }}>
             <Box sx={{ p: 3 }}>
