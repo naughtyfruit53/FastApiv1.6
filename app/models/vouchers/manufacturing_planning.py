@@ -371,9 +371,15 @@ class QCTemplate(Base):
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     test_name = Column(String, nullable=False)
+    description = Column(Text)
+    parameters = Column(Text)  # JSON string of specs with target values
     tolerance_min = Column(Float)
     tolerance_max = Column(Float)
     unit = Column(String)
+    method = Column(String)  # Test method
+    sampling_size = Column(Integer)
+    version = Column(String, default="1.0")
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -389,9 +395,19 @@ class QCInspection(Base):
     id = Column(Integer, primary_key=True, index=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
     batch_id = Column(Integer, nullable=False)  # Link to batch
+    work_order_id = Column(Integer, ForeignKey("manufacturing_orders.id"))
+    item_id = Column(Integer, ForeignKey("products.id"))
+    template_id = Column(Integer, ForeignKey("qc_templates.id"))
     inspector = Column(String, nullable=False)
+    scheduled_date = Column(DateTime(timezone=True))
     test_results = Column(Text, nullable=False)  # JSON of tests
-    overall_status = Column(String, nullable=False)  # pass/fail
+    measurements = Column(Text)  # JSON string of measurements vs template specs
+    photos = Column(Text)  # JSON string of photo URLs
+    overall_status = Column(String, nullable=False, default="pending")  # pending/pass/fail
+    status = Column(String, default="draft")  # draft, in_progress, completed
+    notes = Column(Text)
+    signed_off_by = Column(Integer, ForeignKey("users.id"))
+    signed_off_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -404,8 +420,19 @@ class Rejection(Base):
     id = Column(Integer, primary_key=True, index=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
     qc_inspection_id = Column(Integer, ForeignKey("qc_inspections.id"), nullable=False)
+    work_order_id = Column(Integer, ForeignKey("manufacturing_orders.id"))
+    lot_number = Column(String)
     reason = Column(Text, nullable=False)
+    reason_code = Column(String)
+    quantity = Column(Float, default=0.0)
+    ncr_reference = Column(String)  # Non-Conformance Report reference
+    mrb_reference = Column(String)  # Material Review Board reference
+    disposition = Column(String)  # rework, scrap, return
     rework_required = Column(Boolean, default=False)
+    notes = Column(Text)
+    approval_status = Column(String, default="pending")  # pending, approved, rejected
+    approved_by = Column(Integer, ForeignKey("users.id"))
+    approved_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -420,14 +447,20 @@ class InventoryAdjustment(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
-    type = Column(String, nullable=False)  # increase, decrease, etc.
+    type = Column(String, nullable=False)  # increase, decrease, conversion, wip, write-off
     item_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     batch_number = Column(String)
     old_quantity = Column(Float, nullable=False)
     new_quantity = Column(Float, nullable=False)
-    reason = Column(String, nullable=False)
+    reason = Column(String, nullable=False)  # audit, damage, wastage, theft, error, remeasure
+    reason_code = Column(String)
+    reference_doc = Column(String)
     documents = Column(Text)  # JSON paths
+    comment = Column(Text)  # Required comment for audit trail
+    status = Column(String, default="pending")  # pending, approved, rejected
     approved_by = Column(String)
+    approved_at = Column(DateTime(timezone=True))
+    created_by = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
