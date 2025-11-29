@@ -47,7 +47,6 @@ import voucherFormStyles from "../../../styles/voucherFormStyles";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form";
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance";
-import { formatCurrency } from "../../../utils/currencyUtils";
 import Link from 'next/link';
 import { toast } from "react-toastify"; // Added for toast notifications
 import { useAuth } from '../../../context/AuthContext';

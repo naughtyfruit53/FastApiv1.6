@@ -25,7 +25,7 @@ import {
   MenuItem,
   Menu,
 } from "@mui/material";
-import { Refresh, Download, Add, Edit, CheckCircle, MoreVert } from "@mui/icons-material";
+import { Refresh, Download, Add, MoreVert } from "@mui/icons-material";
 import axios from "axios";
 import { formatCurrency } from "../utils/currencyUtils";
 import { ProtectedPage } from "../components/ProtectedPage";

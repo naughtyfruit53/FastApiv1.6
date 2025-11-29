@@ -1,7 +1,7 @@
 // frontend/src/pages/login.tsx
 "use client";
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Container, Button, Divider } from "@mui/material";
+import { Box, Container, Button, Divider } from "@mui/material";
 import { PlayArrow } from "@mui/icons-material";
 import Image from "next/image";
 import { toast } from "react-toastify";
