@@ -1137,8 +1137,8 @@ const BreakdownTab: React.FC = () => {
                 SLA
               </Typography>
 
-              <Alert severity={false ? "error" : "success"} sx={{ mb: 1 }}>
-                SLA Status: Within acceptable limits
+              <Alert severity="info" sx={{ mb: 1 }}>
+                SLA Status: To be computed based on downtime thresholds
               </Alert>
 
               <Divider sx={{ my: 1 }} />

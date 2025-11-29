@@ -573,7 +573,7 @@ const InspectionsTab: React.FC = () => {
 
   // Auto-compute pass/fail when template is selected
   useEffect(() => {
-    if (watchTemplateId && templates) {
+    if (watchTemplateId && Array.isArray(templates) && templates.length > 0) {
       const selectedTemplate = templates.find((t: QCTemplate) => t.id === watchTemplateId);
       if (selectedTemplate) {
         // Template-based status initialization
