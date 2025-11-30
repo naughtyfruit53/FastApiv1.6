@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   Typography,
-  Grid,
   Table,
   TableBody,
   TableCell,
@@ -17,6 +16,7 @@ import {
   Button,
   IconButton,
 } from "@mui/material";
+import Grid from '@mui/material/Grid';
 import { Refresh, Download, Print } from "@mui/icons-material";
 import { Pie } from "react-chartjs-2";
 import {
@@ -25,7 +25,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import axios from "axios";
+import api from "../services/api/client";
 import { formatCurrency } from "../utils/currencyUtils";
 
 import { ProtectedPage } from '../components/ProtectedPage';
@@ -62,14 +62,32 @@ const VendorAgingPage: React.FC = () => {
   const fetchAgingData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/finance/analytics/vendor-aging", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/finance/analytics/vendor-aging");
       setData(response.data);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to fetch vendor aging data");
+      let errorMessage = "Failed to fetch vendor aging data";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.detail) {
+          if (typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (typeof data.detail === 'object' && data.detail !== null) {
+            errorMessage = data.detail.message || data.detail.error || JSON.stringify(data.detail);
+          }
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (typeof data === 'object' && data !== null) {
+          errorMessage = JSON.stringify(data);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -153,8 +171,8 @@ const VendorAgingPage: React.FC = () => {
       </Box>
 
       {/* Summary Cards */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} md={4}>
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -166,7 +184,7 @@ const VendorAgingPage: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -178,7 +196,7 @@ const VendorAgingPage: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Card>
             <CardContent>
               <Typography color="textSecondary" gutterBottom>
@@ -194,7 +212,7 @@ const VendorAgingPage: React.FC = () => {
 
       {/* Chart and Table */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -206,7 +224,7 @@ const VendorAgingPage: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid xs={12} md={6}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>

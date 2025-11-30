@@ -119,7 +119,7 @@ async def get_finance_analytics_dashboard(
     stmt = select(func.sum(AccountsPayable.outstanding_amount)).where(
         AccountsPayable.organization_id == organization_id,
         AccountsPayable.due_date < date.today(),
-        AccountsPayable.payment_status == 'pending'
+        AccountsPayable.status == 'pending'
     )
     result = await db.execute(stmt)
     overdue_ap = result.scalar() or 0
@@ -127,7 +127,7 @@ async def get_finance_analytics_dashboard(
     stmt = select(func.sum(AccountsReceivable.outstanding_amount)).where(
         AccountsReceivable.organization_id == organization_id,
         AccountsReceivable.due_date < date.today(),
-        AccountsReceivable.payment_status == 'pending'
+        AccountsReceivable.status == 'pending'
     )
     result = await db.execute(stmt)
     overdue_ar = result.scalar() or 0
@@ -474,78 +474,82 @@ async def get_vendor_aging(
     db: AsyncSession = Depends(get_db)
 ):
     """Get vendor aging analysis"""
-    current_user, organization_id = auth
-    today = date.today()
-    
-    # Get all outstanding payables
-    stmt = select(AccountsPayable).where(
-        AccountsPayable.organization_id == organization_id,
-        AccountsPayable.payment_status.in_(['pending', 'partial'])
-    )
-    result = await db.execute(stmt)
-    payables = result.scalars().all()
-    
-    # Initialize aging buckets
-    aging_buckets = {
-        "current": {"amount": 0, "count": 0, "vendors": set()},
-    }
-    
-    for period in aging_periods:
-        aging_buckets[f"{period}_days"] = {"amount": 0, "count": 0, "vendors": set()}
-    
-    aging_buckets["over_90"] = {"amount": 0, "count": 0, "vendors": set()}
-    
-    # Categorize payables into aging buckets
-    for payable in payables:
-        if payable.due_date and payable.outstanding_amount:
-            days_overdue = (today - payable.due_date).days
-            amount = float(payable.outstanding_amount)
-            
-            if days_overdue <= 0:
-                aging_buckets["current"]["amount"] += amount
-                aging_buckets["current"]["count"] += 1
-                if payable.vendor_id:
-                    aging_buckets["current"]["vendors"].add(payable.vendor_id)
-            elif days_overdue <= aging_periods[0]:
-                bucket_key = f"{aging_periods[0]}_days"
-                aging_buckets[bucket_key]["amount"] += amount
-                aging_buckets[bucket_key]["count"] += 1
-                if payable.vendor_id:
-                    aging_buckets[bucket_key]["vendors"].add(payable.vendor_id)
-            elif len(aging_periods) > 1 and days_overdue <= aging_periods[1]:
-                bucket_key = f"{aging_periods[1]}_days"
-                aging_buckets[bucket_key]["amount"] += amount
-                aging_buckets[bucket_key]["count"] += 1
-                if payable.vendor_id:
-                    aging_buckets[bucket_key]["vendors"].add(payable.vendor_id)
-            elif len(aging_periods) > 2 and days_overdue <= aging_periods[2]:
-                bucket_key = f"{aging_periods[2]}_days"
-                aging_buckets[bucket_key]["amount"] += amount
-                aging_buckets[bucket_key]["count"] += 1
-                if payable.vendor_id:
-                    aging_buckets[bucket_key]["vendors"].add(payable.vendor_id)
-            else:
-                aging_buckets["over_90"]["amount"] += amount
-                aging_buckets["over_90"]["count"] += 1
-                if payable.vendor_id:
-                    aging_buckets["over_90"]["vendors"].add(payable.vendor_id)
-    
-    # Convert sets to counts
-    for bucket in aging_buckets.values():
-        bucket["vendors"] = len(bucket["vendors"])
-    
-    total_outstanding = sum(bucket["amount"] for bucket in aging_buckets.values())
-    
-    return {
-        "as_of_date": today,
-        "aging_buckets": aging_buckets,
-        "total_outstanding": total_outstanding,
-        "summary": {
-            "total_vendors": len(payables),
-            "total_invoices": len(payables),
-            "total_outstanding": total_outstanding
+    try:
+        current_user, organization_id = auth
+        today = date.today()
+        
+        # Get all outstanding payables
+        stmt = select(AccountsPayable).where(
+            AccountsPayable.organization_id == organization_id,
+            AccountsPayable.status.in_(['pending', 'partial'])
+        )
+        result = await db.execute(stmt)
+        payables = result.scalars().all()
+        
+        # Initialize aging buckets
+        aging_buckets = {
+            "current": {"amount": 0, "count": 0, "vendors": set()},
         }
-    }
+        
+        for period in aging_periods:
+            aging_buckets[f"{period}_days"] = {"amount": 0, "count": 0, "vendors": set()}
+        
+        aging_buckets["over_90"] = {"amount": 0, "count": 0, "vendors": set()}
+        
+        # Categorize payables into aging buckets
+        for payable in payables:
+            if payable.due_date and payable.outstanding_amount:
+                days_overdue = (today - payable.due_date).days
+                amount = float(payable.outstanding_amount)
+                
+                if days_overdue <= 0:
+                    aging_buckets["current"]["amount"] += amount
+                    aging_buckets["current"]["count"] += 1
+                    if payable.vendor_id:
+                        aging_buckets["current"]["vendors"].add(payable.vendor_id)
+                elif days_overdue <= aging_periods[0]:
+                    bucket_key = f"{aging_periods[0]}_days"
+                    aging_buckets[bucket_key]["amount"] += amount
+                    aging_buckets[bucket_key]["count"] += 1
+                    if payable.vendor_id:
+                        aging_buckets[bucket_key]["vendors"].add(payable.vendor_id)
+                elif len(aging_periods) > 1 and days_overdue <= aging_periods[1]:
+                    bucket_key = f"{aging_periods[1]}_days"
+                    aging_buckets[bucket_key]["amount"] += amount
+                    aging_buckets[bucket_key]["count"] += 1
+                    if payable.vendor_id:
+                        aging_buckets[bucket_key]["vendors"].add(payable.vendor_id)
+                elif len(aging_periods) > 2 and days_overdue <= aging_periods[2]:
+                    bucket_key = f"{aging_periods[2]}_days"
+                    aging_buckets[bucket_key]["amount"] += amount
+                    aging_buckets[bucket_key]["count"] += 1
+                    if payable.vendor_id:
+                        aging_buckets[bucket_key]["vendors"].add(payable.vendor_id)
+                else:
+                    aging_buckets["over_90"]["amount"] += amount
+                    aging_buckets["over_90"]["count"] += 1
+                    if payable.vendor_id:
+                        aging_buckets["over_90"]["vendors"].add(payable.vendor_id)
+        
+        # Convert sets to counts
+        for bucket in aging_buckets.values():
+            bucket["vendors"] = len(bucket["vendors"])
+        
+        total_outstanding = sum(bucket["amount"] for bucket in aging_buckets.values())
+        
+        return {
+            "as_of_date": today,
+            "aging_buckets": aging_buckets,
+            "total_outstanding": total_outstanding,
+            "summary": {
+                "total_vendors": len(payables),
+                "total_invoices": len(payables),
+                "total_outstanding": total_outstanding
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error in get_vendor_aging: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/analytics/customer-aging")
@@ -555,78 +559,82 @@ async def get_customer_aging(
     db: AsyncSession = Depends(get_db)
 ):
     """Get customer aging analysis"""
-    current_user, organization_id = auth
-    today = date.today()
-    
-    # Get all outstanding receivables
-    stmt = select(AccountsReceivable).where(
-        AccountsReceivable.organization_id == organization_id,
-        AccountsReceivable.payment_status.in_(['pending', 'partial'])
-    )
-    result = await db.execute(stmt)
-    receivables = result.scalars().all()
-    
-    # Initialize aging buckets
-    aging_buckets = {
-        "current": {"amount": 0, "count": 0, "customers": set()},
-    }
-    
-    for period in aging_periods:
-        aging_buckets[f"{period}_days"] = {"amount": 0, "count": 0, "customers": set()}
-    
-    aging_buckets["over_90"] = {"amount": 0, "count": 0, "customers": set()}
-    
-    # Categorize receivables into aging buckets
-    for receivable in receivables:
-        if receivable.due_date and receivable.outstanding_amount:
-            days_overdue = (today - receivable.due_date).days
-            amount = float(receivable.outstanding_amount)
-            
-            if days_overdue <= 0:
-                aging_buckets["current"]["amount"] += amount
-                aging_buckets["current"]["count"] += 1
-                if receivable.customer_id:
-                    aging_buckets["current"]["customers"].add(receivable.customer_id)
-            elif days_overdue <= aging_periods[0]:
-                bucket_key = f"{aging_periods[0]}_days"
-                aging_buckets[bucket_key]["amount"] += amount
-                aging_buckets[bucket_key]["count"] += 1
-                if receivable.customer_id:
-                    aging_buckets[bucket_key]["customers"].add(receivable.customer_id)
-            elif len(aging_periods) > 1 and days_overdue <= aging_periods[1]:
-                bucket_key = f"{aging_periods[1]}_days"
-                aging_buckets[bucket_key]["amount"] += amount
-                aging_buckets[bucket_key]["count"] += 1
-                if receivable.customer_id:
-                    aging_buckets[bucket_key]["customers"].add(receivable.customer_id)
-            elif len(aging_periods) > 2 and days_overdue <= aging_periods[2]:
-                bucket_key = f"{aging_periods[2]}_days"
-                aging_buckets[bucket_key]["amount"] += amount
-                aging_buckets[bucket_key]["count"] += 1
-                if receivable.customer_id:
-                    aging_buckets[bucket_key]["customers"].add(receivable.customer_id)
-            else:
-                aging_buckets["over_90"]["amount"] += amount
-                aging_buckets["over_90"]["count"] += 1
-                if receivable.customer_id:
-                    aging_buckets["over_90"]["customers"].add(receivable.customer_id)
-    
-    # Convert sets to counts
-    for bucket in aging_buckets.values():
-        bucket["customers"] = len(bucket["customers"])
-    
-    total_outstanding = sum(bucket["amount"] for bucket in aging_buckets.values())
-    
-    return {
-        "as_of_date": today,
-        "aging_buckets": aging_buckets,
-        "total_outstanding": total_outstanding,
-        "summary": {
-            "total_customers": len(receivables),
-            "total_invoices": len(receivables),
-            "total_outstanding": total_outstanding
+    try:
+        current_user, organization_id = auth
+        today = date.today()
+        
+        # Get all outstanding receivables
+        stmt = select(AccountsReceivable).where(
+            AccountsReceivable.organization_id == organization_id,
+            AccountsReceivable.status.in_(['pending', 'partial'])
+        )
+        result = await db.execute(stmt)
+        receivables = result.scalars().all()
+        
+        # Initialize aging buckets
+        aging_buckets = {
+            "current": {"amount": 0, "count": 0, "customers": set()},
         }
-    }
+        
+        for period in aging_periods:
+            aging_buckets[f"{period}_days"] = {"amount": 0, "count": 0, "customers": set()}
+        
+        aging_buckets["over_90"] = {"amount": 0, "count": 0, "customers": set()}
+        
+        # Categorize receivables into aging buckets
+        for receivable in receivables:
+            if receivable.due_date and receivable.outstanding_amount:
+                days_overdue = (today - receivable.due_date).days
+                amount = float(receivable.outstanding_amount)
+                
+                if days_overdue <= 0:
+                    aging_buckets["current"]["amount"] += amount
+                    aging_buckets["current"]["count"] += 1
+                    if receivable.customer_id:
+                        aging_buckets["current"]["customers"].add(receivable.customer_id)
+                elif days_overdue <= aging_periods[0]:
+                    bucket_key = f"{aging_periods[0]}_days"
+                    aging_buckets[bucket_key]["amount"] += amount
+                    aging_buckets[bucket_key]["count"] += 1
+                    if receivable.customer_id:
+                        aging_buckets[bucket_key]["customers"].add(receivable.customer_id)
+                elif len(aging_periods) > 1 and days_overdue <= aging_periods[1]:
+                    bucket_key = f"{aging_periods[1]}_days"
+                    aging_buckets[bucket_key]["amount"] += amount
+                    aging_buckets[bucket_key]["count"] += 1
+                    if receivable.customer_id:
+                        aging_buckets[bucket_key]["customers"].add(receivable.customer_id)
+                elif len(aging_periods) > 2 and days_overdue <= aging_periods[2]:
+                    bucket_key = f"{aging_periods[2]}_days"
+                    aging_buckets[bucket_key]["amount"] += amount
+                    aging_buckets[bucket_key]["count"] += 1
+                    if receivable.customer_id:
+                        aging_buckets[bucket_key]["customers"].add(receivable.customer_id)
+                else:
+                    aging_buckets["over_90"]["amount"] += amount
+                    aging_buckets["over_90"]["count"] += 1
+                    if receivable.customer_id:
+                        aging_buckets["over_90"]["customers"].add(receivable.customer_id)
+        
+        # Convert sets to counts
+        for bucket in aging_buckets.values():
+            bucket["customers"] = len(bucket["customers"])
+        
+        total_outstanding = sum(bucket["amount"] for bucket in aging_buckets.values())
+        
+        return {
+            "as_of_date": today,
+            "aging_buckets": aging_buckets,
+            "total_outstanding": total_outstanding,
+            "summary": {
+                "total_customers": len(receivables),
+                "total_invoices": len(receivables),
+                "total_outstanding": total_outstanding
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error in get_customer_aging: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/analytics/budgets")
