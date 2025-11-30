@@ -119,7 +119,8 @@ class RBACHelper:
             List[str]: List of permission names
         """
         rbac_service = RBACService(db)
-        return await rbac_service.get_user_service_permissions(user_id)
+        permissions = await rbac_service.get_user_permissions(user_id)
+        return list(permissions)
 
     @staticmethod
     async def has_permission(
