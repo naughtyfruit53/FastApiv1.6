@@ -139,8 +139,9 @@ async def create_sales_order(
             voucher_date = invoice_data['date'] if hasattr(invoice_data['date'], 'year') else None
         
         # Handle revisions: If parent_id provided, generate revised number
-        if invoice.parent_id:
-            stmt = select(SalesOrder).where(SalesOrder.id == invoice.parent_id)
+        parent_id = getattr(invoice, 'parent_id', None)
+        if parent_id:
+            stmt = select(SalesOrder).where(SalesOrder.id == parent_id)
             result = await db.execute(stmt)
             parent = result.scalar_one_or_none()
             if not parent:
@@ -156,13 +157,13 @@ async def create_sales_order(
             
             invoice_data['revision_number'] = latest_revision + 1
             invoice_data['voucher_number'] = f"{parent.voucher_number} Rev {invoice_data['revision_number']}"
-            invoice_data['parent_id'] = invoice.parent_id
+            invoice_data['parent_id'] = parent_id
         else:
             # Generate unique voucher number if not provided or blank
             if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
                 invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "SO", org_id, SalesOrder, voucher_date=voucher_date
-            )
+                    db, "SO", org_id, SalesOrder, voucher_date=voucher_date
+                )
             else:
                 stmt = select(SalesOrder).where(
                     SalesOrder.organization_id == org_id,
@@ -172,8 +173,8 @@ async def create_sales_order(
                 existing = result.scalar_one_or_none()
                 if existing:
                     invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "SO", org_id, SalesOrder, voucher_date=voucher_date
-            )
+                        db, "SO", org_id, SalesOrder, voucher_date=voucher_date
+                    )
         
         db_invoice = SalesOrder(**invoice_data)
         db.add(db_invoice)

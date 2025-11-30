@@ -115,16 +115,17 @@ class TestJWTMalformedTokenHandling:
     def test_malformed_token_structure_detection(self):
         """Test that malformed token structure is detected"""
         def check_token_structure(token: str) -> bool:
-            """Check if token has correct JWT structure (3 parts)"""
+            """Check if token has correct JWT structure (3 parts = 2 dots)"""
             return token.count('.') == 2
         
-        # Valid structure
+        # Valid structure (2 dots = 3 parts)
         assert check_token_structure("header.payload.signature") is True
         
         # Invalid structure
         assert check_token_structure("invalid-token-without-dots") is False
-        assert check_token_structure("only.two.parts") is True
+        assert check_token_structure("only.one.part") is True  # This has 2 dots, which is valid structure
         assert check_token_structure("") is False
+        assert check_token_structure("one.dot") is False  # Only 1 dot
 
     def test_structured_error_response_format(self):
         """Test that error responses are properly structured"""
@@ -155,13 +156,20 @@ class TestSalesOrderNextNumber:
 
     def test_voucher_date_affects_period(self):
         """Test that voucher date affects period segment"""
-        # Test monthly period
+        # Test monthly period calculation
         month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
                       'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
         
+        # Verify all 12 months are correctly mapped
+        assert len(month_names) == 12
+        assert month_names[0] == 'JAN'  # January
+        assert month_names[11] == 'DEC'  # December
+        
+        # Test that index-based lookup works for all months
         for month in range(1, 13):
-            assert month_names[month - 1] == ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
-                                              'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][month - 1]
+            period = month_names[month - 1]
+            assert isinstance(period, str)
+            assert len(period) == 3  # All month codes are 3 characters
 
     def test_fiscal_year_calculation(self):
         """Test Indian fiscal year calculation (April to March)"""
