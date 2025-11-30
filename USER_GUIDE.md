@@ -310,6 +310,248 @@ Navigate to: **HR** → **Attendance**
 
 ---
 
+## HR Module (Phase 2 - Advanced Features)
+
+Phase 2 introduces advanced payroll, attendance policies, and employee self-service capabilities.
+
+### Employee Self-Service Portal
+
+Navigate to: **HR** → **Self-Service**
+
+Employees can access their own information through the self-service portal:
+
+#### Leave Requests
+
+| Feature | Description |
+|---------|-------------|
+| Apply Leave | Submit new leave applications |
+| View History | See past leave requests and status |
+| Check Balance | View available leave balances |
+| Track Status | Monitor approval status |
+
+**Applying for Leave:**
+1. Click "Apply Leave" button
+2. Select leave type from dropdown
+3. Enter start and end dates
+4. Provide reason for leave
+5. Submit for approval
+
+#### Attendance Self-Service
+
+| Feature | Description |
+|---------|-------------|
+| Clock In/Out | Self-service attendance marking |
+| View Records | See attendance history |
+| Request Corrections | Submit attendance correction requests |
+| Export Data | Download attendance reports |
+
+**Clock In/Out Process:**
+1. Navigate to Self-Service → Attendance
+2. Click "Clock In" to start your work day
+3. Clock shows current status and time
+4. Click "Clock Out" when leaving
+5. System calculates hours automatically
+
+#### Payslip Downloads
+
+| Feature | Description |
+|---------|-------------|
+| View Payslips | Access monthly payslips |
+| Download PDF | Generate PDF payslip |
+| View History | Access past payslips |
+| Year-to-Date | View cumulative earnings |
+
+### Advanced Payroll (HR Admins)
+
+#### Salary Structure Management
+
+Navigate to: **HR** → **Payroll** → **Salary Structures**
+
+| Component | Description |
+|-----------|-------------|
+| Basic Salary | Core monthly salary |
+| HRA | House Rent Allowance |
+| Transport | Travel allowance |
+| Medical | Medical benefits |
+| Special | Special allowances |
+| Variable | Performance-based pay |
+
+#### Payroll Processing
+
+**Monthly Payroll Workflow:**
+1. **Create Period** - Define payroll period (e.g., "January 2024")
+2. **Process Attendance** - Import attendance data
+3. **Apply Deductions** - Calculate PF, PT, TDS
+4. **Generate Payslips** - Create individual payslips
+5. **Review & Approve** - Multi-level approval workflow
+6. **Disburse** - Generate bank payment files
+
+#### Statutory Deductions
+
+The system supports Indian statutory deductions:
+
+| Deduction | Rate | Details |
+|-----------|------|---------|
+| Provident Fund (PF) | 12% | On basic salary up to ₹15,000 |
+| Professional Tax (PT) | Fixed | State-specific (₹200/month typical) |
+| TDS | Slab-based | Income tax deduction |
+| ESI | 0.75% | For gross salary < ₹21,000 |
+
+#### Loans and Advances
+
+Navigate to: **HR** → **Payroll** → **Loans**
+
+| Loan Type | Description |
+|-----------|-------------|
+| Salary Advance | Short-term advance |
+| Personal Loan | Employee loan with EMI |
+| Emergency Loan | Emergency financial support |
+
+**Loan Workflow:**
+1. Employee submits loan application
+2. HR reviews and approves
+3. Finance disburses amount
+4. EMI deducted from monthly payroll
+5. Loan closes when fully repaid
+
+### Attendance Policies
+
+Navigate to: **HR** → **Settings** → **Attendance Policies**
+
+#### Accrual Rules
+
+| Setting | Description |
+|---------|-------------|
+| Accrual Type | Monthly, annual, or per pay period |
+| Accrual Rate | Days accrued per period |
+| Maximum Accrual | Cap on accrued days |
+
+#### Carry Forward Rules
+
+| Setting | Description |
+|---------|-------------|
+| Enabled | Allow carry forward |
+| Max Days | Maximum days to carry |
+| Expiry | Months until carried leave expires |
+
+#### Overtime Calculation
+
+| Setting | Description |
+|---------|-------------|
+| Threshold | Hours before overtime kicks in |
+| Multiplier | Regular overtime rate (e.g., 1.5x) |
+| Weekend Rate | Weekend overtime rate (e.g., 2x) |
+| Holiday Rate | Holiday overtime rate (e.g., 2.5x) |
+
+### Timesheets (Feature-Flagged)
+
+Navigate to: **HR** → **Timesheets**
+
+Weekly/monthly timesheet tracking for detailed time allocation:
+
+| Field | Description |
+|-------|-------------|
+| Period | Timesheet week/month |
+| Daily Hours | Hours logged per day |
+| Project | Project allocation |
+| Overtime | Extra hours worked |
+| Status | Draft, Submitted, Approved |
+
+**Timesheet Workflow:**
+1. Employee enters daily hours
+2. Submits timesheet for approval
+3. Manager reviews and approves/rejects
+4. Approved timesheets feed into payroll
+
+### Arrears and Retro Adjustments
+
+Navigate to: **HR** → **Payroll** → **Arrears**
+
+Handle salary revisions and backdated adjustments:
+
+| Type | Description |
+|------|-------------|
+| Salary Revision | Backdated salary increase |
+| Bonus | One-time payment |
+| Allowance | Additional allowance |
+| Deduction | Recovery or correction |
+
+### Bank Payment Export
+
+Generate payment files for bulk salary disbursement:
+
+| Format | Bank |
+|--------|------|
+| NEFT/RTGS | All banks |
+| CSV | Generic format |
+| Bank-Specific | HDFC, ICICI, SBI, etc. |
+
+### Approval Workflows
+
+Multi-level approval for payroll:
+
+| Level | Role | Action |
+|-------|------|--------|
+| 1 | HR Manager | Initial review |
+| 2 | Finance Head | Budget approval |
+| 3 | CFO/Director | Final approval |
+
+---
+
+## Phase 4 Features (Scaffolding - Feature-Flagged)
+
+The following features are available as scaffolding with feature flags:
+
+### HR Analytics Dashboard
+
+Navigate to: **HR** → **Analytics** (when enabled)
+
+| Metric | Description |
+|--------|-------------|
+| Headcount | Total and active employees |
+| Attrition Rate | Employee turnover percentage |
+| Average Tenure | Mean employment duration |
+| Payroll Cost | Total compensation expense |
+| Department Breakdown | Headcount by department |
+
+### Position Budgeting
+
+Navigate to: **HR** → **Planning** → **Position Budget** (when enabled)
+
+| Field | Description |
+|-------|-------------|
+| Fiscal Year | Budget year |
+| Position | Job position |
+| Budgeted Headcount | Planned positions |
+| Actual Headcount | Current filled positions |
+| Salary Budget | Allocated salary cost |
+
+### Transfer History
+
+Navigate to: **HR** → **Planning** → **Transfers** (when enabled)
+
+Track employee movements:
+
+| Transfer Type | Description |
+|---------------|-------------|
+| Department | Move between departments |
+| Location | Office/location change |
+| Position | Role change |
+| Promotion | Advancement with salary change |
+
+### Integration Adapters (Configuration)
+
+Navigate to: **Settings** → **Integrations** → **HR Adapters** (when enabled)
+
+| Adapter Type | Examples |
+|--------------|----------|
+| SSO/IdP | Okta, Azure AD, Auth0 |
+| Payroll Provider | ADP, Greythr |
+| Attendance Hardware | Biometric devices, Access cards |
+| ERP | SAP, Oracle |
+
+---
+
 ## AI Chatbot
 
 The AI Chatbot provides intelligent assistance throughout the application.

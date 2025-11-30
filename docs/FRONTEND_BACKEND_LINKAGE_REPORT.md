@@ -135,12 +135,34 @@ This document provides a comprehensive mapping between frontend pages/components
 | `/hr/dashboard.tsx` | `/api/v1/hr/dashboard` | `hrService.ts` | ✅ Connected |
 | `/hr/employees.tsx` | `/api/v1/hr/employees/*` | `hrService.ts` | ✅ Connected |
 | `/hr/employees-directory.tsx` | `/api/v1/hr/employees/*` | `hrService.ts` | ✅ Connected |
-| - | `/api/v1/hr/departments/*` | `hrService.ts` | ✅ API Ready |
-| - | `/api/v1/hr/positions/*` | `hrService.ts` | ✅ API Ready |
-| - | `/api/v1/hr/shifts/*` | `hrService.ts` | ✅ API Ready |
-| - | `/api/v1/hr/holidays/*` | `hrService.ts` | ✅ API Ready |
-| - | `/api/v1/hr/attendance/clock-in` | `hrService.ts` | ✅ API Ready |
-| - | `/api/v1/hr/attendance/clock-out` | `hrService.ts` | ✅ API Ready |
+| `/hr/self-service/index.tsx` | `/api/v1/hr/attendance/*`, `/api/v1/hr/leave-applications/*` | `hrService.ts` | ✅ Connected |
+| - | `/api/v1/hr/departments/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| - | `/api/v1/hr/positions/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| - | `/api/v1/hr/shifts/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| - | `/api/v1/hr/holidays/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| - | `/api/v1/hr/attendance/clock-in` | `hrService.ts` | ✅ API Ready + Service Methods |
+| - | `/api/v1/hr/attendance/clock-out` | `hrService.ts` | ✅ API Ready + Service Methods |
+
+### HR Module (Phase 2 - Advanced)
+
+| Feature | Backend Model/API | Service File | Status |
+|---------|------------------|--------------|--------|
+| Attendance Policies | `AttendancePolicy` model | `hrService.ts` | ✅ Model Ready |
+| Leave Balances | `LeaveBalance` model | `hrService.ts` | ✅ Model Ready |
+| Timesheets | `Timesheet` model | `hrService.ts` | ✅ Model Ready (Feature-flagged) |
+| Payroll Arrears | `PayrollArrear` model | `hrService.ts` | ✅ Model Ready |
+| Statutory Deductions | `StatutoryDeduction` model | `hrService.ts` | ✅ Model Ready |
+| Bank Exports | `BankPaymentExport` model | `hrService.ts` | ✅ Model Ready |
+| Approval Workflow | `PayrollApproval` model | `hrService.ts` | ✅ Model Ready |
+
+### Phase 4 Scaffolding (Feature-flagged)
+
+| Feature | Backend Model/API | Status |
+|---------|------------------|--------|
+| HR Analytics | `HRAnalyticsSnapshot` model | ✅ Model Ready (Feature-flagged) |
+| Position Budgeting | `PositionBudget` model | ✅ Model Ready (Feature-flagged) |
+| Transfer History | `EmployeeTransfer` model | ✅ Model Ready (Feature-flagged) |
+| Integration Adapters | `IntegrationAdapter` model | ✅ Model Ready (Feature-flagged) |
 
 ### AI & Analytics Module
 
