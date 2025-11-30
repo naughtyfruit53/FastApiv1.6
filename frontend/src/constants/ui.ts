@@ -67,23 +67,23 @@ export const DEFAULT_DEPARTMENTS = [
 
 export type Department = typeof DEFAULT_DEPARTMENTS[number];
 
-// Role hierarchy for dashboard display
-export const ROLE_HIERARCHY = {
+// Role hierarchy for dashboard display - type-safe definition
+export const ROLE_HIERARCHY: Record<string, readonly string[]> = {
   // App-level admin roles
-  app_admin: ["super_admin", "app_admin"],
+  app_admin: ["super_admin", "app_admin"] as const,
   // Organization admin roles
-  admin: ["admin", "org_admin"],
+  admin: ["admin", "org_admin"] as const,
   // Management roles
-  management: ["management", "director", "ceo", "cfo", "coo", "vp", "head"],
+  management: ["management", "director", "ceo", "cfo", "coo", "vp", "head"] as const,
   // Manager roles
-  manager: ["manager", "team_lead", "supervisor", "lead", "senior"],
+  manager: ["manager", "team_lead", "supervisor", "lead", "senior"] as const,
   // Executive/Staff roles
-  executive: ["executive", "staff", "employee", "user", "associate"],
+  executive: ["executive", "staff", "employee", "user", "associate"] as const,
   // Viewer roles
-  viewer: ["viewer", "guest", "readonly"],
+  viewer: ["viewer", "guest", "readonly"] as const,
 } as const;
 
-export type DashboardRole = keyof typeof ROLE_HIERARCHY;
+export type DashboardRole = "app_admin" | "admin" | "management" | "manager" | "executive" | "viewer";
 
 // Common sx styles for reuse
 export const COMMON_STYLES = {

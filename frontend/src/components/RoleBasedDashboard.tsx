@@ -85,7 +85,7 @@ const getDashboardRole = (user: any): DashboardRole => {
   
   // Check against centralized role hierarchy
   for (const [dashboardRole, roles] of Object.entries(ROLE_HIERARCHY)) {
-    if ((roles as readonly string[]).includes(role)) {
+    if (roles.includes(role)) {
       return dashboardRole as DashboardRole;
     }
   }

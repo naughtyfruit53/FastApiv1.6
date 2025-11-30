@@ -48,9 +48,14 @@ export const formatCurrency = (
       maximumFractionDigits: config.decimals,
     }).format(amount);
   } catch (error) {
-    // Log error for debugging in development
+    // Log error with full context for debugging in development
     if (process.env.NODE_ENV === "development") {
-      console.warn(`Currency formatting failed for ${currency}:`, error);
+      console.warn(`Currency formatting failed:`, {
+        currency,
+        amount,
+        locale: finalLocale,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
     // Fallback for unsupported currencies
     const symbol = getCurrencySymbol(currency);

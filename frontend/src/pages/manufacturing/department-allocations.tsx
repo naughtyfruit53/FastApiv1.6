@@ -112,8 +112,11 @@ const DepartmentAllocationsPage: React.FC = () => {
       try {
         const response = await api.get("/manufacturing/departments");
         return response.data;
-      } catch {
-        // Return default departments from constants if API fails
+      } catch (error) {
+        // Log error and return default departments from constants
+        console.warn("Failed to fetch departments, using defaults:", 
+          error instanceof Error ? error.message : "Unknown error"
+        );
         return [...DEFAULT_DEPARTMENTS];
       }
     },
@@ -185,13 +188,18 @@ const DepartmentAllocationsPage: React.FC = () => {
     );
   }, [allocations, searchQuery]);
 
-  // Calculate summary stats - memoized
-  const summaryStats = useMemo(() => ({
-    totalAllocated: filteredAllocations.reduce((sum: number, a: DepartmentAllocation) => sum + a.quantity_allocated, 0),
-    totalReturned: filteredAllocations.reduce((sum: number, a: DepartmentAllocation) => sum + a.quantity_returned, 0),
-    totalPending: filteredAllocations.reduce((sum: number, a: DepartmentAllocation) => sum + a.quantity_pending, 0),
-    totalValue: filteredAllocations.reduce((sum: number, a: DepartmentAllocation) => sum + (a.total_value || 0), 0),
-  }), [filteredAllocations]);
+  // Calculate summary stats in single pass for performance - memoized
+  const summaryStats = useMemo(() => {
+    return filteredAllocations.reduce(
+      (stats, allocation: DepartmentAllocation) => ({
+        totalAllocated: stats.totalAllocated + allocation.quantity_allocated,
+        totalReturned: stats.totalReturned + allocation.quantity_returned,
+        totalPending: stats.totalPending + allocation.quantity_pending,
+        totalValue: stats.totalValue + (allocation.total_value || 0),
+      }),
+      { totalAllocated: 0, totalReturned: 0, totalPending: 0, totalValue: 0 }
+    );
+  }, [filteredAllocations]);
 
   if (error) {
     return (
