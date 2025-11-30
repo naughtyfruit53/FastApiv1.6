@@ -1,4 +1,8 @@
 # app/api/v1/vouchers/sales_order.py
+"""
+Sales Orders API - Unified at /api/v1/vouchers/sales-orders
+This is the single source of truth for sales order endpoints.
+"""
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
@@ -25,7 +29,8 @@ from app.utils.voucher_gst_helper import get_state_codes_for_sales
 import re  # Added for filename sanitization
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/vouchers/sales-orders", tags=["sales-orders"])
+# Router without prefix - prefix added by vouchers/__init__.py at /sales-orders
+router = APIRouter(tags=["sales-orders"])
 
 @router.get("", response_model=List[SalesOrderInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[SalesOrderInDB])
