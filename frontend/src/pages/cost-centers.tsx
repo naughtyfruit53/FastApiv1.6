@@ -71,6 +71,22 @@ interface CreateCostCenterData {
   description?: string;
 }
 
+// Standard cost center options for quick selection
+const standardCostCenters = [
+  { code: "ADMIN", name: "Administration", description: "Administrative functions and overhead" },
+  { code: "SALES", name: "Sales", description: "Sales and business development" },
+  { code: "MKTG", name: "Marketing", description: "Marketing and promotional activities" },
+  { code: "PROD", name: "Production", description: "Manufacturing and production operations" },
+  { code: "QA", name: "Quality Assurance", description: "Quality control and testing" },
+  { code: "RND", name: "Research & Development", description: "Product development and innovation" },
+  { code: "HR", name: "Human Resources", description: "Personnel and employee management" },
+  { code: "FIN", name: "Finance", description: "Financial operations and accounting" },
+  { code: "IT", name: "Information Technology", description: "IT infrastructure and support" },
+  { code: "LEGAL", name: "Legal", description: "Legal and compliance" },
+  { code: "FACIL", name: "Facilities", description: "Building and facilities management" },
+  { code: "PURCH", name: "Procurement", description: "Purchasing and vendor management" },
+];
+
 const CostCenters: React.FC = () => {
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +94,7 @@ const CostCenters: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedCostCenter, setSelectedCostCenter] = useState<CostCenter | null>(null);
+  const [showStandardNames, setShowStandardNames] = useState(false);
   // Create cost center form state
   const [createData, setCreateData] = useState<CreateCostCenterData>({
     cost_center_code: "",

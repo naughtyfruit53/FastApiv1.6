@@ -83,6 +83,7 @@ class SalesOrderCreate(VoucherBase):
     delivery_date: Optional[datetime] = None
     payment_terms: Optional[str] = None
     terms_conditions: Optional[str] = None
+    customer_voucher_number: Optional[str] = None  # Customer's PO/reference number
     additional_charges: Optional[Dict[str, float]] = None
     items: List[SalesOrderItemCreate] = []
 
@@ -91,6 +92,7 @@ class SalesOrderUpdate(BaseModel):
     delivery_date: Optional[datetime] = None
     payment_terms: Optional[str] = None
     terms_conditions: Optional[str] = None
+    customer_voucher_number: Optional[str] = None  # Customer's PO/reference number
     additional_charges: Optional[Dict[str, float]] = None
     total_amount: Optional[float] = None
     status: Optional[str] = None
@@ -102,6 +104,7 @@ class SalesOrderInDB(VoucherInDBBase):
     delivery_date: Optional[datetime]
     payment_terms: Optional[str]
     terms_conditions: Optional[str]
+    customer_voucher_number: Optional[str] = None  # Customer's PO/reference number
     additional_charges: Optional[Dict[str, float]] = None
     items: List[SalesOrderItemInDB]
 

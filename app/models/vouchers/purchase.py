@@ -124,6 +124,7 @@ class PurchaseVoucher(BaseVoucher):
     vehicle_number = Column(String)
     lr_rr_number = Column(String)
     e_way_bill_number = Column(String)
+    vendor_voucher_number = Column(String)  # Vendor's own voucher/invoice reference number
     additional_charges = Column(JSONB, default=dict)
     
     vendor = relationship("Vendor")
@@ -140,6 +141,7 @@ class PurchaseVoucher(BaseVoucher):
         Index('idx_pv_org_po', 'organization_id', 'purchase_order_id'),
         Index('idx_pv_org_grn', 'organization_id', 'grn_id'),
         Index('idx_pv_org_date', 'organization_id', 'date'),
+        Index('idx_pv_vendor_voucher_number', 'organization_id', 'vendor_voucher_number'),
     )
 
 class PurchaseVoucherItem(VoucherItemBase):
