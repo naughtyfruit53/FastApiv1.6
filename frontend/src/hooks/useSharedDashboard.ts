@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import adminService from '../services/adminService';
 import activityService, { RecentActivity } from '../services/activityService';
+import { useCurrency } from './useCurrency';
 
 export interface AppStatistics {
   total_licenses_issued: number;
@@ -67,6 +68,7 @@ export interface DashboardState {
  */
 export const useSharedDashboard = () => {
   const { user } = useAuth();
+  const { formatCurrency } = useCurrency();
   
   const [state, setState] = useState<DashboardState>({
     statistics: null,
@@ -282,7 +284,7 @@ export const useSharedDashboard = () => {
         },
         {
           title: "Monthly Sales",
-          value: `₹${(stats.monthly_sales ?? 0).toLocaleString()}`,
+          value: formatCurrency(stats.monthly_sales ?? 0),
           description: "Sales in last 30 days",
           trend: {
             value: stats.monthly_sales_trend ?? 0,
@@ -292,7 +294,7 @@ export const useSharedDashboard = () => {
         },
         {
           title: "Inventory Value",
-          value: `₹${(stats.inventory_value ?? 0).toLocaleString()}`,
+          value: formatCurrency(stats.inventory_value ?? 0),
           description: "Current stock value",
           trend: {
             value: stats.inventory_value_trend ?? 0,
@@ -302,7 +304,7 @@ export const useSharedDashboard = () => {
         },
       ];
     }
-  }, [state.statistics, isSuperAdmin]);
+  }, [state.statistics, isSuperAdmin, formatCurrency]);
 
   return {
     ...state,

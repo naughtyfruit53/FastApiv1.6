@@ -3,6 +3,7 @@ import React from 'react';
 import { useRouter } from 'next/router';
 import { Box } from '@mui/material';
 import MegaMenu from './MegaMenu';
+import LogoBadge from './LogoBadge';
 import { useAuth } from '../context/AuthContext';
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -35,6 +36,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       >
         {children}
       </Box>
+      {/* Global logo badge - hidden on print/PDF, shown on all authenticated pages */}
+      {shouldShowMenu && <LogoBadge />}
     </>
   );
 };

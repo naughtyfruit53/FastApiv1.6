@@ -46,6 +46,45 @@ export const UI_CONSTANTS = {
 // Type for UI constants
 export type UIConstants = typeof UI_CONSTANTS;
 
+// Default departments for the application
+export const DEFAULT_DEPARTMENTS = [
+  "Finance",
+  "HR",
+  "IT",
+  "Operations",
+  "Sales",
+  "Marketing",
+  "Production",
+  "Quality Control",
+  "Warehouse",
+  "Maintenance",
+  "R&D",
+  "Customer Service",
+  "Logistics",
+  "Procurement",
+  "Administration",
+] as const;
+
+export type Department = typeof DEFAULT_DEPARTMENTS[number];
+
+// Role hierarchy for dashboard display - type-safe definition
+export const ROLE_HIERARCHY: Record<string, readonly string[]> = {
+  // App-level admin roles
+  app_admin: ["super_admin", "app_admin"] as const,
+  // Organization admin roles
+  admin: ["admin", "org_admin"] as const,
+  // Management roles
+  management: ["management", "director", "ceo", "cfo", "coo", "vp", "head"] as const,
+  // Manager roles
+  manager: ["manager", "team_lead", "supervisor", "lead", "senior"] as const,
+  // Executive/Staff roles
+  executive: ["executive", "staff", "employee", "user", "associate"] as const,
+  // Viewer roles
+  viewer: ["viewer", "guest", "readonly"] as const,
+} as const;
+
+export type DashboardRole = "app_admin" | "admin" | "management" | "manager" | "executive" | "viewer";
+
 // Common sx styles for reuse
 export const COMMON_STYLES = {
   smallInput: {
