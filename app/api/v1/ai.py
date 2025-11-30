@@ -2,7 +2,7 @@
 AI Agent API endpoints for chatbot operations and business intelligence
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -49,7 +49,7 @@ class BusinessAdviceResponse(BaseModel):
 async def classify_intent(
     request: IntentClassificationRequest,
     auth: tuple = Depends(require_access("ai", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Classify user intent from a message
@@ -101,7 +101,7 @@ async def get_intent_patterns(
 async def get_business_advice(
     request: BusinessAdviceRequest,
     auth: tuple = Depends(require_access("ai", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get business advice for a specific category
@@ -277,7 +277,7 @@ async def get_quick_actions(
 async def execute_agent_task(
     task: Dict[str, Any],
     auth: tuple = Depends(require_access("ai", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Execute an AI agent task
@@ -337,7 +337,7 @@ async def execute_agent_task(
 async def get_smart_insights(
     category: Optional[str] = Query(None, description="Insight category filter"),
     auth: tuple = Depends(require_access("ai", "read")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get smart business insights powered by AI
@@ -393,7 +393,7 @@ async def get_smart_insights(
 async def get_recommendations(
     context: Optional[str] = Query(None, description="Context for recommendations"),
     auth: tuple = Depends(require_access("ai", "read")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get personalized recommendations for the user
@@ -486,7 +486,7 @@ class ChatResponse(BaseModel):
 async def chat_completion(
     request: ChatRequest,
     auth: tuple = Depends(require_access("ai", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Chat with AI assistant using OpenAI API
@@ -641,7 +641,7 @@ class StreamingChatRequest(BaseModel):
 async def chat_completion_stream(
     request: StreamingChatRequest,
     auth: tuple = Depends(require_access("ai", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Stream chat with AI assistant using OpenAI API.

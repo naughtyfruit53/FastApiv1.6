@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc, func, extract
 from typing import List, Optional
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 import os
 import uuid
 
@@ -13,7 +14,8 @@ from app.core.enforcement import require_access
 from app.models.user_models import User
 from app.models.hr_models import (
     EmployeeProfile, AttendanceRecord, LeaveType, 
-    LeaveApplication, PerformanceReview
+    LeaveApplication, PerformanceReview,
+    Department, Position, WorkShift, HolidayCalendar
 )
 from app.schemas.hr_schemas import (
     EmployeeProfileCreate, EmployeeProfileUpdate, EmployeeProfileResponse,
@@ -21,7 +23,11 @@ from app.schemas.hr_schemas import (
     LeaveTypeCreate, LeaveTypeUpdate, LeaveTypeResponse,
     LeaveApplicationCreate, LeaveApplicationUpdate, LeaveApplicationResponse,
     PerformanceReviewCreate, PerformanceReviewUpdate, PerformanceReviewResponse,
-    HRDashboard, EmployeeDashboard, AttendanceSummary
+    HRDashboard, EmployeeDashboard, AttendanceSummary,
+    DepartmentCreate, DepartmentUpdate, DepartmentResponse,
+    PositionCreate, PositionUpdate, PositionResponse,
+    WorkShiftCreate, WorkShiftUpdate, WorkShiftResponse,
+    HolidayCalendarCreate, HolidayCalendarUpdate, HolidayCalendarResponse
 )
 from app.services.pdf_extraction import pdf_extraction_service
 
@@ -822,16 +828,13 @@ async def get_hr_dashboard(
 # Department Management
 # ============================================================================
 
-@router.post("/departments", response_model="DepartmentResponse")
+@router.post("/departments", response_model=DepartmentResponse)
 async def create_department(
-    department_data: "DepartmentCreate",
+    department_data: DepartmentCreate,
     auth: tuple = Depends(require_access("hr", "create")),
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new department"""
-    from app.models.hr_models import Department
-    from app.schemas.hr_schemas import DepartmentCreate, DepartmentResponse
-    
     current_user, org_id = auth
     
     # Check if department code is unique
@@ -865,7 +868,6 @@ async def get_departments(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all departments"""
-    from app.models.hr_models import Department
     
     current_user, org_id = auth
     
@@ -886,7 +888,6 @@ async def get_department(
     db: AsyncSession = Depends(get_db)
 ):
     """Get department by ID"""
-    from app.models.hr_models import Department
     
     current_user, org_id = auth
     
@@ -913,8 +914,6 @@ async def update_department(
     db: AsyncSession = Depends(get_db)
 ):
     """Update department"""
-    from app.models.hr_models import Department
-    from app.schemas.hr_schemas import DepartmentUpdate
     
     current_user, org_id = auth
     
@@ -950,8 +949,6 @@ async def create_position(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new position"""
-    from app.models.hr_models import Position
-    from app.schemas.hr_schemas import PositionCreate
     
     current_user, org_id = auth
     
@@ -986,7 +983,6 @@ async def get_positions(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all positions"""
-    from app.models.hr_models import Position
     
     current_user, org_id = auth
     
@@ -1011,8 +1007,6 @@ async def update_position(
     db: AsyncSession = Depends(get_db)
 ):
     """Update position"""
-    from app.models.hr_models import Position
-    from app.schemas.hr_schemas import PositionUpdate
     
     current_user, org_id = auth
     
@@ -1048,8 +1042,6 @@ async def create_work_shift(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new work shift"""
-    from app.models.hr_models import WorkShift
-    from app.schemas.hr_schemas import WorkShiftCreate
     
     current_user, org_id = auth
     
@@ -1083,7 +1075,6 @@ async def get_work_shifts(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all work shifts"""
-    from app.models.hr_models import WorkShift
     
     current_user, org_id = auth
     
@@ -1105,8 +1096,6 @@ async def update_work_shift(
     db: AsyncSession = Depends(get_db)
 ):
     """Update work shift"""
-    from app.models.hr_models import WorkShift
-    from app.schemas.hr_schemas import WorkShiftUpdate
     
     current_user, org_id = auth
     
@@ -1142,8 +1131,6 @@ async def create_holiday(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new holiday"""
-    from app.models.hr_models import HolidayCalendar
-    from app.schemas.hr_schemas import HolidayCalendarCreate
     
     current_user, org_id = auth
     
@@ -1178,7 +1165,6 @@ async def get_holidays(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all holidays"""
-    from app.models.hr_models import HolidayCalendar
     
     current_user, org_id = auth
     
@@ -1203,8 +1189,6 @@ async def update_holiday(
     db: AsyncSession = Depends(get_db)
 ):
     """Update holiday"""
-    from app.models.hr_models import HolidayCalendar
-    from app.schemas.hr_schemas import HolidayCalendarUpdate
     
     current_user, org_id = auth
     
@@ -1236,7 +1220,6 @@ async def delete_holiday(
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a holiday"""
-    from app.models.hr_models import HolidayCalendar
     
     current_user, org_id = auth
     

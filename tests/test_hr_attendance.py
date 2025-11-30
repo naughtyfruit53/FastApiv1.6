@@ -9,14 +9,22 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
+# Import models and schemas at module level
+from app.models.hr_models import (
+    WorkShift, AttendanceRecord, HolidayCalendar,
+    Department, Position
+)
+from app.schemas.hr_schemas import (
+    WorkShiftCreate, AttendanceRecordCreate,
+    HolidayCalendarCreate, DepartmentCreate, PositionCreate
+)
+
 
 class TestHRAttendanceModels:
     """Tests for HR attendance-related models"""
 
     def test_work_shift_defaults(self):
         """Test WorkShift model default values"""
-        from app.models.hr_models import WorkShift
-        
         shift = WorkShift(
             organization_id=1,
             name="General Shift",
@@ -35,8 +43,6 @@ class TestHRAttendanceModels:
 
     def test_attendance_record_defaults(self):
         """Test AttendanceRecord model default values"""
-        from app.models.hr_models import AttendanceRecord
-        
         record = AttendanceRecord(
             organization_id=1,
             employee_id=1,
@@ -51,7 +57,6 @@ class TestHRAttendanceModels:
 
     def test_holiday_calendar_defaults(self):
         """Test HolidayCalendar model default values"""
-        from app.models.hr_models import HolidayCalendar
         
         holiday = HolidayCalendar(
             organization_id=1,
@@ -65,7 +70,6 @@ class TestHRAttendanceModels:
 
     def test_department_defaults(self):
         """Test Department model default values"""
-        from app.models.hr_models import Department
         
         dept = Department(
             organization_id=1,
@@ -79,7 +83,6 @@ class TestHRAttendanceModels:
 
     def test_position_defaults(self):
         """Test Position model default values"""
-        from app.models.hr_models import Position
         
         position = Position(
             organization_id=1,
@@ -98,7 +101,6 @@ class TestHRAttendanceSchemas:
 
     def test_work_shift_create_schema(self):
         """Test WorkShiftCreate schema validation"""
-        from app.schemas.hr_schemas import WorkShiftCreate
         
         shift_data = WorkShiftCreate(
             name="Morning Shift",
@@ -116,7 +118,6 @@ class TestHRAttendanceSchemas:
 
     def test_attendance_record_create_schema(self):
         """Test AttendanceRecordCreate schema validation"""
-        from app.schemas.hr_schemas import AttendanceRecordCreate
         
         record_data = AttendanceRecordCreate(
             employee_id=1,
@@ -131,7 +132,6 @@ class TestHRAttendanceSchemas:
 
     def test_holiday_calendar_create_schema(self):
         """Test HolidayCalendarCreate schema validation"""
-        from app.schemas.hr_schemas import HolidayCalendarCreate
         
         holiday_data = HolidayCalendarCreate(
             name="Diwali",
@@ -146,7 +146,6 @@ class TestHRAttendanceSchemas:
 
     def test_department_create_schema(self):
         """Test DepartmentCreate schema validation"""
-        from app.schemas.hr_schemas import DepartmentCreate
         
         dept_data = DepartmentCreate(
             name="Human Resources",
@@ -159,7 +158,6 @@ class TestHRAttendanceSchemas:
 
     def test_position_create_schema(self):
         """Test PositionCreate schema validation"""
-        from app.schemas.hr_schemas import PositionCreate
         
         position_data = PositionCreate(
             title="Senior Developer",
