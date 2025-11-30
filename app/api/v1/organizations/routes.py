@@ -1,6 +1,6 @@
 # app/api/v1/organizations/routes.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, Header, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func
 from typing import List, Any, Optional
@@ -29,6 +29,10 @@ from .settings_routes import router as settings_router
 from app.services.otp_service import OTPService
 from app.schemas.reset import OTPRequest, OTPVerify
 from app.scripts.seed_default_coa_accounts import create_default_accounts  # Fixed import
+from app.services.org_cache_service import (
+    get_cached_organization, set_cached_organization, 
+    get_cached_etag, invalidate_organization_cache
+)
 
 # Import RBACService lazily to avoid circular import
 def get_rbac(db: AsyncSession = Depends(get_db)):
@@ -68,11 +72,20 @@ async def list_organizations(
 
 @router.get("/current", response_model=OrganizationInDB)
 async def get_current_organization(
+    response: Response,
     ts: Optional[str] = Query(None, description="Timestamp for cache busting"),
+    if_none_match: Optional[str] = Header(None, alias="If-None-Match"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get current user's organization"""
+    """
+    Get current user's organization.
+    
+    Supports caching with ETag headers:
+    - Returns ETag header with response
+    - Supports If-None-Match header for conditional requests (returns 304 if unchanged)
+    - Cache TTL: 60 seconds (server-side)
+    """
     if current_user.organization_id is None:
         # For super admins (post-reset), return a placeholder empty organization
         return OrganizationInDB(
@@ -92,6 +105,29 @@ async def get_current_organization(
             updated_at=datetime.now(timezone.utc),
             enabled_modules={}
         )
+    
+    org_id = current_user.organization_id
+    user_id = current_user.id
+    
+    # Check if client has valid cached version (ETag match)
+    if if_none_match and not ts:  # ts=timestamp means force refresh
+        cached_etag = get_cached_etag(org_id, user_id)
+        if cached_etag and if_none_match == cached_etag:
+            logger.debug(f"ETag match for org {org_id}, returning 304")
+            raise HTTPException(
+                status_code=status.HTTP_304_NOT_MODIFIED,
+                headers={"ETag": cached_etag, "Cache-Control": "private, max-age=30"}
+            )
+    
+    # Try to get from cache (unless cache busting with ts parameter)
+    if not ts:
+        cached_data = get_cached_organization(org_id, user_id)
+        if cached_data:
+            etag = get_cached_etag(org_id, user_id)
+            if etag:
+                response.headers["ETag"] = etag
+                response.headers["Cache-Control"] = "private, max-age=30"
+            return OrganizationInDB(**cached_data)
   
     result = await db.execute(select(Organization).filter_by(id=current_user.organization_id))
     organization = result.scalars().first()
@@ -115,8 +151,42 @@ async def get_current_organization(
         await db.commit()
         await db.refresh(organization)
         logger.info(f"Populated default enabled_modules for organization {organization.id}")
-  
-    logger.info(f"Returning enabled_modules for org {organization.id}: {organization.enabled_modules}")  # Debug log
+    
+    # Convert to dict for caching
+    org_data = {
+        'id': organization.id,
+        'name': organization.name,
+        'subdomain': organization.subdomain,
+        'primary_email': organization.primary_email,
+        'primary_phone': organization.primary_phone,
+        'address1': organization.address1,
+        'address2': getattr(organization, 'address2', None),
+        'city': organization.city,
+        'state': organization.state,
+        'pin_code': organization.pin_code,
+        'country': organization.country,
+        'state_code': organization.state_code,
+        'gst_number': organization.gst_number,
+        'pan_number': getattr(organization, 'pan_number', None),
+        'tan_number': getattr(organization, 'tan_number', None),
+        'cin_number': getattr(organization, 'cin_number', None),
+        'website': getattr(organization, 'website', None),
+        'logo_url': getattr(organization, 'logo_url', None),
+        'industry': getattr(organization, 'industry', None),
+        'fiscal_year_start': str(getattr(organization, 'fiscal_year_start', '')) if getattr(organization, 'fiscal_year_start', None) else None,
+        'fiscal_year_end': str(getattr(organization, 'fiscal_year_end', '')) if getattr(organization, 'fiscal_year_end', None) else None,
+        'currency': getattr(organization, 'currency', 'INR'),
+        'enabled_modules': organization.enabled_modules,
+        'created_at': organization.created_at.isoformat() if organization.created_at else None,
+        'updated_at': organization.updated_at.isoformat() if organization.updated_at else None,
+    }
+    
+    # Cache the organization data and get ETag
+    etag = set_cached_organization(org_id, user_id, org_data)
+    response.headers["ETag"] = etag
+    response.headers["Cache-Control"] = "private, max-age=30"
+    
+    logger.debug(f"Returning organization {organization.id} with ETag {etag}")
     return organization
 
 @router.put("/current", response_model=OrganizationInDB)

@@ -18,6 +18,16 @@ import {
   TableRow,
   Paper,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  InputAdornment,
+  Alert,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -30,6 +40,8 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { crmService, Lead, Opportunity, CRMAnalytics } from "../../services";
 import { ProtectedPage } from "../../components/ProtectedPage";
+import { formatCurrency, getCurrencySymbol } from "../../utils/currencyUtils";
+
 const statusColors: Record<string, string> = {
   new: "default",
   contacted: "info",
@@ -46,6 +58,7 @@ const stageColors: Record<string, string> = {
   closed_won: "success",
   closed_lost: "error",
 };
+
 export default function CRMDashboard() {
   const { user } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
@@ -57,9 +70,15 @@ export default function CRMDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [openLeadDialog, setOpenLeadDialog] = useState(false);
   const [openOpportunityDialog, setOpenOpportunityDialog] = useState(false);
+  
+  // Get currency from organization settings - default to INR
+  const orgCurrency = (user as any)?.organization?.currency || "INR";
+  const currencySymbol = getCurrencySymbol(orgCurrency);
+
   useEffect(() => {
     loadCRMData();
   }, []);
+
   const loadCRMData = async () => {
     setLoading(true);
     setError(null);
@@ -91,6 +110,7 @@ export default function CRMDashboard() {
       setLoading(false);
     }
   };
+
   const filteredLeads = leads.filter(
     (lead) =>
       (lead.contact_person || "")
@@ -104,6 +124,7 @@ export default function CRMDashboard() {
         .toLowerCase()
         .includes(searchTerm.toLowerCase()),
   );
+
   const filteredOpportunities = opportunities.filter(
     (opportunity) =>
       opportunity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -111,6 +132,7 @@ export default function CRMDashboard() {
         .toLowerCase()
         .includes(searchTerm.toLowerCase()),
   );
+
   const renderAnalyticsCards = () => {
     if (!analytics) {
       return null;
@@ -161,7 +183,7 @@ export default function CRMDashboard() {
                     Pipeline Value
                   </Typography>
                   <Typography variant="h5" component="div">
-                    ${analytics.pipeline_value.toLocaleString()}
+                    {formatCurrency(analytics.pipeline_value, orgCurrency)}
                   </Typography>
                 </Box>
               </Box>
@@ -188,6 +210,7 @@ export default function CRMDashboard() {
       </Grid>
     );
   };
+
   const renderLeadsTable = () => (
     <TableContainer component={Paper}>
       <Table>
@@ -222,7 +245,7 @@ export default function CRMDashboard() {
               <TableCell>{lead.score}</TableCell>
               <TableCell>
                 {lead.estimated_value
-                  ? `$${lead.estimated_value.toLocaleString()}`
+                  ? formatCurrency(lead.estimated_value, orgCurrency)
                   : "-"}
               </TableCell>
               <TableCell>
@@ -234,6 +257,7 @@ export default function CRMDashboard() {
       </Table>
     </TableContainer>
   );
+
   const renderOpportunitiesTable = () => (
     <TableContainer component={Paper}>
       <Table>
@@ -260,10 +284,10 @@ export default function CRMDashboard() {
                   size="small"
                 />
               </TableCell>
-              <TableCell>${opportunity.amount.toLocaleString()}</TableCell>
+              <TableCell>{formatCurrency(opportunity.amount, orgCurrency)}</TableCell>
               <TableCell>{opportunity.probability}%</TableCell>
               <TableCell>
-                ${opportunity.expected_revenue.toLocaleString()}
+                {formatCurrency(opportunity.expected_revenue, orgCurrency)}
               </TableCell>
               <TableCell>
                 {new Date(opportunity.expected_close_date).toLocaleDateString()}

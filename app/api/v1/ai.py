@@ -453,3 +453,197 @@ async def chatbot_health_check():
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0"
     }
+
+
+# ============================================================================
+# OPENAI CHAT ENDPOINTS
+# ============================================================================
+
+class ChatMessage(BaseModel):
+    """A single chat message"""
+    role: str = Field(..., description="Role: 'user', 'assistant', or 'system'")
+    content: str = Field(..., description="Message content")
+
+
+class ChatRequest(BaseModel):
+    """Request for AI chat completion"""
+    messages: List[ChatMessage] = Field(..., description="Conversation messages")
+    context: Optional[Dict[str, Any]] = Field(None, description="Additional context")
+    model: Optional[str] = Field(None, description="Model to use (optional)")
+    temperature: Optional[float] = Field(None, ge=0, le=2, description="Temperature (0-2)")
+    max_tokens: Optional[int] = Field(None, ge=1, le=4000, description="Max tokens")
+
+
+class ChatResponse(BaseModel):
+    """Response from AI chat"""
+    message: ChatMessage
+    usage: Optional[Dict[str, int]] = None
+    model: str
+    finish_reason: Optional[str] = None
+
+
+@router.post("/chat", response_model=ChatResponse)
+async def chat_completion(
+    request: ChatRequest,
+    auth: tuple = Depends(require_access("ai", "create")),
+    db: Session = Depends(get_db)
+):
+    """
+    Chat with AI assistant using OpenAI API
+    
+    This endpoint provides a conversational AI interface for:
+    - Business questions and advice
+    - System navigation help
+    - Report generation guidance
+    - General assistance
+    """
+    import os
+    
+    current_user, org_id = auth
+    
+    # Get OpenAI configuration from environment
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="AI chat service is not configured. Please set OPENAI_API_KEY."
+        )
+    
+    try:
+        import httpx
+        
+        # Prepare request with safe environment variable parsing
+        model = request.model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        
+        try:
+            temperature = request.temperature or float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+        except ValueError:
+            logger.warning("Invalid OPENAI_TEMPERATURE environment variable, using default 0.7")
+            temperature = request.temperature or 0.7
+        
+        try:
+            max_tokens = request.max_tokens or int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
+        except ValueError:
+            logger.warning("Invalid OPENAI_MAX_TOKENS environment variable, using default 1000")
+            max_tokens = request.max_tokens or 1000
+        
+        # Build messages list with system prompt
+        system_prompt = """You are TritIQ Assistant, an AI helper for the TritIQ Business Operating System.
+You help users with:
+- Business management questions
+- Navigation within the system
+- Understanding financial reports and analytics
+- CRM and sales pipeline guidance
+- Inventory management advice
+- HR and payroll queries
+
+Be concise, professional, and helpful. Provide actionable advice when possible."""
+        
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        # Add context if provided
+        if request.context:
+            context_str = f"User context: Organization ID: {org_id}"
+            if request.context.get("current_page"):
+                context_str += f", Current page: {request.context['current_page']}"
+            if request.context.get("user_role"):
+                context_str += f", User role: {request.context['user_role']}"
+            messages.append({"role": "system", "content": context_str})
+        
+        # Add conversation messages
+        for msg in request.messages:
+            messages.append({"role": msg.role, "content": msg.content})
+        
+        # Make request to OpenAI
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        org_id_env = os.getenv("OPENAI_ORG_ID")
+        if org_id_env:
+            headers["OpenAI-Organization"] = org_id_env
+        
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=payload
+            )
+        
+        if response.status_code != 200:
+            error_detail = response.json().get("error", {}).get("message", "Unknown error")
+            logger.error(f"OpenAI API error: {response.status_code} - {error_detail}")
+            raise HTTPException(
+                status_code=502,
+                detail=f"AI service error: {error_detail}"
+            )
+        
+        result = response.json()
+        choice = result["choices"][0]
+        
+        # Log chat interaction for audit (if audit service exists)
+        try:
+            from app.services.audit_trail_service import AuditTrailService
+            audit_service = AuditTrailService(db)
+            await audit_service.log_action(
+                entity_type="ai_chat",
+                entity_id=None,
+                action="chat_completion",
+                user_id=current_user.id,
+                organization_id=org_id,
+                details={
+                    "model": model,
+                    "message_count": len(request.messages),
+                    "tokens_used": result.get("usage", {}).get("total_tokens", 0)
+                }
+            )
+        except Exception as audit_error:
+            logger.debug(f"Audit logging skipped: {audit_error}")
+        
+        return ChatResponse(
+            message=ChatMessage(
+                role=choice["message"]["role"],
+                content=choice["message"]["content"]
+            ),
+            usage=result.get("usage"),
+            model=result["model"],
+            finish_reason=choice.get("finish_reason")
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in chat completion: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process chat request: {str(e)}"
+        )
+
+
+@router.get("/chat/models")
+async def get_available_models(
+    auth: tuple = Depends(require_access("ai", "read"))
+):
+    """Get list of available chat models"""
+    import os
+    
+    default_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    
+    return {
+        "default_model": default_model,
+        "available_models": [
+            {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "description": "Fast and cost-effective"},
+            {"id": "gpt-4o", "name": "GPT-4o", "description": "Most capable model"},
+            {"id": "gpt-4-turbo", "name": "GPT-4 Turbo", "description": "High capability with faster response"},
+            {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo", "description": "Fast and efficient"}
+        ],
+        "configured": bool(os.getenv("OPENAI_API_KEY"))
+    }
