@@ -909,7 +909,7 @@ async def get_department(
 @router.put("/departments/{department_id}")
 async def update_department(
     department_id: int,
-    department_data: "DepartmentUpdate",
+    department_data: DepartmentUpdate,
     auth: tuple = Depends(require_access("hr", "update")),
     db: AsyncSession = Depends(get_db)
 ):
@@ -944,7 +944,7 @@ async def update_department(
 
 @router.post("/positions")
 async def create_position(
-    position_data: "PositionCreate",
+    position_data: PositionCreate,
     auth: tuple = Depends(require_access("hr", "create")),
     db: AsyncSession = Depends(get_db)
 ):
@@ -1002,7 +1002,7 @@ async def get_positions(
 @router.put("/positions/{position_id}")
 async def update_position(
     position_id: int,
-    position_data: "PositionUpdate",
+    position_data: PositionUpdate,
     auth: tuple = Depends(require_access("hr", "update")),
     db: AsyncSession = Depends(get_db)
 ):
@@ -1037,7 +1037,7 @@ async def update_position(
 
 @router.post("/shifts")
 async def create_work_shift(
-    shift_data: "WorkShiftCreate",
+    shift_data: WorkShiftCreate,
     auth: tuple = Depends(require_access("hr", "create")),
     db: AsyncSession = Depends(get_db)
 ):
@@ -1091,7 +1091,7 @@ async def get_work_shifts(
 @router.put("/shifts/{shift_id}")
 async def update_work_shift(
     shift_id: int,
-    shift_data: "WorkShiftUpdate",
+    shift_data: WorkShiftUpdate,
     auth: tuple = Depends(require_access("hr", "update")),
     db: AsyncSession = Depends(get_db)
 ):
@@ -1126,7 +1126,7 @@ async def update_work_shift(
 
 @router.post("/holidays")
 async def create_holiday(
-    holiday_data: "HolidayCalendarCreate",
+    holiday_data: HolidayCalendarCreate,
     auth: tuple = Depends(require_access("hr", "create")),
     db: AsyncSession = Depends(get_db)
 ):
@@ -1184,7 +1184,7 @@ async def get_holidays(
 @router.put("/holidays/{holiday_id}")
 async def update_holiday(
     holiday_id: int,
-    holiday_data: "HolidayCalendarUpdate",
+    holiday_data: HolidayCalendarUpdate,
     auth: tuple = Depends(require_access("hr", "update")),
     db: AsyncSession = Depends(get_db)
 ):

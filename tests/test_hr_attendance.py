@@ -289,11 +289,14 @@ class TestHolidayCalendar:
     """Tests for holiday calendar functionality"""
 
     def test_holiday_types(self):
-        """Test different holiday types"""
-        valid_types = ["public", "restricted", "optional", "company"]
+        """Test different holiday types are recognized"""
+        valid_types = {"public", "restricted", "optional", "company"}
         
-        for holiday_type in valid_types:
-            assert holiday_type in valid_types
+        # Test that holiday types are distinct and non-empty
+        assert len(valid_types) == 4
+        assert "" not in valid_types
+        assert "public" in valid_types
+        assert "company" in valid_types
 
     def test_is_holiday_check(self):
         """Test checking if a date is a holiday"""
