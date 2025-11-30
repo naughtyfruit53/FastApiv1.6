@@ -29,7 +29,12 @@ DEMO_SESSION_DURATION_MINUTES = 30
 DEMO_ORG_ID = -1  # Pseudo organization ID for demo users
 DEMO_USER_PREFIX = "demo_user_"
 
-# In-memory storage for demo sessions (in production, use Redis)
+# In-memory storage for demo sessions
+# NOTE: This in-memory storage is suitable for single-instance deployments.
+# For multi-instance production deployments, replace with Redis-based storage:
+#   - Use redis-py or aioredis for async operations
+#   - Key pattern: f"demo_session:{demo_email}"
+#   - Set TTL matching DEMO_SESSION_DURATION_MINUTES
 _demo_sessions: Dict[str, Dict[str, Any]] = {}
 
 

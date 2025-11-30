@@ -48,17 +48,21 @@ export function useCurrency(): UseCurrencyReturn {
   const { user } = useAuth();
   
   // Get currency settings from organization or use defaults
+  // Note: currency and locale can be stored in organization settings
+  // Falls back to INR/en-IN if not available
   const config = useMemo<CurrencyConfig>(() => {
     // Check user's organization settings for currency preference
-    const orgCurrency = user?.organization?.currency || 'INR';
-    const orgLocale = user?.organization?.locale || 'en-IN';
+    // The organization may have settings nested or directly on the object
+    const orgSettings = (user as any)?.organization?.settings || (user as any)?.organization;
+    const orgCurrency = orgSettings?.currency || 'INR';
+    const orgLocale = orgSettings?.locale || 'en-IN';
     
     return {
       currencyCode: orgCurrency,
       locale: orgLocale,
       symbol: getCurrencySymbol(orgCurrency),
     };
-  }, [user?.organization?.currency, user?.organization?.locale]);
+  }, [user]);
   
   // Format currency using organization settings
   const formatCurrency = useCallback((amount: number): string => {

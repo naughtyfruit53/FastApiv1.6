@@ -203,9 +203,9 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
       } else {
         setError(response.data.message || "OTP verification failed.");
       }
-    } catch {
+    } catch (err: any) {
       // Fallback to simulated demo mode
-      console.log("[Demo] Using simulated demo mode - backend verification not available");
+      console.warn("[Demo] Using simulated demo mode - backend verification not available:", err?.message || err);
       const demoToken = `demo_temp_token_${Date.now()}`;
       const demoResponse = {
         access_token: demoToken,
