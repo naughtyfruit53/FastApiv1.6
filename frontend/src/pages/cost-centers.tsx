@@ -16,7 +16,6 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Grid,
   MenuItem,
   Select,
   FormControl,
@@ -30,6 +29,7 @@ import {
   LinearProgress,
   Tooltip,
 } from "@mui/material";
+import Grid from '@mui/material/Grid';
 import {
   Add,
   Edit,
@@ -42,7 +42,7 @@ import {
 } from "@mui/icons-material";
 import { SimpleTreeView } from "@mui/x-tree-view/SimpleTreeView";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
-import axios from "axios";
+import api from "../services/api/client";
 
 import { ProtectedPage } from '../components/ProtectedPage';
 interface CostCenter {
@@ -106,14 +106,32 @@ const CostCenters: React.FC = () => {
   const fetchCostCenters = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/erp/cost-centers", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/erp/cost-centers");
       setCostCenters(response.data);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to fetch cost centers");
+      let errorMessage = "Failed to fetch cost centers";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.detail) {
+          if (typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (typeof data.detail === 'object' && data.detail !== null) {
+            errorMessage = data.detail.message || data.detail.error || JSON.stringify(data.detail);
+          }
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (typeof data === 'object' && data !== null) {
+          errorMessage = JSON.stringify(data);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -131,12 +149,9 @@ const CostCenters: React.FC = () => {
         finalCode = generateCostCenterCode();
       }
 
-      const token = localStorage.getItem("token");
-      await axios.post("/api/v1/erp/cost-centers", {
+      await api.post("/erp/cost-centers", {
         ...createData,
         cost_center_code: finalCode
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
       });
       setCreateDialogOpen(false);
       setCreateData({
@@ -148,7 +163,28 @@ const CostCenters: React.FC = () => {
       setShowStandardNames(false);
       fetchCostCenters();
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to create cost center");
+      let errorMessage = "Failed to create cost center";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.detail) {
+          if (typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (typeof data.detail === 'object' && data.detail !== null) {
+            errorMessage = data.detail.message || data.detail.error || JSON.stringify(data.detail);
+          }
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (typeof data === 'object' && data !== null) {
+          errorMessage = JSON.stringify(data);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     }
   };
 
@@ -180,15 +216,33 @@ const CostCenters: React.FC = () => {
   const handleEditCostCenter = async () => {
     if (selectedCostCenter) {
       try {
-        const token = localStorage.getItem("token");
-        await axios.put(`/api/v1/erp/cost-centers/${selectedCostCenter.id}`, selectedCostCenter, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.put(`/erp/cost-centers/${selectedCostCenter.id}`, selectedCostCenter);
         setEditDialogOpen(false);
         setSelectedCostCenter(null);
         fetchCostCenters();
       } catch (err: any) {
-        setError(err.response?.data?.detail || "Failed to update cost center");
+        let errorMessage = "Failed to update cost center";
+        if (err.response?.data) {
+          const data = err.response.data;
+          if (typeof data === 'string') {
+            errorMessage = data;
+          } else if (data.detail) {
+            if (typeof data.detail === 'string') {
+              errorMessage = data.detail;
+            } else if (typeof data.detail === 'object' && data.detail !== null) {
+              errorMessage = data.detail.message || data.detail.error || JSON.stringify(data.detail);
+            }
+          } else if (data.message) {
+            errorMessage = data.message;
+          } else if (data.error) {
+            errorMessage = data.error;
+          } else if (typeof data === 'object' && data !== null) {
+            errorMessage = JSON.stringify(data);
+          }
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage);
       }
     }
   };
@@ -197,13 +251,31 @@ const CostCenters: React.FC = () => {
   const handleDeleteCostCenter = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this cost center?")) {
       try {
-        const token = localStorage.getItem("token");
-        await axios.delete(`/api/v1/erp/cost-centers/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api.delete(`/erp/cost-centers/${id}`);
         fetchCostCenters();
       } catch (err: any) {
-        setError(err.response?.data?.detail || "Failed to delete cost center");
+        let errorMessage = "Failed to delete cost center";
+        if (err.response?.data) {
+          const data = err.response.data;
+          if (typeof data === 'string') {
+            errorMessage = data;
+          } else if (data.detail) {
+            if (typeof data.detail === 'string') {
+              errorMessage = data.detail;
+            } else if (typeof data.detail === 'object' && data.detail !== null) {
+              errorMessage = data.detail.message || data.detail.error || JSON.stringify(data.detail);
+            }
+          } else if (data.message) {
+            errorMessage = data.message;
+          } else if (data.error) {
+            errorMessage = data.error;
+          } else if (typeof data === 'object' && data !== null) {
+            errorMessage = JSON.stringify(data);
+          }
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage);
       }
     }
   };
@@ -319,8 +391,8 @@ const CostCenters: React.FC = () => {
         </Box>
       </Box>
       {/* Summary Cards */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} sm={4}>
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid xs={12} sm={4}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -337,7 +409,7 @@ const CostCenters: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid xs={12} sm={4}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -354,7 +426,7 @@ const CostCenters: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid xs={12} sm={4}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -385,7 +457,7 @@ const CostCenters: React.FC = () => {
       )}
       <Grid container spacing={3}>
         {/* Cost Center Hierarchy */}
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Paper sx={{ p: 2, height: 500, overflow: "auto" }}>
             <Typography variant="h6" gutterBottom>
               Cost Center Hierarchy
@@ -398,7 +470,7 @@ const CostCenters: React.FC = () => {
           </Paper>
         </Grid>
         {/* Cost Centers Table */}
-        <Grid item xs={12} md={8}>
+        <Grid xs={12} md={8}>
           <Paper>
             <TableContainer sx={{ maxHeight: 500 }}>
               <Table stickyHeader>
@@ -539,7 +611,7 @@ const CostCenters: React.FC = () => {
         <DialogTitle>Create Cost Center</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <Button
                 variant="outlined"
                 fullWidth
@@ -550,14 +622,14 @@ const CostCenters: React.FC = () => {
             </Grid>
             
             {showStandardNames && (
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, maxHeight: 200, overflow: 'auto' }}>
                   <Typography variant="caption" color="text.secondary" gutterBottom display="block">
                     Quick Selection:
                   </Typography>
                   <Grid container spacing={1}>
                     {standardCostCenters.map((standard) => (
-                      <Grid item xs={6} sm={4} key={standard.code}>
+                      <Grid xs={6} sm={4} key={standard.code}>
                         <Button
                           variant="outlined"
                           size="small"
@@ -574,7 +646,7 @@ const CostCenters: React.FC = () => {
               </Grid>
             )}
 
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <Box display="flex" gap={1}>
                 <TextField
                   fullWidth
@@ -600,7 +672,7 @@ const CostCenters: React.FC = () => {
                 </Button>
               </Box>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Cost Center Name"
@@ -614,7 +686,7 @@ const CostCenters: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Parent Cost Center</InputLabel>
                 <Select
@@ -637,7 +709,7 @@ const CostCenters: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Department"
@@ -650,7 +722,7 @@ const CostCenters: React.FC = () => {
                 }
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <TextField
                 fullWidth
                 type="number"
@@ -666,7 +738,7 @@ const CostCenters: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid xs={12}>
               <TextField
                 fullWidth
                 multiline
@@ -702,7 +774,7 @@ const CostCenters: React.FC = () => {
           {selectedCostCenter && (
             <Grid container spacing={2} sx={{ mt: 1 }}>
               {/* Add form fields similar to create, pre-filled with selectedCostCenter data */}
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <TextField
                   fullWidth
                   label="Cost Center Name"
