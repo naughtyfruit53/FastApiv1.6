@@ -1,16 +1,26 @@
 # TritIQ Business Suite - User Guide
 
-Complete guide for database reset, migration, seeding, and system onboarding.
+Complete guide for using TritIQ Business Suite, including all new features from recent releases.
 
 ## Table of Contents
 
 1. [Quick Start](#quick-start)
-2. [Database Reset Workflow](#database-reset-workflow)
-3. [Migration Guide](#migration-guide)
-4. [Seeding Baseline Data](#seeding-baseline-data)
-5. [User Onboarding](#user-onboarding)
-6. [Troubleshooting](#troubleshooting)
-7. [Advanced Operations](#advanced-operations)
+2. [New Features Overview](#new-features-overview)
+3. [Currency Utility Usage](#currency-utility-usage)
+4. [Voucher System](#voucher-system)
+5. [Demo Mode & OTP User Flow](#demo-mode--otp-user-flow)
+6. [HR Module (Phase 1)](#hr-module-phase-1)
+7. [AI Chatbot](#ai-chatbot)
+8. [Exhibition Module](#exhibition-module)
+9. [Role-Based Dashboards](#role-based-dashboards)
+10. [Mobile Experience](#mobile-experience)
+11. [GRN PDF Generation](#grn-pdf-generation)
+12. [Database Reset Workflow](#database-reset-workflow)
+13. [Migration Guide](#migration-guide)
+14. [Seeding Baseline Data](#seeding-baseline-data)
+15. [User Onboarding](#user-onboarding)
+16. [Troubleshooting](#troubleshooting)
+17. [Advanced Operations](#advanced-operations)
 
 ---
 
@@ -47,6 +57,466 @@ After first boot, you can login with:
 - **Email**: `naughtyfruit53@gmail.com`
 - **Password**: `123456`
 - **⚠️ IMPORTANT**: Change this password immediately after first login!
+
+---
+
+## New Features Overview
+
+This section covers all new features from the last 7-8 PRs:
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Currency Utilities | Multi-currency formatting with locale support | ✅ Active |
+| Voucher Fields | Vendor/Customer voucher numbers, backdated numbering | ✅ Active |
+| Demo OTP Sessions | 30-minute ephemeral demo sessions with OTP | ✅ Active |
+| HR Module Phase 1 | Departments, positions, shifts, holidays, attendance | ✅ Active |
+| AI Chatbot Streaming | Real-time AI chat with SSE streaming | ✅ Active |
+| Exhibition Module | CRM exhibitions and commissions | ✅ Active |
+| GRN PDF Improvements | Enhanced GRN with vendor invoice, batch dates, SKU | ✅ Active |
+| Mobile Parity | Full mobile support for all modules | ✅ Active |
+
+---
+
+## Currency Utility Usage
+
+The application provides comprehensive currency formatting utilities supporting multiple currencies and locales.
+
+### Supported Currencies
+
+| Currency | Symbol | Locale | Decimals |
+|----------|--------|--------|----------|
+| INR | ₹ | en-IN | 2 |
+| USD | $ | en-US | 2 |
+| EUR | € | de-DE | 2 |
+| GBP | £ | en-GB | 2 |
+| JPY | ¥ | ja-JP | 0 |
+| AUD | A$ | en-AU | 2 |
+| CAD | C$ | en-CA | 2 |
+| CHF | Fr | de-CH | 2 |
+| CNY | ¥ | zh-CN | 2 |
+| SAR | ر.س | ar-SA | 2 |
+| AED | د.إ | ar-AE | 2 |
+| ZAR | R | en-ZA | 2 |
+| MXN | $ | es-MX | 2 |
+| BRL | R$ | pt-BR | 2 |
+| RUB | ₽ | ru-RU | 2 |
+
+### Usage Examples
+
+```typescript
+import { formatCurrency, formatCurrencyCompact, getCurrencySymbol } from '@/utils/currencyUtils';
+
+// Basic formatting (defaults to INR)
+formatCurrency(10000); // "₹10,000.00"
+
+// Specific currency
+formatCurrency(10000, 'USD'); // "$10,000.00"
+formatCurrency(10000, 'EUR'); // "10.000,00 €"
+formatCurrency(10000, 'JPY'); // "¥10,000"
+
+// Compact notation for large numbers
+formatCurrencyCompact(1500000); // "₹15L" (Indian locale)
+formatCurrencyCompact(1500000, 'USD'); // "$1.5M"
+
+// Get currency symbol
+getCurrencySymbol('INR'); // "₹"
+getCurrencySymbol('USD'); // "$"
+```
+
+### Setting Organization Currency
+
+1. Navigate to **Settings** → **Company Settings**
+2. Select your preferred currency from the dropdown
+3. All vouchers and reports will use this currency
+
+---
+
+## Voucher System
+
+### Voucher Number Fields
+
+The voucher system now supports additional reference fields:
+
+| Field | Description | Usage |
+|-------|-------------|-------|
+| **Vendor Voucher Number** | External reference from vendor | Track vendor's invoice/PO numbers |
+| **Customer Voucher Number** | Customer's reference number | Track customer's PO/order numbers |
+| **Backdated Voucher Number** | Manual numbering for backdated entries | Maintain proper audit trail |
+
+### How to Use Voucher Fields
+
+1. **When Creating a Voucher:**
+   - Enter the **Voucher Date** (current or backdated)
+   - If backdating, the system will prompt for manual voucher number entry
+   - Enter **Vendor Voucher Number** for purchases (supplier's invoice number)
+   - Enter **Customer Voucher Number** for sales (customer's PO number)
+
+2. **Backdated Numbering Behavior:**
+   ```
+   Current Date Entry: Auto-generated voucher number (e.g., INV/2024/00123)
+   Backdated Entry: Manual entry required (respects existing sequence)
+   ```
+
+3. **Searching by Reference Numbers:**
+   - Use the search bar in voucher lists
+   - Search by vendor voucher number, customer voucher number, or internal voucher number
+
+---
+
+## Demo Mode & OTP User Flow
+
+The Demo Mode allows potential users to experience the application with temporary 30-minute sessions.
+
+### Starting a Demo Session
+
+1. **Access Demo Page:**
+   - Navigate to `/demo` or click "Try Demo" on the login page
+
+2. **Initiate Session:**
+   - Optionally enter phone number for WhatsApp OTP
+   - Click "Start Demo"
+   - System generates a demo email and 6-digit OTP
+
+3. **Verify OTP:**
+   - Enter the 6-digit OTP
+   - Click "Verify"
+   - Session starts (30-minute duration)
+
+### Demo Session Features
+
+| Feature | Description |
+|---------|-------------|
+| **Session Duration** | 30 minutes (auto-expires) |
+| **Temporary Data** | All data created is ephemeral |
+| **Full Access** | Explore all modules and features |
+| **No Org Context** | Uses demo organization |
+| **Audit Logging** | All actions are logged for security |
+
+### Session Information
+
+During a demo session, you can:
+- View remaining time in the session info panel
+- Manually logout (purges temporary data)
+- Extend session by re-verifying OTP
+
+### Data Purge on Logout/Expiry
+
+When a demo session ends:
+1. All temporary vouchers are deleted
+2. All temporary settings are cleared
+3. Audit logs are retained for compliance
+4. Session token is invalidated
+
+---
+
+## HR Module (Phase 1)
+
+The HR module provides basic human resources management capabilities.
+
+### Available Features
+
+#### 1. Department Management
+
+Navigate to: **HR** → **Departments**
+
+| Action | Description |
+|--------|-------------|
+| Create | Add new departments with hierarchy |
+| Edit | Update department details |
+| Assign Manager | Link department head |
+| Cost Center | Map to financial cost center |
+
+**Department Hierarchy:**
+```
+Organization
+├── Operations
+│   ├── Production
+│   └── Quality
+├── Sales
+│   ├── Domestic
+│   └── Export
+└── Admin
+    ├── HR
+    └── Finance
+```
+
+#### 2. Position/Designation Management
+
+Navigate to: **HR** → **Positions**
+
+| Field | Description |
+|-------|-------------|
+| Title | Position name (e.g., "Senior Developer") |
+| Code | Unique position code |
+| Department | Associated department |
+| Level | Job level (Junior, Mid, Senior, Lead, etc.) |
+| Grade | Pay grade (A, B, C, etc.) |
+| Salary Range | Min/max salary for position |
+
+#### 3. Work Shift Management
+
+Navigate to: **HR** → **Shifts**
+
+| Field | Description |
+|-------|-------------|
+| Name | Shift name (e.g., "General Shift") |
+| Code | Unique shift code |
+| Start Time | Shift start time |
+| End Time | Shift end time |
+| Break Duration | Total break time (minutes) |
+| Working Days | Days shift is active |
+
+**Example Shifts:**
+```
+General Shift: 09:00 - 18:00 (60 min break)
+Morning Shift: 06:00 - 14:00 (30 min break)
+Night Shift: 22:00 - 06:00 (45 min break)
+```
+
+#### 4. Holiday Calendar
+
+Navigate to: **HR** → **Holidays**
+
+| Field | Description |
+|-------|-------------|
+| Date | Holiday date |
+| Name | Holiday name |
+| Type | public, optional, restricted |
+| Year | Calendar year |
+
+**Holiday Types:**
+- **Public:** Office closed, paid leave
+- **Optional:** Employee choice
+- **Restricted:** Limited staff required
+
+#### 5. Attendance Clock-In/Out
+
+Navigate to: **HR** → **Attendance**
+
+**Clock-In:**
+1. Select employee
+2. Choose work type (office, remote, field)
+3. Optional: Add location, device info
+4. Click "Clock In"
+
+**Clock-Out:**
+1. Select employee
+2. Optional: Add remarks
+3. Click "Clock Out"
+4. System calculates total hours automatically
+
+**Attendance Status Types:**
+- present, absent, half_day, late, early_leave, on_leave
+
+---
+
+## AI Chatbot
+
+The AI Chatbot provides intelligent assistance throughout the application.
+
+### Accessing the Chatbot
+
+- **Location:** Bottom-right corner of every page
+- **Icon:** Chat bubble icon
+- **Visibility:** Always visible when logged in
+
+### Using the Chatbot
+
+1. **Click the chat icon** to open the chat panel
+2. **Type your question** in the input field
+3. **Press Enter** or click Send
+4. **View streaming response** in real-time
+
+### Chatbot Capabilities
+
+| Category | Examples |
+|----------|----------|
+| **Navigation** | "How do I create a sales invoice?" |
+| **Reports** | "Show me how to view balance sheet" |
+| **Features** | "What can the HR module do?" |
+| **Business** | "How do I set up tax codes?" |
+| **Analytics** | "Explain my sales trends" |
+
+### Streaming Responses
+
+The chatbot uses Server-Sent Events (SSE) for real-time responses:
+- Text appears character-by-character
+- No waiting for full response
+- Can be interrupted by new messages
+
+### Tips for Better Responses
+
+1. Be specific in your questions
+2. Provide context when needed
+3. Ask follow-up questions for clarity
+4. Use the chatbot for guidance, not data entry
+
+---
+
+## Exhibition Module
+
+The Exhibition module manages CRM exhibitions and commission tracking.
+
+### Creating an Exhibition
+
+Navigate to: **CRM** → **Exhibitions** → **Create**
+
+| Field | Description |
+|-------|-------------|
+| Name | Exhibition name |
+| Location | Venue details |
+| Start Date | Exhibition start |
+| End Date | Exhibition end |
+| Budget | Allocated budget |
+| Expected Leads | Target lead count |
+
+### Managing Leads from Exhibition
+
+1. **During Exhibition:**
+   - Capture leads directly in the mobile app
+   - Scan business cards (if integrated)
+   - Add notes and requirements
+
+2. **Post-Exhibition:**
+   - Convert leads to opportunities
+   - Assign to sales team
+   - Track conversion rate
+
+### Commission Tracking
+
+Navigate to: **CRM** → **Commissions**
+
+| Feature | Description |
+|---------|-------------|
+| Commission Plans | Create tiered commission structures |
+| Sales Attribution | Link sales to exhibitions |
+| Commission Calculation | Automatic calculation |
+| Payout Tracking | Manage commission payments |
+
+---
+
+## Role-Based Dashboards
+
+Different users see different dashboards based on their role.
+
+### Dashboard Types
+
+| Role | Dashboard | Key Widgets |
+|------|-----------|-------------|
+| **Super Admin** | App-wide metrics | Organizations, Users, System Health |
+| **Org Admin** | Organization dashboard | Sales, Inventory, Finance overview |
+| **Sales Manager** | Sales dashboard | Pipeline, Opportunities, Targets |
+| **Accountant** | Finance dashboard | P&L, Cash flow, Receivables |
+| **HR Manager** | HR dashboard | Attendance, Leave, Headcount |
+| **Warehouse** | Inventory dashboard | Stock levels, Movements |
+
+### Recent Activity Widget
+
+Each dashboard includes a recent activity panel showing:
+- Last 10 actions by the user
+- Important notifications
+- Pending approvals
+- Upcoming tasks
+
+### Customizing Your Dashboard
+
+1. Navigate to **Dashboard** → **Customize**
+2. Drag and drop widgets
+3. Resize as needed
+4. Click **Save Layout**
+
+---
+
+## Mobile Experience
+
+The application provides full mobile support with dedicated optimized pages.
+
+### Mobile Pages
+
+Access any page with `/mobile/` prefix:
+- `/mobile/login` - Mobile login
+- `/mobile/dashboard` - Mobile dashboard
+- `/mobile/sales` - Sales module
+- `/mobile/inventory` - Inventory management
+- `/mobile/hr` - HR functions
+- `/mobile/ai-chatbot` - AI assistance
+
+### Mobile Features
+
+| Feature | Description |
+|---------|-------------|
+| **Responsive Design** | Adapts to screen size |
+| **Touch Optimized** | Large touch targets |
+| **Offline Capable** | PWA support (partial) |
+| **Camera Integration** | Barcode scanning |
+| **GPS Location** | Field service tracking |
+
+### Error Handling on Mobile
+
+Mobile pages have enhanced error handling:
+- Clear error messages
+- Retry options
+- Offline indicators
+- Network status alerts
+
+---
+
+## GRN PDF Generation
+
+The Goods Receipt Note (GRN) PDF has been enhanced with additional fields and improved formatting.
+
+### New GRN Fields
+
+| Field | Description |
+|-------|-------------|
+| **Vendor Invoice Number** | Supplier's invoice reference |
+| **Vendor Invoice Date** | Date of supplier invoice |
+| **E-Way Bill Number** | GST transport document number |
+| **Manufacturing Date** | Product manufacturing date |
+| **Expiry Date** | Product expiry date |
+| **SKU** | Stock Keeping Unit code |
+| **Lot Number** | Batch/lot identifier |
+
+### GRN PDF Layout
+
+```
+┌─────────────────────────────────────────────────┐
+│                GOODS RECEIPT NOTE                │
+├─────────────────────────────────────────────────┤
+│ GRN Details              │ Vendor Details        │
+│ - GRN Number            │ - Vendor Name         │
+│ - GRN Date              │ - Address             │
+│ - Challan No.           │ - GSTIN               │
+│ - Vendor Invoice No.    │                       │
+│ - E-Way Bill No.        │                       │
+├─────────────────────────────────────────────────┤
+│ Items Table                                     │
+│ Sr | Product | HSN | Batch | Ord | Rcv | Acc   │
+│    | (SKU)   |     | Mfg/Exp|     |     | Rej  │
+├─────────────────────────────────────────────────┤
+│ Totals      │ QC Summary     │                  │
+│             │ Acceptance: 98%│                  │
+├─────────────────────────────────────────────────┤
+│ Signatures: Received By | QC | Store | Auth    │
+├─────────────────────────────────────────────────┤
+│ Page 1 | Generated: 30/11/2025 19:00           │
+└─────────────────────────────────────────────────┘
+```
+
+### Color-Coded Acceptance Rates
+
+| Rate | Color | Meaning |
+|------|-------|---------|
+| ≥95% | Green | Excellent quality |
+| 80-94% | Orange | Acceptable quality |
+| <80% | Red | Quality concern |
+
+### Generating GRN PDF
+
+1. Navigate to the GRN voucher
+2. Click **Print** or **Download PDF**
+3. Select print options
+4. Generate PDF
 
 ---
 
@@ -527,9 +997,10 @@ For issues, questions, or contributions:
 - Create an issue on GitHub
 - Review `CONTRIBUTING.md` for contribution guidelines
 - Check existing documentation in the `docs/` directory
+- **Frontend-Backend Linkage Report**: See `docs/FRONTEND_BACKEND_LINKAGE_REPORT.md`
 
 ---
 
-**Last Updated**: 2025-11-06  
-**Version**: 1.6  
+**Last Updated**: 2025-11-30  
+**Version**: 1.6.1  
 **Status**: Production Ready
