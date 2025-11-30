@@ -25,8 +25,6 @@ from app.models.entitlement_models import *  # register entitlement models
 from app.services.entitlement_service import EntitlementService
 from app.models.user_models import Organization  # For org loop
 
-from app.api.v1.vouchers.sales_order import router as sales_order_router  # NEW: Explicit import
-
 logger = logging.getLogger(__name__)
 
 
@@ -625,13 +623,7 @@ def include_minimal_routers():
         except Exception as e:
             logger.warning(f"Failed to import ai_analytics router: {str(e)}")
 
-    try:  # NEW: Add sales_order_router
-        from app.api.v1.vouchers.sales_order import router as sales_order_router
-
-        routers.append((sales_order_router, "/api/v1", ["sales-orders"]))
-        logger.info("Included sales_order_router at /api/v1/vouchers/sales-orders")
-    except Exception as e:
-        logger.error(f"Failed to import sales_order router: {str(e)}")
+    # Sales orders now unified at /api/v1/vouchers/sales-orders via vouchers router
 
     for router, prefix, tags in routers:
         try:

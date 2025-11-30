@@ -816,3 +816,574 @@ async def get_hr_dashboard(
         employees_in_probation=employees_in_probation,
         average_attendance_rate=average_attendance_rate
     )
+
+
+# ============================================================================
+# Department Management
+# ============================================================================
+
+@router.post("/departments", response_model="DepartmentResponse")
+async def create_department(
+    department_data: "DepartmentCreate",
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new department"""
+    from app.models.hr_models import Department
+    from app.schemas.hr_schemas import DepartmentCreate, DepartmentResponse
+    
+    current_user, org_id = auth
+    
+    # Check if department code is unique
+    stmt = select(Department).where(
+        and_(
+            Department.organization_id == org_id,
+            Department.code == department_data.code
+        )
+    )
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Department code already exists")
+    
+    department = Department(
+        **department_data.model_dump(),
+        organization_id=org_id,
+        created_by_id=current_user.id
+    )
+    
+    db.add(department)
+    await db.commit()
+    await db.refresh(department)
+    
+    return department
+
+
+@router.get("/departments")
+async def get_departments(
+    is_active: Optional[bool] = Query(None),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all departments"""
+    from app.models.hr_models import Department
+    
+    current_user, org_id = auth
+    
+    stmt = select(Department).where(Department.organization_id == org_id)
+    
+    if is_active is not None:
+        stmt = stmt.where(Department.is_active == is_active)
+    
+    stmt = stmt.order_by(Department.name)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.get("/departments/{department_id}")
+async def get_department(
+    department_id: int,
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get department by ID"""
+    from app.models.hr_models import Department
+    
+    current_user, org_id = auth
+    
+    stmt = select(Department).where(
+        and_(
+            Department.id == department_id,
+            Department.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    department = result.scalar_one_or_none()
+    
+    if not department:
+        raise HTTPException(status_code=404, detail="Department not found")
+    
+    return department
+
+
+@router.put("/departments/{department_id}")
+async def update_department(
+    department_id: int,
+    department_data: "DepartmentUpdate",
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update department"""
+    from app.models.hr_models import Department
+    from app.schemas.hr_schemas import DepartmentUpdate
+    
+    current_user, org_id = auth
+    
+    stmt = select(Department).where(
+        and_(
+            Department.id == department_id,
+            Department.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    department = result.scalar_one_or_none()
+    
+    if not department:
+        raise HTTPException(status_code=404, detail="Department not found")
+    
+    for field, value in department_data.model_dump(exclude_unset=True).items():
+        setattr(department, field, value)
+    
+    await db.commit()
+    await db.refresh(department)
+    
+    return department
+
+
+# ============================================================================
+# Position Management
+# ============================================================================
+
+@router.post("/positions")
+async def create_position(
+    position_data: "PositionCreate",
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new position"""
+    from app.models.hr_models import Position
+    from app.schemas.hr_schemas import PositionCreate
+    
+    current_user, org_id = auth
+    
+    # Check if position code is unique
+    stmt = select(Position).where(
+        and_(
+            Position.organization_id == org_id,
+            Position.code == position_data.code
+        )
+    )
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Position code already exists")
+    
+    position = Position(
+        **position_data.model_dump(),
+        organization_id=org_id
+    )
+    
+    db.add(position)
+    await db.commit()
+    await db.refresh(position)
+    
+    return position
+
+
+@router.get("/positions")
+async def get_positions(
+    department_id: Optional[int] = Query(None),
+    is_active: Optional[bool] = Query(None),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all positions"""
+    from app.models.hr_models import Position
+    
+    current_user, org_id = auth
+    
+    stmt = select(Position).where(Position.organization_id == org_id)
+    
+    if department_id:
+        stmt = stmt.where(Position.department_id == department_id)
+    
+    if is_active is not None:
+        stmt = stmt.where(Position.is_active == is_active)
+    
+    stmt = stmt.order_by(Position.title)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/positions/{position_id}")
+async def update_position(
+    position_id: int,
+    position_data: "PositionUpdate",
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update position"""
+    from app.models.hr_models import Position
+    from app.schemas.hr_schemas import PositionUpdate
+    
+    current_user, org_id = auth
+    
+    stmt = select(Position).where(
+        and_(
+            Position.id == position_id,
+            Position.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    position = result.scalar_one_or_none()
+    
+    if not position:
+        raise HTTPException(status_code=404, detail="Position not found")
+    
+    for field, value in position_data.model_dump(exclude_unset=True).items():
+        setattr(position, field, value)
+    
+    await db.commit()
+    await db.refresh(position)
+    
+    return position
+
+
+# ============================================================================
+# Work Shift Management
+# ============================================================================
+
+@router.post("/shifts")
+async def create_work_shift(
+    shift_data: "WorkShiftCreate",
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new work shift"""
+    from app.models.hr_models import WorkShift
+    from app.schemas.hr_schemas import WorkShiftCreate
+    
+    current_user, org_id = auth
+    
+    # Check if shift code is unique
+    stmt = select(WorkShift).where(
+        and_(
+            WorkShift.organization_id == org_id,
+            WorkShift.code == shift_data.code
+        )
+    )
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Shift code already exists")
+    
+    shift = WorkShift(
+        **shift_data.model_dump(),
+        organization_id=org_id
+    )
+    
+    db.add(shift)
+    await db.commit()
+    await db.refresh(shift)
+    
+    return shift
+
+
+@router.get("/shifts")
+async def get_work_shifts(
+    is_active: Optional[bool] = Query(None),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all work shifts"""
+    from app.models.hr_models import WorkShift
+    
+    current_user, org_id = auth
+    
+    stmt = select(WorkShift).where(WorkShift.organization_id == org_id)
+    
+    if is_active is not None:
+        stmt = stmt.where(WorkShift.is_active == is_active)
+    
+    stmt = stmt.order_by(WorkShift.name)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/shifts/{shift_id}")
+async def update_work_shift(
+    shift_id: int,
+    shift_data: "WorkShiftUpdate",
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update work shift"""
+    from app.models.hr_models import WorkShift
+    from app.schemas.hr_schemas import WorkShiftUpdate
+    
+    current_user, org_id = auth
+    
+    stmt = select(WorkShift).where(
+        and_(
+            WorkShift.id == shift_id,
+            WorkShift.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    shift = result.scalar_one_or_none()
+    
+    if not shift:
+        raise HTTPException(status_code=404, detail="Work shift not found")
+    
+    for field, value in shift_data.model_dump(exclude_unset=True).items():
+        setattr(shift, field, value)
+    
+    await db.commit()
+    await db.refresh(shift)
+    
+    return shift
+
+
+# ============================================================================
+# Holiday Calendar Management
+# ============================================================================
+
+@router.post("/holidays")
+async def create_holiday(
+    holiday_data: "HolidayCalendarCreate",
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new holiday"""
+    from app.models.hr_models import HolidayCalendar
+    from app.schemas.hr_schemas import HolidayCalendarCreate
+    
+    current_user, org_id = auth
+    
+    # Check if holiday already exists for this date
+    stmt = select(HolidayCalendar).where(
+        and_(
+            HolidayCalendar.organization_id == org_id,
+            HolidayCalendar.holiday_date == holiday_data.holiday_date
+        )
+    )
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Holiday already exists for this date")
+    
+    holiday = HolidayCalendar(
+        **holiday_data.model_dump(),
+        organization_id=org_id
+    )
+    
+    db.add(holiday)
+    await db.commit()
+    await db.refresh(holiday)
+    
+    return holiday
+
+
+@router.get("/holidays")
+async def get_holidays(
+    year: Optional[int] = Query(None),
+    holiday_type: Optional[str] = Query(None),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all holidays"""
+    from app.models.hr_models import HolidayCalendar
+    
+    current_user, org_id = auth
+    
+    stmt = select(HolidayCalendar).where(HolidayCalendar.organization_id == org_id)
+    
+    if year:
+        stmt = stmt.where(HolidayCalendar.year == year)
+    
+    if holiday_type:
+        stmt = stmt.where(HolidayCalendar.holiday_type == holiday_type)
+    
+    stmt = stmt.order_by(HolidayCalendar.holiday_date)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/holidays/{holiday_id}")
+async def update_holiday(
+    holiday_id: int,
+    holiday_data: "HolidayCalendarUpdate",
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update holiday"""
+    from app.models.hr_models import HolidayCalendar
+    from app.schemas.hr_schemas import HolidayCalendarUpdate
+    
+    current_user, org_id = auth
+    
+    stmt = select(HolidayCalendar).where(
+        and_(
+            HolidayCalendar.id == holiday_id,
+            HolidayCalendar.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    holiday = result.scalar_one_or_none()
+    
+    if not holiday:
+        raise HTTPException(status_code=404, detail="Holiday not found")
+    
+    for field, value in holiday_data.model_dump(exclude_unset=True).items():
+        setattr(holiday, field, value)
+    
+    await db.commit()
+    await db.refresh(holiday)
+    
+    return holiday
+
+
+@router.delete("/holidays/{holiday_id}")
+async def delete_holiday(
+    holiday_id: int,
+    auth: tuple = Depends(require_access("hr", "delete")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a holiday"""
+    from app.models.hr_models import HolidayCalendar
+    
+    current_user, org_id = auth
+    
+    stmt = select(HolidayCalendar).where(
+        and_(
+            HolidayCalendar.id == holiday_id,
+            HolidayCalendar.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    holiday = result.scalar_one_or_none()
+    
+    if not holiday:
+        raise HTTPException(status_code=404, detail="Holiday not found")
+    
+    await db.delete(holiday)
+    await db.commit()
+    
+    return {"message": "Holiday deleted successfully"}
+
+
+# ============================================================================
+# Clock In/Out Endpoints
+# ============================================================================
+
+@router.post("/attendance/clock-in")
+async def clock_in(
+    employee_id: int,
+    work_type: str = Query(default="office"),
+    location: Optional[str] = Query(None),
+    device: Optional[str] = Query(None),
+    remarks: Optional[str] = Query(None),
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Clock in an employee for attendance"""
+    current_user, org_id = auth
+    today = date.today()
+    now = datetime.utcnow().time()
+    
+    # Check if attendance record already exists for today
+    stmt = select(AttendanceRecord).where(
+        and_(
+            AttendanceRecord.organization_id == org_id,
+            AttendanceRecord.employee_id == employee_id,
+            AttendanceRecord.attendance_date == today
+        )
+    )
+    result = await db.execute(stmt)
+    existing_record = result.scalar_one_or_none()
+    
+    if existing_record and existing_record.check_in_time:
+        raise HTTPException(
+            status_code=400,
+            detail="Employee has already clocked in for today"
+        )
+    
+    if existing_record:
+        # Update existing record
+        existing_record.check_in_time = now
+        existing_record.work_type = work_type
+        existing_record.check_in_location = location
+        existing_record.check_in_device = device
+        existing_record.employee_remarks = remarks
+        existing_record.attendance_status = "present"
+        await db.commit()
+        await db.refresh(existing_record)
+        return existing_record
+    else:
+        # Create new record
+        attendance_record = AttendanceRecord(
+            organization_id=org_id,
+            employee_id=employee_id,
+            attendance_date=today,
+            check_in_time=now,
+            work_type=work_type,
+            check_in_location=location,
+            check_in_device=device,
+            employee_remarks=remarks,
+            attendance_status="present"
+        )
+        db.add(attendance_record)
+        await db.commit()
+        await db.refresh(attendance_record)
+        return attendance_record
+
+
+@router.post("/attendance/clock-out")
+async def clock_out(
+    employee_id: int,
+    location: Optional[str] = Query(None),
+    remarks: Optional[str] = Query(None),
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Clock out an employee for attendance"""
+    current_user, org_id = auth
+    today = date.today()
+    now = datetime.utcnow().time()
+    
+    # Find today's attendance record
+    stmt = select(AttendanceRecord).where(
+        and_(
+            AttendanceRecord.organization_id == org_id,
+            AttendanceRecord.employee_id == employee_id,
+            AttendanceRecord.attendance_date == today
+        )
+    )
+    result = await db.execute(stmt)
+    record = result.scalar_one_or_none()
+    
+    if not record:
+        raise HTTPException(
+            status_code=404,
+            detail="No clock-in record found for today"
+        )
+    
+    if not record.check_in_time:
+        raise HTTPException(
+            status_code=400,
+            detail="Employee has not clocked in yet"
+        )
+    
+    if record.check_out_time:
+        raise HTTPException(
+            status_code=400,
+            detail="Employee has already clocked out for today"
+        )
+    
+    record.check_out_time = now
+    record.check_out_location = location
+    
+    # Calculate total hours
+    check_in_datetime = datetime.combine(today, record.check_in_time)
+    check_out_datetime = datetime.combine(today, now)
+    total_seconds = (check_out_datetime - check_in_datetime).total_seconds()
+    total_hours = Decimal(str(total_seconds / 3600))
+    
+    # Subtract break hours if applicable
+    break_hours = record.break_hours or Decimal('0')
+    record.total_hours = total_hours - break_hours
+    
+    if remarks:
+        existing_remarks = record.employee_remarks or ""
+        record.employee_remarks = f"{existing_remarks} | Clock-out: {remarks}" if existing_remarks else remarks
+    
+    await db.commit()
+    await db.refresh(record)
+    
+    return record

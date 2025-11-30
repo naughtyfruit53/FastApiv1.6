@@ -146,16 +146,11 @@ class DemoUserService:
             expiry_time = datetime.utcnow() + timedelta(minutes=DEMO_SESSION_DURATION_MINUTES)
             
             # Create access token with demo-specific claims
-            token_data = {
-                "sub": demo_email,
-                "type": "demo",
-                "org_id": DEMO_ORG_ID,
-                "exp": expiry_time,
-                "is_demo": True
-            }
-            
             access_token = create_access_token(
-                data={"sub": demo_email},
+                subject=demo_email,
+                organization_id=DEMO_ORG_ID,
+                user_role="demo",
+                user_type="demo",
                 expires_delta=timedelta(minutes=DEMO_SESSION_DURATION_MINUTES)
             )
             

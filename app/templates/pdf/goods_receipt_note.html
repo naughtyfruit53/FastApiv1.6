@@ -10,9 +10,12 @@
 {% if voucher.challan_date %}<tr><td class="label">Challan Date</td><td class="value">{{ voucher.challan_date|format_date(format_str='%d/%m/%Y') }}</td></tr>{% endif %}
 {% if voucher.purchase_order %}<tr><td class="label">PO Number</td><td class="value">{{ voucher.purchase_order.voucher_number|default('') }}</td></tr>{% endif %}
 {% if voucher.purchase_order %}<tr><td class="label">PO Date</td><td class="value">{{ voucher.purchase_order.date|format_date(format_str='%d/%m/%Y')|default('') }}</td></tr>{% endif %}
+{% if voucher.vendor_invoice_number %}<tr><td class="label">Vendor Inv. No.</td><td class="value">{{ voucher.vendor_invoice_number }}</td></tr>{% endif %}
+{% if voucher.vendor_invoice_date %}<tr><td class="label">Vendor Inv. Date</td><td class="value">{{ voucher.vendor_invoice_date|format_date(format_str='%d/%m/%Y') }}</td></tr>{% endif %}
 {% if voucher.vehicle_number %}<tr><td class="label">Vehicle No.</td><td class="value">{{ voucher.vehicle_number }}</td></tr>{% endif %}
 {% if voucher.lr_rr_number %}<tr><td class="label">LR/RR No.</td><td class="value">{{ voucher.lr_rr_number }}</td></tr>{% endif %}
 {% if voucher.transport_mode %}<tr><td class="label">Transport</td><td class="value">{{ voucher.transport_mode }}</td></tr>{% endif %}
+{% if voucher.eway_bill_number %}<tr><td class="label">E-Way Bill No.</td><td class="value">{{ voucher.eway_bill_number }}</td></tr>{% endif %}
 {% endblock %}
 
 {% block items_table %}
@@ -20,45 +23,52 @@
     <thead>
         <tr>
             <th style="width: 4%;">Sr.</th>
-            <th style="width: 20%;">Product</th>
-            <th style="width: 10%;">HSN Code</th>
+            <th style="width: 18%;">Product</th>
+            <th style="width: 8%;">HSN Code</th>
             <th style="width: 12%;">Batch/Lot</th>
-            <th style="width: 9%;">Ordered</th>
-            <th style="width: 9%;">Received</th>
-            <th style="width: 9%;">Accepted</th>
-            <th style="width: 9%;">Rejected</th>
-            <th style="width: 8%;">Unit</th>
-            <th style="width: 8%;">Unit Price</th>
-            <th style="width: 8%;">Total</th>
-            <th style="width: 10%;">Remarks</th>
+            <th style="width: 8%;">Ordered</th>
+            <th style="width: 8%;">Received</th>
+            <th style="width: 8%;">Accepted</th>
+            <th style="width: 8%;">Rejected</th>
+            <th style="width: 6%;">Unit</th>
+            <th style="width: 8%;">Rate</th>
+            <th style="width: 8%;">Amount</th>
+            <th style="width: 8%;">Remarks</th>
         </tr>
     </thead>
     <tbody>
         {% for item in items %}
-        <tr>
+        <tr{% if item['rejected_quantity']|float > 0 %} style="background-color: #fff5f5;"{% endif %}>
             <td style="text-align: center;">{{ loop.index }}</td>
-            <td>{{ item['product_name']|default('N/A') }}</td>
+            <td>
+                {{ item['product_name']|default('N/A') }}
+                {% if item['sku'] %}<br><small style="color: #666;">SKU: {{ item['sku'] }}</small>{% endif %}
+            </td>
             <td style="text-align: center;">{{ item['hsn_code']|default('-') }}</td>
-            <td style="text-align: center;">{{ item['batch_number']|default('-') }}{% if item['expiry_date'] %}<br><small style="color: #666;">Exp: {{ item['expiry_date']|format_date(format_str='%d/%m/%Y') }}</small>{% endif %}</td>
+            <td style="text-align: center; font-size: 10px;">
+                {{ item['batch_number']|default(item['lot_number'])|default('-') }}
+                {% if item['manufacturing_date'] %}<br><small style="color: #27ae60;">Mfg: {{ item['manufacturing_date']|format_date(format_str='%d/%m/%Y') }}</small>{% endif %}
+                {% if item['expiry_date'] %}<br><small style="color: #c0392b;">Exp: {{ item['expiry_date']|format_date(format_str='%d/%m/%Y') }}</small>{% endif %}
+            </td>
             <td style="text-align: right;">{{ "%.2f"|format(item['ordered_quantity']|float) }}</td>
             <td style="text-align: right;">{{ "%.2f"|format(item['received_quantity']|float) }}</td>
-            <td style="text-align: right;">{{ "%.2f"|format(item['accepted_quantity']|float) }}</td>
-            <td style="text-align: right;">{{ "%.2f"|format(item['rejected_quantity']|float) }}</td>
+            <td style="text-align: right; color: #27ae60;">{{ "%.2f"|format(item['accepted_quantity']|float) }}</td>
+            <td style="text-align: right; {% if item['rejected_quantity']|float > 0 %}color: #c0392b; font-weight: bold;{% endif %}">{{ "%.2f"|format(item['rejected_quantity']|float) }}</td>
             <td style="text-align: center;">{{ item['unit'] }}</td>
             <td style="text-align: right;">{{ item['unit_price']|format_currency }}</td>
-            <td style="text-align: right;">{{ item['total_cost']|format_currency }}</td>
-            <td style="font-size: 9px;">{{ item['remarks']|default('-')|truncate(30) }}</td>
+            <td style="text-align: right;">{{ (item['accepted_quantity']|float * item['unit_price']|float)|format_currency }}</td>
+            <td style="font-size: 9px;">{{ item['remarks']|default(item['rejection_reason'])|default('-')|truncate(25) }}</td>
         </tr>
         {% endfor %}
         <!-- Summary row -->
-        <tr style="background-color: #f6f6f6; font-weight: bold;">
+        <tr style="background-color: #f6f6f6; font-weight: bold; border-top: 2px solid #222;">
             <td colspan="4" style="text-align: right; padding-right: 10px;">Totals:</td>
             <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='ordered_quantity')|float) }}</td>
             <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='received_quantity')|float) }}</td>
-            <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='accepted_quantity')|float) }}</td>
-            <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='rejected_quantity')|float) }}</td>
+            <td style="text-align: right; color: #27ae60;">{{ "%.2f"|format(items|sum(attribute='accepted_quantity')|float) }}</td>
+            <td style="text-align: right; {% if items|sum(attribute='rejected_quantity')|float > 0 %}color: #c0392b;{% endif %}">{{ "%.2f"|format(items|sum(attribute='rejected_quantity')|float) }}</td>
             <td colspan="2"></td>
-            <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='total_cost')|float) }}</td>
+            <td style="text-align: right;">{{ grand_total|format_currency }}</td>
             <td></td>
         </tr>
     </tbody>
@@ -66,39 +76,64 @@
 {% endblock %}
 
 {% block totals_left %}
-<div style="font-weight:700;">Terms and Conditions</div>
+<div style="font-weight:700; margin-bottom: 4px;">Terms and Conditions</div>
 {% if terms_conditions %}
 <table>
     <tbody>
         {% for term in terms_conditions %}
         {% if term|trim %}
-        <tr><td>{{ loop.index }}. {{ term|trim }}</td></tr>
+        <tr><td style="font-size: 10px;">{{ loop.index }}. {{ term|trim }}</td></tr>
         {% endif %}
         {% endfor %}
     </tbody>
 </table>
 {% endif %}
+
+<!-- Supplier Reference Info -->
+{% if voucher.supplier_ref_number or voucher.delivery_note_number %}
+<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ccc;">
+    <div style="font-weight:700; font-size: 10px;">Supplier References</div>
+    {% if voucher.supplier_ref_number %}<div style="font-size: 10px;">Supplier Ref: {{ voucher.supplier_ref_number }}</div>{% endif %}
+    {% if voucher.delivery_note_number %}<div style="font-size: 10px;">Delivery Note: {{ voucher.delivery_note_number }}</div>{% endif %}
+</div>
+{% endif %}
 {% endblock %}
 
 {% block totals_right %}
-<!-- GRN doesn't show financial totals, only QC summary -->
+<!-- GRN QC Summary -->
 <table>
     <tbody>
-        <tr><td class="muted">Total Items</td><td class="right num">{{ items|length if items else 0 }}</td></tr>
-        <tr><td class="muted">Total Ordered</td><td class="right num">{{ "%.2f"|format((items|sum(attribute='ordered_quantity')|float) if items else 0) }}</td></tr>
-        <tr><td class="muted">Total Received</td><td class="right num">{{ "%.2f"|format((items|sum(attribute='received_quantity')|float) if items else 0) }}</td></tr>
-        <tr><td class="muted">Total Accepted</td><td class="right num">{{ "%.2f"|format((items|sum(attribute='accepted_quantity')|float) if items else 0) }}</td></tr>
-        <tr><td class="muted">Total Rejected</td><td class="right num" style="{% if items and items|sum(attribute='rejected_quantity') > 0 %}color: #c0392b;{% endif %}">{{ "%.2f"|format((items|sum(attribute='rejected_quantity')|float) if items else 0) }}</td></tr>
+        <tr><td class="muted">Total Line Items</td><td class="right num">{{ items|length if items else 0 }}</td></tr>
+        <tr><td class="muted">Total Ordered Qty</td><td class="right num">{{ "%.2f"|format((items|sum(attribute='ordered_quantity')|float) if items else 0) }}</td></tr>
+        <tr><td class="muted">Total Received Qty</td><td class="right num">{{ "%.2f"|format((items|sum(attribute='received_quantity')|float) if items else 0) }}</td></tr>
+        <tr><td class="muted">Total Accepted Qty</td><td class="right num" style="color: #27ae60;">{{ "%.2f"|format((items|sum(attribute='accepted_quantity')|float) if items else 0) }}</td></tr>
+        <tr><td class="muted">Total Rejected Qty</td><td class="right num" style="{% if items and items|sum(attribute='rejected_quantity') > 0 %}color: #c0392b; font-weight: bold;{% endif %}">{{ "%.2f"|format((items|sum(attribute='rejected_quantity')|float) if items else 0) }}</td></tr>
         {% set total_received = (items|sum(attribute='received_quantity')|float) if items else 0 %}
         {% set total_accepted = (items|sum(attribute='accepted_quantity')|float) if items else 0 %}
         {% set acceptance_rate = (total_accepted / total_received * 100) if total_received > 0 else 0 %}
-        <tr><td style="font-weight:700">Acceptance Rate</td><td class="right num" style="font-weight:700;">{{ "%.1f"|format(acceptance_rate) }}%</td></tr>
+        <tr style="border-top: 1px solid #222;">
+            <td style="font-weight:700">Acceptance Rate</td>
+            <td class="right num" style="font-weight:700; {% if acceptance_rate >= 95 %}color: #27ae60;{% elif acceptance_rate >= 80 %}color: #f39c12;{% else %}color: #c0392b;{% endif %}">
+                {{ "%.1f"|format(acceptance_rate) }}%
+            </td>
+        </tr>
+        {% if grand_total %}
+        <tr style="border-top: 1px solid #222;">
+            <td style="font-weight:700">Total Value</td>
+            <td class="right num" style="font-weight:700;">{{ grand_total|format_currency }}</td>
+        </tr>
+        {% endif %}
     </tbody>
 </table>
 {% endblock %}
 
 {% block amount_words_block %}
-<!-- GRN doesn't have amount in words -->
+{% if grand_total and grand_total > 0 %}
+<div class="amount-words">
+    <span class="label">Amount in Words:</span>
+    <span class="words">{{ amount_in_words }}</span>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block terms_block %}
@@ -108,20 +143,25 @@
 <div style="box-sizing: border-box; border-left: 1px solid #222; border-right: 1px solid #222; border-bottom: 1px solid #222; padding: 10px; font-size: 11px;">
     <table style="width: 100%; border-collapse: collapse;">
         <tr>
-            <td style="width: 33%; text-align: center; padding: 10px; border-right: 1px solid #ddd;">
-                <div style="height: 40px;"></div>
+            <td style="width: 25%; text-align: center; padding: 10px; border-right: 1px solid #ddd;">
+                <div style="height: 35px;"></div>
                 <div>_______________________</div>
-                <div style="font-weight: 600;">Quality Inspector</div>
+                <div style="font-weight: 600; font-size: 10px;">Received By</div>
             </td>
-            <td style="width: 33%; text-align: center; padding: 10px; border-right: 1px solid #ddd;">
-                <div style="height: 40px;"></div>
+            <td style="width: 25%; text-align: center; padding: 10px; border-right: 1px solid #ddd;">
+                <div style="height: 35px;"></div>
                 <div>_______________________</div>
-                <div style="font-weight: 600;">Store In-Charge</div>
+                <div style="font-weight: 600; font-size: 10px;">Quality Inspector</div>
             </td>
-            <td style="width: 34%; text-align: center; padding: 10px;">
-                <div style="height: 40px;"></div>
+            <td style="width: 25%; text-align: center; padding: 10px; border-right: 1px solid #ddd;">
+                <div style="height: 35px;"></div>
                 <div>_______________________</div>
-                <div style="font-weight: 600;">Authorized Signatory</div>
+                <div style="font-weight: 600; font-size: 10px;">Store In-Charge</div>
+            </td>
+            <td style="width: 25%; text-align: center; padding: 10px;">
+                <div style="height: 35px;"></div>
+                <div>_______________________</div>
+                <div style="font-weight: 600; font-size: 10px;">Authorized Signatory</div>
             </td>
         </tr>
     </table>
@@ -138,13 +178,29 @@
 </div>
 {% endif %}
 
+{% if voucher.quality_check_notes %}
+<div style="margin-top: 10px; border: 1px solid #f39c12; padding: 8px; background-color: #fef9e7;">
+    <div style="font-weight: 700; font-size: 11px; color: #9a7d0a;">Quality Check Notes:</div>
+    <div style="font-size: 10px; color: #333;">
+        {{ voucher.quality_check_notes }}
+    </div>
+</div>
+{% endif %}
+
 {% if voucher.inspection_status %}
-<div style="margin-top: 10px; text-align: center; font-weight: bold; padding: 10px; border: 2px solid {% if voucher.inspection_status == 'completed' %}#27ae60{% elif voucher.inspection_status == 'rejected' %}#c0392b{% else %}#f39c12{% endif %}; background-color: {% if voucher.inspection_status == 'completed' %}#d5f5e3{% elif voucher.inspection_status == 'rejected' %}#fadbd8{% else %}#fef9e7{% endif %}; color: {% if voucher.inspection_status == 'completed' %}#1e8449{% elif voucher.inspection_status == 'rejected' %}#922b21{% else %}#9a7d0a{% endif %};">
+<div style="margin-top: 10px; text-align: center; font-weight: bold; padding: 10px; border: 2px solid {% if voucher.inspection_status == 'completed' or voucher.inspection_status == 'approved' %}#27ae60{% elif voucher.inspection_status == 'rejected' %}#c0392b{% else %}#f39c12{% endif %}; background-color: {% if voucher.inspection_status == 'completed' or voucher.inspection_status == 'approved' %}#d5f5e3{% elif voucher.inspection_status == 'rejected' %}#fadbd8{% else %}#fef9e7{% endif %}; color: {% if voucher.inspection_status == 'completed' or voucher.inspection_status == 'approved' %}#1e8449{% elif voucher.inspection_status == 'rejected' %}#922b21{% else %}#9a7d0a{% endif %};">
     Inspection Status: {{ voucher.inspection_status|upper }}
+    {% if voucher.inspected_by %}<br><small>Inspected by: {{ voucher.inspected_by }}</small>{% endif %}
+    {% if voucher.inspected_at %}<br><small>Date: {{ voucher.inspected_at|format_date(format_str='%d/%m/%Y %H:%M') }}</small>{% endif %}
 </div>
 {% else %}
 <div style="margin-top: 10px; text-align: center; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; padding: 10px; background-color: #ebf3fd;">
     Goods Receipt Confirmed
 </div>
 {% endif %}
+
+<!-- Page number for multi-page support -->
+<div style="position: absolute; bottom: 5px; right: 10px; font-size: 9px; color: #888;">
+    Page {{ page_count }} | Generated: {{ generated_at|format_date(format_str='%d/%m/%Y %H:%M') }}
+</div>
 {% endblock %}
