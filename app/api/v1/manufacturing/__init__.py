@@ -15,10 +15,16 @@ This module is organized into logical submodules for better maintainability:
 - production_entries.py: Production entry operations  # NEW: Added
 """
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Depends, Query
 from fastapi.routing import APIRoute
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from typing import Optional
 import logging
 import traceback
+
+from app.core.database import get_db
+from app.core.enforcement import require_access
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +42,7 @@ from .maintenance import router as maintenance_router
 from .quality_control import router as quality_control_router
 from .inventory_adjustment import router as inventory_adjustment_router
 from .production_entries import router as production_entries_router  # NEW: Added import
+from .fg_receipts import router as fg_receipts_router  # NEW: Added FG Receipts router
 # Comment out the test_router import and inclusion to avoid ModuleNotFoundError in deployment
 # from .test_router import router as test_router
 
@@ -48,6 +55,29 @@ async def debug_manufacturing():
     """Debug endpoint to verify manufacturing router is mounted"""
     logger.info("Manufacturing debug endpoint accessed")
     return {"message": "Manufacturing router is mounted"}
+
+# Alias endpoint for quality-inspections (frontend uses this path)
+@router.get("/quality-inspections")
+async def get_quality_inspections_alias(
+    page: int = 1,
+    per_page: int = 10,
+    status: Optional[str] = None,
+    overall_status: Optional[str] = None,
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Alias for quality-control/inspections to match frontend API calls"""
+    from app.models.vouchers.manufacturing_planning import QCInspection
+    _, org_id = auth
+    stmt = select(QCInspection).where(QCInspection.organization_id == org_id)
+    if status:
+        stmt = stmt.where(QCInspection.status == status)
+    if overall_status:
+        stmt = stmt.where(QCInspection.overall_status == overall_status)
+    stmt = stmt.order_by(QCInspection.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+    return {"items": items, "page": page, "per_page": per_page}
 
 # Include sub-routers with error handling
 try:
@@ -190,6 +220,17 @@ try:
     logger.debug("Included production_entries_router")
 except Exception as e:
     logger.error(f"Failed to include production_entries_router: {str(e)}\n{traceback.format_exc()}")
+
+# NEW: Added FG Receipts router
+try:
+    router.include_router(fg_receipts_router, prefix="/fg-receipts", tags=["Finished Good Receipts"])
+    for route in fg_receipts_router.routes:
+        if isinstance(route, APIRoute):
+            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
+            logger.debug(f"Registered fg_receipts endpoint: {methods} /fg-receipts{route.path}")
+    logger.debug("Included fg_receipts_router")
+except Exception as e:
+    logger.error(f"Failed to include fg_receipts_router: {str(e)}\n{traceback.format_exc()}")
 
 # Comment out test_router to avoid ModuleNotFoundError in deployment
 # try:

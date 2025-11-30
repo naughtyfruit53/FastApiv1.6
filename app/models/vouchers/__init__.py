@@ -80,5 +80,9 @@ from .manufacturing_operations import (
     JobCardReceivedOutput,
     StockJournal,
     StockJournalEntry,
-    ProductionEntry
+    ProductionEntry,
+    FinishedGoodReceipt,
+    FinishedGoodReceiptItem,
+    FGReceiptCostDetail,
+    FGReceiptAudit
 )

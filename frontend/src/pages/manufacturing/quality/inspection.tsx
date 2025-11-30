@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Box, Typography, Alert, Card, CardContent, Grid, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Chip } from '@mui/material';
+import { Container, Box, Typography, Alert, Card, CardContent, CardActionArea, Grid, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Chip } from '@mui/material';
 import { Assessment, CheckCircle, Warning, Add, Visibility, Edit } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/router';
@@ -33,6 +33,19 @@ const QualityInspectionPage: React.FC = () => {
     router.push('/manufacturing/quality/inspection/create');
   };
 
+  // Tile click handlers
+  const handleInspectionPlansClick = () => {
+    router.push('/manufacturing/quality/inspection-plans');
+  };
+
+  const handleAcceptanceClick = () => {
+    router.push('/manufacturing/quality/acceptance');
+  };
+
+  const handleNonConformanceClick = () => {
+    router.push('/manufacturing/quality/non-conformance');
+  };
+
   return (
     <ProtectedPage moduleKey="manufacturing" action="read">
     <Container maxWidth="xl">
@@ -60,52 +73,86 @@ const QualityInspectionPage: React.FC = () => {
           systematic inspection of raw materials, work-in-progress, and finished goods.
         </Alert>
 
+        {/* Clickable Tiles */}
         <Grid container spacing={3} sx={{ mb: 3 }}>
           <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Assessment color="primary" sx={{ fontSize: 40 }} />
-                  <Typography variant="h6">
-                    Inspection Plans
+            <Card 
+              sx={{ 
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4,
+                }
+              }}
+            >
+              <CardActionArea onClick={handleInspectionPlansClick}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Assessment color="primary" sx={{ fontSize: 40 }} />
+                    <Typography variant="h6">
+                      Inspection Plans
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Define inspection criteria and quality parameters for different product types.
                   </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  Define inspection criteria and quality parameters for different product types.
-                </Typography>
-              </CardContent>
+                </CardContent>
+              </CardActionArea>
             </Card>
           </Grid>
           
           <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <CheckCircle color="primary" sx={{ fontSize: 40 }} />
-                  <Typography variant="h6">
-                    Acceptance
+            <Card 
+              sx={{ 
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4,
+                }
+              }}
+            >
+              <CardActionArea onClick={handleAcceptanceClick}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <CheckCircle color="success" sx={{ fontSize: 40 }} />
+                    <Typography variant="h6">
+                      Acceptance
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Record inspection results and approve or reject batches based on quality standards.
                   </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  Record inspection results and approve or reject batches based on quality standards.
-                </Typography>
-              </CardContent>
+                </CardContent>
+              </CardActionArea>
             </Card>
           </Grid>
           
           <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Warning color="primary" sx={{ fontSize: 40 }} />
-                  <Typography variant="h6">
-                    Non-Conformance
+            <Card 
+              sx={{ 
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4,
+                }
+              }}
+            >
+              <CardActionArea onClick={handleNonConformanceClick}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Warning color="error" sx={{ fontSize: 40 }} />
+                    <Typography variant="h6">
+                      Non-Conformance
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Track and manage non-conformance issues and corrective actions.
                   </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  Track and manage non-conformance issues and corrective actions.
-                </Typography>
-              </CardContent>
+                </CardContent>
+              </CardActionArea>
             </Card>
           </Grid>
         </Grid>

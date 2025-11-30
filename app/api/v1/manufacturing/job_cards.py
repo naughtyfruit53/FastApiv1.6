@@ -82,10 +82,10 @@ async def get_job_card_vouchers(
     skip: int = 0,
     limit: int = 100,
     auth: tuple = Depends(require_access("manufacturing", "read")),
-
     db: AsyncSession = Depends(get_db)
 ):
     """Get list of job card vouchers at /api/v1/job-card-vouchers"""
+    current_user, org_id = auth
     try:
         stmt = select(JobCardVoucher).where(
             JobCardVoucher.organization_id == org_id
@@ -101,16 +101,16 @@ async def get_job_card_vouchers(
 @router.get("/next-number")
 async def get_next_job_card_number(
     auth: tuple = Depends(require_access("manufacturing", "read")),
-
     db: AsyncSession = Depends(get_db)
 ):
     """Get next job card number at /api/v1/job-card-vouchers/next-number"""
+    current_user, org_id = auth
     try:
         next_number = await VoucherNumberService.generate_voucher_number_async(
             db, "JCV", org_id, JobCardVoucher
         )
         logger.info(f"Generated next job card number: {next_number} for organization {org_id}")
-        return next_number
+        return {"next_number": next_number}
     except Exception as e:
         logger.error(f"Error generating job card number: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate job card number")
@@ -118,11 +118,11 @@ async def get_next_job_card_number(
 @router.post("")
 async def create_job_card_voucher(
     voucher_data: JobCardVoucherCreate,
-    auth: tuple = Depends(require_access("manufacturing", "read")),
-
+    auth: tuple = Depends(require_access("manufacturing", "write")),
     db: AsyncSession = Depends(get_db)
 ):
     """Create new job card voucher at /api/v1/job-card-vouchers"""
+    current_user, org_id = auth
     try:
         # Generate voucher number
         voucher_number = await VoucherNumberService.generate_voucher_number_async(
@@ -196,5 +196,6 @@ async def create_job_card_voucher(
         logger.info(f"Created job card voucher {voucher_number} for organization {org_id}")
         return db_voucher
     except Exception as e:
+        await db.rollback()
         logger.error(f"Error creating job card voucher: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create job card voucher")

@@ -511,3 +511,236 @@ async def delete_quotation(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete quotation"
         )
+
+
+# ============== Proforma and Revision Endpoints ==============
+
+@router.post("/{quotation_id}/proforma", response_model=QuotationInDB)
+async def create_proforma_from_quotation(
+    quotation_id: int,
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("voucher", "create"))
+):
+    """
+    Create a Proforma Invoice from a quotation.
+    Duplicates header and lines, sets is_proforma=True, uses PI prefix.
+    """
+    current_user, org_id = auth
+    
+    try:
+        # Get the source quotation
+        stmt = select(Quotation).options(
+            joinedload(Quotation.items)
+        ).where(
+            Quotation.id == quotation_id,
+            Quotation.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        source = result.unique().scalar_one_or_none()
+        
+        if not source:
+            raise HTTPException(status_code=404, detail="Quotation not found")
+        
+        # Generate Proforma Invoice voucher number (PI prefix)
+        pi_number = await VoucherNumberService.generate_voucher_number_async(
+            db, "PI", org_id, Quotation
+        )
+        
+        # Create the proforma
+        proforma = Quotation(
+            organization_id=org_id,
+            voucher_number=pi_number,
+            date=datetime.now(),
+            customer_id=source.customer_id,
+            valid_until=source.valid_until,
+            payment_terms=source.payment_terms,
+            terms_conditions=source.terms_conditions,
+            line_discount_type=source.line_discount_type,
+            total_discount_type=source.total_discount_type,
+            total_discount=source.total_discount,
+            round_off=source.round_off,
+            total_amount=source.total_amount,
+            cgst_amount=source.cgst_amount,
+            sgst_amount=source.sgst_amount,
+            igst_amount=source.igst_amount,
+            discount_amount=source.discount_amount,
+            parent_id=source.id,  # Link to original quotation
+            revision_number=0,
+            is_proforma=True,  # Mark as proforma
+            additional_charges=source.additional_charges,
+            notes=f"Proforma Invoice created from {source.voucher_number}",
+            status="draft",
+            created_by=current_user.id
+        )
+        
+        db.add(proforma)
+        await db.flush()
+        
+        # Copy items
+        for source_item in source.items:
+            item = QuotationItem(
+                quotation_id=proforma.id,
+                product_id=source_item.product_id,
+                quantity=source_item.quantity,
+                unit=source_item.unit,
+                unit_price=source_item.unit_price,
+                discount_percentage=source_item.discount_percentage,
+                discount_amount=source_item.discount_amount,
+                taxable_amount=source_item.taxable_amount,
+                gst_rate=source_item.gst_rate,
+                cgst_amount=source_item.cgst_amount,
+                sgst_amount=source_item.sgst_amount,
+                igst_amount=source_item.igst_amount,
+                total_amount=source_item.total_amount,
+                description=source_item.description
+            )
+            db.add(item)
+        
+        await db.commit()
+        
+        # Re-query with joins
+        stmt = select(Quotation).options(
+            joinedload(Quotation.customer),
+            joinedload(Quotation.items).joinedload(QuotationItem.product)
+        ).where(Quotation.id == proforma.id)
+        result = await db.execute(stmt)
+        proforma = result.unique().scalar_one_or_none()
+        
+        logger.info(f"Created proforma {pi_number} from quotation {source.voucher_number}")
+        return proforma
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error creating proforma from quotation {quotation_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create proforma invoice"
+        )
+
+
+@router.post("/{quotation_id}/revision", response_model=QuotationInDB)
+async def create_revision_from_quotation(
+    quotation_id: int,
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("voucher", "create"))
+):
+    """
+    Create a revision from a quotation.
+    Creates new quotation with base_quote_id set to root, increments revision_number.
+    Voucher number format: ORIGINAL-rev{N}
+    """
+    current_user, org_id = auth
+    
+    try:
+        # Get the source quotation
+        stmt = select(Quotation).options(
+            joinedload(Quotation.items)
+        ).where(
+            Quotation.id == quotation_id,
+            Quotation.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        source = result.unique().scalar_one_or_none()
+        
+        if not source:
+            raise HTTPException(status_code=404, detail="Quotation not found")
+        
+        # Determine the base quote (root quotation)
+        base_quote_id = source.base_quote_id if source.base_quote_id else source.id
+        
+        # Get the original voucher number (from base quote)
+        if source.base_quote_id:
+            base_stmt = select(Quotation).where(Quotation.id == base_quote_id)
+            base_result = await db.execute(base_stmt)
+            base_quote = base_result.scalar_one_or_none()
+            original_voucher_number = base_quote.voucher_number if base_quote else source.voucher_number
+        else:
+            original_voucher_number = source.voucher_number
+        
+        # Find next revision number
+        revision_stmt = select(func.max(Quotation.revision_number)).where(
+            Quotation.organization_id == org_id,
+            Quotation.base_quote_id == base_quote_id
+        )
+        revision_result = await db.execute(revision_stmt)
+        max_revision = revision_result.scalar() or 0
+        next_revision = max_revision + 1
+        
+        # Generate revision voucher number
+        revision_number_str = f"{original_voucher_number}-rev{next_revision}"
+        
+        # Create the revision
+        revision = Quotation(
+            organization_id=org_id,
+            voucher_number=revision_number_str,
+            date=datetime.now(),
+            customer_id=source.customer_id,
+            valid_until=source.valid_until,
+            payment_terms=source.payment_terms,
+            terms_conditions=source.terms_conditions,
+            line_discount_type=source.line_discount_type,
+            total_discount_type=source.total_discount_type,
+            total_discount=source.total_discount,
+            round_off=source.round_off,
+            total_amount=source.total_amount,
+            cgst_amount=source.cgst_amount,
+            sgst_amount=source.sgst_amount,
+            igst_amount=source.igst_amount,
+            discount_amount=source.discount_amount,
+            parent_id=source.id,  # Link to immediate parent
+            base_quote_id=base_quote_id,  # Link to root quotation
+            revision_number=next_revision,
+            is_proforma=False,
+            additional_charges=source.additional_charges,
+            notes=f"Revision {next_revision} created from {source.voucher_number}",
+            status="draft",
+            created_by=current_user.id
+        )
+        
+        db.add(revision)
+        await db.flush()
+        
+        # Copy items
+        for source_item in source.items:
+            item = QuotationItem(
+                quotation_id=revision.id,
+                product_id=source_item.product_id,
+                quantity=source_item.quantity,
+                unit=source_item.unit,
+                unit_price=source_item.unit_price,
+                discount_percentage=source_item.discount_percentage,
+                discount_amount=source_item.discount_amount,
+                taxable_amount=source_item.taxable_amount,
+                gst_rate=source_item.gst_rate,
+                cgst_amount=source_item.cgst_amount,
+                sgst_amount=source_item.sgst_amount,
+                igst_amount=source_item.igst_amount,
+                total_amount=source_item.total_amount,
+                description=source_item.description
+            )
+            db.add(item)
+        
+        await db.commit()
+        
+        # Re-query with joins
+        stmt = select(Quotation).options(
+            joinedload(Quotation.customer),
+            joinedload(Quotation.items).joinedload(QuotationItem.product)
+        ).where(Quotation.id == revision.id)
+        result = await db.execute(stmt)
+        revision = result.unique().scalar_one_or_none()
+        
+        logger.info(f"Created revision {revision_number_str} from quotation {source.voucher_number}")
+        return revision
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error creating revision from quotation {quotation_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create revision"
+        )

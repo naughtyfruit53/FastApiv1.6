@@ -71,8 +71,11 @@ async def get_purchase_vouchers(
     result = await db.execute(stmt.offset(skip).limit(per_page))
     vouchers = result.unique().scalars().all()
     
+    # Convert ORM objects to Pydantic schemas for proper JSON serialization
+    serialized_vouchers = [PurchaseVoucherInDB.model_validate(v) for v in vouchers]
+    
     return {
-        'vouchers': vouchers,
+        'vouchers': [v.model_dump() for v in serialized_vouchers],
         'total': total,
         'page': page,
         'per_page': per_page
