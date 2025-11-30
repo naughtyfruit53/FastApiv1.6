@@ -28,7 +28,7 @@ import {
   Upload as UploadIcon,
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-import { getProducts, getVendors, getCustomers } from '../../services/masterService';
+import { getProducts, getVendors, getCustomers } from '../services/masterService';
 
 interface JobworkItem {
   product_id: number | null;

@@ -15,6 +15,7 @@ import DashboardLayout from "../../components/DashboardLayout";
 import ModernLoading from "../../components/ModernLoading";
 import { useAuth } from "../../context/AuthContext";
 import { ProtectedPage } from "../../components/ProtectedPage";
+import { useCurrency } from "../../hooks/useCurrency";
 
 interface OrgStatistics {
   total_products: number;
@@ -45,6 +46,7 @@ interface OrgStatistics {
 
 const OrgDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { formatCurrency } = useCurrency();
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +101,23 @@ const OrgDashboard: React.FC = () => {
     const now = new Date();
     const diffTime = expiry.getTime() - now.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Helper function to determine subscription display based on plan type
+  const getSubscriptionDisplay = (stats: OrgStatistics) => {
+    const planType = stats.plan_type?.toLowerCase();
+    const isPerpetual = planType === "perpetual" || (!stats.license_expiry_date && planType !== "trial");
+    const isTrial = planType === "trial";
+    const isMonthlyOrAnnual = ["monthly", "annual", "yearly"].includes(planType || "");
+    
+    return {
+      isPerpetual,
+      isTrial,
+      isMonthlyOrAnnual,
+      showTrialBadge: isTrial,
+      showDates: !isPerpetual && (isMonthlyOrAnnual || isTrial),
+      planLabel: isPerpetual ? "PERPETUAL" : (stats.plan_type?.toUpperCase() ?? "N/A"),
+    };
   };
 
   if (loading) {
@@ -205,7 +224,7 @@ const OrgDashboard: React.FC = () => {
     },
     {
       title: "Monthly Sales",
-      value: `₹${(statistics.monthly_sales ?? 0).toLocaleString()}`,
+      value: formatCurrency(statistics.monthly_sales ?? 0),
       icon: <AttachMoney />,
       color: "success" as const,
       description: "Sales in last 30 days",
@@ -218,7 +237,7 @@ const OrgDashboard: React.FC = () => {
     },
     {
       title: "Inventory Value",
-      value: `₹${(statistics.inventory_value ?? 0).toLocaleString()}`,
+      value: formatCurrency(statistics.inventory_value ?? 0),
       icon: <TrendingUp />,
       color: "primary" as const,
       description: "Current stock value",
@@ -232,6 +251,7 @@ const OrgDashboard: React.FC = () => {
   ];
 
   const validityDays = calculateValidityDays(statistics.license_expiry_date);
+  const subscriptionInfo = getSubscriptionDisplay(statistics);
 
   return (
     <ProtectedPage moduleKey="dashboard" action="read">
@@ -257,8 +277,8 @@ const OrgDashboard: React.FC = () => {
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
             <Chip
-              label={statistics.plan_type?.toUpperCase() ?? "N/A"}
-              color={statistics.plan_type === "trial" ? "warning" : "primary"}
+              label={subscriptionInfo.planLabel}
+              color={subscriptionInfo.isTrial ? "warning" : subscriptionInfo.isPerpetual ? "info" : "primary"}
               variant="filled"
               sx={{
                 fontWeight: 600,
@@ -270,35 +290,57 @@ const OrgDashboard: React.FC = () => {
                   backgroundColor: "var(--warning-500)",
                   color: "white",
                 },
+                "&.MuiChip-colorInfo": {
+                  backgroundColor: "var(--info-600)",
+                  color: "white",
+                },
               }}
             />
-            <Chip
-              label={statistics.license_status ? statistics.license_status.toUpperCase() : "UNKNOWN"}
-              color={statistics.license_status === "active" ? "success" : "default"}
-              variant="outlined"
-              size="small"
-            />
+            {subscriptionInfo.isTrial && (
+              <Chip
+                label="TRIAL"
+                color="warning"
+                variant="outlined"
+                size="small"
+              />
+            )}
+            {!subscriptionInfo.isTrial && (
+              <Chip
+                label={statistics.license_status ? statistics.license_status.toUpperCase() : "UNKNOWN"}
+                color={statistics.license_status === "active" ? "success" : "default"}
+                variant="outlined"
+                size="small"
+              />
+            )}
           </Box>
-          {statistics.license_issued_date && (
+          {/* Show Start Date for monthly/annual subscriptions */}
+          {subscriptionInfo.showDates && statistics.license_issued_date && (
             <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-              <strong>Started:</strong> {new Date(statistics.license_issued_date).toLocaleDateString()}
+              <strong>Start Date:</strong> {new Date(statistics.license_issued_date).toLocaleDateString()}
             </Typography>
           )}
-          {statistics.license_expiry_date && (
+          {/* Show End/Renewal Date for monthly/annual, or expiry for trial */}
+          {subscriptionInfo.showDates && statistics.license_expiry_date && (
             <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-              <strong>Valid Up To:</strong> {new Date(statistics.license_expiry_date).toLocaleDateString()}
+              <strong>{subscriptionInfo.isTrial ? "Trial Ends:" : subscriptionInfo.isMonthlyOrAnnual ? "Renewal Date:" : "Valid Up To:"}</strong>{" "}
+              {new Date(statistics.license_expiry_date).toLocaleDateString()}
             </Typography>
           )}
+          {/* Subscription status message */}
           <Typography 
             variant="body2" 
             color={validityDays && validityDays <= 30 ? "error" : "textSecondary"}
             sx={{ fontWeight: validityDays && validityDays <= 30 ? 600 : 400 }}
           >
-            {validityDays === null 
-              ? "Perpetual License"
-              : validityDays > 0 
-                ? `${validityDays} days remaining`
-                : "Subscription expired"}
+            {subscriptionInfo.isPerpetual 
+              ? "Perpetual License - No Expiration"
+              : subscriptionInfo.isTrial && validityDays !== null && validityDays > 0
+                ? `Trial: ${validityDays} days remaining`
+                : validityDays === null 
+                  ? "Perpetual License"
+                  : validityDays > 0 
+                    ? `${validityDays} days until renewal`
+                    : "Subscription expired"}
           </Typography>
         </Paper>
         <Paper className="modern-card" sx={{ p: 3 }}>

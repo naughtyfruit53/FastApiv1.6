@@ -18,6 +18,7 @@ import { OrganizationProvider } from "../context/OrganizationContext";  // NEW: 
 import { useState, useEffect } from "react"; // Added import for useState and useEffect
 import Head from 'next/head';  // Added import for Head to handle meta tags
 import AppLayout from "../components/AppLayout"; // Global layout with MegaMenu
+import ErrorBoundary from "../components/ErrorBoundary"; // Error boundary for catching runtime errors
 // Removed ChatbotNavigator import as it may be causing the undefined component error
 import CompanySetupGuard from "../components/CompanySetupGuard";  // NEW: Import CompanySetupGuard to show modal on login if company details missing
 
@@ -209,34 +210,36 @@ function MyApp({ Component, pageProps }: AppProps) {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <ClientOnly>
-          <AuthProvider>
-            <OrganizationProvider>
-              <QueryClientProvider client={queryClient}>
-                <PermissionProvider>
-                  <CompanyProvider>
-                    <EmailProvider>
-                      <AppLayout>
-                        <CompanySetupGuard>
-                          {getLayout(<Component {...pageProps} />)}
-                        </CompanySetupGuard>
-                      </AppLayout>
-                      <ToastContainer
-                        position="top-right"
-                        autoClose={5000}
-                        hideProgressBar={false}
-                        newestOnTop={false}
-                        closeOnClick
-                        rtl={false}
-                        pauseOnFocusLoss
-                        draggable
-                        pauseOnHover
-                      />
-                    </EmailProvider>
-                  </CompanyProvider>
-                </PermissionProvider>
-              </QueryClientProvider>
-            </OrganizationProvider>
-          </AuthProvider>
+          <ErrorBoundary>
+            <AuthProvider>
+              <OrganizationProvider>
+                <QueryClientProvider client={queryClient}>
+                  <PermissionProvider>
+                    <CompanyProvider>
+                      <EmailProvider>
+                        <AppLayout>
+                          <CompanySetupGuard>
+                            {getLayout(<Component {...pageProps} />)}
+                          </CompanySetupGuard>
+                        </AppLayout>
+                        <ToastContainer
+                          position="top-right"
+                          autoClose={5000}
+                          hideProgressBar={false}
+                          newestOnTop={false}
+                          closeOnClick
+                          rtl={false}
+                          pauseOnFocusLoss
+                          draggable
+                          pauseOnHover
+                        />
+                      </EmailProvider>
+                    </CompanyProvider>
+                  </PermissionProvider>
+                </QueryClientProvider>
+              </OrganizationProvider>
+            </AuthProvider>
+          </ErrorBoundary>
         </ClientOnly>
       </ThemeProvider>
     </>
