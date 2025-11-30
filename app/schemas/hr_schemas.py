@@ -289,3 +289,160 @@ class HRDashboard(BaseModel):
     recent_joiners: int
     employees_in_probation: int
     average_attendance_rate: Optional[Decimal] = None
+
+
+# Department Schemas
+class DepartmentBase(BaseModel):
+    name: str = Field(..., description="Department name")
+    code: str = Field(..., description="Department code")
+    description: Optional[str] = None
+    parent_id: Optional[int] = None
+    manager_id: Optional[int] = None
+    is_active: bool = Field(default=True)
+    cost_center_code: Optional[str] = None
+
+
+class DepartmentCreate(DepartmentBase):
+    pass
+
+
+class DepartmentUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    description: Optional[str] = None
+    parent_id: Optional[int] = None
+    manager_id: Optional[int] = None
+    is_active: Optional[bool] = None
+    cost_center_code: Optional[str] = None
+
+
+class DepartmentResponse(DepartmentBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+
+
+# Position Schemas
+class PositionBase(BaseModel):
+    title: str = Field(..., description="Position title")
+    code: str = Field(..., description="Position code")
+    description: Optional[str] = None
+    department_id: Optional[int] = None
+    level: Optional[str] = None
+    grade: Optional[str] = None
+    min_salary: Optional[Decimal] = None
+    max_salary: Optional[Decimal] = None
+    is_active: bool = Field(default=True)
+    headcount: Optional[int] = None
+
+
+class PositionCreate(PositionBase):
+    pass
+
+
+class PositionUpdate(BaseModel):
+    title: Optional[str] = None
+    code: Optional[str] = None
+    description: Optional[str] = None
+    department_id: Optional[int] = None
+    level: Optional[str] = None
+    grade: Optional[str] = None
+    min_salary: Optional[Decimal] = None
+    max_salary: Optional[Decimal] = None
+    is_active: Optional[bool] = None
+    headcount: Optional[int] = None
+
+
+class PositionResponse(PositionBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+# Work Shift Schemas
+class WorkShiftBase(BaseModel):
+    name: str = Field(..., description="Shift name")
+    code: str = Field(..., description="Shift code")
+    description: Optional[str] = None
+    start_time: time = Field(..., description="Shift start time")
+    end_time: time = Field(..., description="Shift end time")
+    break_start_time: Optional[time] = None
+    break_end_time: Optional[time] = None
+    working_hours: Decimal = Field(default=Decimal("8"), description="Working hours per day")
+    break_duration_minutes: int = Field(default=60)
+    shift_type: str = Field(default="general")
+    grace_period_minutes: int = Field(default=15)
+    overtime_threshold_minutes: int = Field(default=30)
+    is_active: bool = Field(default=True)
+    is_default: bool = Field(default=False)
+
+
+class WorkShiftCreate(WorkShiftBase):
+    pass
+
+
+class WorkShiftUpdate(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    description: Optional[str] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    break_start_time: Optional[time] = None
+    break_end_time: Optional[time] = None
+    working_hours: Optional[Decimal] = None
+    break_duration_minutes: Optional[int] = None
+    shift_type: Optional[str] = None
+    grace_period_minutes: Optional[int] = None
+    overtime_threshold_minutes: Optional[int] = None
+    is_active: Optional[bool] = None
+    is_default: Optional[bool] = None
+
+
+class WorkShiftResponse(WorkShiftBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+# Holiday Calendar Schemas
+class HolidayCalendarBase(BaseModel):
+    name: str = Field(..., description="Holiday name")
+    holiday_date: SkipValidation[date] = Field(..., description="Date of the holiday")
+    description: Optional[str] = None
+    holiday_type: str = Field(default="public", description="Type: public, restricted, optional, company")
+    is_mandatory: bool = Field(default=True)
+    applicable_departments: Optional[Dict[str, Any]] = None
+    year: int = Field(..., description="Year of the holiday")
+
+
+class HolidayCalendarCreate(HolidayCalendarBase):
+    pass
+
+
+class HolidayCalendarUpdate(BaseModel):
+    name: Optional[str] = None
+    holiday_date: Optional[SkipValidation[date]] = None
+    description: Optional[str] = None
+    holiday_type: Optional[str] = None
+    is_mandatory: Optional[bool] = None
+    applicable_departments: Optional[Dict[str, Any]] = None
+    year: Optional[int] = None
+
+
+class HolidayCalendarResponse(HolidayCalendarBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
