@@ -14,8 +14,6 @@ import MetricCard from "../../components/MetricCard";
 import DashboardLayout from "../../components/DashboardLayout";
 import ModernLoading from "../../components/ModernLoading";
 import { useAuth } from "../../context/AuthContext";
-import { isAppSuperAdmin, isOrgSuperAdmin } from "../../types/user.types";
-import { usePermissions } from "../../context/PermissionContext";  // Added import for permissions
 import { ProtectedPage } from "../../components/ProtectedPage";
 
 interface OrgStatistics {
@@ -47,13 +45,10 @@ interface OrgStatistics {
 
 const OrgDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { hasPermission } = usePermissions();  // Added hook for permission check
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  const isSuperAdmin = isAppSuperAdmin(user) || isOrgSuperAdmin(user);
   
   useEffect(() => {
     fetchOrgStatistics();
@@ -409,45 +404,44 @@ const OrgDashboard: React.FC = () => {
             </Typography>
           </Box>
         </Box>
-        {isSuperAdmin && (
-          <Box sx={{ mt: 3, pt: 3, borderTop: "1px solid", borderColor: "divider" }}>
-            <Typography variant="h6" gutterBottom sx={{ color: "primary.main" }}>
-              Super Admin View
-            </Typography>
-            <Box className="modern-grid cols-2">
-              <Box sx={{ textAlign: "center" }}>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    color: "var(--warning-600)",
-                    fontWeight: 600,
-                    mb: 1,
-                  }}
-                >
-                  {statistics.inactive_users ?? 0}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Inactive Users
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    color: "var(--info-600)",
-                    fontWeight: 600,
-                    mb: 1,
-                  }}
-                >
-                  {((statistics.active_users / (statistics.total_org_users || 1)) * 100).toFixed(1)}%
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  User Activity Rate
-                </Typography>
-              </Box>
+        {/* Organization Overview Stats - Available to all org admins */}
+        <Box sx={{ mt: 3, pt: 3, borderTop: "1px solid", borderColor: "divider" }}>
+          <Typography variant="h6" gutterBottom sx={{ color: "primary.main" }}>
+            User Activity
+          </Typography>
+          <Box className="modern-grid cols-2">
+            <Box sx={{ textAlign: "center" }}>
+              <Typography
+                variant="h4"
+                sx={{
+                  color: "var(--warning-600)",
+                  fontWeight: 600,
+                  mb: 1,
+                }}
+              >
+                {statistics.inactive_users ?? 0}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Inactive Users Today
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography
+                variant="h4"
+                sx={{
+                  color: "var(--info-600)",
+                  fontWeight: 600,
+                  mb: 1,
+                }}
+              >
+                {((statistics.active_users / (statistics.total_org_users || 1)) * 100).toFixed(1)}%
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                User Activity Rate
+              </Typography>
             </Box>
           </Box>
-        )}
+        </Box>
       </Paper>
     </DashboardLayout>
     </ProtectedPage>

@@ -130,6 +130,7 @@ async def create_audit_log(
     """
     Create a new audit log entry.
     """
+    current_user, org_id = auth
     try:
         audit_log = AuditLog(
             organization_id=org_id,
@@ -141,7 +142,7 @@ async def create_audit_log(
             user_id=current_user.id,
             actor_type=log_data.actor_type,
             actor_id=log_data.actor_id or current_user.id,
-            actor_name=log_data.actor_name or current_user.username,
+            actor_name=log_data.actor_name or getattr(current_user, 'username', current_user.email),
             ai_agent_id=log_data.ai_agent_id,
             automation_workflow_id=log_data.automation_workflow_id,
             triggered_by_automation=log_data.triggered_by_automation,
@@ -186,6 +187,7 @@ async def query_audit_logs(
     """
     Query audit logs with filters.
     """
+    current_user, org_id = auth
     try:
         query = db.query(AuditLog).filter(
             AuditLog.organization_id == org_id
@@ -240,23 +242,33 @@ async def list_audit_logs(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     entity_type: Optional[str] = None,
+    entity_id: Optional[int] = None,
     action: Optional[str] = None,
     actor_type: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
+    org_id: Optional[int] = Query(None, description="Organization ID for filtering (uses current org if not provided)"),
     auth: tuple = Depends(require_access("audit_log", "read")),
     db: Session = Depends(get_db)
 ):
     """
     List audit logs for the organization.
+    Supports filtering by entity_type, entity_id, action, org_id for dashboard activities.
     """
+    current_user, auth_org_id = auth
+    # Use provided org_id or fall back to authenticated user's org
+    filter_org_id = org_id if org_id is not None else auth_org_id
+    
     try:
         query = db.query(AuditLog).filter(
-            AuditLog.organization_id == org_id
+            AuditLog.organization_id == filter_org_id
         )
         
         if entity_type:
             query = query.filter(AuditLog.entity_type == entity_type)
+        
+        if entity_id:
+            query = query.filter(AuditLog.entity_id == entity_id)
         
         if action:
             query = query.filter(AuditLog.action == action)
@@ -291,6 +303,7 @@ async def get_audit_log(
     """
     Get details of a specific audit log entry.
     """
+    current_user, org_id = auth
     try:
         log = db.query(AuditLog).filter(
             and_(
@@ -330,6 +343,7 @@ async def get_audit_statistics(
     """
     Get audit log statistics for the organization.
     """
+    current_user, org_id = auth
     try:
         start_date = datetime.utcnow() - timedelta(days=days)
         
@@ -401,6 +415,7 @@ async def request_audit_log_export(
     """
     Request an audit log export.
     """
+    current_user, org_id = auth
     try:
         export = AuditLogExport(
             organization_id=org_id,
@@ -442,6 +457,7 @@ async def list_audit_log_exports(
     """
     List audit log export requests.
     """
+    current_user, org_id = auth
     try:
         exports = db.query(AuditLogExport).filter(
             AuditLogExport.organization_id == org_id
