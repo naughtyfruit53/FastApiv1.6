@@ -710,6 +710,14 @@ async def create_revision_from_quotation(
         db.add(revision)
         await db.flush()
         
+        # STRICT GST ENFORCEMENT: Get state codes (NO FALLBACK)
+        company_state_code, customer_state_code = await get_state_codes_for_sales(
+            db=db,
+            org_id=org_id,
+            customer_id=revision.customer_id,
+            voucher_type="quotation"
+        )
+        
         # Copy items from source
         for source_item in source.items:
             item = QuotationItem(
@@ -771,7 +779,7 @@ async def create_revision_from_quotation(
                     gst_amounts = calculate_gst_amounts(
                         taxable_amount=taxable,
                         gst_rate=item_dict['gst_rate'],
-                        company_state_code=company_state_code,  # Assuming defined earlier
+                        company_state_code=company_state_code,
                         customer_state_code=customer_state_code,
                         organization_id=org_id,
                         entity_id=revision.customer_id,
@@ -885,3 +893,4 @@ async def get_next_revision_number(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get next revision number"
         )
+    

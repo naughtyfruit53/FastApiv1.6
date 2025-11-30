@@ -129,6 +129,8 @@ const QuotationPage: React.FC = () => {
     getAmountInWords,
     totalRoundOff,
     handleRevise,
+    nextRevisionNumber,  // ADDED
+    isNextRevisionLoading,  // ADDED
   } = useVoucherPage(config);
 
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
@@ -364,11 +366,12 @@ const QuotationPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (voucherData && (mode === "view" || mode === "edit" || mode === "revise")) {
+    if (voucherData && (mode === "view" || mode === "edit" || (mode === "revise" && nextRevisionNumber && !isNextRevisionLoading))) {
       const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
       const formattedData = {
         ...voucherData,
         date: formattedDate,
+        voucher_number: mode === "revise" ? nextRevisionNumber : voucherData.voucher_number,
       };
       reset(formattedData);
       if (voucherData.additional_charges) {
@@ -406,7 +409,7 @@ const QuotationPage: React.FC = () => {
         setValue("parent_id", voucherData.id);
       }
     }
-  }, [voucherData, mode, reset, append, remove, isIntrastate, setValue]);
+  }, [voucherData, mode, reset, append, remove, isIntrastate, setValue, nextRevisionNumber, isNextRevisionLoading]);
 
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {

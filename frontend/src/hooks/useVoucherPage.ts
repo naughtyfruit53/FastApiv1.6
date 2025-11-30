@@ -392,11 +392,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     staleTime: 300000,  
   });  
   
-  const {  
-    data: nextVoucherNumber,  
-    isLoading: isNextNumberLoading,  
-    refetch: refetchNextNumber,  
-  } = useQuery({  
+  const { data: nextVoucherNumber, isLoading: isNextNumberLoading, refetch: refetchNextNumber } = useQuery({  
     queryKey: [`next${config.voucherType}Number`],  
     queryFn: () =>  
       voucherService.getNextVoucherNumber(config.nextNumberEndpoint),  
@@ -405,7 +401,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   });  
   
   // NEW: Fetch next revision number for revise mode
-  const { data: nextRevisionNumber } = useQuery({
+  const { data: nextRevisionNumber, isLoading: isNextRevisionLoading } = useQuery({
     queryKey: [`next${config.voucherType}Revision`, selectedId],
     queryFn: () => api.get(`${config.endpoint}/${selectedId}/next-revision`),
     enabled: mode === "revise" && !!selectedId && isOrgContextReady,
@@ -1039,5 +1035,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     handleDiscountDialogClose,  
     handleDiscountTypeSelect,  
     discountDialogFor,  
+    nextRevisionNumber,  // ADDED
+    isNextRevisionLoading,  // ADDED
   };  
 };  

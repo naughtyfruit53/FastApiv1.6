@@ -14,15 +14,15 @@ import {
   CircularProgress,
   Alert,
   Button,
-  Grid,
   TextField,
   MenuItem,
   IconButton,
   Paper,
   Chip
 } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import { Refresh, Download, Print, TrendingUp, TrendingDown } from '@mui/icons-material';
-import axios from 'axios';
+import api from "../../services/api/client";
 import { formatCurrency } from '../../utils/currencyUtils';
 import { ProtectedPage } from '../../components/ProtectedPage';
 
@@ -44,10 +44,8 @@ const CashFlowPage: React.FC = () => {
   const fetchCashFlow = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/v1/finance/analytics/dashboard', {
-        params: { period_days: periodDays },
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await api.get('/finance/analytics/dashboard', {
+        params: { period_days: periodDays }
       });
       setData({
         period: response.data.period,
@@ -55,7 +53,28 @@ const CashFlowPage: React.FC = () => {
       });
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to fetch cash flow data');
+      let errorMessage = "Failed to fetch cash flow data";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.detail) {
+          if (typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (typeof data.detail === 'object' && data.detail !== null) {
+            errorMessage = data.detail.message || data.detail.error || JSON.stringify(data.detail);
+          }
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (typeof data === 'object' && data !== null) {
+          errorMessage = JSON.stringify(data);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
       // Demo data
       setData({
         period: { start_date: '2024-12-01', end_date: '2024-12-31' },
@@ -135,7 +154,7 @@ const CashFlowPage: React.FC = () => {
         <>
           {/* Summary Cards */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid xs={12} sm={6} md={4}>
               <Card>
                 <CardContent>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -152,7 +171,7 @@ const CashFlowPage: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid xs={12} sm={6} md={4}>
               <Card>
                 <CardContent>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -169,7 +188,7 @@ const CashFlowPage: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={12} md={4}>
+            <Grid xs={12} sm={12} md={4}>
               <Card>
                 <CardContent>
                   <Box display="flex" alignItems="center" justifyContent="space-between">
