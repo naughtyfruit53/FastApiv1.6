@@ -21,17 +21,22 @@ class Quotation(BaseVoucher):
     round_off = Column(Float, default=0.0)  # Added to match schema and PDF calculations
     parent_id = Column(Integer, ForeignKey("quotations.id"), nullable=True)  # Link to original/previous revision
     revision_number = Column(Integer, default=0)  # 0 for original, 1 for Rev 1, etc.
+    base_quote_id = Column(Integer, ForeignKey("quotations.id"), nullable=True)  # NEW: Reference to root quotation for revisions
+    is_proforma = Column(Boolean, default=False)  # NEW: Flag for proforma invoice
     additional_charges = Column(JSONB, default=dict)
     
     customer = relationship("app.models.customer_models.Customer")
     items = relationship("app.models.vouchers.presales.QuotationItem", back_populates="quotation", cascade="all, delete-orphan")
-    parent = relationship("app.models.vouchers.presales.Quotation", remote_side="app.models.vouchers.presales.Quotation.id", backref="revisions")  # Use string for remote_side
+    parent = relationship("app.models.vouchers.presales.Quotation", remote_side="app.models.vouchers.presales.Quotation.id", foreign_keys=[parent_id], backref="revisions")  # Use string for remote_side
+    base_quote = relationship("app.models.vouchers.presales.Quotation", remote_side="app.models.vouchers.presales.Quotation.id", foreign_keys=[base_quote_id])  # NEW: Relationship to base quotation
     
     __table_args__ = (
         # Unique voucher number per organization
         UniqueConstraint('organization_id', 'voucher_number', name='uq_quotation_org_voucher_number'),
+        UniqueConstraint('base_quote_id', 'revision_number', name='uq_quotation_base_revision'),  # NEW: Unique revision per base quote
         Index('idx_quotation_org_customer', 'organization_id', 'customer_id'),
         Index('idx_quotation_org_date', 'organization_id', 'date'),
+        Index('idx_quotation_base_quote', 'base_quote_id'),  # NEW: Index for base quote lookups
     )
 
 # QuotationItem

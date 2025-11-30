@@ -36,6 +36,7 @@ from .maintenance import router as maintenance_router
 from .quality_control import router as quality_control_router
 from .inventory_adjustment import router as inventory_adjustment_router
 from .production_entries import router as production_entries_router  # NEW: Added import
+from .fg_receipts import router as fg_receipts_router  # NEW: Added FG Receipts router
 # Comment out the test_router import and inclusion to avoid ModuleNotFoundError in deployment
 # from .test_router import router as test_router
 
@@ -190,6 +191,17 @@ try:
     logger.debug("Included production_entries_router")
 except Exception as e:
     logger.error(f"Failed to include production_entries_router: {str(e)}\n{traceback.format_exc()}")
+
+# NEW: Added FG Receipts router
+try:
+    router.include_router(fg_receipts_router, prefix="/fg-receipts", tags=["Finished Good Receipts"])
+    for route in fg_receipts_router.routes:
+        if isinstance(route, APIRoute):
+            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
+            logger.debug(f"Registered fg_receipts endpoint: {methods} /fg-receipts{route.path}")
+    logger.debug("Included fg_receipts_router")
+except Exception as e:
+    logger.error(f"Failed to include fg_receipts_router: {str(e)}\n{traceback.format_exc()}")
 
 # Comment out test_router to avoid ModuleNotFoundError in deployment
 # try:

@@ -465,3 +465,158 @@ class ProductionEntryConsumption(Base):
 
     production_entry = relationship("ProductionEntry", back_populates="bom_consumption")
     component = relationship("Product")
+
+
+# Finished Good Receipt - NEW
+class FinishedGoodReceipt(BaseVoucher):
+    """Finished Good Receipt for receiving finished goods from production"""
+    __tablename__ = "finished_good_receipts"
+    
+    # Production Reference
+    manufacturing_order_id = Column(Integer, ForeignKey("manufacturing_orders.id"), nullable=True)
+    bom_id = Column(Integer, ForeignKey("bill_of_materials.id"), nullable=True)
+    
+    # Receipt Details
+    receipt_date = Column(DateTime(timezone=True), nullable=False)
+    production_batch_number = Column(String)
+    lot_number = Column(String)
+    
+    # Quantity Details
+    expected_quantity = Column(Float, default=0.0)
+    received_quantity = Column(Float, default=0.0)
+    accepted_quantity = Column(Float, default=0.0)
+    rejected_quantity = Column(Float, default=0.0)
+    
+    # Quality Details
+    qc_status = Column(String, default="pending")  # pending, passed, failed, partial
+    qc_remarks = Column(Text)
+    inspector_name = Column(String)
+    inspection_date = Column(DateTime(timezone=True))
+    
+    # Cost Details (for cost calculation tile)
+    base_cost = Column(Float, default=0.0)
+    material_cost = Column(Float, default=0.0)
+    labor_cost = Column(Float, default=0.0)
+    overhead_cost = Column(Float, default=0.0)
+    freight_cost = Column(Float, default=0.0)
+    duty_cost = Column(Float, default=0.0)
+    total_cost = Column(Float, default=0.0)
+    unit_cost = Column(Float, default=0.0)
+    
+    # Inventory Update Status (for inventory update tile)
+    inventory_posted = Column(Boolean, default=False)
+    inventory_posted_at = Column(DateTime(timezone=True))
+    inventory_posted_by = Column(Integer, ForeignKey("users.id"))
+    
+    # Warehouse Details
+    warehouse_location = Column(String)
+    bin_location = Column(String)
+    
+    # Approval workflow
+    approved_by = Column(Integer, ForeignKey("users.id"))
+    approval_date = Column(DateTime(timezone=True))
+    
+    # Relationships
+    manufacturing_order = relationship("ManufacturingOrder")
+    bom = relationship("BillOfMaterials")
+    approved_by_user = relationship("User", foreign_keys=[approved_by])
+    inventory_posted_by_user = relationship("User", foreign_keys=[inventory_posted_by])
+    items = relationship("FinishedGoodReceiptItem", back_populates="receipt", cascade="all, delete-orphan")
+    cost_details = relationship("FGReceiptCostDetail", back_populates="receipt", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'voucher_number', name='uq_fgr_org_voucher_number'),
+        Index('idx_fgr_org_mo', 'organization_id', 'manufacturing_order_id'),
+        Index('idx_fgr_org_date', 'organization_id', 'receipt_date'),
+        Index('idx_fgr_org_status', 'organization_id', 'status'),
+        {'extend_existing': True},
+    )
+
+
+class FinishedGoodReceiptItem(Base):
+    """Items in a Finished Good Receipt"""
+    __tablename__ = "finished_good_receipt_items"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    receipt_id = Column(Integer, ForeignKey("finished_good_receipts.id"), nullable=False)
+    
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    unit = Column(String, nullable=False)
+    unit_cost = Column(Float, default=0.0)
+    total_cost = Column(Float, default=0.0)
+    
+    # Batch/Lot tracking
+    batch_number = Column(String)
+    lot_number = Column(String)
+    expiry_date = Column(DateTime(timezone=True))
+    
+    # Quality Details
+    qc_status = Column(String, default="pending")
+    qc_remarks = Column(Text)
+    
+    receipt = relationship("FinishedGoodReceipt", back_populates="items")
+    product = relationship("Product")
+    
+    __table_args__ = (
+        {'extend_existing': True},
+    )
+
+
+class FGReceiptCostDetail(Base):
+    """Cost breakdown details for Finished Good Receipt (for cost calculation tile)"""
+    __tablename__ = "fg_receipt_cost_details"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    receipt_id = Column(Integer, ForeignKey("finished_good_receipts.id"), nullable=False)
+    
+    cost_type = Column(String, nullable=False)  # material, labor, overhead, freight, duty, other
+    description = Column(String)
+    amount = Column(Float, default=0.0)
+    allocation_basis = Column(String)  # percentage, quantity, fixed
+    allocation_value = Column(Float, default=0.0)
+    
+    # Reference for traceability
+    reference_document = Column(String)
+    reference_id = Column(Integer)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_by = Column(Integer, ForeignKey("users.id"))
+    
+    receipt = relationship("FinishedGoodReceipt", back_populates="cost_details")
+    
+    __table_args__ = (
+        {'extend_existing': True},
+    )
+
+
+class FGReceiptAudit(Base):
+    """Audit trail for Finished Good Receipt (for audit trail tile)"""
+    __tablename__ = "fg_receipt_audits"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    receipt_id = Column(Integer, ForeignKey("finished_good_receipts.id"), nullable=False)
+    
+    action = Column(String, nullable=False)  # create, update, post, recalculate, revise
+    action_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    before_json = Column(JSON)  # State before action
+    after_json = Column(JSON)  # State after action
+    notes = Column(Text)
+    
+    # Request context
+    ip_address = Column(String)
+    user_agent = Column(String)
+    
+    user = relationship("User", foreign_keys=[action_by])
+    
+    __table_args__ = (
+        Index('idx_fgra_org_receipt', 'organization_id', 'receipt_id'),
+        Index('idx_fgra_action', 'action'),
+        Index('idx_fgra_action_at', 'action_at'),
+        {'extend_existing': True},
+    )

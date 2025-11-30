@@ -73,6 +73,8 @@ class QuotationCreate(VoucherBase):
     round_off: Optional[float] = 0.0
     parent_id: Optional[int] = None  # For revisions
     revision_number: Optional[int] = 0
+    base_quote_id: Optional[int] = None  # NEW: Root quotation for revisions
+    is_proforma: Optional[bool] = False  # NEW: Flag for proforma invoice
     additional_charges: Optional[Dict[str, float]] = None
     items: List[QuotationItemCreate] = []
 
@@ -90,6 +92,8 @@ class QuotationUpdate(BaseModel):
     notes: Optional[str] = None
     parent_id: Optional[int] = None  # For revisions
     revision_number: Optional[int] = None
+    base_quote_id: Optional[int] = None  # NEW
+    is_proforma: Optional[bool] = None  # NEW
     additional_charges: Optional[Dict[str, float]] = None
     items: Optional[List[QuotationItemCreate]] = None
 
@@ -104,5 +108,8 @@ class QuotationInDB(VoucherInDBBase):
     round_off: Optional[float] = 0.0
     parent_id: Optional[int]
     revision_number: Optional[int] = 0
+    base_quote_id: Optional[int] = None  # NEW
+    is_proforma: Optional[bool] = False  # NEW
+    has_revisions: Optional[bool] = False  # NEW: Computed field for listing
     additional_charges: Optional[Dict[str, float]] = None
     items: List[QuotationItemInDB]
