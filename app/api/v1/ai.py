@@ -2,7 +2,7 @@
 AI Agent API endpoints for chatbot operations and business intelligence
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -49,7 +49,7 @@ class BusinessAdviceResponse(BaseModel):
 async def classify_intent(
     request: IntentClassificationRequest,
     auth: tuple = Depends(require_access("ai", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Classify user intent from a message
@@ -101,7 +101,7 @@ async def get_intent_patterns(
 async def get_business_advice(
     request: BusinessAdviceRequest,
     auth: tuple = Depends(require_access("ai", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get business advice for a specific category
@@ -277,7 +277,7 @@ async def get_quick_actions(
 async def execute_agent_task(
     task: Dict[str, Any],
     auth: tuple = Depends(require_access("ai", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Execute an AI agent task
@@ -337,7 +337,7 @@ async def execute_agent_task(
 async def get_smart_insights(
     category: Optional[str] = Query(None, description="Insight category filter"),
     auth: tuple = Depends(require_access("ai", "read")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get smart business insights powered by AI
@@ -393,7 +393,7 @@ async def get_smart_insights(
 async def get_recommendations(
     context: Optional[str] = Query(None, description="Context for recommendations"),
     auth: tuple = Depends(require_access("ai", "read")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get personalized recommendations for the user
@@ -486,7 +486,7 @@ class ChatResponse(BaseModel):
 async def chat_completion(
     request: ChatRequest,
     auth: tuple = Depends(require_access("ai", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Chat with AI assistant using OpenAI API
@@ -626,6 +626,164 @@ Be concise, professional, and helpful. Provide actionable advice when possible."
             status_code=500,
             detail=f"Failed to process chat request: {str(e)}"
         )
+
+
+class StreamingChatRequest(BaseModel):
+    """Request for streaming AI chat completion"""
+    messages: List[ChatMessage] = Field(..., description="Conversation messages")
+    context: Optional[Dict[str, Any]] = Field(None, description="Additional context")
+    model: Optional[str] = Field(None, description="Model to use (optional)")
+    temperature: Optional[float] = Field(None, ge=0, le=2, description="Temperature (0-2)")
+    max_tokens: Optional[int] = Field(None, ge=1, le=4000, description="Max tokens")
+
+
+@router.post("/chat/stream")
+async def chat_completion_stream(
+    request: StreamingChatRequest,
+    auth: tuple = Depends(require_access("ai", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Stream chat with AI assistant using OpenAI API.
+    
+    Returns Server-Sent Events (SSE) with real-time token streaming.
+    Use this for a more responsive chat experience.
+    """
+    import os
+    from fastapi.responses import StreamingResponse
+    
+    current_user, org_id = auth
+    
+    # Get OpenAI configuration from environment
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="AI chat service is not configured. Please set OPENAI_API_KEY."
+        )
+    
+    async def generate_stream():
+        """Async generator for streaming response"""
+        import httpx
+        import json
+        
+        try:
+            # Prepare request with safe environment variable parsing
+            model = request.model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+            
+            try:
+                temperature = request.temperature or float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+            except ValueError:
+                temperature = 0.7
+            
+            try:
+                max_tokens = request.max_tokens or int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
+            except ValueError:
+                max_tokens = 1000
+            
+            # Build messages list with system prompt
+            system_prompt = """You are TritIQ Assistant, an AI helper for the TritIQ Business Operating System.
+You help users with:
+- Business management questions
+- Navigation within the system
+- Understanding financial reports and analytics
+- CRM and sales pipeline guidance
+- Inventory management advice
+- HR and payroll queries
+
+Be concise, professional, and helpful. Provide actionable advice when possible."""
+            
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            # Add context if provided
+            if request.context:
+                context_str = f"User context: Organization ID: {org_id}"
+                if request.context.get("current_page"):
+                    context_str += f", Current page: {request.context['current_page']}"
+                if request.context.get("user_role"):
+                    context_str += f", User role: {request.context['user_role']}"
+                messages.append({"role": "system", "content": context_str})
+            
+            # Add conversation messages
+            for msg in request.messages:
+                messages.append({"role": msg.role, "content": msg.content})
+            
+            # Make streaming request to OpenAI
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            org_id_env = os.getenv("OPENAI_ORG_ID")
+            if org_id_env:
+                headers["OpenAI-Organization"] = org_id_env
+            
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": True
+            }
+            
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                async with client.stream(
+                    "POST",
+                    "https://api.openai.com/v1/chat/completions",
+                    headers=headers,
+                    json=payload
+                ) as response:
+                    if response.status_code != 200:
+                        error_text = await response.aread()
+                        try:
+                            error_detail = json.loads(error_text).get("error", {}).get("message", "Unknown error")
+                        except:
+                            error_detail = error_text.decode() if isinstance(error_text, bytes) else str(error_text)
+                        yield f"data: {json.dumps({'error': error_detail})}\n\n"
+                        return
+                    
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data = line[6:]  # Remove "data: " prefix
+                            if data == "[DONE]":
+                                yield f"data: {json.dumps({'done': True})}\n\n"
+                                break
+                            try:
+                                chunk = json.loads(data)
+                                if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
+                                    content = chunk["choices"][0]["delta"]["content"]
+                                    yield f"data: {json.dumps({'content': content})}\n\n"
+                            except json.JSONDecodeError:
+                                continue
+            
+            # Log chat interaction for audit
+            try:
+                from app.core.audit import create_audit_log
+                await create_audit_log(
+                    db=db,
+                    entity_type="ai_chat",
+                    entity_id=None,
+                    action="chat_stream_completion",
+                    user_id=current_user.id,
+                    changes={"model": model, "message_count": len(request.messages)},
+                    organization_id=org_id
+                )
+            except Exception as audit_error:
+                logger.debug(f"Audit logging skipped: {audit_error}")
+                
+        except Exception as e:
+            logger.error(f"Error in streaming chat: {str(e)}")
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream"
+        }
+    )
 
 
 @router.get("/chat/models")

@@ -8,6 +8,184 @@ from typing import List, Optional
 from datetime import datetime, date, time
 from decimal import Decimal
 
+
+# Department Management
+class Department(Base):
+    """Organization department/division structure"""
+    __tablename__ = "departments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_department_organization_id"), nullable=False, index=True)
+    
+    # Department details
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    code: Mapped[str] = mapped_column(String(50), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Hierarchy
+    parent_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("departments.id", name="fk_department_parent_id"), nullable=True)
+    manager_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_department_manager_id"), nullable=True)
+    
+    # Settings
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    cost_center_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_department_created_by_id"), nullable=True)
+
+    # Relationships
+    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    parent: Mapped[Optional["Department"]] = relationship("Department", remote_side=[id], foreign_keys=[parent_id])
+    manager: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User", foreign_keys=[manager_id])
+    positions: Mapped[List["Position"]] = relationship("Position", back_populates="department")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'code', name='uq_department_org_code'),
+        Index('idx_department_org_active', 'organization_id', 'is_active'),
+        {'extend_existing': True}
+    )
+
+
+# Position/Designation Management
+class Position(Base):
+    """Job positions/designations within organization"""
+    __tablename__ = "positions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_position_organization_id"), nullable=False, index=True)
+    
+    # Position details
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    code: Mapped[str] = mapped_column(String(50), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Department association
+    department_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("departments.id", name="fk_position_department_id"), nullable=True)
+    
+    # Job level/grade
+    level: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # Junior, Mid, Senior, Lead, Manager, Director, etc.
+    grade: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)  # A, B, C, etc.
+    
+    # Salary range
+    min_salary: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
+    max_salary: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
+    
+    # Settings
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    headcount: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Budgeted headcount
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    department: Mapped[Optional["Department"]] = relationship("Department", back_populates="positions")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'code', name='uq_position_org_code'),
+        Index('idx_position_org_department', 'organization_id', 'department_id'),
+        Index('idx_position_active', 'is_active'),
+        {'extend_existing': True}
+    )
+
+
+# Work Shift Management
+class WorkShift(Base):
+    """Work shift definitions"""
+    __tablename__ = "work_shifts"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_work_shift_organization_id"), nullable=False, index=True)
+    
+    # Shift details
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    code: Mapped[str] = mapped_column(String(20), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Timing
+    start_time: Mapped[time] = mapped_column(Time, nullable=False)
+    end_time: Mapped[time] = mapped_column(Time, nullable=False)
+    break_start_time: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
+    break_end_time: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
+    
+    # Working hours
+    working_hours: Mapped[Decimal] = mapped_column(Numeric(4, 2), nullable=False, default=8)
+    break_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
+    
+    # Shift type
+    shift_type: Mapped[str] = mapped_column(String(50), nullable=False, default="general")  # general, morning, afternoon, night, rotating
+    
+    # Flexibility settings
+    grace_period_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=15)
+    overtime_threshold_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    
+    # Status
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'code', name='uq_work_shift_org_code'),
+        Index('idx_work_shift_org_active', 'organization_id', 'is_active'),
+        {'extend_existing': True}
+    )
+
+
+# Holiday Calendar
+class HolidayCalendar(Base):
+    """Organization holiday calendar"""
+    __tablename__ = "holiday_calendars"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    
+    # Multi-tenant field
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id", name="fk_holiday_calendar_organization_id"), nullable=False, index=True)
+    
+    # Holiday details
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    holiday_date: Mapped[date] = mapped_column(Date, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Holiday type
+    holiday_type: Mapped[str] = mapped_column(String(50), nullable=False, default="public")  # public, restricted, optional, company
+    
+    # Applicability
+    is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    applicable_departments: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # List of department IDs
+    
+    # Year reference
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'holiday_date', name='uq_holiday_calendar_org_date'),
+        Index('idx_holiday_calendar_org_year', 'organization_id', 'year'),
+        Index('idx_holiday_calendar_date', 'holiday_date'),
+        {'extend_existing': True}
+    )
+
+
 # Employee Profile - Extends User model for HR-specific data
 class EmployeeProfile(Base):
     """Extended employee profile for HR management"""
