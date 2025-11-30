@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   Typography,
-  Grid,
   Table,
   TableBody,
   TableCell,
@@ -17,6 +16,7 @@ import {
   Button,
   IconButton,
 } from "@mui/material";
+import Grid from '@mui/material/Grid';
 import { Refresh, Download, Print } from "@mui/icons-material";
 import { Pie } from "react-chartjs-2";
 import {
@@ -25,7 +25,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import axios from "axios";
+import api from "../services/api/client";
 import { formatCurrency } from "../utils/currencyUtils";
 
 import { ProtectedPage } from '../components/ProtectedPage';
@@ -62,14 +62,32 @@ const CustomerAgingPage: React.FC = () => {
   const fetchAgingData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/finance/analytics/customer-aging", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get("/finance/analytics/customer-aging");
       setData(response.data);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to fetch customer aging data");
+      let errorMessage = "Failed to fetch customer aging data";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.detail) {
+          if (typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (typeof data.detail === 'object' && data.detail !== null) {
+            errorMessage = data.detail.message || data.detail.error || JSON.stringify(data.detail);
+          }
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (typeof data === 'object' && data !== null) {
+          errorMessage = JSON.stringify(data);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -83,8 +101,8 @@ const CustomerAgingPage: React.FC = () => {
     return (
       <ProtectedPage moduleKey="finance" action="read">
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
-        </Box>
+        <CircularProgress />
+      </Box>
       </ProtectedPage>
     );
   }
@@ -133,148 +151,148 @@ const CustomerAgingPage: React.FC = () => {
 
   return (
     <ProtectedPage moduleKey="finance" action="read">
-      <Box sx={{ p: 3 }}>
-        {/* Header */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4" component="h1">
-            Customer Aging Report
-          </Typography>
-          <Box>
-            <IconButton onClick={fetchAgingData} color="primary">
-              <Refresh />
-            </IconButton>
-            <Button startIcon={<Download />} variant="outlined" sx={{ ml: 1 }}>
-              Export
-            </Button>
-            <Button startIcon={<Print />} variant="outlined" sx={{ ml: 1 }}>
-              Print
-            </Button>
-          </Box>
+    <Box sx={{ p: 3 }}>
+      {/* Header */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1">
+          Customer Aging Report
+        </Typography>
+        <Box>
+          <IconButton onClick={fetchAgingData} color="primary">
+            <Refresh />
+          </IconButton>
+          <Button startIcon={<Download />} variant="outlined" sx={{ ml: 1 }}>
+            Export
+          </Button>
+          <Button startIcon={<Print />} variant="outlined" sx={{ ml: 1 }}>
+            Print
+          </Button>
         </Box>
-
-        {/* Summary Cards */}
-        <Grid container spacing={3} mb={3}>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Total Outstanding
-                </Typography>
-                <Typography variant="h5" color="warning.main">
-                  {formatCurrency(data.summary.total_outstanding)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Total Customers
-                </Typography>
-                <Typography variant="h5">
-                  {data.summary.total_customers}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  Total Invoices
-                </Typography>
-                <Typography variant="h5">
-                  {data.summary.total_invoices}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Chart and Table */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Aging Distribution
-                </Typography>
-                <Box sx={{ height: 300 }}>
-                  <Pie data={chartData} />
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Aging Summary
-                </Typography>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Aging Period</TableCell>
-                        <TableCell align="right">Amount</TableCell>
-                        <TableCell align="right">Count</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>Current</TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(data.aging_buckets.current.amount)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {data.aging_buckets.current.count}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>1-30 Days</TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(data.aging_buckets["30_days"].amount)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {data.aging_buckets["30_days"].count}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>31-60 Days</TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(data.aging_buckets["60_days"].amount)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {data.aging_buckets["60_days"].count}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>61-90 Days</TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(data.aging_buckets["90_days"].amount)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {data.aging_buckets["90_days"].count}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Over 90 Days</TableCell>
-                        <TableCell align="right">
-                          {formatCurrency(data.aging_buckets.over_90.amount)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {data.aging_buckets.over_90.count}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
       </Box>
+
+      {/* Summary Cards */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Total Outstanding
+              </Typography>
+              <Typography variant="h5" color="error.main">
+                {formatCurrency(data.summary.total_outstanding)}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Total Customers
+              </Typography>
+              <Typography variant="h5">
+                {data.summary.total_customers}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Total Invoices
+              </Typography>
+              <Typography variant="h5">
+                {data.summary.total_invoices}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Chart and Table */}
+      <Grid container spacing={3}>
+        <Grid xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Aging Distribution
+              </Typography>
+              <Box sx={{ height: 300 }}>
+                <Pie data={chartData} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Aging Summary
+              </Typography>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Aging Period</TableCell>
+                      <TableCell align="right">Amount</TableCell>
+                      <TableCell align="right">Count</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Current</TableCell>
+                      <TableCell align="right">
+                        {formatCurrency(data.aging_buckets.current.amount)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {data.aging_buckets.current.count}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>1-30 Days</TableCell>
+                      <TableCell align="right">
+                        {formatCurrency(data.aging_buckets["30_days"].amount)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {data.aging_buckets["30_days"].count}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>31-60 Days</TableCell>
+                      <TableCell align="right">
+                        {formatCurrency(data.aging_buckets["60_days"].amount)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {data.aging_buckets["60_days"].count}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>61-90 Days</TableCell>
+                      <TableCell align="right">
+                        {formatCurrency(data.aging_buckets["90_days"].amount)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {data.aging_buckets["90_days"].count}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Over 90 Days</TableCell>
+                      <TableCell align="right">
+                        {formatCurrency(data.aging_buckets.over_90.amount)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {data.aging_buckets.over_90.count}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
     </ProtectedPage>
   );
 };
