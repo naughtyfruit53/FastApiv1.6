@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, case
 from typing import Optional, List, Dict, Any
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from pydantic import BaseModel, Field
 import logging
 
@@ -22,6 +22,18 @@ from app.models.vouchers.manufacturing_planning import ManufacturingOrder
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["manufacturing-analytics"])
+
+
+# ============================================================================
+# Configuration Constants
+# ============================================================================
+
+# Default working hours per day (8 hours)
+DEFAULT_WORKING_HOURS_PER_DAY = 8
+
+# Default expected output rate (units per hour)
+# This is a baseline assumption - actual rates depend on product and machine
+DEFAULT_EXPECTED_OUTPUT_RATE = 10
 
 
 # ============================================================================
@@ -255,7 +267,7 @@ async def get_material_consumption(
                     "material": material,
                     "department": department
                 },
-                "generated_at": datetime.utcnow().isoformat()
+                "generated_at": datetime.now(timezone.utc).isoformat()
             }
         )
         
@@ -321,9 +333,9 @@ async def get_efficiency_report(
         total_rejected = 0.0
         total_downtime = 0.0
         
-        # Calculate planned hours (assuming 8 hours per day * number of working days)
+        # Calculate planned hours based on working days and configured hours per day
         working_days = (end_date - start_date).days
-        planned_hours_per_machine = working_days * 8  # 8 hours per day assumption
+        planned_hours_per_machine = working_days * DEFAULT_WORKING_HOURS_PER_DAY
         
         for row in rows:
             runtime = float(row.total_runtime or 0)
@@ -339,8 +351,8 @@ async def get_efficiency_report(
             availability = min(100, availability)  # Cap at 100%
             
             # Performance = Actual Output / Expected Output at actual runtime
-            # Assume expected output rate is 10 units per hour
-            expected_output = runtime * 10
+            # Uses configurable expected output rate (units per hour)
+            expected_output = runtime * DEFAULT_EXPECTED_OUTPUT_RATE
             performance = (produced / expected_output * 100) if expected_output > 0 else 0
             performance = min(100, performance)
             
@@ -377,7 +389,7 @@ async def get_efficiency_report(
         overall_availability = (total_runtime / total_planned * 100) if total_planned > 0 else 0
         overall_availability = min(100, overall_availability)
         
-        expected_total_output = total_runtime * 10
+        expected_total_output = total_runtime * DEFAULT_EXPECTED_OUTPUT_RATE
         overall_performance = (total_produced / expected_total_output * 100) if expected_total_output > 0 else 0
         overall_performance = min(100, overall_performance)
         
@@ -405,7 +417,7 @@ async def get_efficiency_report(
                 "filters_applied": {
                     "machine": machine
                 },
-                "generated_at": datetime.utcnow().isoformat()
+                "generated_at": datetime.now(timezone.utc).isoformat()
             }
         )
         
@@ -509,9 +521,11 @@ async def get_production_summary(
             
             total_planned += planned
         
-        # Calculate estimated downtime
+        # Calculate estimated downtime based on working days and configured hours
         working_days = (end_date - start_date).days
-        available_hours = working_days * 8 * max(1, entry_count // 10)  # Rough estimate
+        # Scale available hours by number of production entries (rough estimate for parallelism)
+        production_scale = max(1, entry_count // DEFAULT_EXPECTED_OUTPUT_RATE)
+        available_hours = working_days * DEFAULT_WORKING_HOURS_PER_DAY * production_scale
         downtime_hours = max(0, available_hours - total_machine_hours)
         
         completion_rate = (total_good / total_planned * 100) if total_planned > 0 else 0
@@ -539,7 +553,7 @@ async def get_production_summary(
                 "filters_applied": {
                     "product": product
                 },
-                "generated_at": datetime.utcnow().isoformat()
+                "generated_at": datetime.now(timezone.utc).isoformat()
             }
         )
         

@@ -2,9 +2,9 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from typing import List, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from app.core.database import get_db
@@ -88,8 +88,8 @@ async def get_current_organization(
             country="India",
             state_code="00",
             gst_number=None,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             enabled_modules={}
         )
   
@@ -436,7 +436,7 @@ async def get_current_organization_license(
     # Calculate days remaining
     days_remaining = None
     if not is_perpetual and org.license_expiry_date:
-        delta = org.license_expiry_date.date() - datetime.utcnow().date()
+        delta = org.license_expiry_date.date() - datetime.now(timezone.utc).date()
         days_remaining = delta.days
     
     # Determine renewal info
@@ -493,7 +493,7 @@ async def get_current_organization_overview(
     total_users = total_users_result.scalar_one() or 0
     
     # Get users logged in today
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     logged_in_today_result = await db.execute(
         select(func.count(User.id)).where(
             User.organization_id == org_id,
@@ -515,5 +515,5 @@ async def get_current_organization_overview(
         "users_logged_in_today": users_logged_in_today,
         "inactive_users_today": inactive_users_today,
         "user_activity_rate": round(activity_rate, 2),
-        "generated_at": datetime.utcnow().isoformat()
+        "generated_at": datetime.now(timezone.utc).isoformat()
     }
