@@ -737,39 +737,40 @@ Be concise, professional, and helpful. Provide actionable advice when possible."
                         error_text = await response.aread()
                         try:
                             error_detail = json.loads(error_text).get("error", {}).get("message", "Unknown error")
-                        except:
+                        except (json.JSONDecodeError, UnicodeDecodeError):
                             error_detail = error_text.decode() if isinstance(error_text, bytes) else str(error_text)
                         yield f"data: {json.dumps({'error': error_detail})}\n\n"
                         return
                     
-                    async for line in response.aiter_lines():
-                        if line.startswith("data: "):
-                            data = line[6:]  # Remove "data: " prefix
-                            if data == "[DONE]":
-                                yield f"data: {json.dumps({'done': True})}\n\n"
-                                break
-                            try:
-                                chunk = json.loads(data)
-                                if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
-                                    content = chunk["choices"][0]["delta"]["content"]
-                                    yield f"data: {json.dumps({'content': content})}\n\n"
-                            except json.JSONDecodeError:
-                                continue
-            
-            # Log chat interaction for audit
-            try:
-                from app.core.audit import create_audit_log
-                await create_audit_log(
-                    db=db,
-                    entity_type="ai_chat",
-                    entity_id=None,
-                    action="chat_stream_completion",
-                    user_id=current_user.id,
-                    changes={"model": model, "message_count": len(request.messages)},
-                    organization_id=org_id
-                )
-            except Exception as audit_error:
-                logger.debug(f"Audit logging skipped: {audit_error}")
+                    try:
+                        async for line in response.aiter_lines():
+                            if line.startswith("data: "):
+                                data = line[6:]  # Remove "data: " prefix
+                                if data == "[DONE]":
+                                    yield f"data: {json.dumps({'done': True})}\n\n"
+                                    break
+                                try:
+                                    chunk = json.loads(data)
+                                    if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
+                                        content = chunk["choices"][0]["delta"]["content"]
+                                        yield f"data: {json.dumps({'content': content})}\n\n"
+                                except json.JSONDecodeError:
+                                    continue
+                    finally:
+                        # Log chat interaction for audit - always attempt after streaming
+                        try:
+                            from app.core.audit import create_audit_log
+                            await create_audit_log(
+                                db=db,
+                                entity_type="ai_chat",
+                                entity_id=None,
+                                action="chat_stream_completion",
+                                user_id=current_user.id,
+                                changes={"model": model, "message_count": len(request.messages)},
+                                organization_id=org_id
+                            )
+                        except Exception as audit_error:
+                            logger.debug(f"Audit logging skipped: {audit_error}")
                 
         except Exception as e:
             logger.error(f"Error in streaming chat: {str(e)}")

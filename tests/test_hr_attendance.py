@@ -5,9 +5,8 @@ Tests clock-in/out, attendance records, and shift management.
 """
 
 import pytest
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
 
 # Import models and schemas at module level
 from app.models.hr_models import (

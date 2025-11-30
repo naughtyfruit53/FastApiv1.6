@@ -5,7 +5,7 @@ Tests chat completion, streaming, and model configuration.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 import json
 
 
@@ -265,9 +265,9 @@ class TestChatErrorHandling:
                     status_code=503,
                     detail="AI chat service is not configured. Please set OPENAI_API_KEY."
                 )
-            
-            assert exc_info.value.status_code == 503
-            assert "OPENAI_API_KEY" in exc_info.value.detail
+        
+        assert exc_info.value.status_code == 503
+        assert "OPENAI_API_KEY" in exc_info.value.detail
 
     def test_invalid_temperature_handling(self):
         """Test handling of invalid temperature environment variable"""

@@ -2,12 +2,10 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, desc, func, extract
+from sqlalchemy import select, and_, or_, desc, func
 from typing import List, Optional
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-import os
-import uuid
 
 from app.core.database import get_db
 from app.core.enforcement import require_access
@@ -1258,7 +1256,7 @@ async def clock_in(
     """Clock in an employee for attendance"""
     current_user, org_id = auth
     today = date.today()
-    now = datetime.utcnow().time()
+    now = datetime.now(timezone.utc).time()
     
     # Check if attendance record already exists for today
     stmt = select(AttendanceRecord).where(
@@ -1318,7 +1316,7 @@ async def clock_out(
     """Clock out an employee for attendance"""
     current_user, org_id = auth
     today = date.today()
-    now = datetime.utcnow().time()
+    now = datetime.now(timezone.utc).time()
     
     # Find today's attendance record
     stmt = select(AttendanceRecord).where(
@@ -1358,8 +1356,8 @@ async def clock_out(
     total_seconds = (check_out_datetime - check_in_datetime).total_seconds()
     total_hours = Decimal(str(total_seconds / 3600))
     
-    # Subtract break hours if applicable
-    break_hours = record.break_hours or Decimal('0')
+    # Subtract break hours if applicable - use explicit None check
+    break_hours = record.break_hours if record.break_hours is not None else Decimal('0')
     record.total_hours = total_hours - break_hours
     
     if remarks:

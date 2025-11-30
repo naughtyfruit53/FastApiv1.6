@@ -57,7 +57,17 @@
             <td style="text-align: center;">{{ item['unit'] }}</td>
             <td style="text-align: right;">{{ item['unit_price']|format_currency }}</td>
             <td style="text-align: right;">{{ (item['accepted_quantity']|float * item['unit_price']|float)|format_currency }}</td>
-            <td style="font-size: 9px;">{{ item['remarks']|default(item['rejection_reason'])|default('-')|truncate(25) }}</td>
+            <td style="font-size: 9px;">
+                {% if item['rejection_reason'] and item['remarks'] %}
+                    {{ (item['rejection_reason'] ~ ' | ' ~ item['remarks'])|truncate(25) }}
+                {% elif item['rejection_reason'] %}
+                    {{ item['rejection_reason']|truncate(25) }}
+                {% elif item['remarks'] %}
+                    {{ item['remarks']|truncate(25) }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
         <!-- Summary row -->
@@ -68,7 +78,7 @@
             <td style="text-align: right; color: #27ae60;">{{ "%.2f"|format(items|sum(attribute='accepted_quantity')|float) }}</td>
             <td style="text-align: right; {% if items|sum(attribute='rejected_quantity')|float > 0 %}color: #c0392b;{% endif %}">{{ "%.2f"|format(items|sum(attribute='rejected_quantity')|float) }}</td>
             <td colspan="2"></td>
-            <td style="text-align: right;">{{ grand_total|format_currency }}</td>
+            <td style="text-align: right;">{{ grand_total|default(0)|format_currency }}</td>
             <td></td>
         </tr>
     </tbody>
@@ -131,7 +141,7 @@
 {% if grand_total and grand_total > 0 %}
 <div class="amount-words">
     <span class="label">Amount in Words:</span>
-    <span class="words">{{ amount_in_words }}</span>
+    <span class="words">{{ amount_in_words|default('') }}</span>
 </div>
 {% endif %}
 {% endblock %}
@@ -201,6 +211,6 @@
 
 <!-- Page number for multi-page support -->
 <div style="position: absolute; bottom: 5px; right: 10px; font-size: 9px; color: #888;">
-    Page {{ page_count }} | Generated: {{ generated_at|format_date(format_str='%d/%m/%Y %H:%M') }}
+    Page {{ page_count|default(1) }} | Generated: {{ generated_at|default('N/A')|format_date(format_str='%d/%m/%Y %H:%M') }}
 </div>
 {% endblock %}

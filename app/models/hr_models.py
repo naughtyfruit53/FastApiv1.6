@@ -1,12 +1,15 @@
 # app/models/hr_models.py
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Numeric, Time
+from sqlalchemy import Integer, String, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Numeric, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from datetime import datetime, date, time
 from decimal import Decimal
+
+if TYPE_CHECKING:
+    from app.models.user_models import Organization, User
 
 
 # Department Management
@@ -37,10 +40,10 @@ class Department(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
     created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_department_created_by_id"), nullable=True)
 
-    # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    # Relationships - use string references for cross-module relationships
+    organization: Mapped["Organization"] = relationship("Organization")
     parent: Mapped[Optional["Department"]] = relationship("Department", remote_side=[id], foreign_keys=[parent_id])
-    manager: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User", foreign_keys=[manager_id])
+    manager: Mapped[Optional["User"]] = relationship("User", foreign_keys=[manager_id])
     positions: Mapped[List["Position"]] = relationship("Position", back_populates="department")
 
     __table_args__ = (

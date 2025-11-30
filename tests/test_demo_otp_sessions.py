@@ -5,13 +5,12 @@ Tests OTP generation, verification, session management, and data purge functiona
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from datetime import datetime, timedelta
 
 # Import the service and utilities
 from app.services.demo_user_service import (
     DemoUserService,
-    get_demo_user_service,
     DEMO_SESSION_DURATION_MINUTES,
     DEMO_ORG_ID,
     DEMO_USER_PREFIX,
