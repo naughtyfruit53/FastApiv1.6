@@ -177,10 +177,10 @@ async def get_finance_analytics_dashboard(
 async def get_cash_flow_forecast(
     forecast_days: int = Query(90, description="Number of days to forecast"),
     auth: tuple = Depends(require_access("finance", "read")),
-
     db: Session = Depends(get_db)
 ):
     """Get cash flow forecast"""
+    current_user, organization_id = auth
     today = date.today()
     forecast_end = today + timedelta(days=forecast_days)
     
@@ -249,10 +249,10 @@ async def get_cash_flow_forecast(
 async def get_profit_loss_trend(
     months: int = Query(12, description="Number of months for trend analysis"),
     auth: tuple = Depends(require_access("finance", "read")),
-
     db: Session = Depends(get_db)
 ):
     """Get profit and loss trend analysis"""
+    current_user, organization_id = auth
     end_date = date.today()
     start_date = end_date.replace(month=1, day=1) if months >= 12 else end_date - timedelta(days=months * 30)
     
@@ -317,10 +317,10 @@ async def get_expense_breakdown(
     period_days: int = Query(30, description="Number of days for analysis"),
     group_by: str = Query("account", description="Group by: account, cost_center, or category"),
     auth: tuple = Depends(require_access("finance", "read")),
-
     db: Session = Depends(get_db)
 ):
     """Get expense breakdown analysis"""
+    current_user, organization_id = auth
     end_date = date.today()
     start_date = end_date - timedelta(days=period_days)
     
@@ -394,10 +394,10 @@ async def get_kpi_trends(
     kpi_codes: List[str] = Query(None, description="List of KPI codes to analyze"),
     months: int = Query(6, description="Number of months for trend analysis"),
     auth: tuple = Depends(require_access("finance", "read")),
-
     db: Session = Depends(get_db)
 ):
     """Get KPI trend analysis"""
+    current_user, organization_id = auth
     end_date = date.today()
     start_date = end_date - timedelta(days=months * 30)
     
@@ -438,10 +438,10 @@ async def get_kpi_trends(
 async def get_vendor_aging(
     aging_periods: List[int] = Query([30, 60, 90], description="Aging period buckets"),
     auth: tuple = Depends(require_access("finance", "read")),
-
     db: Session = Depends(get_db)
 ):
     """Get vendor aging analysis"""
+    current_user, organization_id = auth
     today = date.today()
     
     # Get all outstanding payables
@@ -517,10 +517,10 @@ async def get_vendor_aging(
 async def get_customer_aging(
     aging_periods: List[int] = Query([30, 60, 90], description="Aging period buckets"),
     auth: tuple = Depends(require_access("finance", "read")),
-
     db: Session = Depends(get_db)
 ):
     """Get customer aging analysis"""
+    current_user, organization_id = auth
     today = date.today()
     
     # Get all outstanding receivables
@@ -596,10 +596,10 @@ async def get_customer_aging(
 async def get_budgets(
     budget_year: Optional[int] = Query(None, description="Budget year"),
     auth: tuple = Depends(require_access("finance", "read")),
-
     db: Session = Depends(get_db)
 ):
     """Get budget management data"""
+    current_user, organization_id = auth
     if not budget_year:
         budget_year = date.today().year
     
@@ -649,10 +649,10 @@ async def get_budgets(
 async def get_expense_analysis(
     period_months: int = Query(6, description="Number of months for analysis"),
     auth: tuple = Depends(require_access("finance", "read")),
-
     db: Session = Depends(get_db)
 ):
     """Get expense analysis by category"""
+    current_user, organization_id = auth
     end_date = date.today()
     start_date = end_date - timedelta(days=period_months * 30)
     
@@ -699,10 +699,10 @@ async def get_expense_analysis(
 async def get_financial_kpis(
     period_months: int = Query(3, description="Number of months for KPI analysis"),
     auth: tuple = Depends(require_access("finance", "read")),
-
     db: Session = Depends(get_db)
 ):
     """Get financial KPIs dashboard"""
+    current_user, organization_id = auth
     end_date = date.today()
     start_date = end_date - timedelta(days=period_months * 30)
     

@@ -2,9 +2,9 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from typing import List, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from app.core.database import get_db
@@ -88,8 +88,8 @@ async def get_current_organization(
             country="India",
             state_code="00",
             gst_number=None,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             enabled_modules={}
         )
   
@@ -397,3 +397,123 @@ async def get_entitlements(
 
     service = EntitlementService(db)
     return await service.get_app_entitlements(current_user.organization_id)
+
+
+# NEW: Get current organization license info (normalized endpoint)
+@router.get("/current/license")
+async def get_current_organization_license(
+    auth: tuple = Depends(require_access("organization", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get license information for the current organization.
+    
+    Normalizes license data:
+    - Removes duplicate trial entries if a paid plan exists
+    - Shows start date (license_issued_date)
+    - Shows 'Perpetual' if perpetual license, else shows renewal date
+    """
+    current_user, org_id = auth
+    
+    result = await db.execute(select(Organization).filter_by(id=org_id))
+    org = result.scalars().first()
+    
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
+        )
+    
+    # Determine license status - if plan_type is not "basic" or "trial", consider it a paid plan
+    is_perpetual = org.license_type == "perpetual"
+    is_trial = org.license_type == "trial" or org.status == "trial"
+    has_paid_plan = org.plan_type not in ["basic", "trial", None, ""]
+    
+    # If both trial status and paid plan exist, show only the paid plan (remove trial duplication)
+    display_status = "active" if has_paid_plan else ("trial" if is_trial else "active")
+    display_plan_type = org.plan_type if has_paid_plan else org.license_type
+    
+    # Calculate days remaining
+    days_remaining = None
+    if not is_perpetual and org.license_expiry_date:
+        delta = org.license_expiry_date.date() - datetime.now(timezone.utc).date()
+        days_remaining = delta.days
+    
+    # Determine renewal info
+    renewal_date = None
+    if is_perpetual:
+        renewal_info = "Perpetual"
+    elif org.license_expiry_date:
+        renewal_info = org.license_expiry_date.isoformat()
+        renewal_date = org.license_expiry_date
+    else:
+        renewal_info = None
+    
+    return {
+        "organization_id": org_id,
+        "organization_name": org.name,
+        "license_type": display_plan_type,
+        "license_status": display_status,
+        "is_perpetual": is_perpetual,
+        "is_trial": is_trial and not has_paid_plan,  # Only show trial if no paid plan
+        "start_date": org.license_issued_date.isoformat() if org.license_issued_date else None,
+        "renewal_date": renewal_date.isoformat() if renewal_date else None,
+        "renewal_info": renewal_info,
+        "days_remaining": days_remaining,
+        "license_duration_months": org.license_duration_months,
+        "max_users": org.max_users,
+        "plan_type": org.plan_type
+    }
+
+
+# NEW: Get current organization overview stats (Total Users, Users Logged In Today, etc.)
+@router.get("/current/overview")
+async def get_current_organization_overview(
+    auth: tuple = Depends(require_access("organization", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get organization overview stats:
+    - Total Users
+    - Users Logged In Today
+    - User Activity Rate
+    - Inactive Users Today
+    
+    All stats are organization-scoped, not global.
+    """
+    current_user, org_id = auth
+    
+    # Get total users in organization
+    total_users_result = await db.execute(
+        select(func.count(User.id)).where(
+            User.organization_id == org_id,
+            User.is_active == True
+        )
+    )
+    total_users = total_users_result.scalar_one() or 0
+    
+    # Get users logged in today
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    logged_in_today_result = await db.execute(
+        select(func.count(User.id)).where(
+            User.organization_id == org_id,
+            User.is_active == True,
+            User.last_login >= today_start
+        )
+    )
+    users_logged_in_today = logged_in_today_result.scalar_one() or 0
+    
+    # Calculate inactive users today (total - logged in today)
+    inactive_users_today = total_users - users_logged_in_today
+    
+    # Calculate activity rate
+    activity_rate = (users_logged_in_today / total_users * 100) if total_users > 0 else 0
+    
+    return {
+        "organization_id": org_id,
+        "total_users": total_users,
+        "users_logged_in_today": users_logged_in_today,
+        "inactive_users_today": inactive_users_today,
+        "user_activity_rate": round(activity_rate, 2),
+        "generated_at": datetime.now(timezone.utc).isoformat()
+    }

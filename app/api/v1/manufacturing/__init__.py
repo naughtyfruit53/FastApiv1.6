@@ -43,6 +43,7 @@ from .quality_control import router as quality_control_router
 from .inventory_adjustment import router as inventory_adjustment_router
 from .production_entries import router as production_entries_router  # NEW: Added import
 from .fg_receipts import router as fg_receipts_router  # NEW: Added FG Receipts router
+from .analytics import router as analytics_router  # NEW: Added analytics router for material-consumption, efficiency-report, production-summary
 # Comment out the test_router import and inclusion to avoid ModuleNotFoundError in deployment
 # from .test_router import router as test_router
 
@@ -231,6 +232,17 @@ try:
     logger.debug("Included fg_receipts_router")
 except Exception as e:
     logger.error(f"Failed to include fg_receipts_router: {str(e)}\n{traceback.format_exc()}")
+
+# NEW: Added analytics router for manufacturing analytics endpoints
+try:
+    router.include_router(analytics_router, tags=["Manufacturing Analytics"])
+    for route in analytics_router.routes:
+        if isinstance(route, APIRoute):
+            methods = ', '.join(sorted(route.methods)) if route.methods else 'ALL'
+            logger.debug(f"Registered analytics endpoint: {methods} {route.path}")
+    logger.debug("Included analytics_router")
+except Exception as e:
+    logger.error(f"Failed to include analytics_router: {str(e)}\n{traceback.format_exc()}")
 
 # Comment out test_router to avoid ModuleNotFoundError in deployment
 # try:
