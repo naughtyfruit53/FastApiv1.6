@@ -1,3 +1,5 @@
+# app/services/pdf_generation_service.py
+
 """
 Comprehensive PDF generation service for vouchers with Indian formatting
 """
@@ -64,6 +66,8 @@ class IndianNumberFormatter:
     def format_indian_currency(amount: float, show_symbol: bool = True) -> str:
         """Format amount in Indian currency format (₹1,23,456.78)"""
         try:
+            if amount is None:
+                amount = 0.0
             is_negative = amount < 0
             amount = abs(amount)
             
@@ -389,6 +393,9 @@ class VoucherPDFGenerator:
                 }
                 processed_items.append(processed_item)
                 total_quantity += processed_item['ordered_quantity']
+            subtotal = voucher_data['total_amount']
+            grand_total = subtotal
+            round_off = 0.0
         else:
             # Financial vouchers processing
             for item in items:
@@ -514,6 +521,7 @@ class VoucherPDFGenerator:
             'total_cgst': total_cgst,
             'total_sgst': total_sgst,
             'total_igst': total_igst,
+            'round_off': round_off,
             'total_round_off': round_off,
             'grand_total': grand_total,
             'total_quantity': total_quantity,
@@ -614,7 +622,7 @@ class VoucherPDFGenerator:
                 template_name = 'credit_note.html'
             elif voucher_type == 'debit-note':
                 template_name = 'debit_note.html'
-            elif voucher_type == 'production_order':  # NEW: Handle production_order
+            elif voucher_type == 'production_order':
                 template_name = 'production_order.html'
             else:
                 template_name = f"{voucher_type}_voucher.html"

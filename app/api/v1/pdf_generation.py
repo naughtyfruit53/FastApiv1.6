@@ -50,7 +50,6 @@ async def generate_voucher_pdf(
     - sales-vouchers: Sales Voucher
     - delivery-challan: Delivery Challan
     - sales-return: Sales Return
-    - sales-returns: Sales Return
     - quotation: Quotation
     - sales_order: Sales Order
     - sales-orders: Sales Order
@@ -261,9 +260,7 @@ async def _get_voucher_data(voucher_type: str, voucher_id: int,
         'sales': SalesVoucher,
         'sales-vouchers': SalesVoucher,
         'delivery-challan': DeliveryChallan,
-        'delivery-challans': DeliveryChallan,
         'sales-return': SalesReturn,
-        'sales-returns': SalesReturn,
         'quotation': Quotation,
         'sales_order': SalesOrder,
         'sales-orders': SalesOrder,

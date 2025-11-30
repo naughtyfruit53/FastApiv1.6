@@ -28,6 +28,8 @@
             <th style="width: 9%;">Accepted</th>
             <th style="width: 9%;">Rejected</th>
             <th style="width: 8%;">Unit</th>
+            <th style="width: 8%;">Unit Price</th>
+            <th style="width: 8%;">Total</th>
             <th style="width: 10%;">Remarks</th>
         </tr>
     </thead>
@@ -35,15 +37,17 @@
         {% for item in items %}
         <tr>
             <td style="text-align: center;">{{ loop.index }}</td>
-            <td>{{ item.product_name|default(item.product.product_name|default('N/A')) }}</td>
-            <td style="text-align: center;">{{ item.hsn_code|default(item.product.hsn_code|default('-')) }}</td>
-            <td style="text-align: center;">{{ item.batch_number|default('-') }}{% if item.expiry_date %}<br><small style="color: #666;">Exp: {{ item.expiry_date|format_date(format_str='%d/%m/%Y') }}</small>{% endif %}</td>
-            <td style="text-align: right;">{{ "%.2f"|format(item.ordered_quantity|float) }}</td>
-            <td style="text-align: right;">{{ "%.2f"|format(item.received_quantity|float) }}</td>
-            <td style="text-align: right;">{{ "%.2f"|format(item.accepted_quantity|float) }}</td>
-            <td style="text-align: right;">{{ "%.2f"|format(item.rejected_quantity|float) }}</td>
-            <td style="text-align: center;">{{ item.unit }}</td>
-            <td style="font-size: 9px;">{{ item.remarks|default('-')|truncate(30) }}</td>
+            <td>{{ item['product_name']|default('N/A') }}</td>
+            <td style="text-align: center;">{{ item['hsn_code']|default('-') }}</td>
+            <td style="text-align: center;">{{ item['batch_number']|default('-') }}{% if item['expiry_date'] %}<br><small style="color: #666;">Exp: {{ item['expiry_date']|format_date(format_str='%d/%m/%Y') }}</small>{% endif %}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(item['ordered_quantity']|float) }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(item['received_quantity']|float) }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(item['accepted_quantity']|float) }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(item['rejected_quantity']|float) }}</td>
+            <td style="text-align: center;">{{ item['unit'] }}</td>
+            <td style="text-align: right;">{{ item['unit_price']|format_currency }}</td>
+            <td style="text-align: right;">{{ item['total_cost']|format_currency }}</td>
+            <td style="font-size: 9px;">{{ item['remarks']|default('-')|truncate(30) }}</td>
         </tr>
         {% endfor %}
         <!-- Summary row -->
@@ -54,6 +58,8 @@
             <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='accepted_quantity')|float) }}</td>
             <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='rejected_quantity')|float) }}</td>
             <td colspan="2"></td>
+            <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='total_cost')|float) }}</td>
+            <td></td>
         </tr>
     </tbody>
 </table>

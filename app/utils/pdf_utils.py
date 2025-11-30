@@ -71,7 +71,7 @@ VOUCHER_PDF_CONFIGS: Dict[str, VoucherPdfConfig] = {
         show_tax_details=True,
         entity_type="vendor",
     ),
-    "purchase-order": VoucherPdfConfig(
+    "purchase-orders": VoucherPdfConfig(
         voucher_type="purchase-orders",
         voucher_title="PURCHASE ORDER",
         show_items=True,
@@ -79,14 +79,14 @@ VOUCHER_PDF_CONFIGS: Dict[str, VoucherPdfConfig] = {
         entity_type="vendor",
     ),
     "grn": VoucherPdfConfig(
-        voucher_type="grns",
+        voucher_type="grn",
         voucher_title="GOODS RECEIPT NOTE",
         show_items=True,
         show_tax_details=False,
         entity_type="vendor",
     ),
     "purchase-return": VoucherPdfConfig(
-        voucher_type="purchase-returns",
+        voucher_type="purchase-return",
         voucher_title="PURCHASE RETURN",
         show_items=True,
         show_tax_details=True,
@@ -94,63 +94,63 @@ VOUCHER_PDF_CONFIGS: Dict[str, VoucherPdfConfig] = {
     ),
     # Sales Vouchers
     "sales-voucher": VoucherPdfConfig(
-        voucher_type="sales-vouchers",
+        voucher_type="sales-voucher",
         voucher_title="SALES INVOICE",
         show_items=True,
         show_tax_details=True,
         entity_type="customer",
     ),
     "quotation": VoucherPdfConfig(
-        voucher_type="quotations",
+        voucher_type="quotation",
         voucher_title="QUOTATION",
         show_items=True,
         show_tax_details=True,
         entity_type="customer",
     ),
     "proforma-invoice": VoucherPdfConfig(
-        voucher_type="proforma-invoices",
+        voucher_type="proforma-invoice",
         voucher_title="PROFORMA INVOICE",
         show_items=True,
         show_tax_details=True,
         entity_type="customer",
     ),
     "sales-order": VoucherPdfConfig(
-        voucher_type="sales-orders",
+        voucher_type="sales-order",
         voucher_title="SALES ORDER",
         show_items=True,
         show_tax_details=True,
         entity_type="customer",
     ),
     "delivery-challan": VoucherPdfConfig(
-        voucher_type="delivery-challans",
+        voucher_type="delivery-challan",
         voucher_title="DELIVERY CHALLAN",
         show_items=True,
         show_tax_details=False,
         entity_type="customer",
     ),
     "sales-return": VoucherPdfConfig(
-        voucher_type="sales-returns",
+        voucher_type="sales-return",
         voucher_title="SALES RETURN",
         show_items=True,
         show_tax_details=True,
         entity_type="customer",
     ),
     "credit-note": VoucherPdfConfig(
-        voucher_type="credit-notes",
+        voucher_type="credit-note",
         voucher_title="CREDIT NOTE",
         show_items=True,
         show_tax_details=True,
         entity_type="customer",
     ),
     "debit-note": VoucherPdfConfig(
-        voucher_type="debit-notes",
+        voucher_type="debit-note",
         voucher_title="DEBIT NOTE",
         show_items=True,
         show_tax_details=True,
         entity_type="vendor",
     ),
     "non-sales-credit-note": VoucherPdfConfig(
-        voucher_type="non-sales-credit-notes",
+        voucher_type="non-sales-credit-note",
         voucher_title="NON-SALES CREDIT NOTE",
         show_items=True,
         show_tax_details=True,
@@ -158,55 +158,55 @@ VOUCHER_PDF_CONFIGS: Dict[str, VoucherPdfConfig] = {
     ),
     # Manufacturing Vouchers
     "job-card": VoucherPdfConfig(
-        voucher_type="job-cards",
+        voucher_type="job-card",
         voucher_title="JOB CARD",
         show_items=True,
         show_tax_details=True,
         entity_type="vendor",
     ),
     "production-order": VoucherPdfConfig(
-        voucher_type="production-orders",
+        voucher_type="production-order",
         voucher_title="PRODUCTION ORDER",
         show_items=True,
         show_tax_details=False,
     ),
     "work-order": VoucherPdfConfig(
-        voucher_type="work-orders",
+        voucher_type="work-order",
         voucher_title="WORK ORDER",
         show_items=True,
         show_tax_details=False,
     ),
     "material-receipt": VoucherPdfConfig(
-        voucher_type="material-receipts",
+        voucher_type="material-receipt",
         voucher_title="MATERIAL RECEIPT",
         show_items=True,
         show_tax_details=False,
     ),
     "material-requisition": VoucherPdfConfig(
-        voucher_type="material-requisitions",
+        voucher_type="material-requisition",
         voucher_title="MATERIAL REQUISITION",
         show_items=True,
         show_tax_details=False,
     ),
     "finished-good-receipt": VoucherPdfConfig(
-        voucher_type="finished-good-receipts",
+        voucher_type="finished-good-receipt",
         voucher_title="FINISHED GOODS RECEIPT",
         show_items=True,
         show_tax_details=False,
     ),
     "manufacturing-journal": VoucherPdfConfig(
-        voucher_type="manufacturing-journals",
+        voucher_type="manufacturing-journal",
         voucher_title="MANUFACTURING JOURNAL",
         show_items=False,
         show_tax_details=False,
     ),
     "stock-journal": VoucherPdfConfig(
-        voucher_type="stock-journals",
+        voucher_type="stock-journal",
         voucher_title="STOCK JOURNAL",
         show_items=True,
         show_tax_details=False,
     ),
-}
+};
 
 def get_voucher_pdf_config(voucher_type: str) -> VoucherPdfConfig:
     config = VOUCHER_PDF_CONFIGS.get(voucher_type)
@@ -230,3 +230,4 @@ def generate_standalone_pdf(voucher_id: int, voucher_type: str) -> None:
     pdf_config = get_voucher_pdf_config(voucher_type)
     # Generate PDF via backend
     generate_voucher_pdf(voucher_id, pdf_config)  # Assuming this function exists
+    

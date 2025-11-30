@@ -321,10 +321,47 @@ export const generateStandalonePDF = async (
     }
     // Get PDF configuration
     const pdfConfig = getVoucherPdfConfig(voucherType);
-    // Generate PDF via backend
-    await generateVoucherPDF(voucherId, pdfConfig, voucherNumber);
+    // Call backend API for PDF generation
+    const response = await api.post(
+      `/voucher/${pdfConfig.voucherType}/${voucherId}/download`,
+      {},
+      { responseType: 'blob' }
+    );
+    // Handle the response blob
+    const blob = response.data;
+    const url = window.URL.createObjectURL(blob);
+
+    // Improved filename extraction from Content-Disposition
+    let filename = `${pdfConfig.voucherTitle.replace(/\s+/g, '_')}_${voucherId}.pdf`; // Fallback filename
+    const contentDisposition = response.headers['content-disposition'];
+    console.log('Content-Disposition header:', contentDisposition);
+    if (contentDisposition) {
+      // Better regex to handle filename with or without quotes
+      const filenameRegex = /filename\*?=['"]?(?:UTF-\d['"]*)?([^;\r\n"']*)['"]?;?/i;
+      const matches = filenameRegex.exec(contentDisposition);
+      if (matches && matches[1]) {
+        filename = matches[1].replace(/['"]/g, '');
+        console.log('Extracted filename:', filename);
+      } else {
+        console.warn('Failed to extract filename from header');
+      }
+    } else {
+      console.warn('No Content-Disposition header found');
+      if (voucherNumber) {
+        filename = `${voucherNumber.replace(/\//g, '-')}.pdf`;
+        console.log('Using voucher number for filename:', filename);
+      }
+    }
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   } catch (error) {
-    console.error("[PDF] Error generating standalone PDF:", error);
+    console.error("Error generating PDF:", error);
     alert("Failed to generate PDF. Please try again.");
   }
 };
