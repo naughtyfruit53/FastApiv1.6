@@ -20,6 +20,10 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Avatar,
+  TextField,
+  FormControlLabel,
+  Switch,
+  Paper,
 } from "@mui/material";
 import {
   CameraAlt,
@@ -32,12 +36,26 @@ import {
   QrCodeScanner,
   ContactMail,
   TrendingUp,
+  Add,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import exhibitionService, {
   ExhibitionEvent,
+  ExhibitionAnalytics,
 } from "../services/exhibitionService";
+
+interface EventFormData {
+  name: string;
+  description: string;
+  location: string;
+  venue: string;
+  start_date: string;
+  end_date: string;
+  status: "planned" | "active" | "completed" | "cancelled";
+  auto_send_intro_email: boolean;
+}
+
 const ExhibitionMode: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<ExhibitionEvent | null>(
     null,
@@ -49,12 +67,24 @@ const ExhibitionMode: React.FC = () => {
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [eventFormData, setEventFormData] = useState<EventFormData>({
+    name: "",
+    description: "",
+    location: "",
+    venue: "",
+    start_date: "",
+    end_date: "",
+    status: "planned",
+    auto_send_intro_email: true,
+  });
   const queryClient = useQueryClient();
+
   // Queries
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ["exhibition-events"],
     queryFn: () => exhibitionService.getEvents(),
   });
+
   const { data: cardScans = [], isLoading: scansLoading } = useQuery({
     queryKey: ["card-scans", selectedEvent?.id],
     queryFn: () =>
@@ -63,6 +93,7 @@ const ExhibitionMode: React.FC = () => {
         : Promise.resolve([]),
     enabled: !!selectedEvent,
   });
+
   const { data: prospects = [], isLoading: prospectsLoading } = useQuery({
     queryKey: ["prospects", selectedEvent?.id],
     queryFn: () =>
@@ -71,6 +102,48 @@ const ExhibitionMode: React.FC = () => {
         : Promise.resolve([]),
     enabled: !!selectedEvent,
   });
+
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ["exhibition-analytics", selectedEvent?.id],
+    queryFn: () => exhibitionService.getAnalytics(selectedEvent?.id ? { event_id: selectedEvent.id } : undefined),
+    enabled: activeTab === "analytics",
+  });
+
+  // Create event mutation
+  const createEventMutation = useMutation({
+    mutationFn: async (data: EventFormData) => {
+      return exhibitionService.createEvent({
+        name: data.name,
+        description: data.description || undefined,
+        location: data.location || undefined,
+        venue: data.venue || undefined,
+        start_date: data.start_date || undefined,
+        end_date: data.end_date || undefined,
+        status: data.status,
+        auto_send_intro_email: data.auto_send_intro_email,
+      });
+    },
+    onSuccess: (newEvent) => {
+      toast.success("Exhibition event created successfully!");
+      setEventModalOpen(false);
+      setEventFormData({
+        name: "",
+        description: "",
+        location: "",
+        venue: "",
+        start_date: "",
+        end_date: "",
+        status: "planned",
+        auto_send_intro_email: true,
+      });
+      queryClient.invalidateQueries({ queryKey: ["exhibition-events"] });
+      setSelectedEvent(newEvent);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.detail || "Failed to create event");
+    },
+  });
+
   // Real scan mutation using backend API
   const scanMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -87,12 +160,14 @@ const ExhibitionMode: React.FC = () => {
       setScanModalOpen(false);
       setSelectedFile(null);
       queryClient.invalidateQueries({ queryKey: ["card-scans"] });
+      queryClient.invalidateQueries({ queryKey: ["exhibition-events"] });
     },
     onError: (error: any) => {
       setScanning(false);
       toast.error(error?.response?.data?.detail || "Failed to scan business card");
     },
   });
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type.startsWith("image/")) {
@@ -101,11 +176,21 @@ const ExhibitionMode: React.FC = () => {
       toast.error("Please select a valid image file");
     }
   };
+
   const handleScanCard = () => {
     if (selectedFile) {
       scanMutation.mutate(selectedFile);
     }
   };
+
+  const handleCreateEvent = () => {
+    if (!eventFormData.name.trim()) {
+      toast.error("Event name is required");
+      return;
+    }
+    createEventMutation.mutate(eventFormData);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -132,6 +217,7 @@ const ExhibitionMode: React.FC = () => {
         return "default";
     }
   };
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {
       year: "numeric",
@@ -139,6 +225,7 @@ const ExhibitionMode: React.FC = () => {
       day: "numeric",
     });
   };
+
   if (eventsLoading) {
     return (
       <Box
@@ -151,6 +238,7 @@ const ExhibitionMode: React.FC = () => {
       </Box>
     );
   }
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -186,14 +274,14 @@ const ExhibitionMode: React.FC = () => {
         <Box>
           <Box
             display="flex"
-            justifyContent="between"
+            justifyContent="space-between"
             alignItems="center"
             mb={3}
           >
             <Typography variant="h6">Exhibition Events</Typography>
             <Button
               variant="contained"
-              startIcon={<Event />}
+              startIcon={<Add />}
               onClick={() => setEventModalOpen(true)}
             >
               Create Event
@@ -217,7 +305,7 @@ const ExhibitionMode: React.FC = () => {
                   </Typography>
                   <Button
                     variant="contained"
-                    startIcon={<Event />}
+                    startIcon={<Add />}
                     onClick={() => setEventModalOpen(true)}
                   >
                     Create First Event
@@ -240,7 +328,7 @@ const ExhibitionMode: React.FC = () => {
                     <CardContent>
                       <Box
                         display="flex"
-                        justifyContent="between"
+                        justifyContent="space-between"
                         alignItems="start"
                         mb={2}
                       >
@@ -262,7 +350,7 @@ const ExhibitionMode: React.FC = () => {
                       </Typography>
                       <Box display="flex" gap={2} mb={2}>
                         <Typography variant="body2">
-                          📍 {event.location}
+                          📍 {event.location || "No location"}
                         </Typography>
                       </Box>
                       {event.start_date && (
@@ -279,7 +367,7 @@ const ExhibitionMode: React.FC = () => {
                       )}
                       <Box
                         display="flex"
-                        justifyContent="between"
+                        justifyContent="space-between"
                         alignItems="center"
                       >
                         <Box display="flex" gap={2}>
@@ -301,6 +389,7 @@ const ExhibitionMode: React.FC = () => {
                             startIcon={<CameraAlt />}
                             onClick={(e) => {
                               e.stopPropagation();
+                              setSelectedEvent(event);
                               setScanModalOpen(true);
                             }}
                           >
@@ -317,25 +406,32 @@ const ExhibitionMode: React.FC = () => {
         </Box>
       )}
       {/* Card Scans Tab */}
-      {activeTab === "scans" && selectedEvent && (
+      {activeTab === "scans" && (
         <Box>
           <Box
             display="flex"
-            justifyContent="between"
+            justifyContent="space-between"
             alignItems="center"
             mb={3}
           >
             <Typography variant="h6">
-              Card Scans - {selectedEvent.name}
+              Card Scans {selectedEvent ? `- ${selectedEvent.name}` : "(All Events)"}
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<CameraAlt />}
-              onClick={() => setScanModalOpen(true)}
-            >
-              Scan New Card
-            </Button>
+            {selectedEvent && (
+              <Button
+                variant="contained"
+                startIcon={<CameraAlt />}
+                onClick={() => setScanModalOpen(true)}
+              >
+                Scan New Card
+              </Button>
+            )}
           </Box>
+          {!selectedEvent && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              Select an event from the Events tab to view and scan cards for that specific event.
+            </Alert>
+          )}
           {scansLoading ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress />
@@ -354,15 +450,19 @@ const ExhibitionMode: React.FC = () => {
                     No Card Scans Yet
                   </Typography>
                   <Typography color="text.secondary" align="center" sx={{ mb: 3 }}>
-                    Start scanning business cards to capture leads from this exhibition event.
+                    {selectedEvent 
+                      ? "Start scanning business cards to capture leads from this exhibition event."
+                      : "Select an event first, then start scanning business cards."}
                   </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<CameraAlt />}
-                    onClick={() => setScanModalOpen(true)}
-                  >
-                    Scan First Card
-                  </Button>
+                  {selectedEvent && (
+                    <Button
+                      variant="contained"
+                      startIcon={<CameraAlt />}
+                      onClick={() => setScanModalOpen(true)}
+                    >
+                      Scan First Card
+                    </Button>
+                  )}
                 </Box>
               </CardContent>
             </Card>
@@ -426,11 +526,32 @@ const ExhibitionMode: React.FC = () => {
         </Box>
       )}
       {/* Prospects Tab */}
-      {activeTab === "prospects" && selectedEvent && (
+      {activeTab === "prospects" && (
         <Box>
-          <Typography variant="h6" sx={{ mb: 3 }}>
-            Prospects - {selectedEvent.name}
-          </Typography>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={3}
+          >
+            <Typography variant="h6">
+              Prospects {selectedEvent ? `- ${selectedEvent.name}` : "(All Events)"}
+            </Typography>
+            {selectedEvent && (
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setScanModalOpen(true)}
+              >
+                Add Prospect
+              </Button>
+            )}
+          </Box>
+          {!selectedEvent && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              Select an event from the Events tab to view prospects for that specific event.
+            </Alert>
+          )}
           {prospectsLoading ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress />
@@ -449,15 +570,19 @@ const ExhibitionMode: React.FC = () => {
                     No Prospects Yet
                   </Typography>
                   <Typography color="text.secondary" align="center" sx={{ mb: 3 }}>
-                    Scan business cards or manually add prospects to start tracking potential leads from this event.
+                    {selectedEvent
+                      ? "Scan business cards or manually add prospects to start tracking potential leads from this event."
+                      : "Select an event first to view and manage prospects."}
                   </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={<CameraAlt />}
-                    onClick={() => setScanModalOpen(true)}
-                  >
-                    Scan Business Card
-                  </Button>
+                  {selectedEvent && (
+                    <Button
+                      variant="contained"
+                      startIcon={<CameraAlt />}
+                      onClick={() => setScanModalOpen(true)}
+                    >
+                      Scan Business Card
+                    </Button>
+                  )}
                 </Box>
               </CardContent>
             </Card>
@@ -524,12 +649,101 @@ const ExhibitionMode: React.FC = () => {
       {activeTab === "analytics" && (
         <Box>
           <Typography variant="h6" sx={{ mb: 3 }}>
-            Exhibition Analytics
+            Exhibition Analytics {selectedEvent ? `- ${selectedEvent.name}` : "(Overall)"}
           </Typography>
-          <Alert severity="info">
-            Analytics dashboard will show conversion rates, lead quality
-            metrics, and performance comparisons across events.
-          </Alert>
+          {analyticsLoading ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : analytics ? (
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper sx={{ p: 3, textAlign: "center" }}>
+                  <Typography variant="h3" color="primary">
+                    {analytics.total_events}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Events
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper sx={{ p: 3, textAlign: "center" }}>
+                  <Typography variant="h3" color="success.main">
+                    {analytics.total_scans}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Scans
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper sx={{ p: 3, textAlign: "center" }}>
+                  <Typography variant="h3" color="info.main">
+                    {analytics.total_prospects}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Prospects
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper sx={{ p: 3, textAlign: "center" }}>
+                  <Typography variant="h3" color="warning.main">
+                    {analytics.conversion_rate.toFixed(1)}%
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Conversion Rate
+                  </Typography>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Top Companies
+                  </Typography>
+                  {analytics.top_companies && analytics.top_companies.length > 0 ? (
+                    <List dense>
+                      {analytics.top_companies.slice(0, 5).map((company: any, index: number) => (
+                        <ListItem key={index}>
+                          <ListItemText
+                            primary={company.name}
+                            secondary={`${company.count} prospects`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Typography color="text.secondary">No data available</Typography>
+                  )}
+                </Paper>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Paper sx={{ p: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Lead Quality Distribution
+                  </Typography>
+                  {analytics.lead_quality_distribution && Object.keys(analytics.lead_quality_distribution).length > 0 ? (
+                    <Box display="flex" gap={2} flexWrap="wrap">
+                      {Object.entries(analytics.lead_quality_distribution).map(([status, count]) => (
+                        <Chip
+                          key={status}
+                          label={`${status}: ${count}`}
+                          color={getStatusColor(status) as any}
+                        />
+                      ))}
+                    </Box>
+                  ) : (
+                    <Typography color="text.secondary">No data available</Typography>
+                  )}
+                </Paper>
+              </Grid>
+            </Grid>
+          ) : (
+            <Alert severity="info">
+              No analytics data available yet. Start by creating events and scanning business cards.
+            </Alert>
+          )}
         </Box>
       )}
       {/* Card Scan Modal */}
@@ -541,7 +755,11 @@ const ExhibitionMode: React.FC = () => {
       >
         <DialogTitle>Scan Business Card</DialogTitle>
         <DialogContent>
-          {scanning ? (
+          {!selectedEvent ? (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Please select an event first before scanning a business card.
+            </Alert>
+          ) : scanning ? (
             <Box
               display="flex"
               flexDirection="column"
@@ -608,24 +826,91 @@ const ExhibitionMode: React.FC = () => {
           <Button
             onClick={handleScanCard}
             variant="contained"
-            disabled={!selectedFile || scanning}
+            disabled={!selectedFile || scanning || !selectedEvent}
           >
             {scanning ? "Processing..." : "Scan Card"}
           </Button>
         </DialogActions>
       </Dialog>
-      {/* Event Creation Modal - Placeholder */}
-      <Dialog open={eventModalOpen} onClose={() => setEventModalOpen(false)}>
+      {/* Event Creation Modal */}
+      <Dialog 
+        open={eventModalOpen} 
+        onClose={() => setEventModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Create Exhibition Event</DialogTitle>
         <DialogContent>
-          <Alert severity="info">
-            Event creation form would be implemented here with fields for name,
-            dates, location, etc.
-          </Alert>
+          <Box sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              label="Event Name"
+              fullWidth
+              required
+              value={eventFormData.name}
+              onChange={(e) => setEventFormData({ ...eventFormData, name: e.target.value })}
+            />
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={3}
+              value={eventFormData.description}
+              onChange={(e) => setEventFormData({ ...eventFormData, description: e.target.value })}
+            />
+            <TextField
+              label="Location"
+              fullWidth
+              value={eventFormData.location}
+              onChange={(e) => setEventFormData({ ...eventFormData, location: e.target.value })}
+            />
+            <TextField
+              label="Venue"
+              fullWidth
+              value={eventFormData.venue}
+              onChange={(e) => setEventFormData({ ...eventFormData, venue: e.target.value })}
+            />
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField
+                  label="Start Date"
+                  type="date"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={eventFormData.start_date}
+                  onChange={(e) => setEventFormData({ ...eventFormData, start_date: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="End Date"
+                  type="date"
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  value={eventFormData.end_date}
+                  onChange={(e) => setEventFormData({ ...eventFormData, end_date: e.target.value })}
+                />
+              </Grid>
+            </Grid>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={eventFormData.auto_send_intro_email}
+                  onChange={(e) => setEventFormData({ ...eventFormData, auto_send_intro_email: e.target.checked })}
+                />
+              }
+              label="Auto-send intro email to prospects"
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEventModalOpen(false)}>Cancel</Button>
-          <Button variant="contained">Create Event</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCreateEvent}
+            disabled={createEventMutation.isPending}
+          >
+            {createEventMutation.isPending ? "Creating..." : "Create Event"}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

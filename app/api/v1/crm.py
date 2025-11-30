@@ -70,7 +70,7 @@ async def get_leads(
     try:
         # Get user permissions for admin access check
         rbac = RBACService(db)
-        user_permissions = await rbac.get_user_service_permissions(current_user.id)
+        user_permissions = await rbac.get_user_permissions(current_user.id)
         
         stmt = select(Lead).where(Lead.organization_id == org_id)
         
@@ -691,7 +691,7 @@ async def get_crm_analytics(
 
     # Check RBAC permissions
     rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    user_permissions = await rbac.get_user_permissions(current_user.id)
     logger.debug(f"User {current_user.email} permissions: {user_permissions}")
     if current_user.role != "org_admin" and "crm_analytics_read" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_analytics_read' permission")
@@ -817,7 +817,7 @@ async def get_customer_analytics(
 
     # Check RBAC permissions
     rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    user_permissions = await rbac.get_user_permissions(current_user.id)
     logger.debug(f"User {current_user.email} permissions: {user_permissions}")
     if current_user.role != "org_admin" and "crm_customer_analytics_read" not in user_permissions:
         logger.error(f"User {current_user.email} lacks 'crm_customer_analytics_read' permission")
@@ -972,7 +972,7 @@ async def get_commissions(
 
     # Check RBAC permissions
     rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    user_permissions = await rbac.get_user_permissions(current_user.id)
     if "crm_commission_read" not in user_permissions and not current_user.is_company_admin:
         logger.error(f"User {current_user.email} lacks 'crm_commission_read' permission. User permissions: {user_permissions}")
         raise HTTPException(
@@ -1020,7 +1020,7 @@ async def get_commission(
 
     # Check RBAC permissions
     rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    user_permissions = await rbac.get_user_permissions(current_user.id)
     if "crm_commission_read" not in user_permissions and not current_user.is_company_admin:
         logger.error(f"User {current_user.email} lacks 'crm_commission_read' permission. User permissions: {user_permissions}")
         raise HTTPException(
@@ -1069,7 +1069,7 @@ async def create_commission(
 
     # Check RBAC permissions
     rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    user_permissions = await rbac.get_user_permissions(current_user.id)
     if "crm_commission_create" not in user_permissions and not current_user.is_company_admin:
         logger.error(f"User {current_user.email} lacks 'crm_commission_create' permission")
         raise HTTPException(
@@ -1128,7 +1128,7 @@ async def update_commission(
 
     # Check RBAC permissions
     rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    user_permissions = await rbac.get_user_permissions(current_user.id)
     if "crm_commission_update" not in user_permissions and not current_user.is_company_admin:
         logger.error(f"User {current_user.email} lacks 'crm_commission_update' permission")
         raise HTTPException(
@@ -1190,7 +1190,7 @@ async def delete_commission(
 
     # Check RBAC permissions
     rbac = RBACService(db)
-    user_permissions = await rbac.get_user_service_permissions(current_user.id)
+    user_permissions = await rbac.get_user_permissions(current_user.id)
     if "crm_commission_delete" not in user_permissions and not current_user.is_company_admin:
         logger.error(f"User {current_user.email} lacks 'crm_commission_delete' permission")
         raise HTTPException(
