@@ -30,9 +30,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import axios from "axios";
+import api from "../services/api/client";
 import { formatCurrency } from "../utils/currencyUtils";
-import { extractErrorMessage } from "../utils/errorHandling";
 
 import { ProtectedPage } from '../components/ProtectedPage';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -66,15 +65,34 @@ const BudgetsPage: React.FC = () => {
   const fetchBudgetData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/v1/finance/analytics/budgets", {
+      const response = await api.get("/finance/analytics/budgets", {
         params: { budget_year: budgetYear },
-        headers: { Authorization: `Bearer ${token}` },
       });
       setData(response.data);
       setError(null);
     } catch (err: any) {
-      setError(extractErrorMessage(err));
+      let errorMessage = "Failed to fetch budget data";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.detail) {
+          if (typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (typeof data.detail === 'object' && data.detail !== null) {
+            errorMessage = data.detail.message || data.detail.error || JSON.stringify(data.detail);
+          }
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (typeof data === 'object' && data !== null) {
+          errorMessage = JSON.stringify(data);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -169,8 +187,8 @@ const BudgetsPage: React.FC = () => {
         </Box>
 
         {/* Summary Cards */}
-        <Grid container spacing={3} mb={3}>
-          <Grid item xs={12} md={3}>
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid xs={12} md={3}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -182,7 +200,7 @@ const BudgetsPage: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid xs={12} md={3}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -194,7 +212,7 @@ const BudgetsPage: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid xs={12} md={3}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
@@ -209,7 +227,7 @@ const BudgetsPage: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid xs={12} md={3}>
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>

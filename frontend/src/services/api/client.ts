@@ -302,8 +302,8 @@ class ApiClient {
     );
   }
 
-  async get<T = any>(url: string, params?: any): Promise<ApiResponse<T>> {
-    const response = await this.client.get(url, { params });
+  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const response = await this.client.get(url, config);
     return response;
   }
 
@@ -312,18 +312,18 @@ class ApiClient {
     return response;
   }
 
-  async put<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-    const response = await this.client.put(url, data);
+  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const response = await this.client.put(url, data, config);
     return response;
   }
 
-  async patch<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-    const response = await this.client.patch(url, data);
+  async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const response = await this.client.patch(url, data, config);
     return response;
   }
 
-  async delete<T = any>(url: string): Promise<ApiResponse<T>> {
-    const response = await this.client.delete(url);
+  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    const response = await this.client.delete(url, config);
     return response;
   }
 
