@@ -4,38 +4,57 @@
 {% set voucher_subtitle = "GRN" %}
 
 {% block voucher_meta %}
-<tr><td class="label">Date</td><td class="value">{{ voucher.date|format_date(format_str='%d/%m/%Y') }}</td></tr>
+<tr><td class="label">GRN Date</td><td class="value">{{ voucher.grn_date|format_date(format_str='%d/%m/%Y') }}</td></tr>
 <tr><td class="label">GRN Number</td><td class="value">{{ voucher.voucher_number|default('N/A') }}</td></tr>
-{% if voucher.reference_number %}<tr><td class="label">Reference</td><td class="value">{{ voucher.reference_number }}</td></tr>{% endif %}
-{% if voucher.purchase_order %}<tr><td class="label">Order Date</td><td class="value">{{ voucher.purchase_order.date|format_date(format_str='%d/%m/%Y')|default('') }}</td></tr>{% endif %}
+{% if voucher.challan_number %}<tr><td class="label">Challan No.</td><td class="value">{{ voucher.challan_number }}</td></tr>{% endif %}
+{% if voucher.challan_date %}<tr><td class="label">Challan Date</td><td class="value">{{ voucher.challan_date|format_date(format_str='%d/%m/%Y') }}</td></tr>{% endif %}
 {% if voucher.purchase_order %}<tr><td class="label">PO Number</td><td class="value">{{ voucher.purchase_order.voucher_number|default('') }}</td></tr>{% endif %}
+{% if voucher.purchase_order %}<tr><td class="label">PO Date</td><td class="value">{{ voucher.purchase_order.date|format_date(format_str='%d/%m/%Y')|default('') }}</td></tr>{% endif %}
+{% if voucher.vehicle_number %}<tr><td class="label">Vehicle No.</td><td class="value">{{ voucher.vehicle_number }}</td></tr>{% endif %}
+{% if voucher.lr_rr_number %}<tr><td class="label">LR/RR No.</td><td class="value">{{ voucher.lr_rr_number }}</td></tr>{% endif %}
+{% if voucher.transport_mode %}<tr><td class="label">Transport</td><td class="value">{{ voucher.transport_mode }}</td></tr>{% endif %}
 {% endblock %}
 
 {% block items_table %}
 <table class="items-table">
     <thead>
         <tr>
-            <th style="width: 5%;">S.No</th>
-            <th style="width: 25%;">Product</th>
-            <th style="width: 15%;">HSN Code</th>
-            <th style="width: 10%;">Ordered Qty</th>
-            <th style="width: 15%;">Received Qty</th>
-            <th style="width: 15%;">Accepted Qty</th>
-            <th style="width: 15%;">Rejected Qty</th>
+            <th style="width: 4%;">Sr.</th>
+            <th style="width: 20%;">Product</th>
+            <th style="width: 10%;">HSN Code</th>
+            <th style="width: 12%;">Batch/Lot</th>
+            <th style="width: 9%;">Ordered</th>
+            <th style="width: 9%;">Received</th>
+            <th style="width: 9%;">Accepted</th>
+            <th style="width: 9%;">Rejected</th>
+            <th style="width: 8%;">Unit</th>
+            <th style="width: 10%;">Remarks</th>
         </tr>
     </thead>
     <tbody>
         {% for item in items %}
         <tr>
-            <td>{{ loop.index }}</td>
+            <td style="text-align: center;">{{ loop.index }}</td>
             <td>{{ item.product_name|default(item.product.product_name|default('N/A')) }}</td>
-            <td>{{ item.hsn_code|default('N/A') }}</td>
-            <td>{{ item.ordered_quantity|floatformat(2) }} {{ item.unit }}</td>
-            <td>{{ item.received_quantity|floatformat(2) }} {{ item.unit }}</td>
-            <td>{{ item.accepted_quantity|floatformat(2) }} {{ item.unit }}</td>
-            <td>{{ item.rejected_quantity|floatformat(2) }} {{ item.unit }}</td>
+            <td style="text-align: center;">{{ item.hsn_code|default(item.product.hsn_code|default('-')) }}</td>
+            <td style="text-align: center;">{{ item.batch_number|default('-') }}{% if item.expiry_date %}<br><small style="color: #666;">Exp: {{ item.expiry_date|format_date(format_str='%d/%m/%Y') }}</small>{% endif %}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(item.ordered_quantity|float) }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(item.received_quantity|float) }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(item.accepted_quantity|float) }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(item.rejected_quantity|float) }}</td>
+            <td style="text-align: center;">{{ item.unit }}</td>
+            <td style="font-size: 9px;">{{ item.remarks|default('-')|truncate(30) }}</td>
         </tr>
         {% endfor %}
+        <!-- Summary row -->
+        <tr style="background-color: #f6f6f6; font-weight: bold;">
+            <td colspan="4" style="text-align: right; padding-right: 10px;">Totals:</td>
+            <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='ordered_quantity')|float) }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='received_quantity')|float) }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='accepted_quantity')|float) }}</td>
+            <td style="text-align: right;">{{ "%.2f"|format(items|sum(attribute='rejected_quantity')|float) }}</td>
+            <td colspan="2"></td>
+        </tr>
     </tbody>
 </table>
 {% endblock %}
@@ -56,23 +75,68 @@
 {% endblock %}
 
 {% block totals_right %}
-<!-- Remove totals table for GRN -->
+<!-- GRN doesn't show financial totals, only QC summary -->
+<table>
+    <tbody>
+        <tr><td class="muted">Total Items</td><td class="right num">{{ items|length }}</td></tr>
+        <tr><td class="muted">Total Ordered</td><td class="right num">{{ "%.2f"|format(items|sum(attribute='ordered_quantity')|float) }}</td></tr>
+        <tr><td class="muted">Total Received</td><td class="right num">{{ "%.2f"|format(items|sum(attribute='received_quantity')|float) }}</td></tr>
+        <tr><td class="muted">Total Accepted</td><td class="right num">{{ "%.2f"|format(items|sum(attribute='accepted_quantity')|float) }}</td></tr>
+        <tr><td class="muted">Total Rejected</td><td class="right num" style="{% if items|sum(attribute='rejected_quantity') > 0 %}color: #c0392b;{% endif %}">{{ "%.2f"|format(items|sum(attribute='rejected_quantity')|float) }}</td></tr>
+        {% set acceptance_rate = (items|sum(attribute='accepted_quantity') / items|sum(attribute='received_quantity') * 100) if items|sum(attribute='received_quantity') > 0 else 0 %}
+        <tr><td style="font-weight:700">Acceptance Rate</td><td class="right num" style="font-weight:700;">{{ "%.1f"|format(acceptance_rate) }}%</td></tr>
+    </tbody>
+</table>
+{% endblock %}
+
+{% block amount_words_block %}
+<!-- GRN doesn't have amount in words -->
 {% endblock %}
 
 {% block terms_block %}
 {% endblock %}
 
+{% block signatures_block %}
+<div style="box-sizing: border-box; border-left: 1px solid #222; border-right: 1px solid #222; border-bottom: 1px solid #222; padding: 10px; font-size: 11px;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="width: 33%; text-align: center; padding: 10px; border-right: 1px solid #ddd;">
+                <div style="height: 40px;"></div>
+                <div>_______________________</div>
+                <div style="font-weight: 600;">Quality Inspector</div>
+            </td>
+            <td style="width: 33%; text-align: center; padding: 10px; border-right: 1px solid #ddd;">
+                <div style="height: 40px;"></div>
+                <div>_______________________</div>
+                <div style="font-weight: 600;">Store In-Charge</div>
+            </td>
+            <td style="width: 34%; text-align: center; padding: 10px;">
+                <div style="height: 40px;"></div>
+                <div>_______________________</div>
+                <div style="font-weight: 600;">Authorized Signatory</div>
+            </td>
+        </tr>
+    </table>
+</div>
+{% endblock %}
+
 {% block voucher_specific_footer %}
 {% if voucher.notes %}
-<div style="margin-top: 15px;">
-    <div class="section-title">Additional Notes</div>
-    <div style="font-size: 10px;">
+<div style="margin-top: 10px; border: 1px solid #222; padding: 8px;">
+    <div style="font-weight: 700; font-size: 11px;">Additional Notes:</div>
+    <div style="font-size: 10px; color: #333;">
         {{ voucher.notes }}
     </div>
 </div>
 {% endif %}
 
-<div style="margin-top: 15px; text-align: center; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; padding: 10px; background-color: #ebf3fd;">
-    Goods receipt confirmed.
+{% if voucher.inspection_status %}
+<div style="margin-top: 10px; text-align: center; font-weight: bold; padding: 10px; border: 2px solid {% if voucher.inspection_status == 'completed' %}#27ae60{% elif voucher.inspection_status == 'rejected' %}#c0392b{% else %}#f39c12{% endif %}; background-color: {% if voucher.inspection_status == 'completed' %}#d5f5e3{% elif voucher.inspection_status == 'rejected' %}#fadbd8{% else %}#fef9e7{% endif %}; color: {% if voucher.inspection_status == 'completed' %}#1e8449{% elif voucher.inspection_status == 'rejected' %}#922b21{% else %}#9a7d0a{% endif %};">
+    Inspection Status: {{ voucher.inspection_status|upper }}
 </div>
+{% else %}
+<div style="margin-top: 10px; text-align: center; font-weight: bold; color: #2c3e50; border: 2px solid #3498db; padding: 10px; background-color: #ebf3fd;">
+    Goods Receipt Confirmed
+</div>
+{% endif %}
 {% endblock %}
