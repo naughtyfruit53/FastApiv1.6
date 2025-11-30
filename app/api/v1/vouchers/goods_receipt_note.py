@@ -34,66 +34,70 @@ async def get_goods_receipt_notes(
     """Get all goods receipt notes"""
     current_user, org_id = auth
     
-    stmt = select(GoodsReceiptNote).options(
-        joinedload(GoodsReceiptNote.vendor),
-        joinedload(GoodsReceiptNote.purchase_order),
-        joinedload(GoodsReceiptNote.items).joinedload(GoodsReceiptNoteItem.product)
-    ).where(
-        GoodsReceiptNote.organization_id == org_id
-    )
-    
-    if status:
-        stmt = stmt.where(GoodsReceiptNote.status == status)
-    
-    if hasattr(GoodsReceiptNote, sortBy):
-        sort_attr = getattr(GoodsReceiptNote, sortBy)
-        if sort.lower() == "asc":
-            stmt = stmt.order_by(sort_attr.asc())
-        else:
-            stmt = stmt.order_by(sort_attr.desc())
-    else:
-        stmt = stmt.order_by(GoodsReceiptNote.created_at.desc())
-    
-    result = await db.execute(stmt.offset(skip).limit(limit))
-    invoices = result.unique().scalars().all()
-    
-    for grn in invoices:
-        has_rejection = any(item.rejected_quantity > 0 for item in grn.items)
-        is_full_rejection = all(item.rejected_quantity == item.received_quantity for item in grn.items if item.received_quantity > 0)
+    try:
+        stmt = select(GoodsReceiptNote).options(
+            joinedload(GoodsReceiptNote.vendor),
+            joinedload(GoodsReceiptNote.purchase_order),
+            joinedload(GoodsReceiptNote.items).joinedload(GoodsReceiptNoteItem.product)
+        ).where(
+            GoodsReceiptNote.organization_id == org_id
+        )
         
-        stmt_pv = select(PurchaseVoucher).where(PurchaseVoucher.grn_id == grn.id)
-        has_pv = (await db.execute(stmt_pv)).scalar_one_or_none() is not None
+        if status:
+            stmt = stmt.where(GoodsReceiptNote.status == status)
         
-        stmt_pr = select(PurchaseReturn).where(PurchaseReturn.grn_id == grn.id)
-        has_pr = (await db.execute(stmt_pr)).scalar_one_or_none() is not None
-        
-        logger.debug(f"GRN {grn.voucher_number} - has_rejection: {has_rejection}, is_full_rejection: {is_full_rejection}, has_pv: {has_pv}, has_pr: {has_pr}")
-        
-        color_status = 'pending'  # Default
-        
-        if has_pv:
-            if not has_rejection:
-                color_status = 'green'
+        if hasattr(GoodsReceiptNote, sortBy):
+            sort_attr = getattr(GoodsReceiptNote, sortBy)
+            if sort.lower() == "asc":
+                stmt = stmt.order_by(sort_attr.asc())
             else:
-                if not has_pr:
-                    color_status = 'yellow'
+                stmt = stmt.order_by(sort_attr.desc())
+        else:
+            stmt = stmt.order_by(GoodsReceiptNote.created_at.desc())
+        
+        result = await db.execute(stmt.offset(skip).limit(limit))
+        invoices = result.unique().scalars().all()
+        
+        for grn in invoices:
+            has_rejection = any((item.rejected_quantity or 0) > 0 for item in grn.items)
+            is_full_rejection = all((item.rejected_quantity or 0) == (item.received_quantity or 0) for item in grn.items if (item.received_quantity or 0) > 0)
+            
+            stmt_pv = select(PurchaseVoucher).where(PurchaseVoucher.grn_id == grn.id)
+            has_pv = (await db.execute(stmt_pv)).scalar_one_or_none() is not None
+            
+            stmt_pr = select(PurchaseReturn).where(PurchaseReturn.grn_id == grn.id)
+            has_pr = (await db.execute(stmt_pr)).scalar_one_or_none() is not None
+            
+            logger.debug(f"GRN {grn.voucher_number} - has_rejection: {has_rejection}, is_full_rejection: {is_full_rejection}, has_pv: {has_pv}, has_pr: {has_pr}")
+            
+            color_status = 'pending'  # Default
+            
+            if has_pv:
+                if not has_rejection:
+                    color_status = 'green'
                 else:
-                    color_status = 'green'  # Rejection with PR and PV: treat as resolved (green)
-        else:  # No PV
-            if has_rejection:
-                if is_full_rejection:
-                    color_status = 'orange' if has_pr else 'red'
-                else:
-                    color_status = 'blue' if has_pr else 'red'  # Partial rejection no PR: red (consistent with full)
-        
-        grn.has_purchase_voucher = has_pv
-        grn.has_purchase_return = has_pr
-        grn.color_status = color_status
-        
-        # Add debug log for color_status
-        logger.debug(f"GRN {grn.voucher_number} - has_rejection: {has_rejection}, is_full_rejection: {is_full_rejection}, has_pv: {has_pv}, has_pr: {has_pr}, color_status: {color_status}")
-        
-    return invoices
+                    if not has_pr:
+                        color_status = 'yellow'
+                    else:
+                        color_status = 'green'  # Rejection with PR and PV: treat as resolved (green)
+            else:  # No PV
+                if has_rejection:
+                    if is_full_rejection:
+                        color_status = 'orange' if has_pr else 'red'
+                    else:
+                        color_status = 'blue' if has_pr else 'red'  # Partial rejection no PR: red (consistent with full)
+            
+            grn.has_purchase_voucher = has_pv
+            grn.has_purchase_return = has_pr
+            grn.color_status = color_status
+            
+            # Add debug log for color_status
+            logger.debug(f"GRN {grn.voucher_number} - has_rejection: {has_rejection}, is_full_rejection: {is_full_rejection}, has_pv: {has_pv}, has_pr: {has_pr}, color_status: {color_status}")
+            
+        return invoices
+    except Exception as e:
+        logger.error(f"Error in get_goods_receipt_notes: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/next-number", response_model=str)
 async def get_next_goods_receipt_note_number(
@@ -548,3 +552,4 @@ async def delete_goods_receipt_note(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete goods receipt note"
         )
+        

@@ -5,7 +5,7 @@ Finance Analytics API endpoints - Financial reporting, KPIs, and dashboards
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, case, extract
+from sqlalchemy import select, func, case, extract, desc
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date, timedelta
 from decimal import Decimal
@@ -41,14 +41,14 @@ class FinanceAnalyticsService:
         # Get account balances
         stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.organization_id == organization_id,
-            ChartOfAccounts.account_type == 'asset'
+            ChartOfAccounts.account_type == 'ASSET'
         )
         result = await db.execute(stmt)
         asset_accounts = result.scalars().all()
         
         stmt = select(ChartOfAccounts).where(
             ChartOfAccounts.organization_id == organization_id,
-            ChartOfAccounts.account_type == 'liability'
+            ChartOfAccounts.account_type == 'LIABILITY'
         )
         result = await db.execute(stmt)
         liability_accounts = result.scalars().all()
@@ -57,8 +57,8 @@ class FinanceAnalyticsService:
         total_liabilities = sum(acc.current_balance for acc in liability_accounts)
         
         # Current assets vs current liabilities (simplified)
-        current_assets = total_assets * 0.6  # Assuming 60% are current assets
-        current_liabilities = total_liabilities * 0.7  # Assuming 70% are current liabilities
+        current_assets = total_assets * Decimal('0.6')  # Assuming 60% are current assets
+        current_liabilities = total_liabilities * Decimal('0.7')  # Assuming 70% are current liabilities
         
         ratios = {
             "current_ratio": float(current_assets / current_liabilities) if current_liabilities > 0 else 0,
@@ -80,113 +80,117 @@ async def get_finance_analytics_dashboard(
     db: AsyncSession = Depends(get_db)
 ):
     """Get comprehensive finance analytics dashboard"""
-    current_user, organization_id = auth
-    
-    end_date = date.today()
-    start_date = end_date - timedelta(days=period_days)
-    
-    # Financial ratios
-    ratios = await FinanceAnalyticsService.calculate_financial_ratios(db, organization_id)
-    
-    # Cash flow analysis
-    stmt = select(func.sum(GeneralLedger.credit_amount)).where(
-        GeneralLedger.organization_id == organization_id,
-        GeneralLedger.transaction_date.between(start_date, end_date),
-        GeneralLedger.account_id.in_(
-            select(ChartOfAccounts.id).where(
-                ChartOfAccounts.organization_id == organization_id,
-                ChartOfAccounts.account_type.in_(['bank', 'cash'])
+    try:
+        current_user, organization_id = auth
+        
+        end_date = date.today()
+        start_date = end_date - timedelta(days=period_days)
+        
+        # Financial ratios
+        ratios = await FinanceAnalyticsService.calculate_financial_ratios(db, organization_id)
+        
+        # Cash flow analysis
+        stmt = select(func.sum(GeneralLedger.credit_amount)).where(
+            GeneralLedger.organization_id == organization_id,
+            GeneralLedger.transaction_date.between(start_date, end_date),
+            GeneralLedger.account_id.in_(
+                select(ChartOfAccounts.id).where(
+                    ChartOfAccounts.organization_id == organization_id,
+                    ChartOfAccounts.account_type.in_(['BANK', 'CASH'])
+                )
             )
         )
-    )
-    result = await db.execute(stmt)
-    cash_inflow = result.scalar() or 0
-    
-    stmt = select(func.sum(GeneralLedger.debit_amount)).where(
-        GeneralLedger.organization_id == organization_id,
-        GeneralLedger.transaction_date.between(start_date, end_date),
-        GeneralLedger.account_id.in_(
-            select(ChartOfAccounts.id).where(
-                ChartOfAccounts.organization_id == organization_id,
-                ChartOfAccounts.account_type.in_(['bank', 'cash'])
+        result = await db.execute(stmt)
+        cash_inflow = result.scalar() or 0
+        
+        stmt = select(func.sum(GeneralLedger.debit_amount)).where(
+            GeneralLedger.organization_id == organization_id,
+            GeneralLedger.transaction_date.between(start_date, end_date),
+            GeneralLedger.account_id.in_(
+                select(ChartOfAccounts.id).where(
+                    ChartOfAccounts.organization_id == organization_id,
+                    ChartOfAccounts.account_type.in_(['BANK', 'CASH'])
+                )
             )
         )
-    )
-    result = await db.execute(stmt)
-    cash_outflow = result.scalar() or 0
-    
-    # AP/AR aging
-    stmt = select(func.sum(AccountsPayable.outstanding_amount)).where(
-        AccountsPayable.organization_id == organization_id,
-        AccountsPayable.due_date < date.today(),
-        AccountsPayable.status == 'pending'
-    )
-    result = await db.execute(stmt)
-    overdue_ap = result.scalar() or 0
-    
-    stmt = select(func.sum(AccountsReceivable.outstanding_amount)).where(
-        AccountsReceivable.organization_id == organization_id,
-        AccountsReceivable.due_date < date.today(),
-        AccountsReceivable.status == 'pending'
-    )
-    result = await db.execute(stmt)
-    overdue_ar = result.scalar() or 0
-    
-    # Cost center performance
-    stmt = select(
-        CostCenter.cost_center_name,
-        CostCenter.budget_amount,
-        CostCenter.actual_amount,
-        func.coalesce((CostCenter.actual_amount - CostCenter.budget_amount) / nullif(CostCenter.budget_amount, 0) * 100, 0).label('variance_percent')
-    ).where(
-        CostCenter.organization_id == organization_id,
-        CostCenter.is_active == True
-    )
-    result = await db.execute(stmt)
-    cost_center_performance = result.all()
-    
-    # Recent KPI trends
-    stmt = select(FinancialKPI).where(
-        FinancialKPI.organization_id == organization_id,
-        FinancialKPI.period_end.between(start_date, end_date)
-    ).order_by(desc(FinancialKPI.period_end)).limit(10)
-    result = await db.execute(stmt)
-    recent_kpis = result.scalars().all()
-    
-    return {
-        "period": {"start_date": start_date, "end_date": end_date},
-        "financial_ratios": ratios,
-        "cash_flow": {
-            "inflow": float(cash_inflow),
-            "outflow": float(cash_outflow),
-            "net_flow": float(cash_inflow - cash_outflow)
-        },
-        "accounts_aging": {
-            "overdue_payables": float(overdue_ap),
-            "overdue_receivables": float(overdue_ar)
-        },
-        "cost_centers": [
-            {
-                "name": cc.cost_center_name,
-                "budget": float(cc.budget_amount),
-                "actual": float(cc.actual_amount),
-                "variance_percent": float(cc.variance_percent) if cc.variance_percent else 0
-            }
-            for cc in cost_center_performance
-        ],
-        "recent_kpis": [
-            {
-                "code": kpi.kpi_code,
-                "name": kpi.kpi_name,
-                "category": kpi.kpi_category,
-                "value": float(kpi.kpi_value),
-                "target": float(kpi.target_value) if kpi.target_value else None,
-                "variance": float(kpi.variance_percentage) if kpi.variance_percentage else None,
-                "period_end": kpi.period_end
-            }
-            for kpi in recent_kpis
-        ]
-    }
+        result = await db.execute(stmt)
+        cash_outflow = result.scalar() or 0
+        
+        # AP/AR aging
+        stmt = select(func.sum(AccountsPayable.balance_amount)).where(
+            AccountsPayable.organization_id == organization_id,
+            AccountsPayable.due_date < date.today(),
+            AccountsPayable.status == 'unpaid'
+        )
+        result = await db.execute(stmt)
+        overdue_ap = result.scalar() or 0
+        
+        stmt = select(func.sum(AccountsReceivable.balance_amount)).where(
+            AccountsReceivable.organization_id == organization_id,
+            AccountsReceivable.due_date < date.today(),
+            AccountsReceivable.status == 'unpaid'
+        )
+        result = await db.execute(stmt)
+        overdue_ar = result.scalar() or 0
+        
+        # Cost center performance
+        stmt = select(
+            CostCenter.cost_center_name,
+            CostCenter.budget_amount,
+            CostCenter.actual_amount,
+            func.coalesce((CostCenter.actual_amount - CostCenter.budget_amount) / func.nullif(CostCenter.budget_amount, 0) * 100, 0).label('variance_percent')
+        ).where(
+            CostCenter.organization_id == organization_id,
+            CostCenter.is_active == True
+        )
+        result = await db.execute(stmt)
+        cost_center_performance = result.all()
+        
+        # Recent KPI trends
+        stmt = select(FinancialKPI).where(
+            FinancialKPI.organization_id == organization_id,
+            FinancialKPI.period_end.between(start_date, end_date)
+        ).order_by(desc(FinancialKPI.period_end)).limit(10)
+        result = await db.execute(stmt)
+        recent_kpis = result.scalars().all()
+        
+        return {
+            "period": {"start_date": start_date, "end_date": end_date},
+            "financial_ratios": ratios,
+            "cash_flow": {
+                "inflow": float(cash_inflow),
+                "outflow": float(cash_outflow),
+                "net_flow": float(cash_inflow - cash_outflow)
+            },
+            "accounts_aging": {
+                "overdue_payables": float(overdue_ap),
+                "overdue_receivables": float(overdue_ar)
+            },
+            "cost_centers": [
+                {
+                    "name": cc.cost_center_name,
+                    "budget": float(cc.budget_amount),
+                    "actual": float(cc.actual_amount),
+                    "variance_percent": float(cc.variance_percent) if cc.variance_percent else 0
+                }
+                for cc in cost_center_performance
+            ],
+            "recent_kpis": [
+                {
+                    "code": kpi.kpi_code,
+                    "name": kpi.kpi_name,
+                    "category": kpi.kpi_category,
+                    "value": float(kpi.kpi_value),
+                    "target": float(kpi.target_value) if kpi.target_value else None,
+                    "variance": float(kpi.variance_percentage) if kpi.variance_percentage else None,
+                    "period_end": kpi.period_end
+                }
+                for kpi in recent_kpis
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error in get_finance_analytics_dashboard: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/analytics/cash-flow-forecast")
@@ -196,75 +200,79 @@ async def get_cash_flow_forecast(
     db: AsyncSession = Depends(get_db)
 ):
     """Get cash flow forecast"""
-    current_user, organization_id = auth
-    today = date.today()
-    forecast_end = today + timedelta(days=forecast_days)
-    
-    # Get current cash position
-    stmt = select(func.sum(BankAccount.current_balance)).where(
-        BankAccount.organization_id == organization_id,
-        BankAccount.is_active == True
-    )
-    result = await db.execute(stmt)
-    current_cash = result.scalar() or 0
-    
-    # Get expected receivables (by due date)
-    stmt = select(
-        AccountsReceivable.due_date,
-        func.sum(AccountsReceivable.outstanding_amount).label('amount')
-    ).where(
-        AccountsReceivable.organization_id == organization_id,
-        AccountsReceivable.payment_status == 'pending',
-        AccountsReceivable.due_date.between(today, forecast_end)
-    ).group_by(AccountsReceivable.due_date)
-    result = await db.execute(stmt)
-    expected_receivables = result.all()
-    
-    # Get expected payables (by due date)
-    stmt = select(
-        AccountsPayable.due_date,
-        func.sum(AccountsPayable.outstanding_amount).label('amount')
-    ).where(
-        AccountsPayable.organization_id == organization_id,
-        AccountsPayable.payment_status == 'pending',
-        AccountsPayable.due_date.between(today, forecast_end)
-    ).group_by(AccountsPayable.due_date)
-    result = await db.execute(stmt)
-    expected_payables = result.all()
-    
-    # Create daily forecast
-    forecast_data = []
-    running_balance = current_cash
-    
-    for i in range(forecast_days + 1):
-        forecast_date = today + timedelta(days=i)
+    try:
+        current_user, organization_id = auth
+        today = date.today()
+        forecast_end = today + timedelta(days=forecast_days)
         
-        # Find receivables for this date
-        receivables = next((r.amount for r in expected_receivables if r.due_date == forecast_date), 0)
+        # Get current cash position
+        stmt = select(func.sum(BankAccount.current_balance)).where(
+            BankAccount.organization_id == organization_id,
+            BankAccount.is_active == True
+        )
+        result = await db.execute(stmt)
+        current_cash = result.scalar() or 0
         
-        # Find payables for this date
-        payables = next((p.amount for p in expected_payables if p.due_date == forecast_date), 0)
+        # Get expected receivables (by due date)
+        stmt = select(
+            AccountsReceivable.due_date,
+            func.sum(AccountsReceivable.balance_amount).label('amount')
+        ).where(
+            AccountsReceivable.organization_id == organization_id,
+            AccountsReceivable.payment_status == 'pending',
+            AccountsReceivable.due_date.between(today, forecast_end)
+        ).group_by(AccountsReceivable.due_date)
+        result = await db.execute(stmt)
+        expected_receivables = result.all()
         
-        running_balance += receivables - payables
+        # Get expected payables (by due date)
+        stmt = select(
+            AccountsPayable.due_date,
+            func.sum(AccountsPayable.balance_amount).label('amount')
+        ).where(
+            AccountsPayable.organization_id == organization_id,
+            AccountsPayable.payment_status == 'pending',
+            AccountsPayable.due_date.between(today, forecast_end)
+        ).group_by(AccountsPayable.due_date)
+        result = await db.execute(stmt)
+        expected_payables = result.all()
         
-        forecast_data.append({
-            "date": forecast_date,
-            "receivables": float(receivables),
-            "payables": float(payables),
-            "net_flow": float(receivables - payables),
-            "running_balance": float(running_balance)
-        })
-    
-    return {
-        "current_cash": float(current_cash),
-        "forecast_period": {"start": today, "end": forecast_end},
-        "forecast_data": forecast_data,
-        "summary": {
-            "total_expected_receivables": float(sum(r.amount for r in expected_receivables)),
-            "total_expected_payables": float(sum(p.amount for p in expected_payables)),
-            "projected_ending_balance": running_balance
+        # Create daily forecast
+        forecast_data = []
+        running_balance = current_cash
+        
+        for i in range(forecast_days + 1):
+            forecast_date = today + timedelta(days=i)
+            
+            # Find receivables for this date
+            receivables = next((r.amount for r in expected_receivables if r.due_date == forecast_date), 0)
+            
+            # Find payables for this date
+            payables = next((p.amount for p in expected_payables if p.due_date == forecast_date), 0)
+            
+            running_balance += receivables - payables
+            
+            forecast_data.append({
+                "date": forecast_date,
+                "receivables": float(receivables),
+                "payables": float(payables),
+                "net_flow": float(receivables - payables),
+                "running_balance": float(running_balance)
+            })
+        
+        return {
+            "current_cash": float(current_cash),
+            "forecast_period": {"start": today, "end": forecast_end},
+            "forecast_data": forecast_data,
+            "summary": {
+                "total_expected_receivables": float(sum(r.amount for r in expected_receivables)),
+                "total_expected_payables": float(sum(p.amount for p in expected_payables)),
+                "projected_ending_balance": running_balance
+            }
         }
-    }
+    except Exception as e:
+        logger.error(f"Error in get_cash_flow_forecast: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/analytics/profit-loss-trend")
@@ -274,66 +282,70 @@ async def get_profit_loss_trend(
     db: AsyncSession = Depends(get_db)
 ):
     """Get profit and loss trend analysis"""
-    current_user, organization_id = auth
-    end_date = date.today()
-    start_date = end_date.replace(month=1, day=1) if months >= 12 else end_date - timedelta(days=months * 30)
-    
-    # Get monthly P&L data
-    stmt = select(
-        extract('year', GeneralLedger.transaction_date).label('year'),
-        extract('month', GeneralLedger.transaction_date).label('month'),
-        func.sum(
-            case(
-                (ChartOfAccounts.account_type == 'income', GeneralLedger.credit_amount),
-                else_=0
-            )
-        ).label('income'),
-        func.sum(
-            case(
-                (ChartOfAccounts.account_type == 'expense', GeneralLedger.debit_amount),
-                else_=0
-            )
-        ).label('expenses')
-    ).join(ChartOfAccounts).where(
-        GeneralLedger.organization_id == organization_id,
-        GeneralLedger.transaction_date.between(start_date, end_date)
-    ).group_by(
-        extract('year', GeneralLedger.transaction_date),
-        extract('month', GeneralLedger.transaction_date)
-    ).order_by(
-        extract('year', GeneralLedger.transaction_date),
-        extract('month', GeneralLedger.transaction_date)
-    )
-    result = await db.execute(stmt)
-    monthly_data = result.all()
-    
-    trend_data = [
-        {
-            "period": f"{int(row.year)}-{int(row.month):02d}",
-            "income": float(row.income),
-            "expenses": float(row.expenses),
-            "net_profit": float(row.income - row.expenses),
-            "profit_margin": float((row.income - row.expenses) / row.income * 100) if row.income > 0 else 0
+    try:
+        current_user, organization_id = auth
+        end_date = date.today()
+        start_date = end_date.replace(month=1, day=1) if months >= 12 else end_date - timedelta(days=months * 30)
+        
+        # Get monthly P&L data
+        stmt = select(
+            extract('year', GeneralLedger.transaction_date).label('year'),
+            extract('month', GeneralLedger.transaction_date).label('month'),
+            func.sum(
+                case(
+                    (ChartOfAccounts.account_type == 'INCOME', GeneralLedger.credit_amount),
+                    else_=0
+                )
+            ).label('income'),
+            func.sum(
+                case(
+                    (ChartOfAccounts.account_type == 'EXPENSE', GeneralLedger.debit_amount),
+                    else_=0
+                )
+            ).label('expenses')
+        ).join(ChartOfAccounts).where(
+            GeneralLedger.organization_id == organization_id,
+            GeneralLedger.transaction_date.between(start_date, end_date)
+        ).group_by(
+            extract('year', GeneralLedger.transaction_date),
+            extract('month', GeneralLedger.transaction_date)
+        ).order_by(
+            extract('year', GeneralLedger.transaction_date),
+            extract('month', GeneralLedger.transaction_date)
+        )
+        result = await db.execute(stmt)
+        monthly_data = result.all()
+        
+        trend_data = [
+            {
+                "period": f"{int(row.year)}-{int(row.month):02d}",
+                "income": float(row.income),
+                "expenses": float(row.expenses),
+                "net_profit": float(row.income - row.expenses),
+                "profit_margin": float((row.income - row.expenses) / row.income * 100) if row.income > 0 else 0
+            }
+            for row in monthly_data
+        ]
+        
+        # Calculate totals and averages
+        total_income = sum(d["income"] for d in trend_data)
+        total_expenses = sum(d["expenses"] for d in trend_data)
+        avg_monthly_profit = sum(d["net_profit"] for d in trend_data) / len(trend_data) if trend_data else 0
+        
+        return {
+            "period": {"start": start_date, "end": end_date},
+            "trend_data": trend_data,
+            "summary": {
+                "total_income": total_income,
+                "total_expenses": total_expenses,
+                "total_net_profit": total_income - total_expenses,
+                "average_monthly_profit": avg_monthly_profit,
+                "overall_profit_margin": (total_income - total_expenses) / total_income * 100 if total_income > 0 else 0
+            }
         }
-        for row in monthly_data
-    ]
-    
-    # Calculate totals and averages
-    total_income = sum(d["income"] for d in trend_data)
-    total_expenses = sum(d["expenses"] for d in trend_data)
-    avg_monthly_profit = sum(d["net_profit"] for d in trend_data) / len(trend_data) if trend_data else 0
-    
-    return {
-        "period": {"start": start_date, "end": end_date},
-        "trend_data": trend_data,
-        "summary": {
-            "total_income": total_income,
-            "total_expenses": total_expenses,
-            "total_net_profit": total_income - total_expenses,
-            "average_monthly_profit": avg_monthly_profit,
-            "overall_profit_margin": (total_income - total_expenses) / total_income * 100 if total_income > 0 else 0
-        }
-    }
+    except Exception as e:
+        logger.error(f"Error in get_profit_loss_trend: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/analytics/expense-breakdown")
@@ -344,80 +356,84 @@ async def get_expense_breakdown(
     db: AsyncSession = Depends(get_db)
 ):
     """Get expense breakdown analysis"""
-    current_user, organization_id = auth
-    end_date = date.today()
-    start_date = end_date - timedelta(days=period_months * 30)
-    
-    if group_by == "account":
-        # Group by account
-        stmt = select(
-            ChartOfAccounts.account_name,
-            ChartOfAccounts.account_code,
-            func.sum(GeneralLedger.debit_amount).label('total_amount')
-        ).join(GeneralLedger).where(
-            GeneralLedger.organization_id == organization_id,
-            ChartOfAccounts.account_type == 'expense',
-            GeneralLedger.transaction_date.between(start_date, end_date)
-        ).group_by(
-            ChartOfAccounts.account_name,
-            ChartOfAccounts.account_code
-        ).order_by(desc('total_amount'))
-        result = await db.execute(stmt)
-        expense_data = result.all()
+    try:
+        current_user, organization_id = auth
+        end_date = date.today()
+        start_date = end_date - timedelta(days=period_months * 30)
         
-        breakdown = [
-            {
-                "category": row.account_name,
-                "code": row.account_code,
-                "amount": float(row.total_amount)
-            }
-            for row in expense_data
-        ]
+        if group_by == "account":
+            # Group by account
+            stmt = select(
+                ChartOfAccounts.account_name,
+                ChartOfAccounts.account_code,
+                func.sum(GeneralLedger.debit_amount).label('total_amount')
+            ).join(GeneralLedger).where(
+                GeneralLedger.organization_id == organization_id,
+                ChartOfAccounts.account_type == 'EXPENSE',
+                GeneralLedger.transaction_date.between(start_date, end_date)
+            ).group_by(
+                ChartOfAccounts.account_name,
+                ChartOfAccounts.account_code
+            ).order_by(desc('total_amount'))
+            result = await db.execute(stmt)
+            expense_data = result.all()
+            
+            breakdown = [
+                {
+                    "category": row.account_name,
+                    "code": row.account_code,
+                    "amount": float(row.total_amount)
+                }
+                for row in expense_data
+            ]
+            
+        elif group_by == "cost_center":
+            # Group by cost center
+            stmt = select(
+                CostCenter.cost_center_name,
+                CostCenter.cost_center_code,
+                func.sum(GeneralLedger.debit_amount).label('total_amount')
+            ).join(GeneralLedger).where(
+                GeneralLedger.organization_id == organization_id,
+                GeneralLedger.transaction_date.between(start_date, end_date)
+            ).group_by(
+                CostCenter.cost_center_name,
+                CostCenter.cost_center_code
+            ).order_by(desc('total_amount'))
+            result = await db.execute(stmt)
+            expense_data = result.all()
+            
+            breakdown = [
+                {
+                    "category": row.cost_center_name,
+                    "code": row.cost_center_code,
+                    "amount": float(row.total_amount)
+                }
+                for row in expense_data
+            ]
         
-    elif group_by == "cost_center":
-        # Group by cost center
-        stmt = select(
-            CostCenter.cost_center_name,
-            CostCenter.cost_center_code,
-            func.sum(GeneralLedger.debit_amount).label('total_amount')
-        ).join(GeneralLedger).where(
-            GeneralLedger.organization_id == organization_id,
-            GeneralLedger.transaction_date.between(start_date, end_date)
-        ).group_by(
-            CostCenter.cost_center_name,
-            CostCenter.cost_center_code
-        ).order_by(desc('total_amount'))
-        result = await db.execute(stmt)
-        expense_data = result.all()
+        else:
+            # Default to account type grouping
+            breakdown = [{"category": "No breakdown available", "code": "", "amount": 0}]
         
-        breakdown = [
-            {
-                "category": row.cost_center_name,
-                "code": row.cost_center_code,
-                "amount": float(row.total_amount)
-            }
-            for row in expense_data
-        ]
-    
-    else:
-        # Default to account type grouping
-        breakdown = [{"category": "No breakdown available", "code": "", "amount": 0}]
-    
-    total_expenses = sum(item["amount"] for item in breakdown)
-    
-    # Add percentages
-    for item in breakdown:
-        item["percentage"] = (item["amount"] / total_expenses * 100) if total_expenses > 0 else 0
-    
-    # Sort by amount descending
-    breakdown.sort(key=lambda x: x["amount"], reverse=True)
-    
-    return {
-        "period": {"start_date": start_date, "end_date": end_date},
-        "group_by": group_by,
-        "breakdown": breakdown,
-        "total_expenses": total_expenses
-    }
+        total_expenses = sum(item["amount"] for item in breakdown)
+        
+        # Add percentages
+        for item in breakdown:
+            item["percentage"] = (item["amount"] / total_expenses * 100) if total_expenses > 0 else 0
+        
+        # Sort by amount descending
+        breakdown.sort(key=lambda x: x["amount"], reverse=True)
+        
+        return {
+            "period": {"start_date": start_date, "end_date": end_date},
+            "group_by": group_by,
+            "breakdown": breakdown,
+            "total_expenses": total_expenses
+        }
+    except Exception as e:
+        logger.error(f"Error in get_expense_breakdown: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/analytics/kpi-trends")
@@ -428,43 +444,47 @@ async def get_kpi_trends(
     db: AsyncSession = Depends(get_db)
 ):
     """Get KPI trend analysis"""
-    current_user, organization_id = auth
-    end_date = date.today()
-    start_date = end_date - timedelta(days=months * 30)
-    
-    stmt = select(FinancialKPI).where(
-        FinancialKPI.organization_id == organization_id,
-        FinancialKPI.period_end.between(start_date, end_date)
-    )
-    
-    if kpi_codes:
-        stmt = stmt.where(FinancialKPI.kpi_code.in_(kpi_codes))
-    
-    stmt = stmt.order_by(FinancialKPI.kpi_code, FinancialKPI.period_end)
-    result = await db.execute(stmt)
-    kpis = result.scalars().all()
-    
-    # Group by KPI code
-    kpi_trends = {}
-    for kpi in kpis:
-        if kpi.kpi_code not in kpi_trends:
-            kpi_trends[kpi.kpi_code] = {
-                "kpi_name": kpi.kpi_name,
-                "kpi_category": kpi.kpi_category,
-                "data_points": []
-            }
+    try:
+        current_user, organization_id = auth
+        end_date = date.today()
+        start_date = end_date - timedelta(days=months * 30)
         
-        kpi_trends[kpi.kpi_code]["data_points"].append({
-            "period_end": kpi.period_end,
-            "value": float(kpi.kpi_value),
-            "target": float(kpi.target_value) if kpi.target_value else None,
-            "variance": float(kpi.variance_percentage) if kpi.variance_percentage else None
-        })
-    
-    return {
-        "period": {"start": start_date, "end": end_date},
-        "kpi_trends": kpi_trends
-    }
+        stmt = select(FinancialKPI).where(
+            FinancialKPI.organization_id == organization_id,
+            FinancialKPI.period_end.between(start_date, end_date)
+        )
+        
+        if kpi_codes:
+            stmt = stmt.where(FinancialKPI.kpi_code.in_(kpi_codes))
+        
+        stmt = stmt.order_by(FinancialKPI.kpi_code, FinancialKPI.period_end)
+        result = await db.execute(stmt)
+        kpis = result.scalars().all()
+        
+        # Group by KPI code
+        kpi_trends = {}
+        for kpi in kpis:
+            if kpi.kpi_code not in kpi_trends:
+                kpi_trends[kpi.kpi_code] = {
+                    "kpi_name": kpi.kpi_name,
+                    "kpi_category": kpi.kpi_category,
+                    "data_points": []
+                }
+            
+            kpi_trends[kpi.kpi_code]["data_points"].append({
+                "period_end": kpi.period_end,
+                "value": float(kpi.kpi_value),
+                "target": float(kpi.target_value) if kpi.target_value else None,
+                "variance": float(kpi.variance_percentage) if kpi.variance_percentage else None
+            })
+        
+        return {
+            "period": {"start": start_date, "end": end_date},
+            "kpi_trends": kpi_trends
+        }
+    except Exception as e:
+        logger.error(f"Error in get_kpi_trends: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/analytics/vendor-aging")
@@ -498,9 +518,9 @@ async def get_vendor_aging(
         
         # Categorize payables into aging buckets
         for payable in payables:
-            if payable.due_date and payable.outstanding_amount:
+            if payable.due_date and payable.balance_amount:
                 days_overdue = (today - payable.due_date).days
-                amount = float(payable.outstanding_amount)
+                amount = float(payable.balance_amount)
                 
                 if days_overdue <= 0:
                     aging_buckets["current"]["amount"] += amount
@@ -583,9 +603,9 @@ async def get_customer_aging(
         
         # Categorize receivables into aging buckets
         for receivable in receivables:
-            if receivable.due_date and receivable.outstanding_amount:
+            if receivable.due_date and receivable.balance_amount:
                 days_overdue = (today - receivable.due_date).days
-                amount = float(receivable.outstanding_amount)
+                amount = float(receivable.balance_amount)
                 
                 if days_overdue <= 0:
                     aging_buckets["current"]["amount"] += amount
@@ -703,49 +723,53 @@ async def get_expense_analysis(
     db: AsyncSession = Depends(get_db)
 ):
     """Get expense analysis by category"""
-    current_user, organization_id = auth
-    end_date = date.today()
-    start_date = end_date - timedelta(days=period_months * 30)
-    
-    # Get expense accounts
-    stmt = select(ChartOfAccounts).where(
-        ChartOfAccounts.organization_id == organization_id,
-        ChartOfAccounts.account_type == 'expense',
-        ChartOfAccounts.is_active == True
-    )
-    result = await db.execute(stmt)
-    expense_accounts = result.scalars().all()
-    
-    expense_analysis = []
-    total_expenses = Decimal(0)
-    
-    for account in expense_accounts:
-        amount = abs(account.current_balance)
-        if amount > 0:
-            expense_analysis.append({
-                "account_code": account.account_code,
-                "account_name": account.account_name,
-                "amount": float(amount),
-                "parent_account": account.parent_account_code or "Root"
-            })
-            total_expenses += amount
-    
-    # Calculate percentages
-    for expense in expense_analysis:
-        expense["percentage"] = (expense["amount"] / float(total_expenses) * 100) if total_expenses > 0 else 0
-    
-    # Sort by amount descending
-    expense_analysis.sort(key=lambda x: x["amount"], reverse=True)
-    
-    return {
-        "period": {"start_date": start_date, "end_date": end_date},
-        "expenses": expense_analysis,
-        "summary": {
-            "total_expenses": float(total_expenses),
-            "expense_count": len(expense_analysis),
-            "top_expense": expense_analysis[0] if expense_analysis else None
+    try:
+        current_user, organization_id = auth
+        end_date = date.today()
+        start_date = end_date - timedelta(days=period_months * 30)
+        
+        # Get expense accounts
+        stmt = select(ChartOfAccounts).where(
+            ChartOfAccounts.organization_id == organization_id,
+            ChartOfAccounts.account_type == 'EXPENSE',
+            ChartOfAccounts.is_active == True
+        )
+        result = await db.execute(stmt)
+        expense_accounts = result.scalars().all()
+        
+        expense_analysis = []
+        total_expenses = Decimal(0)
+        
+        for account in expense_accounts:
+            amount = abs(account.current_balance)
+            if amount > 0:
+                expense_analysis.append({
+                    "account_code": account.account_code,
+                    "account_name": account.account_name,
+                    "amount": float(amount),
+                    "parent_account": account.parent_account_code or "Root"
+                })
+                total_expenses += amount
+        
+        # Calculate percentages
+        for expense in expense_analysis:
+            expense["percentage"] = (expense["amount"] / float(total_expenses) * 100) if total_expenses > 0 else 0
+        
+        # Sort by amount descending
+        expense_analysis.sort(key=lambda x: x["amount"], reverse=True)
+        
+        return {
+            "period": {"start_date": start_date, "end_date": end_date},
+            "expenses": expense_analysis,
+            "summary": {
+                "total_expenses": float(total_expenses),
+                "expense_count": len(expense_analysis),
+                "top_expense": expense_analysis[0] if expense_analysis else None
+            }
         }
-    }
+    except Exception as e:
+        logger.error(f"Error in get_expense_analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/analytics/financial-kpis")
@@ -755,41 +779,46 @@ async def get_financial_kpis(
     db: AsyncSession = Depends(get_db)
 ):
     """Get financial KPIs dashboard"""
-    current_user, organization_id = auth
-    end_date = date.today()
-    start_date = end_date - timedelta(days=period_months * 30)
-    
-    # Get recent KPIs
-    stmt = select(FinancialKPI).where(
-        FinancialKPI.organization_id == organization_id,
-        FinancialKPI.period_end.between(start_date, end_date)
-    ).order_by(desc(FinancialKPI.period_end))
-    result = await db.execute(stmt)
-    kpis = result.scalars().all()
-    
-    kpi_data = []
-    for kpi in kpis:
-        kpi_data.append({
-            "kpi_code": kpi.kpi_code,
-            "kpi_name": kpi.kpi_name,
-            "kpi_category": kpi.kpi_category,
-            "value": float(kpi.kpi_value),
-            "target": float(kpi.target_value) if kpi.target_value else None,
-            "variance": float(kpi.variance_percentage) if kpi.variance_percentage else None,
-            "period_end": kpi.period_end,
-            "status": "on_track" if kpi.variance_percentage and abs(kpi.variance_percentage) < 5 else "needs_attention"
-        })
-    
-    # Calculate financial ratios
-    ratios = await FinanceAnalyticsService.calculate_financial_ratios(db, organization_id)
-    
-    return {
-        "period": {"start_date": start_date, "end_date": end_date},
-        "kpis": kpi_data,
-        "financial_ratios": ratios,
-        "summary": {
-            "total_kpis": len(kpi_data),
-            "on_track_count": sum(1 for k in kpi_data if k["status"] == "on_track"),
-            "needs_attention_count": sum(1 for k in kpi_data if k["status"] == "needs_attention")
+    try:
+        current_user, organization_id = auth
+        end_date = date.today()
+        start_date = end_date - timedelta(days=period_months * 30)
+        
+        # Get recent KPIs
+        stmt = select(FinancialKPI).where(
+            FinancialKPI.organization_id == organization_id,
+            FinancialKPI.period_end.between(start_date, end_date)
+        ).order_by(desc(FinancialKPI.period_end))
+        result = await db.execute(stmt)
+        kpis = result.scalars().all()
+        
+        kpi_data = []
+        for kpi in kpis:
+            kpi_data.append({
+                "kpi_code": kpi.kpi_code,
+                "kpi_name": kpi.kpi_name,
+                "kpi_category": kpi.kpi_category,
+                "value": float(kpi.kpi_value),
+                "target": float(kpi.target_value) if kpi.target_value else None,
+                "variance": float(kpi.variance_percentage) if kpi.variance_percentage else None,
+                "period_end": kpi.period_end,
+                "status": "on_track" if kpi.variance_percentage and abs(kpi.variance_percentage) < 5 else "needs_attention"
+            })
+        
+        # Calculate financial ratios
+        ratios = await FinanceAnalyticsService.calculate_financial_ratios(db, organization_id)
+        
+        return {
+            "period": {"start_date": start_date, "end_date": end_date},
+            "kpis": kpi_data,
+            "financial_ratios": ratios,
+            "summary": {
+                "total_kpis": len(kpi_data),
+                "on_track_count": sum(1 for k in kpi_data if k["status"] == "on_track"),
+                "needs_attention_count": sum(1 for k in kpi_data if k["status"] == "needs_attention")
+            }
         }
-    }
+    except Exception as e:
+        logger.error(f"Error in get_financial_kpis: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    

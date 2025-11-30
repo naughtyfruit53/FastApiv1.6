@@ -11,13 +11,13 @@ from enum import Enum
 
 class AccountTypeEnum(str, Enum):
     """Account types for Chart of Accounts"""
-    ASSET = "asset"
-    LIABILITY = "liability"
-    EQUITY = "equity"
-    INCOME = "income"
-    EXPENSE = "expense"
-    BANK = "bank"
-    CASH = "cash"
+    ASSET = "ASSET"
+    LIABILITY = "LIABILITY"
+    EQUITY = "EQUITY"
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
+    BANK = "BANK"
+    CASH = "CASH"
 
 class TaxTypeEnum(str, Enum):
     """Tax types for GST compliance"""
@@ -565,3 +565,4 @@ class CashFlowResponse(BaseModel):
     from_date: SkipValidation[date]
     to_date: SkipValidation[date]
     organization_id: int
+    

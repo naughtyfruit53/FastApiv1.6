@@ -103,7 +103,7 @@ const CashFlowPage: React.FC = () => {
 
   if (loading) {
     return (
-      <ProtectedPage moduleKey="reports" action="read">
+      <ProtectedPage moduleKey="finance" action="read">
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
       </Box>
@@ -112,7 +112,7 @@ const CashFlowPage: React.FC = () => {
   }
 
   return (
-    <ProtectedPage moduleKey="reports" action="read">
+    <ProtectedPage moduleKey="finance" action="read">
     <Box sx={{ p: 3 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" component="h1">
@@ -145,8 +145,16 @@ const CashFlowPage: React.FC = () => {
       </Box>
 
       {error && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error} (Showing demo data)
+          <Button 
+            variant="text" 
+            size="small" 
+            onClick={fetchCashFlow}
+            sx={{ ml: 2 }}
+          >
+            Retry
+          </Button>
         </Alert>
       )}
 

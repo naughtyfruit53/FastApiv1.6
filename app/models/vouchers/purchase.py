@@ -18,8 +18,8 @@ class PurchaseOrder(BaseVoucher):
     terms_conditions = Column(Text)
     line_discount_type = Column(String)  # 'percentage' or 'amount'
     total_discount_type = Column(String)  # 'percentage' or 'amount'
-    total_discount = Column(Float, default=0.0)
-    round_off = Column(Float, default=0.0)  # Added to match schema and PDF calculations
+    total_discount = Column(Float, default=0.0, nullable=False)
+    round_off = Column(Float, default=0.0, nullable=False)  # Added to match schema and PDF calculations
     additional_charges = Column(JSONB, default=dict)
     # Tracking fields
     transporter_name = Column(String)
@@ -43,17 +43,17 @@ class PurchaseOrderItem(SimpleVoucherItemBase):
     
     purchase_order_id = Column(Integer, ForeignKey("purchase_orders.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)  # Added foreign key for product
-    delivered_quantity = Column(Float, default=0.0)
-    pending_quantity = Column(Float, nullable=False)
-    discount_percentage = Column(Float, default=0.0)
-    gst_rate = Column(Float, default=18.0)
+    delivered_quantity = Column(Float, default=0.0, nullable=False)
+    pending_quantity = Column(Float, default=0.0, nullable=False)
+    discount_percentage = Column(Float, default=0.0, nullable=False)
+    gst_rate = Column(Float, default=18.0, nullable=False)
     discount_amount = Column(Float, default=0.0, nullable=False)
-    taxable_amount = Column(Float, default=0.0)
-    cgst_amount = Column(Float, default=0.0)
-    sgst_amount = Column(Float, default=0.0)
-    igst_amount = Column(Float, default=0.0)
+    taxable_amount = Column(Float, default=0.0, nullable=False)
+    cgst_amount = Column(Float, default=0.0, nullable=False)
+    sgst_amount = Column(Float, default=0.0, nullable=False)
+    igst_amount = Column(Float, default=0.0, nullable=False)
     description = Column(Text)
-    discounted_price = Column(Float, default=0.0)
+    discounted_price = Column(Float, default=0.0, nullable=False)
     
     purchase_order = relationship("PurchaseOrder", back_populates="items")
     product = relationship("Product")  # Added relationship to Product
@@ -92,13 +92,13 @@ class GoodsReceiptNoteItem(Base):
     grn_id = Column(Integer, ForeignKey("goods_receipt_notes.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     po_item_id = Column(Integer, ForeignKey("purchase_order_items.id"))
-    ordered_quantity = Column(Float, nullable=False)
-    received_quantity = Column(Float, nullable=False)
-    accepted_quantity = Column(Float, nullable=False)
-    rejected_quantity = Column(Float, default=0.0)
+    ordered_quantity = Column(Float, default=0.0, nullable=False)
+    received_quantity = Column(Float, default=0.0, nullable=False)
+    accepted_quantity = Column(Float, default=0.0, nullable=False)
+    rejected_quantity = Column(Float, default=0.0, nullable=False)
     unit = Column(String, nullable=False)
-    unit_price = Column(Float, nullable=False)
-    total_cost = Column(Float, nullable=False)
+    unit_price = Column(Float, default=0.0, nullable=False)
+    total_cost = Column(Float, default=0.0, nullable=False)
     remarks = Column(Text)
     # Quality control fields
     batch_number = Column(String)
@@ -185,3 +185,4 @@ class PurchaseReturnItem(VoucherItemBase):
     purchase_return_id = Column(Integer, ForeignKey("purchase_returns.id"), nullable=False)
     purchase_return = relationship("PurchaseReturn", back_populates="items")
     product = relationship("Product")  # Added relationship to Product
+    
