@@ -273,6 +273,127 @@ class VoucherNumberService:
             "suggested_date": last_voucher.date if last_voucher else voucher_date,
             "period": period_segment if period_segment else "ANNUAL"
         }
+    
+    @staticmethod
+    async def reindex_vouchers_after_backdated_insert(
+        db: AsyncSession,
+        prefix: str,
+        organization_id: int,
+        model: Type[Any],
+        new_voucher_date: datetime,
+        new_voucher_id: int
+    ) -> dict:
+        """
+        Reindex voucher numbers after inserting a backdated voucher.
+        
+        This function:
+        1. Finds all vouchers with dates >= new_voucher_date
+        2. Sorts them by date (oldest first)
+        3. Reassigns voucher numbers in chronological order
+        
+        This ensures voucher numbers always match the chronological order of voucher dates.
+        
+        Args:
+            db: Database session
+            prefix: Voucher type prefix (e.g., "PO", "SO")
+            organization_id: Organization ID
+            model: SQLAlchemy model class
+            new_voucher_date: Date of the newly inserted voucher
+            new_voucher_id: ID of the newly inserted voucher
+        
+        Returns:
+            dict with:
+                - success: bool
+                - vouchers_reindexed: int
+                - old_to_new_mapping: dict mapping old voucher numbers to new ones
+        """
+        logger.info(f"Starting voucher reindexing for {prefix} in org {organization_id}")
+        
+        try:
+            current_year = new_voucher_date.year
+            current_month = new_voucher_date.month
+            
+            # Get organization settings for period calculation
+            stmt = select(OrganizationSettings).where(
+                OrganizationSettings.organization_id == organization_id
+            )
+            result = await db.execute(stmt)
+            org_settings = result.scalar_one_or_none()
+            
+            full_prefix = prefix
+            if org_settings and org_settings.voucher_prefix_enabled and org_settings.voucher_prefix:
+                full_prefix = f"{org_settings.voucher_prefix}-{prefix}"
+            
+            fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
+            
+            reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
+            
+            period_segment = ""
+            if reset_period == VoucherCounterResetPeriod.MONTHLY:
+                month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+                              'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+                period_segment = month_names[current_month - 1]
+            elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
+                quarter = ((current_month - 1) // 3) + 1
+                period_segment = f"Q{quarter}"
+            
+            if period_segment:
+                search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
+                base_number = f"{full_prefix}/{fiscal_year}/{period_segment}"
+            else:
+                search_pattern = f"{full_prefix}/{fiscal_year}/%"
+                base_number = f"{full_prefix}/{fiscal_year}"
+            
+            # Get all vouchers in this period ordered by date, then by original sequence
+            stmt = select(model).where(
+                model.organization_id == organization_id,
+                model.voucher_number.like(search_pattern)
+            ).order_by(model.date, model.id)
+            
+            result = await db.execute(stmt)
+            vouchers = result.scalars().all()
+            
+            if not vouchers:
+                return {
+                    "success": True,
+                    "vouchers_reindexed": 0,
+                    "old_to_new_mapping": {}
+                }
+            
+            # Reindex vouchers in chronological order
+            old_to_new_mapping = {}
+            sequence = 1
+            
+            for voucher in vouchers:
+                old_number = voucher.voucher_number
+                new_number = f"{base_number}/{sequence:05d}"
+                
+                if old_number != new_number:
+                    old_to_new_mapping[old_number] = new_number
+                    voucher.voucher_number = new_number
+                    logger.debug(f"Reindexed voucher {old_number} -> {new_number}")
+                
+                sequence += 1
+            
+            await db.commit()
+            
+            logger.info(f"Reindexed {len(old_to_new_mapping)} vouchers for {prefix} in org {organization_id}")
+            
+            return {
+                "success": True,
+                "vouchers_reindexed": len(old_to_new_mapping),
+                "old_to_new_mapping": old_to_new_mapping
+            }
+            
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error during voucher reindexing: {str(e)}")
+            return {
+                "success": False,
+                "vouchers_reindexed": 0,
+                "old_to_new_mapping": {},
+                "error": str(e)
+            }
 
 class VoucherValidationService:
     """Service for voucher validation logic"""

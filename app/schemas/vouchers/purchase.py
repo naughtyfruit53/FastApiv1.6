@@ -28,6 +28,7 @@ class PurchaseVoucherCreate(VoucherBase):
     vehicle_number: Optional[str] = None
     lr_rr_number: Optional[str] = None
     e_way_bill_number: Optional[str] = None
+    vendor_voucher_number: Optional[str] = None  # Vendor's own voucher/invoice reference
     additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseVoucherItemCreate] = []
 
@@ -43,6 +44,7 @@ class PurchaseVoucherUpdate(BaseModel):
     vehicle_number: Optional[str] = None
     lr_rr_number: Optional[str] = None
     e_way_bill_number: Optional[str] = None
+    vendor_voucher_number: Optional[str] = None  # Vendor's own voucher/invoice reference
     additional_charges: Optional[Dict[str, float]] = None
     total_amount: Optional[float] = None
     cgst_amount: Optional[float] = None
@@ -65,6 +67,7 @@ class PurchaseVoucherInDB(VoucherInDBBase):
     vehicle_number: Optional[str]
     lr_rr_number: Optional[str]
     e_way_bill_number: Optional[str]
+    vendor_voucher_number: Optional[str] = None  # Vendor's own voucher/invoice reference
     additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseVoucherItemInDB]
     vendor: Optional[VendorMinimal] = None

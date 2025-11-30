@@ -28,6 +28,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import axios from "axios";
 import { formatCurrency } from "../utils/currencyUtils";
+import { extractErrorMessage } from "../utils/errorHandling";
 
 import { ProtectedPage } from '../components/ProtectedPage';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -70,7 +71,7 @@ const CashFlowForecastPage: React.FC = () => {
       setData(response.data);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to fetch cash flow forecast");
+      setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }

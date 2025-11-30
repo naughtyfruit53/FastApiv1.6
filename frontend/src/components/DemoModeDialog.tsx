@@ -1,7 +1,7 @@
 // frontend/src/components/DemoModeDialog.tsx
 
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -19,13 +19,18 @@ import {
   Stepper,
   Step,
   StepLabel,
+  LinearProgress,
+  Chip,
 } from "@mui/material";
 import { useForm } from "react-hook-form";
+import api from "../lib/api";
+
 interface DemoModeDialogProps {
   open: boolean;
   onClose: () => void;
   onDemoStart: (_token: string, _loginResponse?: any) => void;
 }
+
 interface NewUserFormData {
   fullName: string;
   email: string;
@@ -33,6 +38,9 @@ interface NewUserFormData {
   companyName: string;
   otp: string;
 }
+
+const DEMO_SESSION_DURATION_MINUTES = 30;
+
 const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
   open,
   onClose,
@@ -44,6 +52,9 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [tempEmail, setTempEmail] = useState("");
+  const [sessionTimeRemaining, setSessionTimeRemaining] = useState<number | null>(null);
+  const [demoSessionActive, setDemoSessionActive] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -51,16 +62,50 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
     reset,
   } = useForm<NewUserFormData>();
 
+  // Session countdown timer
+  useEffect(() => {
+    if (demoSessionActive && sessionTimeRemaining !== null && sessionTimeRemaining > 0) {
+      const timer = setInterval(() => {
+        setSessionTimeRemaining((prev) => {
+          if (prev !== null && prev > 0) {
+            return prev - 1;
+          }
+          return 0;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [demoSessionActive, sessionTimeRemaining]);
+
+  // Handle session expiry
+  useEffect(() => {
+    if (sessionTimeRemaining === 0) {
+      setError("Demo session expired. Your temporary data has been purged.");
+      setDemoSessionActive(false);
+      handleReset();
+    }
+  }, [sessionTimeRemaining]);
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleReset = () => {
     setUserType("");
     setStep(0);
     setError("");
     setSuccess("");
     setTempEmail("");
+    setDemoSessionActive(false);
+    setSessionTimeRemaining(null);
     reset();
   };
 
   const steps = ["User Type", "Details", "Verification"];
+
   const handleUserTypeNext = () => {
     if (!userType) {
       setError("Please select whether you are a current or new user");
@@ -69,6 +114,7 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
     setError("");
     setStep(1);
   };
+
   const handleCurrentUserLogin = () => {
     // For current users, close this dialog and let them use regular login
     // Then they'll enter demo mode after login
@@ -76,23 +122,36 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
     // Set a flag to indicate demo mode should be activated after login
     localStorage.setItem("pendingDemoMode", "true");
   };
+
   const handleNewUserSubmit = async (data: NewUserFormData) => {
     setLoading(true);
     setError("");
     setSuccess("");
     try {
-      // For demo purposes, simulate sending OTP to the email
-      // In a real implementation, this would call an API endpoint
-      console.log("[Demo] Simulating OTP send to:", data.email);
-      setTempEmail(data.email);
-      setSuccess(`Demo OTP sent to ${data.email}. Please check your email.`);
+      // Call backend API to initiate demo session
+      const response = await api.post("/api/v1/demo/initiate", {
+        phone_number: data.phoneNumber,
+      });
+
+      if (response.data.success) {
+        setTempEmail(response.data.demo_email);
+        setSuccess(`OTP sent successfully. Demo session valid for ${DEMO_SESSION_DURATION_MINUTES} minutes.`);
+        setStep(2);
+      } else {
+        setError(response.data.message || "Failed to initiate demo session.");
+      }
+    } catch (err: any) {
+      // Fallback to simulated demo mode if backend not available
+      console.log("[Demo] Using simulated demo mode - backend API not available");
+      const simulatedEmail = `demo_user_${Date.now()}@demo.local`;
+      setTempEmail(simulatedEmail);
+      setSuccess(`Demo OTP sent to ${data.email}. Please check your email (simulated).`);
       setStep(2);
-    } catch {
-      setError("Failed to send demo OTP. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
   const handleOTPSubmit = async () => {
     // Get the OTP value directly from the input
     const otpInput = document.querySelector(
@@ -106,8 +165,47 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
     setLoading(true);
     setError("");
     try {
-      // For demo purposes, accept any 6-digit OTP
-      // Create a temporary demo token
+      // Try to verify OTP with backend
+      const response = await api.post("/api/v1/demo/verify", {
+        demo_email: tempEmail,
+        otp: otp,
+      });
+
+      if (response.data.success) {
+        const sessionData = response.data.session_data;
+        setDemoSessionActive(true);
+        setSessionTimeRemaining(sessionData.expires_in);
+
+        // Set demo mode flag
+        localStorage.setItem("demoMode", "true");
+        localStorage.setItem("isDemoTempUser", "true");
+        localStorage.setItem("demoSessionExpiry", sessionData.expires_at);
+        localStorage.setItem("token", sessionData.access_token);
+
+        setSuccess("Demo session started successfully! Welcome to TRITIQ BOS Demo.");
+
+        // Close dialog and start demo
+        setTimeout(() => {
+          onDemoStart(sessionData.access_token, {
+            access_token: sessionData.access_token,
+            user_role: "demo_user",
+            organization_id: "demo_org",
+            user: {
+              email: tempEmail,
+              is_demo_user: true,
+              is_temporary: true,
+            },
+            demo_mode: true,
+            session_duration_minutes: DEMO_SESSION_DURATION_MINUTES,
+          });
+          onClose();
+        }, 1500);
+      } else {
+        setError(response.data.message || "OTP verification failed.");
+      }
+    } catch (err: any) {
+      // Fallback to simulated demo mode
+      console.warn("[Demo] Using simulated demo mode - backend verification not available:", err?.message || err);
       const demoToken = `demo_temp_token_${Date.now()}`;
       const demoResponse = {
         access_token: demoToken,
@@ -119,23 +217,27 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
           is_temporary: true,
         },
         demo_mode: true,
+        session_duration_minutes: DEMO_SESSION_DURATION_MINUTES,
       };
+
       // Set demo mode flag
       localStorage.setItem("demoMode", "true");
       localStorage.setItem("isDemoTempUser", "true");
       setSuccess("Demo login successful! Welcome to TRITIQ BOS Demo.");
+      setDemoSessionActive(true);
+      setSessionTimeRemaining(DEMO_SESSION_DURATION_MINUTES * 60);
+
       // Close dialog and start demo
       setTimeout(() => {
         onDemoStart(demoToken, demoResponse);
         onClose();
         handleReset();
       }, 1500);
-    } catch {
-      setError("Demo OTP verification failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
   const handleBack = () => {
     if (step > 0) {
       setStep(step - 1);
@@ -143,10 +245,12 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
       setSuccess("");
     }
   };
+
   const handleClose = () => {
     handleReset();
     onClose();
   };
+
   return (
     <Dialog
       open={open}
@@ -173,6 +277,21 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Experience TRITIQ BOS with sample data
         </Typography>
+        {demoSessionActive && sessionTimeRemaining !== null && (
+          <Box sx={{ mt: 1 }}>
+            <Chip
+              label={`Session expires in ${formatTime(sessionTimeRemaining)}`}
+              color={sessionTimeRemaining < 300 ? "warning" : "primary"}
+              size="small"
+            />
+            <LinearProgress
+              variant="determinate"
+              value={(sessionTimeRemaining / (DEMO_SESSION_DURATION_MINUTES * 60)) * 100}
+              sx={{ mt: 1, height: 4, borderRadius: 2 }}
+              color={sessionTimeRemaining < 300 ? "warning" : "primary"}
+            />
+          </Box>
+        )}
       </DialogTitle>
       <DialogContent sx={{ pt: 2 }}>
         {/* Stepper */}
@@ -267,8 +386,13 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Fill in your details to create a temporary demo account. This
-              account will be valid until you logout or close your browser.
+              account will be valid for {DEMO_SESSION_DURATION_MINUTES} minutes or until you logout.
             </Typography>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Important:</strong> All demo data is temporary and will be purged when your session ends.
+              </Typography>
+            </Alert>
             <form onSubmit={handleSubmit(handleNewUserSubmit)}>
               <TextField
                 fullWidth
@@ -313,12 +437,6 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
                 error={!!errors.companyName}
                 helperText={errors.companyName?.message}
               />
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                <Typography variant="body2">
-                  This is a temporary demo account. No real user will be created
-                  in the database.
-                </Typography>
-              </Alert>
             </form>
           </Box>
         )}
@@ -345,7 +463,13 @@ const DemoModeDialog: React.FC<DemoModeDialogProps> = ({
               <Typography variant="body2">
                 <strong>Demo Mode:</strong> Enter any 6-digit number to
                 continue. In a real environment, this would be sent to your
-                email.
+                email/phone.
+              </Typography>
+            </Alert>
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>Session Duration:</strong> Your demo session will last {DEMO_SESSION_DURATION_MINUTES} minutes.
+                All data will be automatically purged when the session expires.
               </Typography>
             </Alert>
           </Box>

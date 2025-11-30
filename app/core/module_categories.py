@@ -53,6 +53,7 @@ CATEGORY_MODULE_MAP: Dict[str, List[str]] = {
         "finance",
         "accounting",
         "reports_analytics",
+        "reports",  # Alias for reports_analytics for backward compatibility
         "payroll",
         "ledger"  # NEW: Added ledger to finance_suite
     ],

@@ -32,6 +32,7 @@ import {
 } from "chart.js";
 import axios from "axios";
 import { formatCurrency } from "../utils/currencyUtils";
+import { extractErrorMessage } from "../utils/errorHandling";
 
 import { ProtectedPage } from '../components/ProtectedPage';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -73,7 +74,7 @@ const BudgetsPage: React.FC = () => {
       setData(response.data);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to fetch budget data");
+      setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }

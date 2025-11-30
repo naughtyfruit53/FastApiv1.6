@@ -106,6 +106,7 @@ class SalesOrder(BaseVoucher):
     delivery_date = Column(DateTime(timezone=True))
     payment_terms = Column(String)
     terms_conditions = Column(Text)
+    customer_voucher_number = Column(String)  # Customer's own PO/reference number
     additional_charges = Column(JSONB, default=dict)
     
     customer = relationship("app.models.customer_models.Customer")
@@ -117,6 +118,7 @@ class SalesOrder(BaseVoucher):
         Index('idx_so_org_customer', 'organization_id', 'customer_id'),
         Index('idx_so_org_date', 'organization_id', 'date'),
         Index('idx_so_org_status', 'organization_id', 'status'),
+        Index('idx_so_customer_voucher_number', 'organization_id', 'customer_voucher_number'),
     )
 
 # SalesOrderItem

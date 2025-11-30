@@ -182,3 +182,113 @@ def get_cache_stats() -> Dict[str, Any]:
         'expired_entries': expired_entries,
         'default_ttl_seconds': DEFAULT_TTL_SECONDS
     }
+
+
+# Entitlement-specific caching with longer TTL
+ENTITLEMENT_TTL_SECONDS = 300  # 5 minutes for entitlements
+
+_entitlement_cache: Dict[str, Dict[str, Any]] = {}
+
+
+def _get_entitlement_cache_key(org_id: int) -> str:
+    """Generate a cache key for organization entitlements."""
+    return f"entitlement:org:{org_id}"
+
+
+def get_cached_entitlements(org_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Get cached entitlements for an organization.
+    
+    Args:
+        org_id: Organization ID
+        
+    Returns:
+        Cached entitlements data or None if not cached/expired
+    """
+    cache_key = _get_entitlement_cache_key(org_id)
+    
+    if cache_key not in _entitlement_cache:
+        return None
+    
+    cached = _entitlement_cache[cache_key]
+    
+    # Check if cache has expired
+    if datetime.utcnow() > cached.get('expires_at', datetime.utcnow()):
+        del _entitlement_cache[cache_key]
+        logger.debug(f"Entitlement cache expired for org_id={org_id}")
+        return None
+    
+    logger.debug(f"Entitlement cache hit for org_id={org_id}")
+    return cached.get('data')
+
+
+def set_cached_entitlements(org_id: int, data: Dict[str, Any], ttl_seconds: int = ENTITLEMENT_TTL_SECONDS) -> None:
+    """
+    Cache entitlements data for an organization.
+    
+    Args:
+        org_id: Organization ID
+        data: Entitlements data to cache
+        ttl_seconds: Time-to-live in seconds (default 5 minutes)
+    """
+    cache_key = _get_entitlement_cache_key(org_id)
+    
+    _entitlement_cache[cache_key] = {
+        'data': data,
+        'expires_at': datetime.utcnow() + timedelta(seconds=ttl_seconds),
+        'cached_at': datetime.utcnow()
+    }
+    
+    logger.debug(f"Entitlements cached for org_id={org_id}, ttl={ttl_seconds}s")
+
+
+def invalidate_entitlement_cache(org_id: int) -> bool:
+    """
+    Invalidate cached entitlements for an organization.
+    
+    Args:
+        org_id: Organization ID
+        
+    Returns:
+        True if cache was invalidated, False if no cache existed
+    """
+    cache_key = _get_entitlement_cache_key(org_id)
+    
+    if cache_key in _entitlement_cache:
+        del _entitlement_cache[cache_key]
+        logger.info(f"Invalidated entitlement cache for org_id={org_id}")
+        return True
+    
+    return False
+
+
+def clear_all_entitlement_cache() -> int:
+    """
+    Clear all entitlement caches.
+    
+    Returns:
+        Number of cache entries cleared
+    """
+    count = len(_entitlement_cache)
+    _entitlement_cache.clear()
+    logger.info(f"Cleared all {count} entitlement cache entries")
+    return count
+
+
+def get_entitlement_cache_stats() -> Dict[str, Any]:
+    """
+    Get entitlement cache statistics.
+    
+    Returns:
+        Dictionary with cache statistics
+    """
+    now = datetime.utcnow()
+    active_entries = sum(1 for v in _entitlement_cache.values() if v.get('expires_at', now) > now)
+    expired_entries = len(_entitlement_cache) - active_entries
+    
+    return {
+        'total_entries': len(_entitlement_cache),
+        'active_entries': active_entries,
+        'expired_entries': expired_entries,
+        'default_ttl_seconds': ENTITLEMENT_TTL_SECONDS
+    }

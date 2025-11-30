@@ -207,7 +207,7 @@ const MobileDashboard: React.FC = () => {
           <>
             <MobileCard title="License Plan Distribution">
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {Object.entries(statistics.plan_breakdown).map(([plan, count]) => (
+                {statistics.plan_breakdown && Object.entries(statistics.plan_breakdown).map(([plan, count]) => (
                   <Chip
                     key={plan}
                     label={`${plan}: ${count}`}
@@ -226,9 +226,9 @@ const MobileDashboard: React.FC = () => {
                 <Typography>
                   Status:{" "}
                   <Chip
-                    label={statistics.system_health.status}
+                    label={statistics.system_health?.status || "unknown"}
                     color={
-                      statistics.system_health.status === "healthy"
+                      statistics.system_health?.status === "healthy"
                         ? "success"
                         : "error"
                     }
@@ -241,7 +241,7 @@ const MobileDashboard: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="body2" color="textSecondary">
-                Last updated: {new Date(statistics.generated_at).toLocaleString()}
+                Last updated: {statistics.generated_at ? new Date(statistics.generated_at).toLocaleString() : 'N/A'}
               </Typography>
             </MobileCard>
             <MobileCard title="Platform Growth Overview">
@@ -249,7 +249,7 @@ const MobileDashboard: React.FC = () => {
                 <Grid item xs={4}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h3" sx={{ color: 'var(--primary-600)', fontWeight: 700, mb: 1 }}>
-                      {statistics.total_licenses_issued}
+                      {statistics.total_licenses_issued ?? 0}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
                       Total Organizations
@@ -259,7 +259,7 @@ const MobileDashboard: React.FC = () => {
                 <Grid item xs={4}>
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h3" sx={{ color: 'var(--secondary-600)', fontWeight: 700, mb: 1 }}>
-                      {statistics.total_active_users}
+                      {statistics.total_active_users ?? 0}
                     </Typography>
                     <Typography variant="body2" color="textSecondary">
                       Platform Users
