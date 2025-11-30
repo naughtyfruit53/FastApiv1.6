@@ -301,6 +301,52 @@ class AIService {
   }
 
   // ============================================================================
+  // OPENAI CHAT SERVICES
+  // ============================================================================
+
+  /**
+   * Send a chat message to OpenAI-powered assistant
+   */
+  async chat(messages: Array<{ role: string; content: string }>, context?: Record<string, any>): Promise<{
+    message: { role: string; content: string };
+    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+    model: string;
+    finish_reason?: string;
+  }> {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/ai/chat`,
+        { messages, context },
+        { headers: this.getHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error in chat:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get available chat models
+   */
+  async getChatModels(): Promise<{
+    default_model: string;
+    available_models: Array<{ id: string; name: string; description: string }>;
+    configured: boolean;
+  }> {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/ai/chat/models`,
+        { headers: this.getHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error getting chat models:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
   // AI ANALYTICS SERVICES
   // ============================================================================
 

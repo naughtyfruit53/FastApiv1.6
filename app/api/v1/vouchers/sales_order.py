@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, asc, desc
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil import parser as date_parser
 from io import BytesIO
 from app.core.database import get_db

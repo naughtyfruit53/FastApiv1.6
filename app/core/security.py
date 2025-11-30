@@ -126,10 +126,15 @@ def verify_token(token: str, expected_type: Optional[str] = None) -> tuple[Union
             headers={"WWW-Authenticate": "Bearer"},
         )
     except exceptions.JWTError as e:
-        logger.error("JWT decode error: %s", str(e))
+        # Use debug level for common token format errors to avoid log flooding
+        error_msg = str(e)
+        if "Not enough segments" in error_msg or "empty or missing" in error_msg:
+            logger.debug("JWT format error (likely malformed token): %s", error_msg)
+        else:
+            logger.warning("JWT decode error: %s", error_msg)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
+            detail={"error": "invalid_token", "message": "Invalid authentication token"},
             headers={"WWW-Authenticate": "Bearer"},
         )
 
