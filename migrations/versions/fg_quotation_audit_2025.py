@@ -18,8 +18,18 @@ depends_on = None
 
 def upgrade() -> None:
     # Add new columns to quotations table
-    op.add_column('quotations', sa.Column('base_quote_id', sa.Integer(), sa.ForeignKey('quotations.id'), nullable=True))
+    op.add_column('quotations', sa.Column('base_quote_id', sa.Integer(), nullable=True))
     op.add_column('quotations', sa.Column('is_proforma', sa.Boolean(), nullable=True, server_default='false'))
+    
+    # Create foreign key constraint with proper naming
+    op.create_foreign_key(
+        'fk_quotations_base_quote_id',
+        'quotations',
+        'quotations',
+        ['base_quote_id'],
+        ['id'],
+        ondelete='SET NULL'
+    )
     
     # Create unique constraint for base_quote_id + revision_number (allow NULLs for original quotes)
     # Note: This constraint only applies when base_quote_id is NOT NULL
@@ -152,5 +162,6 @@ def downgrade() -> None:
     
     # Drop quotation enhancements
     op.drop_index('idx_quotation_base_quote', table_name='quotations')
+    op.drop_constraint('fk_quotations_base_quote_id', 'quotations', type_='foreignkey')
     op.drop_column('quotations', 'is_proforma')
     op.drop_column('quotations', 'base_quote_id')
