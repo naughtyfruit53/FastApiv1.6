@@ -559,8 +559,8 @@ export const VOUCHER_CONFIGS = {
   "sales-order": {
     voucherType: "sales-orders",
     entityType: "sales" as const,
-    endpoint: "/sales-orders",
-    nextNumberEndpoint: "/sales-orders/next-number",
+    endpoint: "/vouchers/sales-orders",
+    nextNumberEndpoint: "/vouchers/sales-orders/next-number",
     hasItems: true,
     voucherTitle: "Sales Order",
   },
@@ -1233,4 +1233,4 @@ export const getVoucherStyles = (): any => ({
       color: "#d32f2f",
     },
   },
-});
+}); 

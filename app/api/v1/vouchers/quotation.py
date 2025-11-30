@@ -20,9 +20,10 @@ from app.services.pdf_generation_service import pdf_generator
 from app.utils.gst_calculator import calculate_gst_amounts
 from app.utils.voucher_gst_helper import get_state_codes_for_sales
 import logging
+import re  # For filename sanitization
 
 logger = logging.getLogger(__name__)
-router = APIRouter(tags=["quotations"])
+router = APIRouter(prefix="/quotations", tags=["quotations"])
 
 @router.get("", response_model=List[QuotationInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[QuotationInDB])
@@ -623,18 +624,19 @@ async def create_proforma_from_quotation(
 @router.post("/{quotation_id}/revision", response_model=QuotationInDB)
 async def create_revision_from_quotation(
     quotation_id: int,
+    update_data: QuotationUpdate = Depends(QuotationUpdate),  # Accept updates
     db: AsyncSession = Depends(get_db),
     auth: tuple = Depends(require_access("voucher", "create"))
 ):
     """
-    Create a revision from a quotation.
+    Create a revision from a quotation with optional updates.
     Creates new quotation with base_quote_id set to root, increments revision_number.
     Voucher number format: ORIGINAL-rev{N}
     """
     current_user, org_id = auth
     
     try:
-        # Get the source quotation
+        # Get the source quotation with items
         stmt = select(Quotation).options(
             joinedload(Quotation.items)
         ).where(
@@ -671,7 +673,7 @@ async def create_revision_from_quotation(
         # Generate revision voucher number
         revision_number_str = f"{original_voucher_number}-rev{next_revision}"
         
-        # Create the revision
+        # Create the revision with source data
         revision = Quotation(
             organization_id=org_id,
             voucher_number=revision_number_str,
@@ -699,10 +701,16 @@ async def create_revision_from_quotation(
             created_by=current_user.id
         )
         
+        # Apply updates from body if provided
+        update_dict = update_data.dict(exclude_unset=True)
+        for key, value in update_dict.items():
+            if key != 'items':  # Handle items separately
+                setattr(revision, key, value)
+        
         db.add(revision)
         await db.flush()
         
-        # Copy items
+        # Copy items from source
         for source_item in source.items:
             item = QuotationItem(
                 quotation_id=revision.id,
@@ -721,6 +729,85 @@ async def create_revision_from_quotation(
                 description=source_item.description
             )
             db.add(item)
+        
+        # If items provided in update, override with new items
+        if update_data.items:
+            # Delete copied items first
+            from sqlalchemy import delete
+            stmt_delete = delete(QuotationItem).where(QuotationItem.quotation_id == revision.id)
+            await db.execute(stmt_delete)
+            await db.flush()
+            
+            # Add new items
+            total_amount = 0.0
+            total_cgst = 0.0
+            total_sgst = 0.0
+            total_igst = 0.0
+            total_discount = 0.0
+            
+            for item_data in update_data.items:
+                item_dict = item_data.dict()
+                
+                # Set defaults
+                item_dict.setdefault('discount_percentage', 0.0)
+                item_dict.setdefault('discount_amount', 0.0)
+                item_dict.setdefault('taxable_amount', 0.0)
+                item_dict.setdefault('gst_rate', 18.0)
+                item_dict.setdefault('cgst_amount', 0.0)
+                item_dict.setdefault('sgst_amount', 0.0)
+                item_dict.setdefault('igst_amount', 0.0)
+                item_dict.setdefault('description', None)
+                
+                # Recalculate taxable
+                if item_dict['taxable_amount'] == 0:
+                    gross = item_dict['quantity'] * item_dict['unit_price']
+                    disc_amount = gross * (item_dict['discount_percentage'] / 100) if item_dict['discount_percentage'] else item_dict['discount_amount']
+                    item_dict['discount_amount'] = disc_amount
+                    item_dict['taxable_amount'] = gross - disc_amount
+                
+                # Recalculate GST
+                taxable = item_dict['taxable_amount']
+                if item_dict['cgst_amount'] == 0 and item_dict['sgst_amount'] == 0 and item_dict['igst_amount'] == 0:
+                    gst_amounts = calculate_gst_amounts(
+                        taxable_amount=taxable,
+                        gst_rate=item_dict['gst_rate'],
+                        company_state_code=company_state_code,  # Assuming defined earlier
+                        customer_state_code=customer_state_code,
+                        organization_id=org_id,
+                        entity_id=revision.customer_id,
+                        entity_type='customer'
+                    )
+                    item_dict['cgst_amount'] = gst_amounts['cgst_amount']
+                    item_dict['sgst_amount'] = gst_amounts['sgst_amount']
+                    item_dict['igst_amount'] = gst_amounts['igst_amount']
+                
+                # Calculate total
+                item_dict['total_amount'] = (
+                    item_dict['taxable_amount'] +
+                    item_dict['cgst_amount'] +
+                    item_dict['sgst_amount'] +
+                    item_dict['igst_amount']
+                )
+                
+                item = QuotationItem(
+                    quotation_id=revision.id,
+                    **item_dict
+                )
+                db.add(item)
+                
+                # Accumulate totals
+                total_amount += item_dict['total_amount']
+                total_cgst += item_dict['cgst_amount']
+                total_sgst += item_dict['sgst_amount']
+                total_igst += item_dict['igst_amount']
+                total_discount += item_dict['discount_amount']
+            
+            # Update header totals
+            revision.total_amount = total_amount
+            revision.cgst_amount = total_cgst
+            revision.sgst_amount = total_sgst
+            revision.igst_amount = total_igst
+            revision.discount_amount = total_discount
         
         await db.commit()
         
@@ -743,4 +830,58 @@ async def create_revision_from_quotation(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create revision"
+        )
+
+@router.get("/{quotation_id}/next-revision", response_model=str)
+async def get_next_revision_number(
+    quotation_id: int,
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("voucher", "read"))
+):
+    """Get the next revision number for a quotation (for preview in revise mode)"""
+    current_user, org_id = auth
+    
+    try:
+        # Get the source quotation
+        stmt = select(Quotation).where(
+            Quotation.id == quotation_id,
+            Quotation.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        source = result.scalar_one_or_none()
+        
+        if not source:
+            raise HTTPException(status_code=404, detail="Quotation not found")
+        
+        # Determine the base quote (root quotation)
+        base_quote_id = source.base_quote_id if source.base_quote_id else source.id
+        
+        # Get the original voucher number (from base quote)
+        if source.base_quote_id:
+            base_stmt = select(Quotation).where(Quotation.id == base_quote_id)
+            base_result = await db.execute(base_stmt)
+            base_quote = base_result.scalar_one_or_none()
+            original_voucher_number = base_quote.voucher_number if base_quote else source.voucher_number
+        else:
+            original_voucher_number = source.voucher_number
+        
+        # Find next revision number
+        revision_stmt = select(func.max(Quotation.revision_number)).where(
+            Quotation.organization_id == org_id,
+            Quotation.base_quote_id == base_quote_id
+        )
+        revision_result = await db.execute(revision_stmt)
+        max_revision = revision_result.scalar() or 0
+        next_revision = max_revision + 1
+        
+        # Generate preview revision voucher number
+        return f"{original_voucher_number}-rev{next_revision}"
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting next revision for quotation {quotation_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get next revision number"
         )

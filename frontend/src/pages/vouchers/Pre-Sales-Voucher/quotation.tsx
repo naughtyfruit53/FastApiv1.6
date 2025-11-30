@@ -117,6 +117,7 @@ const QuotationPage: React.FC = () => {
     isIntrastate,
     createMutation,
     updateMutation,
+    reviseMutation,
     handleCreate,
     handleEdit,
     handleView,
@@ -363,7 +364,7 @@ const QuotationPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (voucherData && (mode === "view" || mode === "edit")) {
+    if (voucherData && (mode === "view" || mode === "edit" || mode === "revise")) {
       const formattedDate = voucherData.date ? new Date(voucherData.date).toISOString().split('T')[0] : '';
       const formattedData = {
         ...voucherData,
@@ -400,8 +401,12 @@ const QuotationPage: React.FC = () => {
           });
         });
       }
+      // For revise mode, set the parent_id
+      if (mode === "revise") {
+        setValue("parent_id", voucherData.id);
+      }
     }
-  }, [voucherData, mode, reset, append, remove, isIntrastate]);
+  }, [voucherData, mode, reset, append, remove, isIntrastate, setValue]);
 
   // Fetch voucher number when date changes and check for conflicts
   useEffect(() => {
@@ -652,7 +657,7 @@ const QuotationPage: React.FC = () => {
               label="Notes" 
               {...control.register("notes")} 
               multiline 
-              rows={2} 
+              rows= {2} 
               disabled={mode === "view"} 
               sx={voucherFormStyles.notesField} 
               InputLabelProps={{ shrink: true }} 
@@ -748,7 +753,7 @@ const QuotationPage: React.FC = () => {
         <DialogContent><Typography>Round off amount is {totalRoundOff.toFixed(2)}. Proceed with save?</Typography></DialogContent>
         <DialogActions>
           <Button onClick={() => setRoundOffConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, localComputedItems, isIntrastate, finalTotalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, mode, handleGeneratePDF, refreshMasterData, config, additionalCharges); }} variant="contained">Confirm</Button>
+          <Button onClick={() => { setRoundOffConfirmOpen(false); if (submitData) handleFinalSubmit(submitData, watch, localComputedItems, isIntrastate, finalTotalAmount, totalRoundOff, lineDiscountEnabled, lineDiscountType, totalDiscountEnabled, totalDiscountType, createMutation, updateMutation, reviseMutation, mode, handleGeneratePDF, refreshMasterData, config, additionalCharges); }} variant="contained">Confirm</Button>
         </DialogActions>
       </Dialog>
       <Dialog

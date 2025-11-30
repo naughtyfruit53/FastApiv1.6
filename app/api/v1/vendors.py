@@ -1,583 +1,597 @@
-# Revised: app/api/v1/vendors.py
-
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
-from typing import List, Optional
-from app.core.database import get_db
-from app.core.enforcement import require_access
-from app.models import User, Vendor, VendorFile
-from app.schemas.base import VendorCreate, VendorUpdate, VendorInDB, BulkImportResponse, VendorFileResponse
-from app.services.excel_service import VendorExcelService, ExcelService
-
-# NEW: Import for entitlement check
-from app.api.deps.entitlements import require_permission_with_entitlement
-
-import logging
-import os
-import uuid
-import shutil
-
-logger = logging.getLogger(__name__)
-router = APIRouter()
-
-# --- Vendor CRUD Endpoints ---
-
-@router.get("", response_model=List[VendorInDB])
-async def get_vendors(
-    skip: int = 0,
-    limit: int = 1000000,
-    search: Optional[str] = None,
-    active_only: bool = True,
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get all vendors for the organization"""
-    current_user, org_id = auth
-    
-    stmt = select(Vendor).where(Vendor.organization_id == org_id)
-
-    if active_only:
-        stmt = stmt.where(Vendor.is_active == True)
-    if search:
-        search_filter = or_(
-            Vendor.name.contains(search),
-            Vendor.contact_number.contains(search),
-            Vendor.email.contains(search)
-        )
-        stmt = stmt.where(search_filter)
-    result = await db.execute(stmt.offset(skip).limit(limit))
-    vendors = result.scalars().all()
-    logger.info(f"Fetched {len(vendors)} vendors for organization {org_id}")
-    return vendors
-
-@router.post("", response_model=VendorInDB)
-async def create_vendor(
-    vendor: VendorCreate,
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.create", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Create new vendor"""
-    current_user, org_id = auth
-    
-    try:
-        vendor_data = vendor.dict()
-        vendor_data['organization_id'] = org_id
-        logger.info(f"Creating vendor with data: {vendor_data}")
-        
-        # Check for duplicate vendor name in organization
-        stmt = select(Vendor).where(
-            Vendor.organization_id == org_id,
-            Vendor.name == vendor_data['name']
-        )
-        result = await db.execute(stmt)
-        existing_vendor = result.scalar_one_or_none()
-        if existing_vendor:
-            logger.warning(f"Vendor creation failed: Vendor with name '{vendor_data['name']}' already exists in organization {org_id}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Vendor with name '{vendor_data['name']}' already exists in this organization"
-            )
-        
-        # Auto-assign default payable account if not provided
-        if not vendor_data.get('payable_account_id'):
-            from app.models.erp_models import ChartOfAccounts
-            default_payable_stmt = select(ChartOfAccounts).where(
-                and_(
-                    ChartOfAccounts.organization_id == org_id,
-                    ChartOfAccounts.account_code == '2110',  # Accounts Payable
-                    ChartOfAccounts.is_active == True
-                )
-            )
-            default_payable_result = await db.execute(default_payable_stmt)
-            default_payable = default_payable_result.scalar_one_or_none()
-            if default_payable:
-                vendor_data['payable_account_id'] = default_payable.id
-                logger.info(f"Auto-assigned payable account {default_payable.account_name} to vendor")
-        
-        db_vendor = Vendor(**vendor_data)
-        db.add(db_vendor)
-        await db.commit()
-        await db.refresh(db_vendor)
-        logger.info(f"Successfully created vendor {db_vendor.name} (ID: {db_vendor.id}) in organization {db_vendor.organization_id}")
-        return db_vendor
-    except Exception as e:
-        await db.rollback()
-        logger.error(f"Error creating vendor: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create vendor: {str(e)}"
-        )
-
-@router.get("/{vendor_id}", response_model=VendorInDB)
-async def get_vendor(
-    vendor_id: int,
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get vendor by ID with organization validation"""
-    current_user, org_id = auth
-    
-    stmt = select(Vendor).where(
-        Vendor.id == vendor_id,
-        Vendor.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    vendor = result.scalar_one_or_none()
-    if not vendor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vendor not found"
-        )
-    return vendor
-
-@router.put("/{vendor_id}", response_model=VendorInDB)
-async def update_vendor(
-    vendor_id: int,
-    vendor: VendorUpdate,
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.update", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Update vendor with organization validation"""
-    current_user, org_id = auth
-    
-    stmt = select(Vendor).where(
-        Vendor.id == vendor_id,
-        Vendor.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    db_vendor = result.scalar_one_or_none()
-    if not db_vendor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vendor not found"
-        )
-    
-    update_data = vendor.dict(exclude_unset=True)
-    if 'name' in update_data and update_data['name'] != db_vendor.name:
-        stmt = select(Vendor).where(
-            Vendor.organization_id == org_id,
-            Vendor.name == update_data['name'],
-            Vendor.id != vendor_id
-        )
-        result = await db.execute(stmt)
-        existing = result.scalar_one_or_none()
-        if existing:
-            logger.warning(f"Vendor update failed: Vendor with name '{update_data['name']}' already exists in organization {org_id}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Vendor with name '{update_data['name']}' already exists in this organization"
-            )
-    
-    for field, value in update_data.items():
-        setattr(db_vendor, field, value)
-    await db.commit()
-    await db.refresh(db_vendor)
-    logger.info(f"Updated vendor {db_vendor.name} (ID: {db_vendor.id}) in organization {db_vendor.organization_id}")
-    return db_vendor
-
-@router.delete("/{vendor_id}")
-async def delete_vendor(
-    vendor_id: int,
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.delete", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Delete vendor with organization validation"""
-    current_user, org_id = auth
-    
-    stmt = select(Vendor).where(
-        Vendor.id == vendor_id,
-        Vendor.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    db_vendor = result.scalar_one_or_none()
-    if not db_vendor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vendor not found"
-        )
-    
-    db_vendor.is_active = False
-    await db.commit()
-    logger.info(f"Deleted vendor {db_vendor.name} (ID: {db_vendor.id}) in organization {db_vendor.organization_id}")
-    return {"message": f"Vendor {vendor_id} deleted successfully"}
-
-# --- Search for Dropdown/Autocomplete ---
-
-@router.post("/search", response_model=List[VendorInDB])
-async def search_vendors_for_dropdown(
-    search_term: str,
-    limit: int = 10,
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Search vendors for dropdown/autocomplete with organization filtering"""
-    current_user, org_id = auth
-    
-    stmt = select(Vendor).where(
-        Vendor.organization_id == org_id,
-        Vendor.is_active == True,
-        Vendor.name.contains(search_term)
-    ).limit(limit)
-    result = await db.execute(stmt)
-    vendors = result.scalars().all()
-    logger.info(f"Searched vendors for dropdown: {len(vendors)} found for term '{search_term}' in organization {org_id}")
-    return vendors
-
-# --- Excel Import/Export/Template endpoints ---
-
-@router.get("/template/excel")
-async def download_vendors_template(
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors"))
-):
-    """Download Excel template for vendors bulk import"""
-    current_user, org_id = auth
-    excel_data = VendorExcelService.create_template()
-    return ExcelService.create_streaming_response(excel_data, "vendors_template.xlsx")
-
-@router.get("/export/excel")
-async def export_vendors_excel(
-    skip: int = 0,
-    limit: int = 1000,
-    search: Optional[str] = None,
-    active_only: bool = True,
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Export vendors to Excel"""
-    current_user, org_id = auth
-    
-    stmt = select(Vendor).where(Vendor.organization_id == org_id)
-    if active_only:
-        stmt = stmt.where(Vendor.is_active == True)
-    if search:
-        search_filter = or_(
-            Vendor.name.contains(search),
-            Vendor.contact_number.contains(search),
-            Vendor.email.contains(search)
-        )
-        stmt = stmt.where(search_filter)
-    result = await db.execute(stmt.offset(skip).limit(limit))
-    vendors = result.scalars().all()
-    
-    vendors_data = []
-    for vendor in vendors:
-        vendors_data.append({
-            "name": vendor.name,
-            "contact_number": vendor.contact_number,
-            "email": vendor.email or "",
-            "address1": vendor.address1,
-            "address2": vendor.address2 or "",
-            "city": vendor.city,
-            "state": vendor.state,
-            "pin_code": vendor.pin_code,
-            "state_code": vendor.state_code,
-            "gst_number": vendor.gst_number or "",
-            "pan_number": vendor.pan_number or "",
-        })
-    excel_data = VendorExcelService.export_vendors(vendors_data)
-    return ExcelService.create_streaming_response(excel_data, "vendors_export.xlsx")
-
-@router.post("/import/excel", response_model=BulkImportResponse)
-async def import_vendors_excel(
-    file: UploadFile = File(...),
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.create", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Import vendors from Excel file"""
-    current_user, org_id = auth
-    
-    if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):
-        logger.warning(f"Invalid file format for vendor import: {file.filename}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only Excel files (.xlsx, .xls) are allowed"
-        )
-    records = await ExcelService.parse_excel_file(file, VendorExcelService.REQUIRED_COLUMNS, "Vendor Import Template")
-    
-    if not records:
-        logger.warning("No data found in Excel file for vendor import")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No data found in Excel file"
-        )
-    
-    created_count = 0
-    updated_count = 0
-    errors = []
-    
-    for i, record in enumerate(records, 1):
-        try:
-            vendor_data = {
-                "name": record.get("name", "").strip(),
-                "contact_number": record.get("contact_number", "").strip(),
-                "email": record.get("email", "").strip() or None,
-                "address1": record.get("address_line_1", "").strip(),
-                "address2": record.get("address_line_2", "").strip() or None,
-                "city": record.get("city", "").strip(),
-                "state": record.get("state", "").strip(),
-                "pin_code": record.get("pin_code", "").strip(),
-                "state_code": record.get("state_code", "").strip(),
-                "gst_number": record.get("gst_number", "").strip() or None,
-                "pan_number": record.get("pan_number", "").strip() or None,
-            }
-            required_fields = ["name", "contact_number", "address1", "city", "state", "pin_code", "state_code"]
-            for field in required_fields:
-                if not vendor_data[field]:
-                    errors.append(f"Row {i}: {field.replace('_', ' ').title()} is required")
-                    break
-            if errors and errors[-1].startswith(f"Row {i}:"):
-                continue
-            stmt = select(Vendor).where(
-                Vendor.name == vendor_data["name"],
-                Vendor.organization_id == org_id
-            )
-            result = await db.execute(stmt)
-            existing_vendor = result.scalar_one_or_none()
-            
-            if existing_vendor:
-                for field, value in vendor_data.items():
-                    setattr(existing_vendor, field, value)
-                updated_count += 1
-                logger.info(f"Updated vendor: {vendor_data['name']}")
-            else:
-                new_vendor = Vendor(
-                    organization_id=org_id,
-                    **vendor_data
-                )
-                db.add(new_vendor)
-                created_count += 1
-                logger.info(f"Created vendor: {vendor_data['name']}")
-        except Exception as e:
-            errors.append(f"Row {i}: Error processing record - {str(e)}")
-            continue
-    await db.commit()
-    logger.info(f"Vendors import completed by {current_user.email}: "
-               f"{created_count} created, {updated_count} updated, {len(errors)} errors")
-    return BulkImportResponse(
-        message=f"Import completed successfully. {created_count} vendors created, {updated_count} updated.",
-        total_processed=len(records),
-        created=created_count,
-        updated=updated_count,
-        errors=errors
-    )
-
-# File upload directory
-UPLOAD_DIR = "uploads/vendors"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-@router.post("/{vendor_id}/files", response_model=VendorFileResponse)
-async def upload_vendor_file(
-    vendor_id: int,
-    file: UploadFile = File(...),
-    file_type: str = "general",
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.update", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Upload a file for a vendor (GST certificate, PAN card, etc.)"""
-    current_user, org_id = auth
-    
-    stmt = select(Vendor).where(
-        Vendor.id == vendor_id,
-        Vendor.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    vendor = result.scalar_one_or_none()
-    
-    if not vendor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vendor not found"
-        )
-    
-    stmt = select(VendorFile).where(
-        VendorFile.vendor_id == vendor_id,
-        VendorFile.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    existing_files_count = len(result.scalars().all())
-    
-    if existing_files_count >= 10:
-        logger.warning(f"Maximum file limit reached for vendor {vendor_id}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Maximum 10 files allowed per vendor"
-        )
-    
-    if file.size and file.size > 10 * 1024 * 1024:
-        logger.warning(f"File size too large for vendor {vendor_id}: {file.size} bytes")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File size must be less than 10MB"
-        )
-    
-    if file_type == "gst_certificate":
-        if not file.filename or not file.filename.lower().endswith('.pdf'):
-            logger.warning(f"Invalid file format for GST certificate upload for vendor {vendor_id}: {file.filename}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="GST certificate must be a PDF file"
-            )
-    
-    file_extension = os.path.splitext(file.filename or "")[1]
-    unique_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
-    
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    db_file = VendorFile(
-        vendor_id=vendor_id,
-        organization_id=org_id,
-        filename=unique_filename,
-        original_filename=file.filename or "unknown",
-        file_path=file_path,
-        file_size=file.size or 0,
-        content_type=file.content_type or "application/octet-stream",
-        file_type=file_type
-    )
-    db.add(db_file)
-    await db.commit()
-    await db.refresh(db_file)
-    
-    logger.info(f"Vendor file uploaded: {db_file.original_filename} for vendor {vendor_id}")
-    
-    return VendorFileResponse(
-        id=db_file.id,
-        filename=db_file.filename,
-        original_filename=db_file.original_filename,
-        file_size=db_file.file_size,
-        content_type=db_file.content_type,
-        vendor_id=db_file.vendor_id,
-        created_at=db_file.created_at
-    )
-
-@router.get("/{vendor_id}/files", response_model=List[VendorFileResponse])
-async def get_vendor_files(
-    vendor_id: int,
-    file_type: Optional[str] = None,
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Get all files for a vendor, optionally filtered by file type"""
-    current_user, org_id = auth
-    
-    stmt = select(Vendor).where(
-        Vendor.id == vendor_id,
-        Vendor.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    vendor = result.scalar_one_or_none()
-    
-    if not vendor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vendor not found"
-        )
-    
-    stmt = select(VendorFile).where(
-        VendorFile.vendor_id == vendor_id,
-        VendorFile.organization_id == org_id
-    )
-    
-    if file_type:
-        stmt = stmt.where(VendorFile.file_type == file_type)
-    
-    result = await db.execute(stmt)
-    files = result.scalars().all()
-    
-    return [
-        VendorFileResponse(
-            id=f.id,
-            filename=f.filename,
-            original_filename=f.original_filename,
-            file_size=f.file_size,
-            content_type=f.content_type,
-            vendor_id=f.vendor_id,
-            created_at=f.created_at
-        ) for f in files
-    ]
-
-@router.get("/{vendor_id}/files/{file_id}/download")
-async def download_vendor_file(
-    vendor_id: int,
-    file_id: int,
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Download a vendor file"""
-    current_user, org_id = auth
-    
-    stmt = select(VendorFile).where(
-        VendorFile.id == file_id,
-        VendorFile.vendor_id == vendor_id,
-        VendorFile.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    file_record = result.scalar_one_or_none()
-    
-    if not file_record:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found"
-        )
-    
-    if not os.path.exists(file_record.file_path):
-        logger.error(f"File {file_record.file_path} not found on disk for vendor {vendor_id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found on disk"
-        )
-    
-    return StreamingResponse(
-        open(file_record.file_path, "rb"),
-        media_type=file_record.content_type,
-        headers={"Content-Disposition": f"attachment; filename={file_record.original_filename}"}
-    )
-
-@router.delete("/{vendor_id}/files/{file_id}")
-async def delete_vendor_file(
-    vendor_id: int,
-    file_id: int,
-    # CHANGED: Use entitlement with submodule
-    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.delete", "vendors")),
-    db: AsyncSession = Depends(get_db)
-):
-    """Delete a vendor file"""
-    current_user, org_id = auth
-    
-    stmt = select(VendorFile).where(
-        VendorFile.id == file_id,
-        VendorFile.vendor_id == vendor_id,
-        VendorFile.organization_id == org_id
-    )
-    result = await db.execute(stmt)
-    file_record = result.scalar_one_or_none()
-    
-    if not file_record:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found"
-        )
-    
-    if os.path.exists(file_record.file_path):
-        os.remove(file_record.file_path)
-    
-    await db.delete(file_record)
-    await db.commit()
-    
-    logger.info(f"Deleted file {file_id} for vendor {vendor_id} in organization {org_id}")
-    return {"message": "File deleted successfully"}
+# Revised: app/api/v1/vendors.py  
+  
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File  
+from fastapi.responses import StreamingResponse  
+from sqlalchemy.ext.asyncio import AsyncSession  
+from sqlalchemy import select, and_, or_  
+from typing import List, Optional  
+from app.core.database import get_db  
+from app.core.enforcement import require_access  
+from app.models import User, Vendor, VendorFile  
+from app.schemas.base import VendorCreate, VendorUpdate, VendorInDB, BulkImportResponse, VendorFileResponse  
+from app.services.excel_service import VendorExcelService, ExcelService  
+  
+# NEW: Import for entitlement check  
+from app.api.deps.entitlements import require_permission_with_entitlement  
+  
+import logging  
+import os  
+import uuid  
+import shutil  
+  
+logger = logging.getLogger(__name__)  
+router = APIRouter()  
+  
+# --- Vendor CRUD Endpoints ---  
+  
+@router.get("", response_model=List[VendorInDB])  
+async def get_vendors(  
+    skip: int = 0,  
+    limit: int = 1000000,  
+    search: Optional[str] = None,  
+    active_only: bool = True,  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Get all vendors for the organization"""  
+    current_user, org_id = auth  
+      
+    stmt = select(Vendor).where(Vendor.organization_id == org_id)  
+  
+    if active_only:  
+        stmt = stmt.where(Vendor.is_active == True)  
+    if search:  
+        search_filter = or_(  
+            Vendor.name.contains(search),  
+            Vendor.contact_number.contains(search),  
+            Vendor.email.contains(search)  
+        )  
+        stmt = stmt.where(search_filter)  
+    result = await db.execute(stmt.offset(skip).limit(limit))  
+    vendors = result.scalars().all()  
+    logger.info(f"Fetched {len(vendors)} vendors for organization {org_id}")  
+    return vendors  
+  
+@router.post("", response_model=VendorInDB)  
+async def create_vendor(  
+    vendor: VendorCreate,  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.create", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Create new vendor"""  
+    current_user, org_id = auth  
+      
+    try:  
+        vendor_data = vendor.dict()  
+        vendor_data['organization_id'] = org_id  
+        logger.info(f"Creating vendor with data: {vendor_data}")  
+          
+        # Check for duplicate vendor name in organization  
+        stmt = select(Vendor).where(  
+            Vendor.organization_id == org_id,  
+            Vendor.name == vendor_data['name']  
+        )  
+        result = await db.execute(stmt)  
+        existing_vendor = result.scalar_one_or_none()  
+        if existing_vendor:  
+            logger.warning(f"Vendor creation failed: Vendor with name '{vendor_data['name']}' already exists in organization {org_id}")  
+            raise HTTPException(  
+                status_code=status.HTTP_400_BAD_REQUEST,  
+                detail=f"Vendor with name '{vendor_data['name']}' already exists in this organization"  
+            )  
+          
+        # Auto-assign default payable account if not provided  
+        if not vendor_data.get('payable_account_id'):  
+            from app.models.erp_models import ChartOfAccounts  
+            default_payable_stmt = select(ChartOfAccounts).where(  
+                and_(  
+                    ChartOfAccounts.organization_id == org_id,  
+                    ChartOfAccounts.account_code == '2110',  # Accounts Payable  
+                    ChartOfAccounts.is_active == True  
+                )  
+            )  
+            default_payable_result = await db.execute(default_payable_stmt)  
+            default_payable = default_payable_result.scalar_one_or_none()  
+            if default_payable:  
+                vendor_data['payable_account_id'] = default_payable.id  
+                logger.info(f"Auto-assigned payable account {default_payable.account_name} to vendor")  
+          
+        # NEW: Extract state_code from gst_number if not provided and gst_number is present  
+        if vendor_data.get('gst_number') and not vendor_data.get('state_code'):  
+            gst_number = vendor_data['gst_number'].strip()  
+            if len(gst_number) >= 2 and gst_number[:2].isdigit():  
+                vendor_data['state_code'] = gst_number[:2]  
+                logger.info(f"Extracted state_code {vendor_data['state_code']} from GST number for vendor {vendor_data['name']}")  
+  
+        db_vendor = Vendor(**vendor_data)  
+        db.add(db_vendor)  
+        await db.commit()  
+        await db.refresh(db_vendor)  
+        logger.info(f"Successfully created vendor {db_vendor.name} (ID: {db_vendor.id}) in organization {db_vendor.organization_id}")  
+        return db_vendor  
+    except Exception as e:  
+        await db.rollback()  
+        logger.error(f"Error creating vendor: {str(e)}")  
+        raise HTTPException(  
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,  
+            detail=f"Failed to create vendor: {str(e)}"  
+        )  
+  
+@router.get("/{vendor_id}", response_model=VendorInDB)  
+async def get_vendor(  
+    vendor_id: int,  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Get vendor by ID with organization validation"""  
+    current_user, org_id = auth  
+      
+    stmt = select(Vendor).where(  
+        Vendor.id == vendor_id,  
+        Vendor.organization_id == org_id  
+    )  
+    result = await db.execute(stmt)  
+    vendor = result.scalar_one_or_none()  
+    if not vendor:  
+        raise HTTPException(  
+            status_code=status.HTTP_404_NOT_FOUND,  
+            detail="Vendor not found"  
+        )  
+    return vendor  
+  
+@router.put("/{vendor_id}", response_model=VendorInDB)  
+async def update_vendor(  
+    vendor_id: int,  
+    vendor: VendorUpdate,  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.update", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Update a vendor with organization validation"""  
+    current_user, org_id = auth  
+      
+    stmt = select(Vendor).where(  
+        Vendor.id == vendor_id,  
+        Vendor.organization_id == org_id  
+    )  
+    result = await db.execute(stmt)  
+    db_vendor = result.scalar_one_or_none()  
+    if not db_vendor:  
+        raise HTTPException(  
+            status_code=status.HTTP_404_NOT_FOUND,  
+            detail="Vendor not found"  
+        )  
+      
+    update_data = vendor.dict(exclude_unset=True)  
+    if 'name' in update_data and update_data['name'] != db_vendor.name:  
+        stmt = select(Vendor).where(  
+            Vendor.organization_id == org_id,  
+            Vendor.name == update_data['name'],  
+            Vendor.id != vendor_id  
+        )  
+        result = await db.execute(stmt)  
+        existing = result.scalar_one_or_none()  
+        if existing:  
+            logger.warning(f"Vendor update failed: Vendor with name '{update_data['name']}' already exists in organization {org_id}")  
+            raise HTTPException(  
+                status_code=status.HTTP_400_BAD_REQUEST,  
+                detail=f"Vendor with name '{update_data['name']}' already exists in this organization"  
+            )  
+      
+    # NEW: Extract state_code from gst_number if updated and state_code not provided  
+    if 'gst_number' in update_data and update_data['gst_number'] and ('state_code' not in update_data or not update_data['state_code']):  
+        gst_number = update_data['gst_number'].strip()  
+        if len(gst_number) >= 2 and gst_number[:2].isdigit():  
+            update_data['state_code'] = gst_number[:2]  
+            logger.info(f"Extracted state_code {update_data['state_code']} from GST number for vendor {db_vendor.name}")  
+      
+    for field, value in update_data.items():  
+        setattr(db_vendor, field, value)  
+    await db.commit()  
+    await db.refresh(db_vendor)  
+    logger.info(f"Updated vendor {db_vendor.name} (ID: {db_vendor.id}) in organization {db_vendor.organization_id}")  
+    return db_vendor  
+  
+@router.delete("/{vendor_id}")  
+async def delete_vendor(  
+    vendor_id: int,  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.delete", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Delete vendor with organization validation"""  
+    current_user, org_id = auth  
+      
+    stmt = select(Vendor).where(  
+        Vendor.id == vendor_id,  
+        Vendor.organization_id == org_id  
+    )  
+    result = await db.execute(stmt)  
+    db_vendor = result.scalar_one_or_none()  
+    if not db_vendor:  
+        raise HTTPException(  
+            status_code=status.HTTP_404_NOT_FOUND,  
+            detail="Vendor not found"  
+        )  
+      
+    db_vendor.is_active = False  
+    await db.commit()  
+    logger.info(f"Deleted vendor {db_vendor.name} (ID: {db_vendor.id}) in organization {db_vendor.organization_id}")  
+    return {"message": f"Vendor {vendor_id} deleted successfully"}  
+  
+# --- Search for Dropdown/Autocomplete ---  
+  
+@router.post("/search", response_model=List[VendorInDB])  
+async def search_vendors_for_dropdown(  
+    search_term: str,  
+    limit: int = 10,  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Search vendors for dropdown/autocomplete with organization filtering"""  
+    current_user, org_id = auth  
+      
+    stmt = select(Vendor).where(  
+        Vendor.organization_id == org_id,  
+        Vendor.is_active == True,  
+        Vendor.name.contains(search_term)  
+    ).limit(limit)  
+    result = await db.execute(stmt)  
+    vendors = result.scalars().all()  
+    logger.info(f"Searched vendors for dropdown: {len(vendors)} found for term '{search_term}' in organization {org_id}")  
+    return vendors  
+  
+# --- Excel Import/Export/Template endpoints ---  
+  
+@router.get("/template/excel")  
+async def download_vendors_template(  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors"))  
+):  
+    """Download Excel template for vendors bulk import"""  
+    current_user, org_id = auth  
+    excel_data = VendorExcelService.create_template()  
+    return ExcelService.create_streaming_response(excel_data, "vendors_template.xlsx")  
+  
+@router.get("/export/excel")  
+async def export_vendors_excel(  
+    skip: int = 0,  
+    limit: int = 1000,  
+    search: Optional[str] = None,  
+    active_only: bool = True,  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Export vendors to Excel"""  
+    current_user, org_id = auth  
+      
+    stmt = select(Vendor).where(Vendor.organization_id == org_id)  
+    if active_only:  
+        stmt = stmt.where(Vendor.is_active == True)  
+    if search:  
+        search_filter = or_(  
+            Vendor.name.contains(search),  
+            Vendor.contact_number.contains(search),  
+            Vendor.email.contains(search)  
+        )  
+        stmt = stmt.where(search_filter)  
+    result = await db.execute(stmt.offset(skip).limit(limit))  
+    vendors = result.scalars().all()  
+      
+    vendors_data = []  
+    for vendor in vendors:  
+        vendors_data.append({  
+            "name": vendor.name,  
+            "contact_number": vendor.contact_number,  
+            "email": vendor.email or "",  
+            "address1": vendor.address1,  
+            "address2": vendor.address2 or "",  
+            "city": vendor.city,  
+            "state": vendor.state,  
+            "pin_code": vendor.pin_code,  
+            "state_code": vendor.state_code,  
+            "gst_number": vendor.gst_number or "",  
+            "pan_number": vendor.pan_number or "",  
+        })  
+    excel_data = VendorExcelService.export_vendors(vendors_data)  
+    return ExcelService.create_streaming_response(excel_data, "vendors_export.xlsx")  
+  
+@router.post("/import/excel", response_model=BulkImportResponse)  
+async def import_vendors_excel(  
+    file: UploadFile = File(...),  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.create", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Import vendors from Excel file"""  
+    current_user, org_id = auth  
+      
+    if not file.filename or not file.filename.endswith(('.xlsx', '.xls')):  
+        logger.warning(f"Invalid file format for vendor import: {file.filename}")  
+        raise HTTPException(  
+            status_code=status.HTTP_400_BAD_REQUEST,  
+            detail="Only Excel files (.xlsx, .xls) are allowed"  
+        )  
+    records = await ExcelService.parse_excel_file(file, VendorExcelService.REQUIRED_COLUMNS, "Vendor Import Template")  
+      
+    if not records:  
+        logger.warning("No data found in Excel file for vendor import")  
+        raise HTTPException(  
+            status_code=status.HTTP_400_BAD_REQUEST,  
+            detail="No data found in Excel file"  
+        )  
+      
+    created_count = 0  
+    updated_count = 0  
+    errors = []  
+      
+    for i, record in enumerate(records, 1):  
+        try:  
+            vendor_data = {  
+                "name": record.get("name", "").strip(),  
+                "contact_number": record.get("contact_number", "").strip(),  
+                "email": record.get("email", "").strip() or None,  
+                "address1": record.get("address_line_1", "").strip(),  
+                "address2": record.get("address_line_2", "").strip() or None,  
+                "city": record.get("city", "").strip(),  
+                "state": record.get("state", "").strip(),  
+                "pin_code": record.get("pin_code", "").strip(),  
+                "state_code": record.get("state_code", "").strip(),  
+                "gst_number": record.get("gst_number", "").strip() or None,  
+                "pan_number": record.get("pan_number", "").strip() or None,  
+            }  
+            required_fields = ["name", "contact_number", "address1", "city", "state", "pin_code", "state_code"]  
+            for field in required_fields:  
+                if not vendor_data[field]:  
+                    errors.append(f"Row {i}: {field.replace('_', ' ').title()} is required")  
+                    break  
+            if errors and errors[-1].startswith(f"Row {i}:"):  
+                continue  
+            stmt = select(Vendor).where(  
+                Vendor.name == vendor_data["name"],  
+                Vendor.organization_id == org_id  
+            )  
+            result = await db.execute(stmt)  
+            existing_vendor = result.scalar_one_or_none()  
+              
+            if existing_vendor:  
+                for field, value in vendor_data.items():  
+                    setattr(existing_vendor, field, value)  
+                updated_count += 1  
+                logger.info(f"Updated vendor: {vendor_data['name']}")  
+            else:  
+                new_vendor = Vendor(  
+                    organization_id=org_id,  
+                    **vendor_data  
+                )  
+                db.add(new_vendor)  
+                created_count += 1  
+                logger.info(f"Created vendor: {vendor_data['name']}")  
+        except Exception as e:  
+            errors.append(f"Row {i}: Error processing record - {str(e)}")  
+            continue  
+    await db.commit()  
+    logger.info(f"Vendors import completed by {current_user.email}: "  
+               f"{created_count} created, {updated_count} updated, {len(errors)} errors")  
+    return BulkImportResponse(  
+        message=f"Import completed successfully. {created_count} vendors created, {updated_count} updated.",  
+        total_processed=len(records),  
+        created=created_count,  
+        updated=updated_count,  
+        errors=errors  
+    )  
+  
+# File upload directory  
+UPLOAD_DIR = "uploads/vendors"  
+os.makedirs(UPLOAD_DIR, exist_ok=True)  
+  
+@router.post("/{vendor_id}/files", response_model=VendorFileResponse)  
+async def upload_vendor_file(  
+    vendor_id: int,  
+    file: UploadFile = File(...),  
+    file_type: str = "general",  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.update", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Upload a file for a vendor (GST certificate, PAN card, etc.)"""  
+    current_user, org_id = auth  
+      
+    stmt = select(Vendor).where(  
+        Vendor.id == vendor_id,  
+        Vendor.organization_id == org_id  
+    )  
+    result = await db.execute(stmt)  
+    vendor = result.scalar_one_or_none()  
+      
+    if not vendor:  
+        raise HTTPException(  
+            status_code=status.HTTP_404_NOT_FOUND,  
+            detail="Vendor not found"  
+        )  
+      
+    stmt = select(VendorFile).where(  
+        VendorFile.vendor_id == vendor_id,  
+        VendorFile.organization_id == org_id  
+    )  
+    result = await db.execute(stmt)  
+    existing_files_count = len(result.scalars().all())  
+      
+    if existing_files_count >= 10:  
+        logger.warning(f"Maximum file limit reached for vendor {vendor_id}")  
+        raise HTTPException(  
+            status_code=status.HTTP_400_BAD_REQUEST,  
+            detail="Maximum 10 files allowed per vendor"  
+        )  
+      
+    if file.size and file.size > 10 * 1024 * 1024:  
+        logger.warning(f"File size too large for vendor {vendor_id}: {file.size} bytes")  
+        raise HTTPException(  
+            status_code=status.HTTP_400_BAD_REQUEST,  
+            detail="File size must be less than 10MB"  
+        )  
+      
+    if file_type == "gst_certificate":  
+        if not file.filename or not file.filename.lower().endswith('.pdf'):  
+            logger.warning(f"Invalid file format for GST certificate upload for vendor {vendor_id}: {file.filename}")  
+            raise HTTPException(  
+                status_code=status.HTTP_400_BAD_REQUEST,  
+                detail="GST certificate must be a PDF file"  
+            )  
+      
+    file_extension = os.path.splitext(file.filename or "")[1]  
+    unique_filename = f"{uuid.uuid4()}{file_extension}"  
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)  
+      
+    with open(file_path, "wb") as buffer:  
+        shutil.copyfileobj(file.file, buffer)  
+      
+    db_file = VendorFile(  
+        vendor_id=vendor_id,  
+        organization_id=org_id,  
+        filename=unique_filename,  
+        original_filename=file.filename or "unknown",  
+        file_path=file_path,  
+        file_size=file.size or 0,  
+        content_type=file.content_type or "application/octet-stream",  
+        file_type=file_type  
+    )  
+    db.add(db_file)  
+    await db.commit()  
+    await db.refresh(db_file)  
+      
+    logger.info(f"Vendor file uploaded: {db_file.original_filename} for vendor {vendor_id}")  
+      
+    return VendorFileResponse(  
+        id=db_file.id,  
+        filename=db_file.filename,  
+        original_filename=db_file.original_filename,  
+        file_size=db_file.file_size,  
+        content_type=db_file.content_type,  
+        vendor_id=db_file.vendor_id,  
+        created_at=db_file.created_at  
+    )  
+  
+@router.get("/{vendor_id}/files", response_model=List[VendorFileResponse])  
+async def get_vendor_files(  
+    vendor_id: int,  
+    file_type: Optional[str] = None,  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Get all files for a vendor, optionally filtered by file type"""  
+    current_user, org_id = auth  
+      
+    stmt = select(Vendor).where(  
+        Vendor.id == vendor_id,  
+        Vendor.organization_id == org_id  
+    )  
+    result = await db.execute(stmt)  
+    vendor = result.scalar_one_or_none()  
+      
+    if not vendor:  
+        raise HTTPException(  
+            status_code=status.HTTP_404_NOT_FOUND,  
+            detail="Vendor not found"  
+        )  
+      
+    stmt = select(VendorFile).where(  
+        VendorFile.vendor_id == vendor_id,  
+        VendorFile.organization_id == org_id  
+    )  
+      
+    if file_type:  
+        stmt = stmt.where(VendorFile.file_type == file_type)  
+      
+    result = await db.execute(stmt)  
+    files = result.scalars().all()  
+      
+    return [  
+        VendorFileResponse(  
+            id=f.id,  
+            filename=f.filename,  
+            original_filename=f.original_filename,  
+            file_size=f.file_size,  
+            content_type=f.content_type,  
+            vendor_id=f.vendor_id,  
+            created_at=f.created_at  
+        ) for f in files  
+    ]  
+  
+@router.get("/{vendor_id}/files/{file_id}/download")  
+async def download_vendor_file(  
+    vendor_id: int,  
+    file_id: int,  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.read", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Download a vendor file"""  
+    current_user, org_id = auth  
+      
+    stmt = select(VendorFile).where(  
+        VendorFile.id == file_id,  
+        VendorFile.vendor_id == vendor_id,  
+        VendorFile.organization_id == org_id  
+    )  
+    result = await db.execute(stmt)  
+    file_record = result.scalar_one_or_none()  
+      
+    if not file_record:  
+        raise HTTPException(  
+            status_code=status.HTTP_404_NOT_FOUND,  
+            detail="File not found"  
+        )  
+      
+    if not os.path.exists(file_record.file_path):  
+        logger.error(f"File {file_record.file_path} not found on disk for vendor {vendor_id}")  
+        raise HTTPException(  
+            status_code=status.HTTP_404_NOT_FOUND,  
+            detail="File not found on disk"  
+        )  
+      
+    return StreamingResponse(  
+        open(file_record.file_path, "rb"),  
+        media_type=file_record.content_type,  
+        headers={"Content-Disposition": f"attachment; filename={file_record.original_filename}"}  
+    )  
+  
+@router.delete("/{vendor_id}/files/{file_id}")  
+async def delete_vendor_file(  
+    vendor_id: int,  
+    file_id: int,  
+    # CHANGED: Use entitlement with submodule  
+    auth: tuple = Depends(require_permission_with_entitlement("erp", "vendors.delete", "vendors")),  
+    db: AsyncSession = Depends(get_db)  
+):  
+    """Delete a vendor file"""  
+    current_user, org_id = auth  
+      
+    stmt = select(VendorFile).where(  
+        VendorFile.id == file_id,  
+        VendorFile.vendor_id == vendor_id,  
+        VendorFile.organization_id == org_id  
+    )  
+    result = await db.execute(stmt)  
+    file_record = result.scalar_one_or_none()  
+      
+    if not file_record:  
+        raise HTTPException(  
+            status_code=status.HTTP_404_NOT_FOUND,  
+            detail="File not found"  
+        )  
+      
+    if os.path.exists(file_record.file_path):  
+        os.remove(file_record.file_path)  
+      
+    await db.delete(file_record)  
+    await db.commit()  
+      
+    logger.info(f"Deleted file {file_id} for vendor {vendor_id} in organization {org_id}")  
+    return {"message": "File deleted successfully"}  

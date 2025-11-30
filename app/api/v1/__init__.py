@@ -570,5 +570,17 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include pdf_extraction_router: {str(e)}\n{traceback.format_exc()}")
 
+    # Add quotation router (new inclusion to fix 404 on /quotations)
+    try:
+        from .vouchers.quotation import router as quotation_router
+        logger.debug("Imported quotation_router")
+        api_v1_router.include_router(quotation_router, tags=["quotations"])
+        quotation_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in quotation_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered quotation endpoints: {len(quotation_routes)} routes")
+        for route_path in quotation_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include quotation_router: {str(e)}\n{traceback.format_exc()}")
+
 
 register_subrouters()

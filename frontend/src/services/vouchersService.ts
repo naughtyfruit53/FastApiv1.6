@@ -36,6 +36,15 @@ export const voucherService = {
     const response = await api.patch(endpoint, data);
     return response.data;
   },
+  createRevision: async (
+    type: string,
+    id: number,
+    data: Record<string, any>,
+  ): Promise<any> => {
+    const endpoint = `/${type}/${id}/revision`;
+    const response = await api.post(endpoint, data);
+    return response.data;
+  },
   getNextVoucherNumber: async (endpoint: string): Promise<any> => {
     const response = await api.get(endpoint);
     return response.data;
