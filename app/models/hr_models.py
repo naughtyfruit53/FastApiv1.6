@@ -506,3 +506,509 @@ class PerformanceReview(Base):
         Index('idx_performance_review_status', 'status'),
         {'extend_existing': True}
     )
+
+
+# =============================================================================
+# HR Phase 2 Models - Advanced Payroll and Attendance
+# =============================================================================
+
+# Attendance Policy Configuration
+class AttendancePolicy(Base):
+    """Attendance policy rules and configurations"""
+    __tablename__ = "attendance_policies"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Policy identification
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    code: Mapped[str] = mapped_column(String(50), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Accrual settings
+    accrual_type: Mapped[str] = mapped_column(String(50), default="monthly")  # monthly, annual, pay_period
+    accrual_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))  # days per period
+    max_accrual: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)  # max accrued days
+    
+    # Carry forward rules
+    carry_forward_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    max_carry_forward_days: Mapped[int] = mapped_column(Integer, default=0)
+    carry_forward_expiry_months: Mapped[int] = mapped_column(Integer, default=12)  # months until carried leave expires
+    
+    # Overtime calculation rules
+    overtime_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    overtime_threshold_hours: Mapped[Decimal] = mapped_column(Numeric(4, 2), default=Decimal("8"))  # daily hours
+    overtime_multiplier: Mapped[Decimal] = mapped_column(Numeric(3, 2), default=Decimal("1.5"))
+    weekend_overtime_multiplier: Mapped[Decimal] = mapped_column(Numeric(3, 2), default=Decimal("2.0"))
+    holiday_overtime_multiplier: Mapped[Decimal] = mapped_column(Numeric(3, 2), default=Decimal("2.5"))
+    
+    # Late/Early rules
+    late_threshold_minutes: Mapped[int] = mapped_column(Integer, default=15)
+    early_leave_threshold_minutes: Mapped[int] = mapped_column(Integer, default=30)
+    half_day_threshold_hours: Mapped[Decimal] = mapped_column(Numeric(4, 2), default=Decimal("4"))
+    
+    # Status and applicability
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    applicable_departments: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'code', name='uq_attendance_policy_org_code'),
+        Index('idx_attendance_policy_org_active', 'organization_id', 'is_active'),
+        {'extend_existing': True}
+    )
+
+
+# Leave Balance Tracking
+class LeaveBalance(Base):
+    """Track leave balances for employees by leave type and year"""
+    __tablename__ = "leave_balances"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    employee_id: Mapped[int] = mapped_column(Integer, ForeignKey("employee_profiles.id"), nullable=False, index=True)
+    leave_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("leave_types.id"), nullable=False, index=True)
+    
+    # Balance tracking
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    allocated_days: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    accrued_days: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    carried_forward_days: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    used_days: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    pending_days: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))  # pending approval
+    encashed_days: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    
+    # Calculated balance
+    available_days: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    
+    # Metadata
+    last_accrual_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization")
+    employee: Mapped["EmployeeProfile"] = relationship("EmployeeProfile")
+    leave_type: Mapped["LeaveType"] = relationship("LeaveType")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'employee_id', 'leave_type_id', 'year', name='uq_leave_balance_emp_type_year'),
+        Index('idx_leave_balance_org_employee', 'organization_id', 'employee_id'),
+        {'extend_existing': True}
+    )
+
+
+# Timesheet for detailed time tracking
+class Timesheet(Base):
+    """Weekly/monthly timesheet entries"""
+    __tablename__ = "timesheets"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    employee_id: Mapped[int] = mapped_column(Integer, ForeignKey("employee_profiles.id"), nullable=False, index=True)
+    
+    # Timesheet period
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False)
+    
+    # Summary hours
+    total_regular_hours: Mapped[Decimal] = mapped_column(Numeric(6, 2), default=Decimal("0"))
+    total_overtime_hours: Mapped[Decimal] = mapped_column(Numeric(6, 2), default=Decimal("0"))
+    total_leave_hours: Mapped[Decimal] = mapped_column(Numeric(6, 2), default=Decimal("0"))
+    
+    # Daily breakdown (JSON for flexibility)
+    daily_entries: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Structure: { "2024-01-01": {"regular": 8, "overtime": 2, "project_id": 1, "notes": ""}, ... }
+    
+    # Status and approval
+    status: Mapped[str] = mapped_column(String(50), default="draft")  # draft, submitted, approved, rejected
+    submitted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization")
+    employee: Mapped["EmployeeProfile"] = relationship("EmployeeProfile")
+    approved_by: Mapped[Optional["User"]] = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'employee_id', 'period_start', 'period_end', name='uq_timesheet_emp_period'),
+        Index('idx_timesheet_org_status', 'organization_id', 'status'),
+        {'extend_existing': True}
+    )
+
+
+# Arrears and Retro Adjustments
+class PayrollArrear(Base):
+    """Track arrears and retro salary adjustments"""
+    __tablename__ = "payroll_arrears"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    employee_id: Mapped[int] = mapped_column(Integer, ForeignKey("employee_profiles.id"), nullable=False, index=True)
+    
+    # Arrear details
+    arrear_type: Mapped[str] = mapped_column(String(50), nullable=False)  # salary_revision, bonus, allowance, deduction
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    
+    # Period for arrear calculation
+    from_period: Mapped[date] = mapped_column(Date, nullable=False)
+    to_period: Mapped[date] = mapped_column(Date, nullable=False)
+    
+    # Amounts
+    arrear_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    tax_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
+    net_arrear_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    
+    # Processing
+    status: Mapped[str] = mapped_column(String(50), default="pending")  # pending, approved, processed, paid
+    process_in_period_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("payroll_periods.id"), nullable=True)
+    
+    # Approval workflow
+    approved_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Reference
+    reference_document: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)  # HR letter number, etc.
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+
+    organization: Mapped["Organization"] = relationship("Organization")
+    employee: Mapped["EmployeeProfile"] = relationship("EmployeeProfile")
+
+    __table_args__ = (
+        Index('idx_payroll_arrear_org_status', 'organization_id', 'status'),
+        Index('idx_payroll_arrear_employee', 'employee_id'),
+        {'extend_existing': True}
+    )
+
+
+# Statutory Deduction Configuration
+class StatutoryDeduction(Base):
+    """Configurable statutory deductions (PF, ESI, TDS, etc.)"""
+    __tablename__ = "statutory_deductions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Deduction identification
+    code: Mapped[str] = mapped_column(String(50), nullable=False)  # PF, ESI, TDS, PT, LWF
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Calculation type
+    calculation_type: Mapped[str] = mapped_column(String(50), nullable=False)  # percentage, fixed, slab_based
+    employee_contribution: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    employer_contribution: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    
+    # Ceiling and limits
+    ceiling_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
+    minimum_wage_threshold: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
+    maximum_wage_threshold: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
+    
+    # Slab configuration (if slab_based)
+    slabs: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Structure: [{"min": 0, "max": 15000, "rate": 0.12}, {"min": 15001, "max": null, "rate": 0.12}]
+    
+    # Applicability
+    applicable_from: Mapped[date] = mapped_column(Date, nullable=False)
+    applicable_to: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'code', name='uq_statutory_deduction_org_code'),
+        Index('idx_statutory_deduction_active', 'organization_id', 'is_active'),
+        {'extend_existing': True}
+    )
+
+
+# Bank Payment Export Configuration
+class BankPaymentExport(Base):
+    """Bank payment file generation tracking"""
+    __tablename__ = "bank_payment_exports"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    payroll_period_id: Mapped[int] = mapped_column(Integer, ForeignKey("payroll_periods.id"), nullable=False, index=True)
+    
+    # Export details
+    export_type: Mapped[str] = mapped_column(String(50), nullable=False)  # bank_transfer, neft, rtgs, imps
+    bank_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    file_format: Mapped[str] = mapped_column(String(50), nullable=False)  # csv, txt, xlsx, bank_specific
+    
+    # File info
+    file_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    file_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    
+    # Summary
+    total_records: Mapped[int] = mapped_column(Integer, default=0)
+    total_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
+    
+    # Status
+    status: Mapped[str] = mapped_column(String(50), default="generated")  # generated, uploaded, processed, failed
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    generated_by_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+
+    organization: Mapped["Organization"] = relationship("Organization")
+    generated_by: Mapped["User"] = relationship("User")
+
+    __table_args__ = (
+        Index('idx_bank_export_org_period', 'organization_id', 'payroll_period_id'),
+        {'extend_existing': True}
+    )
+
+
+# Payroll Approval Workflow
+class PayrollApproval(Base):
+    """Multi-level payroll approval workflow"""
+    __tablename__ = "payroll_approvals"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    payroll_period_id: Mapped[int] = mapped_column(Integer, ForeignKey("payroll_periods.id"), nullable=False, index=True)
+    
+    # Approval level
+    approval_level: Mapped[int] = mapped_column(Integer, nullable=False)  # 1, 2, 3...
+    approver_role: Mapped[str] = mapped_column(String(100), nullable=False)  # hr_manager, finance_head, cfo
+    
+    # Status
+    status: Mapped[str] = mapped_column(String(50), default="pending")  # pending, approved, rejected
+    approved_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    comments: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization")
+    approved_by: Mapped[Optional["User"]] = relationship("User")
+
+    __table_args__ = (
+        UniqueConstraint('payroll_period_id', 'approval_level', name='uq_payroll_approval_period_level'),
+        Index('idx_payroll_approval_status', 'status'),
+        {'extend_existing': True}
+    )
+
+
+# =============================================================================
+# Phase 4 Scaffolding - Analytics and Org Planning (Feature-flagged)
+# =============================================================================
+
+# HR Analytics Data Model
+class HRAnalyticsSnapshot(Base):
+    """Point-in-time HR analytics snapshots"""
+    __tablename__ = "hr_analytics_snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Snapshot details
+    snapshot_date: Mapped[date] = mapped_column(Date, nullable=False)
+    snapshot_type: Mapped[str] = mapped_column(String(50), nullable=False)  # daily, weekly, monthly, quarterly
+    
+    # Headcount metrics
+    total_headcount: Mapped[int] = mapped_column(Integer, default=0)
+    active_employees: Mapped[int] = mapped_column(Integer, default=0)
+    new_hires: Mapped[int] = mapped_column(Integer, default=0)
+    terminations: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Attrition metrics
+    attrition_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    voluntary_attrition: Mapped[int] = mapped_column(Integer, default=0)
+    involuntary_attrition: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Tenure metrics
+    avg_tenure_months: Mapped[Decimal] = mapped_column(Numeric(6, 2), default=Decimal("0"))
+    tenure_distribution: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Structure: {"0-6": 10, "6-12": 20, "12-24": 30, "24+": 40}
+    
+    # Payroll cost metrics
+    total_payroll_cost: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
+    avg_salary: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
+    cost_per_employee: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
+    
+    # Department breakdown
+    department_breakdown: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    # Structure: {"dept_id": {"headcount": 10, "payroll_cost": 500000}}
+    
+    # Feature flag
+    is_feature_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'snapshot_date', 'snapshot_type', name='uq_hr_analytics_snapshot'),
+        Index('idx_hr_analytics_org_date', 'organization_id', 'snapshot_date'),
+        {'extend_existing': True}
+    )
+
+
+# Position Budgeting
+class PositionBudget(Base):
+    """Position budgeting and headcount planning"""
+    __tablename__ = "position_budgets"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    position_id: Mapped[int] = mapped_column(Integer, ForeignKey("positions.id"), nullable=False, index=True)
+    department_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("departments.id"), nullable=True)
+    
+    # Budget period
+    fiscal_year: Mapped[str] = mapped_column(String(10), nullable=False)  # 2024-25
+    quarter: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)  # Q1, Q2, Q3, Q4
+    
+    # Headcount budget
+    budgeted_headcount: Mapped[int] = mapped_column(Integer, default=0)
+    filled_headcount: Mapped[int] = mapped_column(Integer, default=0)
+    open_positions: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Salary budget
+    budgeted_salary_cost: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
+    actual_salary_cost: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
+    variance: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0"))
+    
+    # Approval status
+    status: Mapped[str] = mapped_column(String(50), default="draft")  # draft, submitted, approved
+    approved_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Feature flag
+    is_feature_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+    organization: Mapped["Organization"] = relationship("Organization")
+    position: Mapped["Position"] = relationship("Position")
+    department: Mapped[Optional["Department"]] = relationship("Department")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'position_id', 'fiscal_year', 'quarter', name='uq_position_budget'),
+        Index('idx_position_budget_org_year', 'organization_id', 'fiscal_year'),
+        {'extend_existing': True}
+    )
+
+
+# Transfer History
+class EmployeeTransfer(Base):
+    """Track employee transfers and movements"""
+    __tablename__ = "employee_transfers"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    employee_id: Mapped[int] = mapped_column(Integer, ForeignKey("employee_profiles.id"), nullable=False, index=True)
+    
+    # Transfer details
+    transfer_type: Mapped[str] = mapped_column(String(50), nullable=False)  # department, location, position, promotion
+    effective_date: Mapped[date] = mapped_column(Date, nullable=False)
+    
+    # From
+    from_department_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("departments.id"), nullable=True)
+    from_position_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("positions.id"), nullable=True)
+    from_location: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    from_manager_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # To
+    to_department_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("departments.id"), nullable=True)
+    to_position_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("positions.id"), nullable=True)
+    to_location: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    to_manager_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    # Salary change (if any)
+    salary_change_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
+    salary_change_percentage: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)
+    
+    # Status and approval
+    status: Mapped[str] = mapped_column(String(50), default="pending")  # pending, approved, completed, cancelled
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    approved_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # Feature flag
+    is_feature_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+
+    organization: Mapped["Organization"] = relationship("Organization")
+    employee: Mapped["EmployeeProfile"] = relationship("EmployeeProfile")
+
+    __table_args__ = (
+        Index('idx_employee_transfer_org_emp', 'organization_id', 'employee_id'),
+        Index('idx_employee_transfer_date', 'effective_date'),
+        {'extend_existing': True}
+    )
+
+
+# =============================================================================
+# Integration Adapters Configuration
+# =============================================================================
+
+class IntegrationAdapter(Base):
+    """Integration adapter configuration for external systems"""
+    __tablename__ = "integration_adapters"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    organization_id: Mapped[int] = mapped_column(Integer, ForeignKey("organizations.id"), nullable=False, index=True)
+    
+    # Adapter identification
+    adapter_type: Mapped[str] = mapped_column(String(50), nullable=False)  # sso, payroll_provider, attendance_hardware, erp
+    adapter_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    provider: Mapped[str] = mapped_column(String(100), nullable=False)  # okta, azure_ad, adp, sap, etc.
+    
+    # Configuration (encrypted in production)
+    config: Mapped[dict] = mapped_column(JSON, nullable=False)
+    # Structure varies by adapter_type:
+    # SSO: {"client_id": "", "client_secret": "", "tenant_id": "", "auth_url": "", "token_url": ""}
+    # Payroll: {"api_key": "", "api_url": "", "company_id": ""}
+    # Attendance: {"device_ip": "", "port": "", "api_key": ""}
+    
+    # Status
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_sync_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    sync_status: Mapped[str] = mapped_column(String(50), default="not_synced")  # not_synced, syncing, synced, error
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Feature flag
+    is_feature_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+
+    organization: Mapped["Organization"] = relationship("Organization")
+
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'adapter_type', 'provider', name='uq_integration_adapter'),
+        Index('idx_integration_adapter_org_type', 'organization_id', 'adapter_type'),
+        {'extend_existing': True}
+    )
