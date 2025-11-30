@@ -1,12 +1,15 @@
 # app/models/hr_models.py
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Numeric, Time
+from sqlalchemy import Integer, String, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Numeric, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from datetime import datetime, date, time
 from decimal import Decimal
+
+if TYPE_CHECKING:
+    from app.models.user_models import Organization, User
 
 
 # Department Management
@@ -37,10 +40,10 @@ class Department(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
     created_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_department_created_by_id"), nullable=True)
 
-    # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    # Relationships - use string references for cross-module relationships
+    organization: Mapped["Organization"] = relationship("Organization")
     parent: Mapped[Optional["Department"]] = relationship("Department", remote_side=[id], foreign_keys=[parent_id])
-    manager: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User", foreign_keys=[manager_id])
+    manager: Mapped[Optional["User"]] = relationship("User", foreign_keys=[manager_id])
     positions: Mapped[List["Position"]] = relationship("Position", back_populates="department")
 
     __table_args__ = (
@@ -85,7 +88,7 @@ class Position(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
     department: Mapped[Optional["Department"]] = relationship("Department", back_populates="positions")
 
     __table_args__ = (
@@ -137,7 +140,7 @@ class WorkShift(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
 
     __table_args__ = (
         UniqueConstraint('organization_id', 'code', name='uq_work_shift_org_code'),
@@ -176,7 +179,7 @@ class HolidayCalendar(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
 
     __table_args__ = (
         UniqueConstraint('organization_id', 'holiday_date', name='uq_holiday_calendar_org_date'),
@@ -271,7 +274,7 @@ class EmployeeProfile(Base):
     updated_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", name="fk_employee_profile_updated_by_id"), nullable=True)
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
     user: Mapped["app.models.user_models.User"] = relationship("app.models.user_models.User", foreign_keys=[user_id])
     reporting_manager: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User", foreign_keys=[reporting_manager_id])
     created_by: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User", foreign_keys=[created_by_id])
@@ -339,7 +342,7 @@ class AttendanceRecord(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
     employee: Mapped["EmployeeProfile"] = relationship("EmployeeProfile", back_populates="attendance_records")
     approved_by: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User")
 
@@ -385,7 +388,7 @@ class LeaveType(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
     leave_applications: Mapped[List["LeaveApplication"]] = relationship("LeaveApplication", back_populates="leave_type")
 
     __table_args__ = (
@@ -435,7 +438,7 @@ class LeaveApplication(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
     employee: Mapped["EmployeeProfile"] = relationship("EmployeeProfile", back_populates="leave_applications")
     leave_type: Mapped["LeaveType"] = relationship("LeaveType", back_populates="leave_applications")
     approved_by: Mapped[Optional["app.models.user_models.User"]] = relationship("app.models.user_models.User")
@@ -493,7 +496,7 @@ class PerformanceReview(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization: Mapped["app.models.user_models.Organization"] = relationship("app.models.user_models.Organization")
+    organization: Mapped["Organization"] = relationship("Organization")
     employee: Mapped["EmployeeProfile"] = relationship("EmployeeProfile", back_populates="performance_reviews")
     reviewer: Mapped["app.models.user_models.User"] = relationship("app.models.user_models.User")
 

@@ -14,7 +14,7 @@ from typing import Optional
 from datetime import datetime
 
 from app.core.database import get_db
-from app.core.audit import AuditLogger, get_client_ip, get_user_agent, create_audit_log
+from app.core.audit import get_client_ip, get_user_agent, create_audit_log
 from app.services.demo_user_service import (
     DemoUserService,
     get_demo_user_service,
