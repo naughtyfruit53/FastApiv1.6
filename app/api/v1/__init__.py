@@ -582,5 +582,29 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include quotation_router: {str(e)}\n{traceback.format_exc()}")
 
+    # Top-level Sales Orders API at /api/v1/sales-orders
+    try:
+        from .sales_orders import router as sales_orders_top_router
+        logger.debug("Imported sales_orders_top_router")
+        api_v1_router.include_router(sales_orders_top_router, tags=["sales-orders"])
+        sales_orders_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in sales_orders_top_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered top-level sales-orders endpoints: {len(sales_orders_routes)} routes")
+        for route_path in sales_orders_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include sales_orders_top_router: {str(e)}\n{traceback.format_exc()}")
+
+    # Items API for rate/description memory at /api/v1/items
+    try:
+        from .items import router as items_router
+        logger.debug("Imported items_router")
+        api_v1_router.include_router(items_router, tags=["items"])
+        items_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in items_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered items endpoints: {len(items_routes)} routes")
+        for route_path in items_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include items_router: {str(e)}\n{traceback.format_exc()}")
+
 
 register_subrouters()
