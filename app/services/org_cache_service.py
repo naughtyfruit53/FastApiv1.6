@@ -135,14 +135,16 @@ def invalidate_organization_cache(org_id: int, user_id: Optional[int] = None) ->
             keys_to_remove.append(cache_key)
     else:
         # Invalidate all caches for this organization
+        # Create a snapshot of keys to avoid modification during iteration
         prefix = f"org:{org_id}:"
-        for key in _org_cache.keys():
+        for key in list(_org_cache.keys()):
             if key.startswith(prefix):
                 keys_to_remove.append(key)
     
     for key in keys_to_remove:
-        del _org_cache[key]
-        invalidated += 1
+        if key in _org_cache:  # Double-check key exists before deleting
+            del _org_cache[key]
+            invalidated += 1
     
     if invalidated > 0:
         logger.info(f"Invalidated {invalidated} organization cache entries for org_id={org_id}")

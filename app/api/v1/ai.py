@@ -512,10 +512,20 @@ async def chat_completion(
     try:
         import httpx
         
-        # Prepare request
+        # Prepare request with safe environment variable parsing
         model = request.model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-        temperature = request.temperature or float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
-        max_tokens = request.max_tokens or int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
+        
+        try:
+            temperature = request.temperature or float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+        except ValueError:
+            logger.warning("Invalid OPENAI_TEMPERATURE environment variable, using default 0.7")
+            temperature = request.temperature or 0.7
+        
+        try:
+            max_tokens = request.max_tokens or int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
+        except ValueError:
+            logger.warning("Invalid OPENAI_MAX_TOKENS environment variable, using default 1000")
+            max_tokens = request.max_tokens or 1000
         
         # Build messages list with system prompt
         system_prompt = """You are TritIQ Assistant, an AI helper for the TritIQ Business Operating System.

@@ -114,10 +114,10 @@ async def get_current_organization(
         cached_etag = get_cached_etag(org_id, user_id)
         if cached_etag and if_none_match == cached_etag:
             logger.debug(f"ETag match for org {org_id}, returning 304")
-            response.status_code = status.HTTP_304_NOT_MODIFIED
-            response.headers["ETag"] = cached_etag
-            response.headers["Cache-Control"] = "private, max-age=30"
-            return Response(status_code=304, headers={"ETag": cached_etag})
+            raise HTTPException(
+                status_code=status.HTTP_304_NOT_MODIFIED,
+                headers={"ETag": cached_etag, "Cache-Control": "private, max-age=30"}
+            )
     
     # Try to get from cache (unless cache busting with ts parameter)
     if not ts:
