@@ -596,5 +596,17 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include items_router: {str(e)}\n{traceback.format_exc()}")
 
+    # Demo OTP Users API at /api/v1/demo
+    try:
+        from .demo import router as demo_router
+        logger.debug("Imported demo_router")
+        api_v1_router.include_router(demo_router, tags=["Demo"])
+        demo_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in demo_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered demo endpoints: {len(demo_routes)} routes")
+        for route_path in demo_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include demo_router: {str(e)}\n{traceback.format_exc()}")
+
 
 register_subrouters()
