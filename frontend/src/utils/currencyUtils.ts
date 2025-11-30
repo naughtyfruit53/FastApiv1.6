@@ -47,7 +47,11 @@ export const formatCurrency = (
       minimumFractionDigits: config.decimals,
       maximumFractionDigits: config.decimals,
     }).format(amount);
-  } catch {
+  } catch (error) {
+    // Log error for debugging in development
+    if (process.env.NODE_ENV === "development") {
+      console.warn(`Currency formatting failed for ${currency}:`, error);
+    }
     // Fallback for unsupported currencies
     const symbol = getCurrencySymbol(currency);
     return `${symbol}${amount.toLocaleString(DEFAULT_LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

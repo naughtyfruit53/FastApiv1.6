@@ -5,7 +5,7 @@
  * in working/bad condition
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Container,
@@ -48,6 +48,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../lib/api";
 import { ProtectedPage } from "../../components/ProtectedPage";
 import DashboardLayout from "../../components/DashboardLayout";
+import { DEFAULT_DEPARTMENTS } from "../../constants/ui";
 import { useCurrency } from "../../hooks/useCurrency";
 
 interface DepartmentAllocation {
@@ -112,19 +113,8 @@ const DepartmentAllocationsPage: React.FC = () => {
         const response = await api.get("/manufacturing/departments");
         return response.data;
       } catch {
-        // Return default departments if API fails
-        return [
-          "Finance",
-          "HR",
-          "IT",
-          "Operations",
-          "Sales",
-          "Marketing",
-          "Production",
-          "Quality Control",
-          "Warehouse",
-          "Maintenance",
-        ];
+        // Return default departments from constants if API fails
+        return [...DEFAULT_DEPARTMENTS];
       }
     },
   });
@@ -184,20 +174,24 @@ const DepartmentAllocationsPage: React.FC = () => {
     return colors[condition] || "default";
   };
 
-  // Filter allocations based on search
-  const filteredAllocations = (allocations || []).filter((allocation: DepartmentAllocation) =>
-    allocation.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    allocation.requisition_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    allocation.department.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter allocations based on search - memoized for performance
+  const filteredAllocations = useMemo(() => {
+    if (!allocations) return [];
+    const searchLower = searchQuery.toLowerCase();
+    return allocations.filter((allocation: DepartmentAllocation) =>
+      allocation.product_name.toLowerCase().includes(searchLower) ||
+      allocation.requisition_number.toLowerCase().includes(searchLower) ||
+      allocation.department.toLowerCase().includes(searchLower)
+    );
+  }, [allocations, searchQuery]);
 
-  // Calculate summary stats
-  const summaryStats = {
+  // Calculate summary stats - memoized
+  const summaryStats = useMemo(() => ({
     totalAllocated: filteredAllocations.reduce((sum: number, a: DepartmentAllocation) => sum + a.quantity_allocated, 0),
     totalReturned: filteredAllocations.reduce((sum: number, a: DepartmentAllocation) => sum + a.quantity_returned, 0),
     totalPending: filteredAllocations.reduce((sum: number, a: DepartmentAllocation) => sum + a.quantity_pending, 0),
     totalValue: filteredAllocations.reduce((sum: number, a: DepartmentAllocation) => sum + (a.total_value || 0), 0),
-  };
+  }), [filteredAllocations]);
 
   if (error) {
     return (

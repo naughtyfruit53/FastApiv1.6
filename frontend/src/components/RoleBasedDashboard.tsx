@@ -38,8 +38,9 @@ import MetricCard from "./MetricCard";
 import { useAuth } from "../context/AuthContext";
 import { useCurrency } from "../hooks/useCurrency";
 import activityService, { RecentActivity } from "../services/activityService";
+import { ROLE_HIERARCHY, DashboardRole as RoleType } from "../constants/ui";
 
-export type DashboardRole = "management" | "manager" | "executive" | "admin" | "viewer";
+export type DashboardRole = RoleType;
 
 interface RoleBasedDashboardProps {
   /** Override the auto-detected role */
@@ -75,24 +76,18 @@ const ROLE_KPIS: Record<DashboardRole, { title: string; metrics: string[] }> = {
 };
 
 /**
- * Determine dashboard role from user context
+ * Determine dashboard role from user context using centralized role hierarchy
  */
 const getDashboardRole = (user: any): DashboardRole => {
   if (!user) return "viewer";
   
   const role = user.role?.toLowerCase() || "";
   
-  if (["super_admin", "admin", "app_admin"].includes(role)) {
-    return "admin";
-  }
-  if (["management", "director", "ceo", "cfo", "coo"].includes(role)) {
-    return "management";
-  }
-  if (["manager", "team_lead", "supervisor", "head"].includes(role)) {
-    return "manager";
-  }
-  if (["executive", "staff", "employee", "user"].includes(role)) {
-    return "executive";
+  // Check against centralized role hierarchy
+  for (const [dashboardRole, roles] of Object.entries(ROLE_HIERARCHY)) {
+    if ((roles as readonly string[]).includes(role)) {
+      return dashboardRole as DashboardRole;
+    }
   }
   
   return "viewer";
