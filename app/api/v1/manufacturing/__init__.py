@@ -15,10 +15,16 @@ This module is organized into logical submodules for better maintainability:
 - production_entries.py: Production entry operations  # NEW: Added
 """
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Depends, Query
 from fastapi.routing import APIRoute
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from typing import Optional
 import logging
 import traceback
+
+from app.core.database import get_db
+from app.core.enforcement import require_access
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +55,29 @@ async def debug_manufacturing():
     """Debug endpoint to verify manufacturing router is mounted"""
     logger.info("Manufacturing debug endpoint accessed")
     return {"message": "Manufacturing router is mounted"}
+
+# Alias endpoint for quality-inspections (frontend uses this path)
+@router.get("/quality-inspections")
+async def get_quality_inspections_alias(
+    page: int = 1,
+    per_page: int = 10,
+    status: Optional[str] = None,
+    overall_status: Optional[str] = None,
+    auth: tuple = Depends(require_access("manufacturing", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Alias for quality-control/inspections to match frontend API calls"""
+    from app.models.vouchers.manufacturing_planning import QCInspection
+    _, org_id = auth
+    stmt = select(QCInspection).where(QCInspection.organization_id == org_id)
+    if status:
+        stmt = stmt.where(QCInspection.status == status)
+    if overall_status:
+        stmt = stmt.where(QCInspection.overall_status == overall_status)
+    stmt = stmt.order_by(QCInspection.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+    return {"items": items, "page": page, "per_page": per_page}
 
 # Include sub-routers with error handling
 try:
