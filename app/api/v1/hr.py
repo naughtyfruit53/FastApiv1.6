@@ -2165,7 +2165,7 @@ async def update_integration_adapter(
 
 
 # ============================================================================
-# Export Endpoints (CSV/JSON)
+# Export Endpoints (CSV/JSON) - Scaffolding for future implementation
 # ============================================================================
 
 @router.post("/export/payroll", response_model=ExportResult)
@@ -2174,10 +2174,22 @@ async def export_payroll_data(
     auth: tuple = Depends(require_access("hr", "read")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Export payroll data to CSV/JSON format"""
+    """
+    Export payroll data to CSV/JSON format.
+    
+    NOTE: This is a scaffolding endpoint. Full implementation will include:
+    - Query payroll data from PayrollPeriod and Payslip tables
+    - Generate CSV/JSON/XLSX based on export_format
+    - Store file and return download URL or stream content
+    
+    Current behavior: Returns success with placeholder values.
+    """
     current_user, org_id = auth
     
-    # This is a placeholder - actual implementation would generate the file
+    # TODO: Implement actual export logic
+    # 1. Query payroll data for the period
+    # 2. Format data according to export_format
+    # 3. Generate file and store/return
     return ExportResult(
         success=True,
         file_name=f"payroll_export_{export_request.payroll_period_id}.{export_request.export_format.format}",
@@ -2192,10 +2204,19 @@ async def export_attendance_data(
     auth: tuple = Depends(require_access("hr", "read")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Export attendance data to CSV/JSON format"""
+    """
+    Export attendance data to CSV/JSON format.
+    
+    NOTE: This is a scaffolding endpoint. Full implementation will include:
+    - Query AttendanceRecord table with date range and filters
+    - Calculate overtime based on AttendancePolicy
+    - Generate CSV/JSON/XLSX based on export_format
+    
+    Current behavior: Returns success with placeholder values.
+    """
     current_user, org_id = auth
     
-    # This is a placeholder - actual implementation would generate the file
+    # TODO: Implement actual export logic
     return ExportResult(
         success=True,
         file_name=f"attendance_export_{export_request.start_date}_{export_request.end_date}.{export_request.export_format.format}",
@@ -2210,10 +2231,19 @@ async def export_leave_data(
     auth: tuple = Depends(require_access("hr", "read")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Export leave data to CSV/JSON format"""
+    """
+    Export leave data to CSV/JSON format.
+    
+    NOTE: This is a scaffolding endpoint. Full implementation will include:
+    - Query LeaveApplication table with date range and filters
+    - Include leave type names and balance information
+    - Generate CSV/JSON/XLSX based on export_format
+    
+    Current behavior: Returns success with placeholder values.
+    """
     current_user, org_id = auth
     
-    # This is a placeholder - actual implementation would generate the file
+    # TODO: Implement actual export logic
     return ExportResult(
         success=True,
         file_name=f"leave_export_{export_request.start_date}_{export_request.end_date}.{export_request.export_format.format}",

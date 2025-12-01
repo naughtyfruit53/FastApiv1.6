@@ -49,6 +49,7 @@ import {
   LeaveApplication,
   LeaveType,
   AttendanceRecord,
+  Payslip,
 } from "../../../services";
 import { ProtectedPage } from "../../../components/ProtectedPage";
 
@@ -100,18 +101,6 @@ const SelfServicePortal: NextPage = () => {
   // Payslip state
   const [payslips, setPayslips] = useState<Payslip[]>([]);
 
-  // Payslip interface
-  interface Payslip {
-    id: number;
-    payslip_number: string;
-    pay_date: string;
-    gross_pay: number;
-    total_deductions: number;
-    net_pay: number;
-    status: string;
-    pdf_path?: string;
-  }
-
   // Currency formatter
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-IN', {
@@ -128,18 +117,12 @@ const SelfServicePortal: NextPage = () => {
   const fetchPayslips = async () => {
     try {
       setLoading(true);
-      // Payslip API call - using the payroll endpoint
-      const response = await fetch('/api/v1/payroll/payslips?employee_id=' + (user?.id || 0), {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setPayslips(data);
-      }
+      // Use hrService to fetch payslips
+      const data = await hrService.getPayslips(user?.id);
+      setPayslips(data);
     } catch (err) {
       console.error("Error fetching payslips:", err);
+      // Silently handle errors - payslips may not be available yet
     } finally {
       setLoading(false);
     }
@@ -148,26 +131,17 @@ const SelfServicePortal: NextPage = () => {
   const handleDownloadPayslip = async (payslipId: number) => {
     try {
       setLoading(true);
-      // PDF download API call
-      const response = await fetch(`/api/v1/payroll/payslips/${payslipId}/pdf`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `payslip_${payslipId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        setSuccess("Payslip downloaded successfully");
-      } else {
-        setError("Failed to download payslip");
-      }
+      // Use hrService to download payslip PDF
+      const blob = await hrService.downloadPayslipPdf(payslipId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payslip_${payslipId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setSuccess("Payslip downloaded successfully");
     } catch (err) {
       console.error("Error downloading payslip:", err);
       setError("Failed to download payslip");

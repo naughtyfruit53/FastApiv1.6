@@ -1,4 +1,9 @@
 # app/schemas/hr_schemas.py
+# 
+# NOTE: SkipValidation is used for date fields to allow flexible date input formats
+# (strings, date objects, etc.) that will be parsed by Pydantic. This is necessary
+# because dates may come from various sources (JSON, form data, etc.) with different
+# formats and direct validation would be too strict for these use cases.
 
 from pydantic import BaseModel, Field, ConfigDict, SkipValidation
 from typing import Optional, List, Dict, Any

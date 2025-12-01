@@ -49,6 +49,7 @@ jobs:
 
   smoke-tests:
     runs-on: ubuntu-latest
+    continue-on-error: true  # Allow job to complete even if tests fail due to missing DB
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -64,13 +65,14 @@ jobs:
           SECRET_KEY: "test-secret-key-for-ci"
         run: |
           if [ -f "tests/test_smoke.py" ]; then
-            pytest tests/test_smoke.py -v --tb=short -x || echo "Some smoke tests may require database connection"
+            pytest tests/test_smoke.py -v --tb=short -x
           else
             echo "Smoke tests not yet configured"
           fi
 
   type-check:
     runs-on: ubuntu-latest
+    continue-on-error: true  # Type check informational for now
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -81,4 +83,4 @@ jobs:
         run: npm ci
       - name: Run TypeScript type check
         working-directory: ./frontend
-        run: npx tsc --noEmit || true
+        run: npx tsc --noEmit

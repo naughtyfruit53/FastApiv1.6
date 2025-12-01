@@ -222,6 +222,42 @@ export interface HolidayUpdate {
   year?: number;
 }
 
+// Payslip interfaces
+export interface Payslip {
+  id: number;
+  payslip_number: string;
+  employee_id: number;
+  payroll_period_id: number;
+  salary_structure_id: number;
+  pay_date: string;
+  working_days: number;
+  present_days: number;
+  absent_days: number;
+  leave_days: number;
+  overtime_hours: number;
+  basic_salary: number;
+  hra: number;
+  transport_allowance: number;
+  medical_allowance: number;
+  special_allowance: number;
+  overtime_amount: number;
+  other_allowances: number;
+  provident_fund: number;
+  professional_tax: number;
+  income_tax: number;
+  loan_deduction: number;
+  other_deductions: number;
+  gross_pay: number;
+  total_deductions: number;
+  net_pay: number;
+  status: string;
+  pdf_path?: string;
+  email_sent: boolean;
+  organization_id: number;
+  created_at: string;
+  updated_at?: string;
+}
+
 // Attendance interfaces
 export interface AttendanceRecord {
   id: number;
@@ -983,6 +1019,48 @@ class HRService {
   }
 
   // ==========================================================================
+  // Payslip Methods
+  // ==========================================================================
+
+  /**
+   * Get payslips for an employee
+   */
+  async getPayslips(
+    employeeId?: number,
+    periodId?: number,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<Payslip[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (employeeId !== undefined) params.employee_id = employeeId;
+      if (periodId !== undefined) params.payroll_period_id = periodId;
+      if (status) params.status = status;
+      const response = await api.get("/payroll/payslips", { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching payslips:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Download payslip PDF
+   */
+  async downloadPayslipPdf(payslipId: number): Promise<Blob> {
+    try {
+      const response = await api.get(`/payroll/payslips/${payslipId}/pdf`, {
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error downloading payslip PDF:", error);
+      throw error;
+    }
+  }
+
+  // ==========================================================================
   // Phase 4 Methods - Analytics, Position Budgets, Transfers
   // ==========================================================================
 
@@ -1079,11 +1157,22 @@ class HRService {
   /**
    * Export payroll data
    */
-  async exportPayrollData(payrollPeriodId: number, format: string = "csv"): Promise<unknown> {
+  async exportPayrollData(
+    payrollPeriodId: number,
+    format: string = "csv",
+    includeHeaders: boolean = true,
+    dateFormat: string = "%Y-%m-%d",
+    decimalPlaces: number = 2
+  ): Promise<unknown> {
     try {
       const response = await api.post(`${this.endpoint}/export/payroll`, {
         payroll_period_id: payrollPeriodId,
-        export_format: { format }
+        export_format: {
+          format,
+          include_headers: includeHeaders,
+          date_format: dateFormat,
+          decimal_places: decimalPlaces
+        }
       });
       return response.data;
     } catch (error) {
@@ -1098,13 +1187,21 @@ class HRService {
   async exportAttendanceData(
     startDate: string,
     endDate: string,
-    format: string = "csv"
+    format: string = "csv",
+    includeHeaders: boolean = true,
+    dateFormat: string = "%Y-%m-%d",
+    decimalPlaces: number = 2
   ): Promise<unknown> {
     try {
       const response = await api.post(`${this.endpoint}/export/attendance`, {
         start_date: startDate,
         end_date: endDate,
-        export_format: { format }
+        export_format: {
+          format,
+          include_headers: includeHeaders,
+          date_format: dateFormat,
+          decimal_places: decimalPlaces
+        }
       });
       return response.data;
     } catch (error) {
@@ -1119,13 +1216,21 @@ class HRService {
   async exportLeaveData(
     startDate: string,
     endDate: string,
-    format: string = "csv"
+    format: string = "csv",
+    includeHeaders: boolean = true,
+    dateFormat: string = "%Y-%m-%d",
+    decimalPlaces: number = 2
   ): Promise<unknown> {
     try {
       const response = await api.post(`${this.endpoint}/export/leave`, {
         start_date: startDate,
         end_date: endDate,
-        export_format: { format }
+        export_format: {
+          format,
+          include_headers: includeHeaders,
+          date_format: dateFormat,
+          decimal_places: decimalPlaces
+        }
       });
       return response.data;
     } catch (error) {
