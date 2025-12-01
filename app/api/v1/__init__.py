@@ -608,5 +608,17 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include demo_router: {str(e)}\n{traceback.format_exc()}")
 
+    # Audit Log API at /api/v1/audit-logs
+    try:
+        from .audit_log import router as audit_log_router
+        logger.debug("Imported audit_log_router")
+        api_v1_router.include_router(audit_log_router, tags=["audit-logs"])
+        audit_log_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in audit_log_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered audit_log endpoints: {len(audit_log_routes)} routes")
+        for route_path in audit_log_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include audit_log_router: {str(e)}\n{traceback.format_exc()}")
+
 
 register_subrouters()
