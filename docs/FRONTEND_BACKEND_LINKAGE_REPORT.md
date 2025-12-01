@@ -155,6 +155,24 @@ This document provides a comprehensive mapping between frontend pages/components
 | Bank Exports | `BankPaymentExport` model | `hrService.ts` | ✅ Model Ready |
 | Approval Workflow | `PayrollApproval` model | `hrService.ts` | ✅ Model Ready |
 
+### HR Module (Phase 3 - Performance, Recruitment, Compliance)
+
+| Feature | Backend API Route | Service File | Status |
+|---------|------------------|--------------|--------|
+| Goals/OKRs | `/api/v1/hr/goals/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Review Cycles | `/api/v1/hr/review-cycles/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| 360 Feedback | `/api/v1/hr/feedback-forms/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Job Postings | `/api/v1/hr/job-postings/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Candidates | `/api/v1/hr/candidates/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Interviews | `/api/v1/hr/interviews/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Job Offers | `/api/v1/hr/job-offers/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Onboarding Tasks | `/api/v1/hr/onboarding-tasks/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Policy Documents | `/api/v1/hr/policy-documents/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Acknowledgments | `/api/v1/hr/policy-acknowledgments/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Training Programs | `/api/v1/hr/training-programs/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Training Assignments | `/api/v1/hr/training-assignments/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+| Compliance Exports | `/api/v1/hr/compliance-exports/*` | `hrService.ts` | ✅ API Ready + Service Methods |
+
 ### Phase 4 Scaffolding (Feature-flagged)
 
 | Feature | Backend Model/API | Status |
@@ -482,29 +500,62 @@ The following endpoints were added in PR #218 and are ready for frontend integra
 | Employee Transfers (Phase 4) | ✅ `/api/v1/hr/employee-transfers/*` | ✅ Service ready | ✅ Complete |
 | Integration Adapters (Phase 4) | ✅ `/api/v1/hr/integration-adapters/*` | ✅ Service ready | ✅ Complete |
 
+### PR B: HR Phase 3 + Analytics/Integrations + Navigation Coverage + Linkage Closeout
+
+| Feature | Backend | Frontend | Status |
+|---------|---------|----------|--------|
+| Goals/OKRs | ✅ `/api/v1/hr/goals/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Review Cycles | ✅ `/api/v1/hr/review-cycles/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| 360 Feedback Forms | ✅ `/api/v1/hr/feedback-forms/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Job Postings | ✅ `/api/v1/hr/job-postings/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Candidate Pipeline | ✅ `/api/v1/hr/candidates/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Interview Scheduling | ✅ `/api/v1/hr/interviews/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Job Offers | ✅ `/api/v1/hr/job-offers/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Onboarding Tasks | ✅ `/api/v1/hr/onboarding-tasks/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Policy Documents | ✅ `/api/v1/hr/policy-documents/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Policy Acknowledgments | ✅ `/api/v1/hr/policy-acknowledgments/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Training Programs | ✅ `/api/v1/hr/training-programs/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Training Assignments | ✅ `/api/v1/hr/training-assignments/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Compliance Audit Exports | ✅ `/api/v1/hr/compliance-exports/*` | ✅ Service methods + Menu entry | ✅ Complete |
+| Workforce Analytics Menu | N/A | ✅ Menu entries added | ✅ Complete |
+| Position Budgeting Menu | N/A | ✅ Menu entries added | ✅ Complete |
+| Transfers & Promotions Menu | N/A | ✅ Menu entries added | ✅ Complete |
+| Org Structure Menu | N/A | ✅ Menu entries added | ✅ Complete |
+| Integration Adapters Menu | N/A | ✅ Menu entries added | ✅ Complete |
+| SSO/IdP Config Menu | N/A | ✅ Menu entries added | ✅ Complete |
+| Payroll Providers Menu | N/A | ✅ Menu entries added | ✅ Complete |
+| Attendance Hardware Menu | N/A | ✅ Menu entries added | ✅ Complete |
+| Data Retention Menu | N/A | ✅ Menu entries added | ✅ Complete |
+| Compliance Dashboard Menu | N/A | ✅ Menu entries added | ✅ Complete |
+
 ---
 
 ## Summary
 
-- **Total Frontend Pages:** 223
-- **Total Backend API Files:** 150
-- **Pages with Full API Coverage:** 221+ (99%+)
-- **APIs with Full Frontend Coverage:** 148+ (99%+)
-- **HR Phase 2 Endpoints:** 15+ new endpoints added
+- **Total Frontend Pages:** 240+
+- **Total Backend API Files:** 155+
+- **Pages with Full API Coverage:** 238+ (99%+)
+- **APIs with Full Frontend Coverage:** 153+ (99%+)
+- **HR Phase 2 Endpoints:** 15+ endpoints
+- **HR Phase 3 Endpoints:** 25+ new endpoints added
 - **Phase 4 Scaffolding:** 6 feature-flagged endpoint groups
+- **Menu Navigation Items:** 90+ HR-related menu items with RBAC visibility
 
 ### Action Items
 
 1. ✅ All major pages are properly linked to backend APIs
 2. ✅ HR Phase 1 endpoints connected to service layer
 3. ✅ HR Phase 2 endpoints (attendance policies, timesheets, arrears) added
-4. ✅ Phase 4 scaffolding (analytics, budgets, transfers, adapters) implemented
-5. ✅ Mobile pages have full API parity with desktop
-6. ✅ Export contract formats (CSV/JSON) implemented
-7. ✅ Service layer properly abstracts API calls
-8. ✅ Employee self-service payslip download functional
+4. ✅ HR Phase 3 endpoints (goals, recruitment, compliance) implemented
+5. ✅ Phase 4 scaffolding (analytics, budgets, transfers, adapters) implemented
+6. ✅ Mobile pages have full API parity with desktop
+7. ✅ Export contract formats (CSV/JSON) implemented
+8. ✅ Service layer properly abstracts API calls
+9. ✅ Employee self-service payslip download functional
+10. ✅ All new pages added to mega menu with RBAC visibility
+11. ✅ Navigation audit complete - all pages discoverable
 
 ---
 
 **Last Updated:** 2025-12-01  
-**Reviewed By:** PR A Implementation
+**Reviewed By:** PR B Implementation

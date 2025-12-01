@@ -863,7 +863,6 @@ class HRService {
       throw error;
     }
   }
-}
 
   // ==========================================================================
   // HR Phase 2 Methods - Attendance Policies, Leave Balances, Timesheets
@@ -1235,6 +1234,662 @@ class HRService {
       return response.data;
     } catch (error) {
       console.error("Error exporting leave data:", error);
+      throw error;
+    }
+  }
+
+  // ==========================================================================
+  // HR Phase 3 Methods - Goals/OKRs, Review Cycles, 360 Feedback
+  // ==========================================================================
+
+  /**
+   * Get goals
+   */
+  async getGoals(
+    employeeId?: number,
+    goalType?: string,
+    status?: string,
+    reviewCycleId?: number,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (employeeId !== undefined) params.employee_id = employeeId;
+      if (goalType) params.goal_type = goalType;
+      if (status) params.status = status;
+      if (reviewCycleId !== undefined) params.review_cycle_id = reviewCycleId;
+      const response = await api.get(`${this.endpoint}/goals`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching goals:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create goal
+   */
+  async createGoal(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/goals`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating goal:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update goal
+   */
+  async updateGoal(goalId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/goals/${goalId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating goal:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete goal
+   */
+  async deleteGoal(goalId: number): Promise<void> {
+    try {
+      await api.delete(`${this.endpoint}/goals/${goalId}`);
+    } catch (error) {
+      console.error("Error deleting goal:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get review cycles
+   */
+  async getReviewCycles(
+    status?: string,
+    cycleType?: string,
+    isActive?: boolean
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = {};
+      if (status) params.status = status;
+      if (cycleType) params.cycle_type = cycleType;
+      if (isActive !== undefined) params.is_active = isActive;
+      const response = await api.get(`${this.endpoint}/review-cycles`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching review cycles:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create review cycle
+   */
+  async createReviewCycle(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/review-cycles`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating review cycle:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update review cycle
+   */
+  async updateReviewCycle(cycleId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/review-cycles/${cycleId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating review cycle:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get feedback forms
+   */
+  async getFeedbackForms(
+    isTemplate?: boolean,
+    feedbackType?: string,
+    revieweeId?: number,
+    reviewCycleId?: number,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (isTemplate !== undefined) params.is_template = isTemplate;
+      if (feedbackType) params.feedback_type = feedbackType;
+      if (revieweeId !== undefined) params.reviewee_id = revieweeId;
+      if (reviewCycleId !== undefined) params.review_cycle_id = reviewCycleId;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/feedback-forms`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching feedback forms:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create feedback form
+   */
+  async createFeedbackForm(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/feedback-forms`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating feedback form:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update feedback form
+   */
+  async updateFeedbackForm(formId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/feedback-forms/${formId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating feedback form:", error);
+      throw error;
+    }
+  }
+
+  // ==========================================================================
+  // Recruitment Methods
+  // ==========================================================================
+
+  /**
+   * Get job postings
+   */
+  async getJobPostings(
+    status?: string,
+    departmentId?: number,
+    employmentType?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (status) params.status = status;
+      if (departmentId !== undefined) params.department_id = departmentId;
+      if (employmentType) params.employment_type = employmentType;
+      const response = await api.get(`${this.endpoint}/job-postings`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching job postings:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create job posting
+   */
+  async createJobPosting(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/job-postings`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating job posting:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update job posting
+   */
+  async updateJobPosting(postingId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/job-postings/${postingId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating job posting:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get candidates
+   */
+  async getCandidates(
+    jobPostingId?: number,
+    stage?: string,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (jobPostingId !== undefined) params.job_posting_id = jobPostingId;
+      if (stage) params.stage = stage;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/candidates`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching candidates:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create candidate
+   */
+  async createCandidate(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/candidates`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating candidate:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update candidate
+   */
+  async updateCandidate(candidateId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/candidates/${candidateId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating candidate:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update candidate stage (Kanban)
+   */
+  async updateCandidateStage(candidateId: number, stage: string): Promise<{ message: string }> {
+    try {
+      const response = await api.put(`${this.endpoint}/candidates/${candidateId}/stage`, null, {
+        params: { stage }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error updating candidate stage:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get interviews
+   */
+  async getInterviews(
+    candidateId?: number,
+    status?: string,
+    scheduledDate?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (candidateId !== undefined) params.candidate_id = candidateId;
+      if (status) params.status = status;
+      if (scheduledDate) params.scheduled_date = scheduledDate;
+      const response = await api.get(`${this.endpoint}/interviews`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching interviews:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create interview
+   */
+  async createInterview(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/interviews`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating interview:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update interview
+   */
+  async updateInterview(interviewId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/interviews/${interviewId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating interview:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get job offers
+   */
+  async getJobOffers(
+    candidateId?: number,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (candidateId !== undefined) params.candidate_id = candidateId;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/job-offers`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching job offers:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create job offer
+   */
+  async createJobOffer(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/job-offers`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating job offer:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update job offer
+   */
+  async updateJobOffer(offerId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/job-offers/${offerId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating job offer:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get onboarding tasks
+   */
+  async getOnboardingTasks(
+    employeeId?: number,
+    isTemplate?: boolean,
+    status?: string,
+    category?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (employeeId !== undefined) params.employee_id = employeeId;
+      if (isTemplate !== undefined) params.is_template = isTemplate;
+      if (status) params.status = status;
+      if (category) params.category = category;
+      const response = await api.get(`${this.endpoint}/onboarding-tasks`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching onboarding tasks:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create onboarding task
+   */
+  async createOnboardingTask(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/onboarding-tasks`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating onboarding task:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update onboarding task
+   */
+  async updateOnboardingTask(taskId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/onboarding-tasks/${taskId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating onboarding task:", error);
+      throw error;
+    }
+  }
+
+  // ==========================================================================
+  // Compliance & Policies Methods
+  // ==========================================================================
+
+  /**
+   * Get policy documents
+   */
+  async getPolicyDocuments(
+    category?: string,
+    status?: string,
+    isActive?: boolean,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (category) params.category = category;
+      if (status) params.status = status;
+      if (isActive !== undefined) params.is_active = isActive;
+      const response = await api.get(`${this.endpoint}/policy-documents`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching policy documents:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create policy document
+   */
+  async createPolicyDocument(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/policy-documents`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating policy document:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update policy document
+   */
+  async updatePolicyDocument(documentId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/policy-documents/${documentId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating policy document:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get policy acknowledgments
+   */
+  async getPolicyAcknowledgments(
+    policyDocumentId?: number,
+    employeeId?: number,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (policyDocumentId !== undefined) params.policy_document_id = policyDocumentId;
+      if (employeeId !== undefined) params.employee_id = employeeId;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/policy-acknowledgments`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching policy acknowledgments:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Acknowledge policy
+   */
+  async acknowledgePolicy(ackId: number, ipAddress?: string): Promise<{ message: string }> {
+    try {
+      const response = await api.put(`${this.endpoint}/policy-acknowledgments/${ackId}/acknowledge`, null, {
+        params: ipAddress ? { ip_address: ipAddress } : {}
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error acknowledging policy:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get training programs
+   */
+  async getTrainingPrograms(
+    category?: string,
+    trainingType?: string,
+    isMandatory?: boolean,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (category) params.category = category;
+      if (trainingType) params.training_type = trainingType;
+      if (isMandatory !== undefined) params.is_mandatory = isMandatory;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/training-programs`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching training programs:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create training program
+   */
+  async createTrainingProgram(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/training-programs`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating training program:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update training program
+   */
+  async updateTrainingProgram(programId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/training-programs/${programId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating training program:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get training assignments
+   */
+  async getTrainingAssignments(
+    employeeId?: number,
+    trainingProgramId?: number,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (employeeId !== undefined) params.employee_id = employeeId;
+      if (trainingProgramId !== undefined) params.training_program_id = trainingProgramId;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/training-assignments`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching training assignments:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create training assignment
+   */
+  async createTrainingAssignment(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/training-assignments`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating training assignment:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update training assignment
+   */
+  async updateTrainingAssignment(assignmentId: number, data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.put(`${this.endpoint}/training-assignments/${assignmentId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating training assignment:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get compliance exports
+   */
+  async getComplianceExports(
+    exportType?: string,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (exportType) params.export_type = exportType;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/compliance-exports`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching compliance exports:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create compliance export
+   */
+  async createComplianceExport(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/compliance-exports`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating compliance export:", error);
       throw error;
     }
   }

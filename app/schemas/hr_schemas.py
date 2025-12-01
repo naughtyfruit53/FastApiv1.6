@@ -954,3 +954,734 @@ class ExportResult(BaseModel):
     record_count: int = 0
     file_size_bytes: int = 0
     error_message: Optional[str] = None
+
+
+# =============================================================================
+# HR Phase 3 Schemas - Goals/OKRs, Review Cycles, 360 Feedback
+# =============================================================================
+
+# Goal Schemas
+class GoalBase(BaseModel):
+    title: str = Field(..., description="Goal title")
+    description: Optional[str] = None
+    goal_type: str = Field(default="individual", description="Type: individual, team, department, company")
+    category: Optional[str] = None
+    is_okr: bool = Field(default=False)
+    parent_goal_id: Optional[int] = None
+    key_results: Optional[Dict[str, Any]] = None
+    start_date: SkipValidation[date] = Field(..., description="Goal start date")
+    end_date: SkipValidation[date] = Field(..., description="Goal end date")
+    review_cycle_id: Optional[int] = None
+    progress_percentage: Decimal = Field(default=Decimal("0"))
+    status: str = Field(default="not_started")
+    priority: str = Field(default="medium")
+    weight: Decimal = Field(default=Decimal("1.0"))
+    score: Optional[Decimal] = None
+    aligned_to_company_goal: Optional[str] = None
+    is_private: bool = Field(default=False)
+    shared_with: Optional[Dict[str, Any]] = None
+
+
+class GoalCreate(GoalBase):
+    employee_id: int = Field(..., description="Reference to EmployeeProfile")
+
+
+class GoalUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    goal_type: Optional[str] = None
+    category: Optional[str] = None
+    key_results: Optional[Dict[str, Any]] = None
+    start_date: Optional[SkipValidation[date]] = None
+    end_date: Optional[SkipValidation[date]] = None
+    progress_percentage: Optional[Decimal] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    weight: Optional[Decimal] = None
+    score: Optional[Decimal] = None
+    is_private: Optional[bool] = None
+    shared_with: Optional[Dict[str, Any]] = None
+
+
+class GoalResponse(GoalBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    employee_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+
+
+# Review Cycle Schemas
+class ReviewCycleBase(BaseModel):
+    name: str = Field(..., description="Review cycle name")
+    description: Optional[str] = None
+    cycle_type: str = Field(..., description="Type: annual, semi_annual, quarterly, monthly, probation")
+    start_date: SkipValidation[date] = Field(..., description="Cycle start date")
+    end_date: SkipValidation[date] = Field(..., description="Cycle end date")
+    self_review_start: Optional[SkipValidation[date]] = None
+    self_review_end: Optional[SkipValidation[date]] = None
+    manager_review_start: Optional[SkipValidation[date]] = None
+    manager_review_end: Optional[SkipValidation[date]] = None
+    peer_review_start: Optional[SkipValidation[date]] = None
+    peer_review_end: Optional[SkipValidation[date]] = None
+    calibration_start: Optional[SkipValidation[date]] = None
+    calibration_end: Optional[SkipValidation[date]] = None
+    include_goals: bool = Field(default=True)
+    include_competencies: bool = Field(default=True)
+    include_360_feedback: bool = Field(default=False)
+    allow_self_review: bool = Field(default=True)
+    require_manager_approval: bool = Field(default=True)
+    rating_scale: Optional[Dict[str, Any]] = None
+    applicable_departments: Optional[Dict[str, Any]] = None
+    applicable_positions: Optional[Dict[str, Any]] = None
+    status: str = Field(default="draft")
+    is_active: bool = Field(default=True)
+
+
+class ReviewCycleCreate(ReviewCycleBase):
+    pass
+
+
+class ReviewCycleUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    cycle_type: Optional[str] = None
+    start_date: Optional[SkipValidation[date]] = None
+    end_date: Optional[SkipValidation[date]] = None
+    self_review_start: Optional[SkipValidation[date]] = None
+    self_review_end: Optional[SkipValidation[date]] = None
+    manager_review_start: Optional[SkipValidation[date]] = None
+    manager_review_end: Optional[SkipValidation[date]] = None
+    peer_review_start: Optional[SkipValidation[date]] = None
+    peer_review_end: Optional[SkipValidation[date]] = None
+    calibration_start: Optional[SkipValidation[date]] = None
+    calibration_end: Optional[SkipValidation[date]] = None
+    include_goals: Optional[bool] = None
+    include_competencies: Optional[bool] = None
+    include_360_feedback: Optional[bool] = None
+    allow_self_review: Optional[bool] = None
+    require_manager_approval: Optional[bool] = None
+    rating_scale: Optional[Dict[str, Any]] = None
+    applicable_departments: Optional[Dict[str, Any]] = None
+    applicable_positions: Optional[Dict[str, Any]] = None
+    status: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ReviewCycleResponse(ReviewCycleBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+
+
+# Feedback Form Schemas
+class FeedbackFormBase(BaseModel):
+    name: str = Field(..., description="Feedback form name")
+    description: Optional[str] = None
+    feedback_type: str = Field(..., description="Type: self, manager, peer, subordinate, external")
+    is_template: bool = Field(default=False)
+    template_id: Optional[int] = None
+    review_cycle_id: Optional[int] = None
+    questions: Optional[Dict[str, Any]] = None
+    responses: Optional[Dict[str, Any]] = None
+    overall_score: Optional[Decimal] = None
+    category_scores: Optional[Dict[str, Any]] = None
+    is_anonymous: bool = Field(default=False)
+    status: str = Field(default="pending")
+    due_date: Optional[SkipValidation[date]] = None
+
+
+class FeedbackFormCreate(FeedbackFormBase):
+    reviewee_id: Optional[int] = None
+    reviewer_id: Optional[int] = None
+
+
+class FeedbackFormUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    feedback_type: Optional[str] = None
+    questions: Optional[Dict[str, Any]] = None
+    responses: Optional[Dict[str, Any]] = None
+    overall_score: Optional[Decimal] = None
+    category_scores: Optional[Dict[str, Any]] = None
+    status: Optional[str] = None
+    due_date: Optional[SkipValidation[date]] = None
+
+
+class FeedbackFormResponse(FeedbackFormBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    reviewee_id: Optional[int] = None
+    reviewer_id: Optional[int] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+# =============================================================================
+# Recruitment Schemas
+# =============================================================================
+
+# Job Posting Schemas
+class JobPostingBase(BaseModel):
+    title: str = Field(..., description="Job title")
+    job_code: str = Field(..., description="Unique job code")
+    description: str = Field(..., description="Job description")
+    requirements: Optional[str] = None
+    responsibilities: Optional[str] = None
+    position_id: Optional[int] = None
+    department_id: Optional[int] = None
+    employment_type: str = Field(default="full_time")
+    experience_level: str = Field(default="mid")
+    location: Optional[str] = None
+    is_remote: bool = Field(default=False)
+    work_mode: str = Field(default="onsite")
+    salary_min: Optional[Decimal] = None
+    salary_max: Optional[Decimal] = None
+    salary_currency: str = Field(default="INR")
+    show_salary: bool = Field(default=False)
+    num_openings: int = Field(default=1)
+    hiring_manager_id: Optional[int] = None
+    recruiter_id: Optional[int] = None
+    posted_date: Optional[SkipValidation[date]] = None
+    closing_date: Optional[SkipValidation[date]] = None
+    target_hire_date: Optional[SkipValidation[date]] = None
+    status: str = Field(default="draft")
+    is_internal: bool = Field(default=False)
+    is_confidential: bool = Field(default=False)
+    application_form_config: Optional[Dict[str, Any]] = None
+    required_documents: Optional[Dict[str, Any]] = None
+    required_skills: Optional[Dict[str, Any]] = None
+    preferred_skills: Optional[Dict[str, Any]] = None
+    qualifications: Optional[Dict[str, Any]] = None
+
+
+class JobPostingCreate(JobPostingBase):
+    pass
+
+
+class JobPostingUpdate(BaseModel):
+    title: Optional[str] = None
+    job_code: Optional[str] = None
+    description: Optional[str] = None
+    requirements: Optional[str] = None
+    responsibilities: Optional[str] = None
+    position_id: Optional[int] = None
+    department_id: Optional[int] = None
+    employment_type: Optional[str] = None
+    experience_level: Optional[str] = None
+    location: Optional[str] = None
+    is_remote: Optional[bool] = None
+    work_mode: Optional[str] = None
+    salary_min: Optional[Decimal] = None
+    salary_max: Optional[Decimal] = None
+    show_salary: Optional[bool] = None
+    num_openings: Optional[int] = None
+    hiring_manager_id: Optional[int] = None
+    recruiter_id: Optional[int] = None
+    posted_date: Optional[SkipValidation[date]] = None
+    closing_date: Optional[SkipValidation[date]] = None
+    target_hire_date: Optional[SkipValidation[date]] = None
+    status: Optional[str] = None
+    is_internal: Optional[bool] = None
+    is_confidential: Optional[bool] = None
+    required_skills: Optional[Dict[str, Any]] = None
+    preferred_skills: Optional[Dict[str, Any]] = None
+    qualifications: Optional[Dict[str, Any]] = None
+
+
+class JobPostingResponse(JobPostingBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+
+
+# Candidate Schemas
+class CandidateBase(BaseModel):
+    first_name: str = Field(..., description="First name")
+    last_name: str = Field(..., description="Last name")
+    email: str = Field(..., description="Email address")
+    phone: Optional[str] = None
+    source: Optional[str] = None
+    referral_employee_id: Optional[int] = None
+    experience_years: Optional[Decimal] = None
+    current_company: Optional[str] = None
+    current_title: Optional[str] = None
+    current_salary: Optional[Decimal] = None
+    expected_salary: Optional[Decimal] = None
+    notice_period_days: Optional[int] = None
+    available_from: Optional[SkipValidation[date]] = None
+    skills: Optional[Dict[str, Any]] = None
+    education: Optional[Dict[str, Any]] = None
+    certifications: Optional[Dict[str, Any]] = None
+    stage: str = Field(default="new")
+    overall_rating: Optional[Decimal] = None
+    notes: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    assigned_recruiter_id: Optional[int] = None
+    status: str = Field(default="active")
+
+
+class CandidateCreate(CandidateBase):
+    job_posting_id: int = Field(..., description="Reference to JobPosting")
+
+
+class CandidateUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    experience_years: Optional[Decimal] = None
+    current_company: Optional[str] = None
+    current_title: Optional[str] = None
+    current_salary: Optional[Decimal] = None
+    expected_salary: Optional[Decimal] = None
+    notice_period_days: Optional[int] = None
+    available_from: Optional[SkipValidation[date]] = None
+    skills: Optional[Dict[str, Any]] = None
+    education: Optional[Dict[str, Any]] = None
+    certifications: Optional[Dict[str, Any]] = None
+    stage: Optional[str] = None
+    overall_rating: Optional[Decimal] = None
+    notes: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    assigned_recruiter_id: Optional[int] = None
+    status: Optional[str] = None
+
+
+class CandidateResponse(CandidateBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    job_posting_id: int
+    resume_path: Optional[str] = None
+    cover_letter_path: Optional[str] = None
+    documents: Optional[Dict[str, Any]] = None
+    application_date: datetime
+    stage_updated_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+# Interview Schemas
+class InterviewBase(BaseModel):
+    interview_type: str = Field(..., description="Type: phone, video, in_person, technical, hr, panel")
+    round_number: int = Field(default=1)
+    title: str = Field(..., description="Interview title")
+    description: Optional[str] = None
+    scheduled_date: SkipValidation[date] = Field(..., description="Interview date")
+    scheduled_time: time = Field(..., description="Interview time")
+    duration_minutes: int = Field(default=60)
+    timezone: str = Field(default="Asia/Kolkata")
+    location: Optional[str] = None
+    meeting_link: Optional[str] = None
+    meeting_id: Optional[str] = None
+    interviewers: Optional[Dict[str, Any]] = None
+    primary_interviewer_id: Optional[int] = None
+    feedback: Optional[Dict[str, Any]] = None
+    overall_rating: Optional[Decimal] = None
+    recommendation: Optional[str] = None
+    status: str = Field(default="scheduled")
+    candidate_confirmed: bool = Field(default=False)
+    calendar_event_id: Optional[str] = None
+
+
+class InterviewCreate(InterviewBase):
+    candidate_id: int = Field(..., description="Reference to Candidate")
+
+
+class InterviewUpdate(BaseModel):
+    interview_type: Optional[str] = None
+    round_number: Optional[int] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    scheduled_date: Optional[SkipValidation[date]] = None
+    scheduled_time: Optional[time] = None
+    duration_minutes: Optional[int] = None
+    location: Optional[str] = None
+    meeting_link: Optional[str] = None
+    interviewers: Optional[Dict[str, Any]] = None
+    primary_interviewer_id: Optional[int] = None
+    feedback: Optional[Dict[str, Any]] = None
+    overall_rating: Optional[Decimal] = None
+    recommendation: Optional[str] = None
+    status: Optional[str] = None
+    candidate_confirmed: Optional[bool] = None
+
+
+class InterviewResponse(InterviewBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    candidate_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+
+
+# Job Offer Schemas
+class JobOfferBase(BaseModel):
+    offer_number: str = Field(..., description="Unique offer number")
+    position_title: str = Field(..., description="Position title")
+    department_id: Optional[int] = None
+    reporting_to_id: Optional[int] = None
+    base_salary: Decimal = Field(..., description="Base salary")
+    salary_currency: str = Field(default="INR")
+    variable_pay: Optional[Decimal] = None
+    signing_bonus: Optional[Decimal] = None
+    other_benefits: Optional[Dict[str, Any]] = None
+    employment_type: str = Field(..., description="Employment type")
+    work_location: Optional[str] = None
+    work_mode: str = Field(default="onsite")
+    probation_months: int = Field(default=6)
+    notice_period_days: int = Field(default=30)
+    offer_date: SkipValidation[date] = Field(..., description="Offer date")
+    expiry_date: SkipValidation[date] = Field(..., description="Offer expiry date")
+    proposed_join_date: SkipValidation[date] = Field(..., description="Proposed join date")
+    actual_join_date: Optional[SkipValidation[date]] = None
+    status: str = Field(default="draft")
+    rejection_reason: Optional[str] = None
+
+
+class JobOfferCreate(JobOfferBase):
+    candidate_id: int = Field(..., description="Reference to Candidate")
+    job_posting_id: int = Field(..., description="Reference to JobPosting")
+
+
+class JobOfferUpdate(BaseModel):
+    position_title: Optional[str] = None
+    department_id: Optional[int] = None
+    reporting_to_id: Optional[int] = None
+    base_salary: Optional[Decimal] = None
+    variable_pay: Optional[Decimal] = None
+    signing_bonus: Optional[Decimal] = None
+    other_benefits: Optional[Dict[str, Any]] = None
+    work_location: Optional[str] = None
+    work_mode: Optional[str] = None
+    probation_months: Optional[int] = None
+    notice_period_days: Optional[int] = None
+    expiry_date: Optional[SkipValidation[date]] = None
+    proposed_join_date: Optional[SkipValidation[date]] = None
+    actual_join_date: Optional[SkipValidation[date]] = None
+    status: Optional[str] = None
+    rejection_reason: Optional[str] = None
+
+
+class JobOfferResponse(JobOfferBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    candidate_id: int
+    job_posting_id: int
+    offer_letter_path: Optional[str] = None
+    signed_letter_path: Optional[str] = None
+    candidate_response_date: Optional[datetime] = None
+    approved_by_id: Optional[int] = None
+    approved_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+
+
+# Onboarding Task Schemas
+class OnboardingTaskBase(BaseModel):
+    title: str = Field(..., description="Task title")
+    description: Optional[str] = None
+    category: str = Field(default="general")
+    is_template: bool = Field(default=False)
+    template_id: Optional[int] = None
+    due_days_from_joining: int = Field(default=7)
+    due_date: Optional[SkipValidation[date]] = None
+    completed_date: Optional[SkipValidation[date]] = None
+    sequence_order: int = Field(default=0)
+    depends_on_task_id: Optional[int] = None
+    status: str = Field(default="pending")
+    is_mandatory: bool = Field(default=True)
+    checklist: Optional[Dict[str, Any]] = None
+    notes: Optional[str] = None
+
+
+class OnboardingTaskCreate(OnboardingTaskBase):
+    employee_id: Optional[int] = None
+    assignee_id: Optional[int] = None
+
+
+class OnboardingTaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    due_date: Optional[SkipValidation[date]] = None
+    completed_date: Optional[SkipValidation[date]] = None
+    sequence_order: Optional[int] = None
+    status: Optional[str] = None
+    checklist: Optional[Dict[str, Any]] = None
+    notes: Optional[str] = None
+    assignee_id: Optional[int] = None
+
+
+class OnboardingTaskResponse(OnboardingTaskBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    employee_id: Optional[int] = None
+    assignee_id: Optional[int] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+
+
+# =============================================================================
+# Compliance & Policies Schemas
+# =============================================================================
+
+# Policy Document Schemas
+class PolicyDocumentBase(BaseModel):
+    title: str = Field(..., description="Policy title")
+    code: str = Field(..., description="Policy code")
+    description: Optional[str] = None
+    category: str = Field(..., description="Category: hr, it, security, compliance, general")
+    version: str = Field(default="1.0")
+    effective_date: SkipValidation[date] = Field(..., description="Effective date")
+    review_date: Optional[SkipValidation[date]] = None
+    content: Optional[str] = None
+    applicable_to: str = Field(default="all")
+    applicable_departments: Optional[Dict[str, Any]] = None
+    applicable_positions: Optional[Dict[str, Any]] = None
+    requires_acknowledgment: bool = Field(default=True)
+    acknowledgment_deadline_days: int = Field(default=7)
+    re_acknowledgment_period_months: Optional[int] = None
+    status: str = Field(default="draft")
+    is_active: bool = Field(default=True)
+
+
+class PolicyDocumentCreate(PolicyDocumentBase):
+    pass
+
+
+class PolicyDocumentUpdate(BaseModel):
+    title: Optional[str] = None
+    code: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    version: Optional[str] = None
+    effective_date: Optional[SkipValidation[date]] = None
+    review_date: Optional[SkipValidation[date]] = None
+    content: Optional[str] = None
+    applicable_to: Optional[str] = None
+    applicable_departments: Optional[Dict[str, Any]] = None
+    applicable_positions: Optional[Dict[str, Any]] = None
+    requires_acknowledgment: Optional[bool] = None
+    acknowledgment_deadline_days: Optional[int] = None
+    re_acknowledgment_period_months: Optional[int] = None
+    status: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class PolicyDocumentResponse(PolicyDocumentBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    file_path: Optional[str] = None
+    file_type: Optional[str] = None
+    published_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+
+
+# Policy Acknowledgment Schemas
+class PolicyAcknowledgmentBase(BaseModel):
+    acknowledged_version: str = Field(..., description="Version being acknowledged")
+    due_date: SkipValidation[date] = Field(..., description="Acknowledgment due date")
+    status: str = Field(default="pending")
+    notes: Optional[str] = None
+
+
+class PolicyAcknowledgmentCreate(PolicyAcknowledgmentBase):
+    policy_document_id: int = Field(..., description="Reference to PolicyDocument")
+    employee_id: int = Field(..., description="Reference to EmployeeProfile")
+
+
+class PolicyAcknowledgmentUpdate(BaseModel):
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class PolicyAcknowledgmentResponse(PolicyAcknowledgmentBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    policy_document_id: int
+    employee_id: int
+    acknowledged_at: Optional[datetime] = None
+    ip_address: Optional[str] = None
+    digital_signature: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+# Training Program Schemas
+class TrainingProgramBase(BaseModel):
+    title: str = Field(..., description="Training title")
+    code: str = Field(..., description="Training code")
+    description: Optional[str] = None
+    category: str = Field(..., description="Category: compliance, technical, soft_skills, leadership, safety")
+    training_type: str = Field(default="online")
+    duration_hours: Optional[Decimal] = None
+    content_url: Optional[str] = None
+    materials: Optional[Dict[str, Any]] = None
+    provider: Optional[str] = None
+    instructor: Optional[str] = None
+    scheduled_date: Optional[SkipValidation[date]] = None
+    scheduled_time: Optional[time] = None
+    location: Optional[str] = None
+    max_participants: Optional[int] = None
+    is_mandatory: bool = Field(default=False)
+    applicable_to: str = Field(default="all")
+    applicable_departments: Optional[Dict[str, Any]] = None
+    applicable_positions: Optional[Dict[str, Any]] = None
+    provides_certificate: bool = Field(default=False)
+    certificate_validity_months: Optional[int] = None
+    passing_score: Optional[int] = None
+    requires_assessment: bool = Field(default=False)
+    status: str = Field(default="draft")
+    is_active: bool = Field(default=True)
+
+
+class TrainingProgramCreate(TrainingProgramBase):
+    pass
+
+
+class TrainingProgramUpdate(BaseModel):
+    title: Optional[str] = None
+    code: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    training_type: Optional[str] = None
+    duration_hours: Optional[Decimal] = None
+    content_url: Optional[str] = None
+    materials: Optional[Dict[str, Any]] = None
+    provider: Optional[str] = None
+    instructor: Optional[str] = None
+    scheduled_date: Optional[SkipValidation[date]] = None
+    scheduled_time: Optional[time] = None
+    location: Optional[str] = None
+    max_participants: Optional[int] = None
+    is_mandatory: Optional[bool] = None
+    applicable_to: Optional[str] = None
+    applicable_departments: Optional[Dict[str, Any]] = None
+    applicable_positions: Optional[Dict[str, Any]] = None
+    provides_certificate: Optional[bool] = None
+    certificate_validity_months: Optional[int] = None
+    passing_score: Optional[int] = None
+    requires_assessment: Optional[bool] = None
+    status: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class TrainingProgramResponse(TrainingProgramBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by_id: Optional[int] = None
+
+
+# Training Assignment Schemas
+class TrainingAssignmentBase(BaseModel):
+    assigned_date: SkipValidation[date] = Field(..., description="Assignment date")
+    due_date: SkipValidation[date] = Field(..., description="Due date")
+    status: str = Field(default="assigned")
+    progress_percentage: Decimal = Field(default=Decimal("0"))
+    assessment_score: Optional[int] = None
+    assessment_attempts: int = Field(default=0)
+    passed: Optional[bool] = None
+    certificate_issued: bool = Field(default=False)
+    certificate_expiry: Optional[SkipValidation[date]] = None
+    notes: Optional[str] = None
+    exemption_reason: Optional[str] = None
+
+
+class TrainingAssignmentCreate(TrainingAssignmentBase):
+    training_program_id: int = Field(..., description="Reference to TrainingProgram")
+    employee_id: int = Field(..., description="Reference to EmployeeProfile")
+    assigned_by_id: Optional[int] = None
+
+
+class TrainingAssignmentUpdate(BaseModel):
+    due_date: Optional[SkipValidation[date]] = None
+    status: Optional[str] = None
+    progress_percentage: Optional[Decimal] = None
+    assessment_score: Optional[int] = None
+    assessment_attempts: Optional[int] = None
+    passed: Optional[bool] = None
+    certificate_issued: Optional[bool] = None
+    certificate_expiry: Optional[SkipValidation[date]] = None
+    notes: Optional[str] = None
+    exemption_reason: Optional[str] = None
+
+
+class TrainingAssignmentResponse(TrainingAssignmentBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    training_program_id: int
+    employee_id: int
+    assigned_by_id: Optional[int] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    certificate_path: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+# Compliance Audit Export Schemas
+class ComplianceAuditExportBase(BaseModel):
+    export_type: str = Field(..., description="Export type")
+    export_name: str = Field(..., description="Export name")
+    description: Optional[str] = None
+    date_from: Optional[SkipValidation[date]] = None
+    date_to: Optional[SkipValidation[date]] = None
+    filters: Optional[Dict[str, Any]] = None
+    file_format: str = Field(default="csv")
+
+
+class ComplianceAuditExportCreate(ComplianceAuditExportBase):
+    pass
+
+
+class ComplianceAuditExportResponse(ComplianceAuditExportBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    file_path: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    record_count: int
+    status: str
+    error_message: Optional[str] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+    created_by_id: int

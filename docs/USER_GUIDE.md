@@ -481,6 +481,183 @@ The Website Agent allows you to create and manage customer websites from within 
 5. Generate pay slips
 6. Process payments
 
+### Performance Management (Phase 3)
+
+**Goals & OKRs:**
+1. Navigate to **HR** > **Performance Management** > **Goals & OKRs**
+2. Create individual or team goals
+3. Define key results with measurable targets
+4. Track progress over time
+5. Link goals to company objectives
+6. Calculate scores based on achievement
+
+**Review Cycles:**
+1. Go to **HR** > **Performance Management** > **Review Cycles**
+2. Create review cycles (annual, quarterly, etc.)
+3. Set review windows:
+   - Self-review period
+   - Manager review period
+   - Peer review period
+   - Calibration period
+4. Configure rating scales
+5. Track cycle progress and completion
+
+**360 Feedback:**
+1. Navigate to **HR** > **Performance Management** > **360 Feedback**
+2. Create feedback form templates
+3. Assign feedback requests to employees
+4. Collect feedback from:
+   - Self
+   - Manager
+   - Peers
+   - Subordinates
+5. View aggregated feedback scores
+6. Generate feedback reports
+
+### Recruitment (Phase 3)
+
+**Job Postings:**
+1. Go to **HR** > **Recruitment** > **Job Postings**
+2. Create new job posting with:
+   - Position details
+   - Requirements and responsibilities
+   - Salary range
+   - Location and work mode
+3. Publish to internal/external channels
+4. Track applications received
+
+**Candidate Pipeline (Kanban):**
+1. Navigate to **HR** > **Recruitment** > **Candidate Pipeline**
+2. View candidates across stages:
+   - New → Screening → Interview → Assessment → Offer → Hired
+3. Drag and drop candidates between stages
+4. Add notes and ratings
+5. Track time in each stage
+
+**Interview Scheduling:**
+1. Go to **HR** > **Recruitment** > **Interview Scheduling**
+2. Schedule interviews with:
+   - Date, time, and duration
+   - Interview type (phone, video, in-person)
+   - Interviewer assignments
+3. Send calendar invites
+4. Record feedback and recommendations
+5. Track interview outcomes
+
+**Job Offers:**
+1. Navigate to **HR** > **Recruitment** > **Job Offers**
+2. Create offers for selected candidates
+3. Configure compensation details:
+   - Base salary
+   - Variable pay
+   - Signing bonus
+   - Benefits
+4. Set offer expiry and join dates
+5. Track offer status (sent, accepted, rejected)
+6. Generate offer letters
+
+**Onboarding Tasks:**
+1. Go to **HR** > **Employee Management** > **Onboarding Tasks**
+2. Create onboarding task templates
+3. Assign tasks to new hires
+4. Track task completion
+5. Categories include:
+   - Documentation
+   - Equipment setup
+   - Training
+   - Access provisioning
+   - Introductions
+
+### Compliance & Policies (Phase 3)
+
+**Policy Documents:**
+1. Navigate to **HR** > **Compliance & Policies** > **Policy Documents**
+2. Create policy documents with:
+   - Content or uploaded file
+   - Version tracking
+   - Effective date
+3. Set acknowledgment requirements
+4. Distribute to employees
+
+**Acknowledgments:**
+1. Go to **HR** > **Compliance & Policies** > **Acknowledgments**
+2. Track employee acknowledgments
+3. Send reminders for pending acknowledgments
+4. View compliance status
+5. Generate acknowledgment reports
+
+**Training Programs:**
+1. Navigate to **HR** > **Compliance & Policies** > **Training Programs**
+2. Create training programs:
+   - Online, classroom, or workshop
+   - Duration and materials
+   - Assessment criteria
+3. Mark programs as mandatory/optional
+4. Track certificate validity
+
+**Training Assignments:**
+1. Go to **HR** > **Compliance & Policies** > **Training Assignments**
+2. Assign training to employees
+3. Track progress and completion
+4. Record assessment scores
+5. Issue completion certificates
+
+**Audit Exports:**
+1. Navigate to **HR** > **Compliance & Policies** > **Audit Exports**
+2. Generate compliance reports:
+   - Policy acknowledgments
+   - Training compliance
+   - Document records
+3. Export to CSV or PDF
+4. Schedule recurring exports
+
+### HR Analytics & Planning (Phase 4 - Feature Flagged)
+
+**Workforce Analytics:**
+1. Navigate to **HR** > **HR Analytics** > **Workforce Analytics**
+2. View dashboards for:
+   - Attrition rates
+   - Tenure distribution
+   - Headcount trends
+   - Payroll costs
+   - Department KPIs
+
+**Position Budgeting:**
+1. Go to **HR** > **HR Analytics** > **Position Budgeting**
+2. Plan headcount by:
+   - Fiscal year/quarter
+   - Department
+   - Position
+3. Track budget vs actual
+
+**Transfers & Promotions:**
+1. Navigate to **HR** > **HR Analytics** > **Transfers & Promotions**
+2. Record employee movements:
+   - Department transfers
+   - Location changes
+   - Position changes
+   - Promotions
+3. Track salary changes
+4. View movement history
+
+### HR Integrations (Phase 4 - Feature Flagged)
+
+**Integration Adapters:**
+1. Navigate to **HR** > **HR Integrations** > **Integration Adapters**
+2. Configure external integrations:
+   - SSO/Identity Providers
+   - Payroll provider adapters
+   - Attendance hardware contracts
+3. Monitor sync status
+4. View integration logs
+
+**Data Governance:**
+1. Go to **HR** > **Data Governance**
+2. Configure data retention policies
+3. Manage anonymization rules
+4. View compliance dashboards
+5. Export audit trails
+
 ---
 
 ## Reports & Analytics
