@@ -1,3 +1,5 @@
+# app/core/config.py
+
 """
 Application configuration
 """

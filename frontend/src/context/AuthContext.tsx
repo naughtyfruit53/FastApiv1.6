@@ -263,7 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   const fetchUser = async (retryCount = 0) => {
     if (isFetching.current || !isMounted.current) return; // NEW: Prevent concurrent and unmounted fetches
     isFetching.current = true;
-    const maxRetries = 2;
+    const maxRetries = 1; // Reduced to 1 for faster failure
     try {
       const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
       // Validate token format before proceeding
@@ -312,38 +312,47 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         setTimeout(() => fetchUser(retryCount + 1), retryDelay);
         return;
       }
-      // On error, clear sensitive data and force re-auth
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      localStorage.removeItem(USER_ROLE_KEY);
-      localStorage.removeItem(IS_SUPER_ADMIN_KEY);
-      // Preserve refresh_token for potential recovery
-      setUser(null);
-      resetAuthReady();
-      if (error?.userMessage) {
-        toast.error(`Authentication failed: ${error.userMessage}`, {
-          position: "top-right",
-          autoClose: 5000,
-        });
-      } else {
-        toast.error("Failed to establish secure session. Please log in again.", {
-          position: "top-right",
-          autoClose: 5000,
-        });
-      }
-      // Only redirect if not already on login page to prevent loop
-      if (router.pathname !== "/login") {
-        // Save current path as return URL before redirect
-        // NEW: Don't save if pathname includes '404' or invalid
-        if (
-          router.pathname !== '/login' && 
-          !router.pathname.includes('404') && 
-          !sessionStorage.getItem("returnUrlAfterLogin")
-        ) {
-          sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
-        } else if (router.pathname.includes('404')) {
+      // Improved error handling: Don't clear storage on connection/network errors
+      if (error.response) {
+        const status = error.response.status;
+        if (status === 401 || status === 403) {
+          // Auth errors: Clear and redirect
+          localStorage.removeItem(ACCESS_TOKEN_KEY);
+          localStorage.removeItem(REFRESH_TOKEN_KEY);
+          localStorage.removeItem(USER_ROLE_KEY);
+          localStorage.removeItem(IS_SUPER_ADMIN_KEY);
+          setUser(null);
+          resetAuthReady();
+          toast.error(error?.userMessage || "Authentication failed. Please log in again.", {
+            position: "top-right",
+            autoClose: 5000,
+          });
+          if (router.pathname !== "/login") {
+            // Save current path as return URL before redirect
+            // NEW: Don't save if pathname includes '404' or invalid
+            if (
+              router.pathname !== '/login' && 
+              !router.pathname.includes('404') && 
+              !sessionStorage.getItem("returnUrlAfterLogin")
+            ) {
+              sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
+            } else if (router.pathname.includes('404')) {
+            }
+            router.push("/login");
+          }
+        } else {
+          // Server errors (500 etc.): Don't clear token, just notify
+          toast.error(error?.userMessage || "Server error occurred. Please try refreshing the page.", {
+            position: "top-right",
+            autoClose: 5000,
+          });
         }
-        router.push("/login");
+      } else {
+        // Network/connection errors: Don't clear token, allow retry on refresh
+        toast.error("Unable to connect to the server. Please check if the backend is running on port 8000, your network connection, then try refreshing the page.", {
+          position: "top-right",
+          autoClose: 5000,
+        });
       }
     } finally {
       isFetching.current = false;

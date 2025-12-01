@@ -2,7 +2,7 @@
 
 /**
  * Get the base API URL without /api/v1
- * @returns Base URL (e.g., https://localhost:8000)
+ * @returns Base URL (e.g., http://localhost:8000)
  */
 export const getApiBaseUrl = (): string => {
   let baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -29,6 +29,12 @@ export const getApiBaseUrl = (): string => {
     baseUrl = baseUrl.slice(0, -7);
   }
   
+  // Force 'localhost' instead of '127.0.0.1' to avoid resolution issues
+  if (baseUrl.includes('127.0.0.1')) {
+    baseUrl = baseUrl.replace('127.0.0.1', 'localhost');
+    console.warn('[Config] Replaced 127.0.0.1 with localhost to resolve connection issues');
+  }
+  
   // Log for debugging
   if (typeof console !== 'undefined') {
     console.log('[config] Using API base URL:', baseUrl, 'NODE_ENV:', process.env.NODE_ENV);
@@ -39,7 +45,7 @@ export const getApiBaseUrl = (): string => {
 
 /**
  * Get the full API URL with /api/v1
- * @returns Full API URL (e.g., https://localhost:8000/api/v1)
+ * @returns Full API URL (e.g., http://localhost:8000/api/v1)
  */
 export const getApiUrl = (): string => {
   return `${getApiBaseUrl()}/api/v1`;

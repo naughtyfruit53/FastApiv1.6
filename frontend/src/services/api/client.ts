@@ -54,7 +54,7 @@ class ApiClient {
 
     // Configure retry logic for transient failures
     axiosRetry(this.client, {
-      retries: 3,
+      retries: 1, // Reduced to 1 to shorten spinner on connection failures
       retryDelay: axiosRetry.exponentialDelay,
       retryCondition: (error) => {
         // Retry on network errors or 5xx server errors
