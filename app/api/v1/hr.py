@@ -2250,3 +2250,1298 @@ async def export_leave_data(
         record_count=0,
         file_size_bytes=0
     )
+
+
+# ============================================================================
+# HR Phase 3: Performance Management (Goals/OKRs, Review Cycles, 360 Feedback)
+# ============================================================================
+
+from app.models.hr_models import (
+    Goal, ReviewCycle, FeedbackForm,
+    JobPosting, Candidate, Interview, JobOffer, OnboardingTask,
+    PolicyDocument, PolicyAcknowledgment, TrainingProgram, TrainingAssignment,
+    ComplianceAuditExport
+)
+from app.schemas.hr_schemas import (
+    GoalCreate, GoalUpdate, GoalResponse,
+    ReviewCycleCreate, ReviewCycleUpdate, ReviewCycleResponse,
+    FeedbackFormCreate, FeedbackFormUpdate, FeedbackFormResponse,
+    JobPostingCreate, JobPostingUpdate, JobPostingResponse,
+    CandidateCreate, CandidateUpdate, CandidateResponse,
+    InterviewCreate, InterviewUpdate, InterviewResponse,
+    JobOfferCreate, JobOfferUpdate, JobOfferResponse,
+    OnboardingTaskCreate, OnboardingTaskUpdate, OnboardingTaskResponse,
+    PolicyDocumentCreate, PolicyDocumentUpdate, PolicyDocumentResponse,
+    PolicyAcknowledgmentCreate, PolicyAcknowledgmentUpdate, PolicyAcknowledgmentResponse,
+    TrainingProgramCreate, TrainingProgramUpdate, TrainingProgramResponse,
+    TrainingAssignmentCreate, TrainingAssignmentUpdate, TrainingAssignmentResponse,
+    ComplianceAuditExportCreate, ComplianceAuditExportResponse
+)
+
+
+# Goals/OKRs Management
+@router.post("/goals", response_model=GoalResponse)
+async def create_goal(
+    goal_data: GoalCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new goal or OKR"""
+    current_user, org_id = auth
+    
+    goal = Goal(
+        **goal_data.model_dump(),
+        organization_id=org_id,
+        created_by_id=current_user.id
+    )
+    
+    db.add(goal)
+    await db.commit()
+    await db.refresh(goal)
+    
+    return goal
+
+
+@router.get("/goals", response_model=List[GoalResponse])
+async def get_goals(
+    employee_id: Optional[int] = Query(None),
+    goal_type: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    review_cycle_id: Optional[int] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get goals with filtering"""
+    current_user, org_id = auth
+    
+    stmt = select(Goal).where(Goal.organization_id == org_id)
+    
+    if employee_id:
+        stmt = stmt.where(Goal.employee_id == employee_id)
+    if goal_type:
+        stmt = stmt.where(Goal.goal_type == goal_type)
+    if status:
+        stmt = stmt.where(Goal.status == status)
+    if review_cycle_id:
+        stmt = stmt.where(Goal.review_cycle_id == review_cycle_id)
+    
+    stmt = stmt.order_by(desc(Goal.created_at)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.get("/goals/{goal_id}", response_model=GoalResponse)
+async def get_goal(
+    goal_id: int,
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get goal by ID"""
+    current_user, org_id = auth
+    
+    stmt = select(Goal).where(
+        and_(
+            Goal.id == goal_id,
+            Goal.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    goal = result.scalar_one_or_none()
+    
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    return goal
+
+
+@router.put("/goals/{goal_id}", response_model=GoalResponse)
+async def update_goal(
+    goal_id: int,
+    goal_data: GoalUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a goal"""
+    current_user, org_id = auth
+    
+    stmt = select(Goal).where(
+        and_(
+            Goal.id == goal_id,
+            Goal.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    goal = result.scalar_one_or_none()
+    
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    for field, value in goal_data.model_dump(exclude_unset=True).items():
+        setattr(goal, field, value)
+    
+    await db.commit()
+    await db.refresh(goal)
+    
+    return goal
+
+
+@router.delete("/goals/{goal_id}")
+async def delete_goal(
+    goal_id: int,
+    auth: tuple = Depends(require_access("hr", "delete")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a goal"""
+    current_user, org_id = auth
+    
+    stmt = select(Goal).where(
+        and_(
+            Goal.id == goal_id,
+            Goal.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    goal = result.scalar_one_or_none()
+    
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    await db.delete(goal)
+    await db.commit()
+    
+    return {"message": "Goal deleted successfully"}
+
+
+# Review Cycles Management
+@router.post("/review-cycles", response_model=ReviewCycleResponse)
+async def create_review_cycle(
+    cycle_data: ReviewCycleCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new review cycle"""
+    current_user, org_id = auth
+    
+    cycle = ReviewCycle(
+        **cycle_data.model_dump(),
+        organization_id=org_id,
+        created_by_id=current_user.id
+    )
+    
+    db.add(cycle)
+    await db.commit()
+    await db.refresh(cycle)
+    
+    return cycle
+
+
+@router.get("/review-cycles", response_model=List[ReviewCycleResponse])
+async def get_review_cycles(
+    status: Optional[str] = Query(None),
+    cycle_type: Optional[str] = Query(None),
+    is_active: Optional[bool] = Query(None),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get review cycles"""
+    current_user, org_id = auth
+    
+    stmt = select(ReviewCycle).where(ReviewCycle.organization_id == org_id)
+    
+    if status:
+        stmt = stmt.where(ReviewCycle.status == status)
+    if cycle_type:
+        stmt = stmt.where(ReviewCycle.cycle_type == cycle_type)
+    if is_active is not None:
+        stmt = stmt.where(ReviewCycle.is_active == is_active)
+    
+    stmt = stmt.order_by(desc(ReviewCycle.start_date))
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.get("/review-cycles/{cycle_id}", response_model=ReviewCycleResponse)
+async def get_review_cycle(
+    cycle_id: int,
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get review cycle by ID"""
+    current_user, org_id = auth
+    
+    stmt = select(ReviewCycle).where(
+        and_(
+            ReviewCycle.id == cycle_id,
+            ReviewCycle.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    cycle = result.scalar_one_or_none()
+    
+    if not cycle:
+        raise HTTPException(status_code=404, detail="Review cycle not found")
+    
+    return cycle
+
+
+@router.put("/review-cycles/{cycle_id}", response_model=ReviewCycleResponse)
+async def update_review_cycle(
+    cycle_id: int,
+    cycle_data: ReviewCycleUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a review cycle"""
+    current_user, org_id = auth
+    
+    stmt = select(ReviewCycle).where(
+        and_(
+            ReviewCycle.id == cycle_id,
+            ReviewCycle.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    cycle = result.scalar_one_or_none()
+    
+    if not cycle:
+        raise HTTPException(status_code=404, detail="Review cycle not found")
+    
+    for field, value in cycle_data.model_dump(exclude_unset=True).items():
+        setattr(cycle, field, value)
+    
+    await db.commit()
+    await db.refresh(cycle)
+    
+    return cycle
+
+
+# 360 Feedback Forms
+@router.post("/feedback-forms", response_model=FeedbackFormResponse)
+async def create_feedback_form(
+    form_data: FeedbackFormCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a feedback form template or response"""
+    current_user, org_id = auth
+    
+    form = FeedbackForm(
+        **form_data.model_dump(),
+        organization_id=org_id
+    )
+    
+    db.add(form)
+    await db.commit()
+    await db.refresh(form)
+    
+    return form
+
+
+@router.get("/feedback-forms", response_model=List[FeedbackFormResponse])
+async def get_feedback_forms(
+    is_template: Optional[bool] = Query(None),
+    feedback_type: Optional[str] = Query(None),
+    reviewee_id: Optional[int] = Query(None),
+    review_cycle_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get feedback forms"""
+    current_user, org_id = auth
+    
+    stmt = select(FeedbackForm).where(FeedbackForm.organization_id == org_id)
+    
+    if is_template is not None:
+        stmt = stmt.where(FeedbackForm.is_template == is_template)
+    if feedback_type:
+        stmt = stmt.where(FeedbackForm.feedback_type == feedback_type)
+    if reviewee_id:
+        stmt = stmt.where(FeedbackForm.reviewee_id == reviewee_id)
+    if review_cycle_id:
+        stmt = stmt.where(FeedbackForm.review_cycle_id == review_cycle_id)
+    if status:
+        stmt = stmt.where(FeedbackForm.status == status)
+    
+    stmt = stmt.order_by(desc(FeedbackForm.created_at)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/feedback-forms/{form_id}", response_model=FeedbackFormResponse)
+async def update_feedback_form(
+    form_id: int,
+    form_data: FeedbackFormUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a feedback form"""
+    current_user, org_id = auth
+    
+    stmt = select(FeedbackForm).where(
+        and_(
+            FeedbackForm.id == form_id,
+            FeedbackForm.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    form = result.scalar_one_or_none()
+    
+    if not form:
+        raise HTTPException(status_code=404, detail="Feedback form not found")
+    
+    for field, value in form_data.model_dump(exclude_unset=True).items():
+        setattr(form, field, value)
+    
+    # Mark as completed if status changed to completed
+    if form_data.status == "completed" and not form.completed_at:
+        form.completed_at = datetime.now(timezone.utc)
+    
+    await db.commit()
+    await db.refresh(form)
+    
+    return form
+
+
+# ============================================================================
+# Recruitment Module
+# ============================================================================
+
+# Job Postings
+@router.post("/job-postings", response_model=JobPostingResponse)
+async def create_job_posting(
+    posting_data: JobPostingCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new job posting"""
+    current_user, org_id = auth
+    
+    # Check for unique job code
+    stmt = select(JobPosting).where(
+        and_(
+            JobPosting.organization_id == org_id,
+            JobPosting.job_code == posting_data.job_code
+        )
+    )
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Job code already exists")
+    
+    posting = JobPosting(
+        **posting_data.model_dump(),
+        organization_id=org_id,
+        created_by_id=current_user.id
+    )
+    
+    db.add(posting)
+    await db.commit()
+    await db.refresh(posting)
+    
+    return posting
+
+
+@router.get("/job-postings", response_model=List[JobPostingResponse])
+async def get_job_postings(
+    status: Optional[str] = Query(None),
+    department_id: Optional[int] = Query(None),
+    employment_type: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get job postings"""
+    current_user, org_id = auth
+    
+    stmt = select(JobPosting).where(JobPosting.organization_id == org_id)
+    
+    if status:
+        stmt = stmt.where(JobPosting.status == status)
+    if department_id:
+        stmt = stmt.where(JobPosting.department_id == department_id)
+    if employment_type:
+        stmt = stmt.where(JobPosting.employment_type == employment_type)
+    
+    stmt = stmt.order_by(desc(JobPosting.created_at)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.get("/job-postings/{posting_id}", response_model=JobPostingResponse)
+async def get_job_posting(
+    posting_id: int,
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get job posting by ID"""
+    current_user, org_id = auth
+    
+    stmt = select(JobPosting).where(
+        and_(
+            JobPosting.id == posting_id,
+            JobPosting.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    posting = result.scalar_one_or_none()
+    
+    if not posting:
+        raise HTTPException(status_code=404, detail="Job posting not found")
+    
+    return posting
+
+
+@router.put("/job-postings/{posting_id}", response_model=JobPostingResponse)
+async def update_job_posting(
+    posting_id: int,
+    posting_data: JobPostingUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a job posting"""
+    current_user, org_id = auth
+    
+    stmt = select(JobPosting).where(
+        and_(
+            JobPosting.id == posting_id,
+            JobPosting.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    posting = result.scalar_one_or_none()
+    
+    if not posting:
+        raise HTTPException(status_code=404, detail="Job posting not found")
+    
+    for field, value in posting_data.model_dump(exclude_unset=True).items():
+        setattr(posting, field, value)
+    
+    await db.commit()
+    await db.refresh(posting)
+    
+    return posting
+
+
+# Candidates
+@router.post("/candidates", response_model=CandidateResponse)
+async def create_candidate(
+    candidate_data: CandidateCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new candidate"""
+    current_user, org_id = auth
+    
+    candidate = Candidate(
+        **candidate_data.model_dump(),
+        organization_id=org_id
+    )
+    
+    db.add(candidate)
+    await db.commit()
+    await db.refresh(candidate)
+    
+    return candidate
+
+
+@router.get("/candidates", response_model=List[CandidateResponse])
+async def get_candidates(
+    job_posting_id: Optional[int] = Query(None),
+    stage: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get candidates with filtering"""
+    current_user, org_id = auth
+    
+    stmt = select(Candidate).where(Candidate.organization_id == org_id)
+    
+    if job_posting_id:
+        stmt = stmt.where(Candidate.job_posting_id == job_posting_id)
+    if stage:
+        stmt = stmt.where(Candidate.stage == stage)
+    if status:
+        stmt = stmt.where(Candidate.status == status)
+    
+    stmt = stmt.order_by(desc(Candidate.application_date)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.get("/candidates/{candidate_id}", response_model=CandidateResponse)
+async def get_candidate(
+    candidate_id: int,
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get candidate by ID"""
+    current_user, org_id = auth
+    
+    stmt = select(Candidate).where(
+        and_(
+            Candidate.id == candidate_id,
+            Candidate.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    candidate = result.scalar_one_or_none()
+    
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    return candidate
+
+
+@router.put("/candidates/{candidate_id}", response_model=CandidateResponse)
+async def update_candidate(
+    candidate_id: int,
+    candidate_data: CandidateUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a candidate"""
+    current_user, org_id = auth
+    
+    stmt = select(Candidate).where(
+        and_(
+            Candidate.id == candidate_id,
+            Candidate.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    candidate = result.scalar_one_or_none()
+    
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    for field, value in candidate_data.model_dump(exclude_unset=True).items():
+        setattr(candidate, field, value)
+    
+    # Update stage timestamp
+    if candidate_data.stage:
+        candidate.stage_updated_at = datetime.now(timezone.utc)
+    
+    await db.commit()
+    await db.refresh(candidate)
+    
+    return candidate
+
+
+@router.put("/candidates/{candidate_id}/stage")
+async def update_candidate_stage(
+    candidate_id: int,
+    stage: str = Query(..., description="New stage: new, screening, interview, assessment, offer, hired, rejected"),
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Move candidate to a new stage (Kanban update)"""
+    current_user, org_id = auth
+    
+    stmt = select(Candidate).where(
+        and_(
+            Candidate.id == candidate_id,
+            Candidate.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    candidate = result.scalar_one_or_none()
+    
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    candidate.stage = stage
+    candidate.stage_updated_at = datetime.now(timezone.utc)
+    
+    await db.commit()
+    
+    return {"message": f"Candidate moved to {stage} stage"}
+
+
+# Interviews
+@router.post("/interviews", response_model=InterviewResponse)
+async def create_interview(
+    interview_data: InterviewCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Schedule an interview"""
+    current_user, org_id = auth
+    
+    interview = Interview(
+        **interview_data.model_dump(),
+        organization_id=org_id,
+        created_by_id=current_user.id
+    )
+    
+    db.add(interview)
+    await db.commit()
+    await db.refresh(interview)
+    
+    return interview
+
+
+@router.get("/interviews", response_model=List[InterviewResponse])
+async def get_interviews(
+    candidate_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    scheduled_date: Optional[date] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get interviews"""
+    current_user, org_id = auth
+    
+    stmt = select(Interview).where(Interview.organization_id == org_id)
+    
+    if candidate_id:
+        stmt = stmt.where(Interview.candidate_id == candidate_id)
+    if status:
+        stmt = stmt.where(Interview.status == status)
+    if scheduled_date:
+        stmt = stmt.where(Interview.scheduled_date == scheduled_date)
+    
+    stmt = stmt.order_by(Interview.scheduled_date, Interview.scheduled_time).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/interviews/{interview_id}", response_model=InterviewResponse)
+async def update_interview(
+    interview_id: int,
+    interview_data: InterviewUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update an interview"""
+    current_user, org_id = auth
+    
+    stmt = select(Interview).where(
+        and_(
+            Interview.id == interview_id,
+            Interview.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    interview = result.scalar_one_or_none()
+    
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+    
+    for field, value in interview_data.model_dump(exclude_unset=True).items():
+        setattr(interview, field, value)
+    
+    await db.commit()
+    await db.refresh(interview)
+    
+    return interview
+
+
+# Job Offers
+@router.post("/job-offers", response_model=JobOfferResponse)
+async def create_job_offer(
+    offer_data: JobOfferCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a job offer"""
+    current_user, org_id = auth
+    
+    # Check for unique offer number
+    stmt = select(JobOffer).where(
+        and_(
+            JobOffer.organization_id == org_id,
+            JobOffer.offer_number == offer_data.offer_number
+        )
+    )
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Offer number already exists")
+    
+    offer = JobOffer(
+        **offer_data.model_dump(),
+        organization_id=org_id,
+        created_by_id=current_user.id
+    )
+    
+    db.add(offer)
+    await db.commit()
+    await db.refresh(offer)
+    
+    return offer
+
+
+@router.get("/job-offers", response_model=List[JobOfferResponse])
+async def get_job_offers(
+    candidate_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get job offers"""
+    current_user, org_id = auth
+    
+    stmt = select(JobOffer).where(JobOffer.organization_id == org_id)
+    
+    if candidate_id:
+        stmt = stmt.where(JobOffer.candidate_id == candidate_id)
+    if status:
+        stmt = stmt.where(JobOffer.status == status)
+    
+    stmt = stmt.order_by(desc(JobOffer.offer_date)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/job-offers/{offer_id}", response_model=JobOfferResponse)
+async def update_job_offer(
+    offer_id: int,
+    offer_data: JobOfferUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a job offer"""
+    current_user, org_id = auth
+    
+    stmt = select(JobOffer).where(
+        and_(
+            JobOffer.id == offer_id,
+            JobOffer.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    offer = result.scalar_one_or_none()
+    
+    if not offer:
+        raise HTTPException(status_code=404, detail="Job offer not found")
+    
+    for field, value in offer_data.model_dump(exclude_unset=True).items():
+        setattr(offer, field, value)
+    
+    # Track response date
+    if offer_data.status in ["accepted", "rejected"]:
+        offer.candidate_response_date = datetime.now(timezone.utc)
+    
+    await db.commit()
+    await db.refresh(offer)
+    
+    return offer
+
+
+# Onboarding Tasks
+@router.post("/onboarding-tasks", response_model=OnboardingTaskResponse)
+async def create_onboarding_task(
+    task_data: OnboardingTaskCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create an onboarding task"""
+    current_user, org_id = auth
+    
+    task = OnboardingTask(
+        **task_data.model_dump(),
+        organization_id=org_id,
+        created_by_id=current_user.id
+    )
+    
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+    
+    return task
+
+
+@router.get("/onboarding-tasks", response_model=List[OnboardingTaskResponse])
+async def get_onboarding_tasks(
+    employee_id: Optional[int] = Query(None),
+    is_template: Optional[bool] = Query(None),
+    status: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get onboarding tasks"""
+    current_user, org_id = auth
+    
+    stmt = select(OnboardingTask).where(OnboardingTask.organization_id == org_id)
+    
+    if employee_id:
+        stmt = stmt.where(OnboardingTask.employee_id == employee_id)
+    if is_template is not None:
+        stmt = stmt.where(OnboardingTask.is_template == is_template)
+    if status:
+        stmt = stmt.where(OnboardingTask.status == status)
+    if category:
+        stmt = stmt.where(OnboardingTask.category == category)
+    
+    stmt = stmt.order_by(OnboardingTask.sequence_order).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/onboarding-tasks/{task_id}", response_model=OnboardingTaskResponse)
+async def update_onboarding_task(
+    task_id: int,
+    task_data: OnboardingTaskUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update an onboarding task"""
+    current_user, org_id = auth
+    
+    stmt = select(OnboardingTask).where(
+        and_(
+            OnboardingTask.id == task_id,
+            OnboardingTask.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    task = result.scalar_one_or_none()
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Onboarding task not found")
+    
+    for field, value in task_data.model_dump(exclude_unset=True).items():
+        setattr(task, field, value)
+    
+    await db.commit()
+    await db.refresh(task)
+    
+    return task
+
+
+# ============================================================================
+# Compliance & Policies Module
+# ============================================================================
+
+# Policy Documents
+@router.post("/policy-documents", response_model=PolicyDocumentResponse)
+async def create_policy_document(
+    document_data: PolicyDocumentCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a policy document"""
+    current_user, org_id = auth
+    
+    # Check for unique code + version
+    stmt = select(PolicyDocument).where(
+        and_(
+            PolicyDocument.organization_id == org_id,
+            PolicyDocument.code == document_data.code,
+            PolicyDocument.version == document_data.version
+        )
+    )
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Policy with this code and version already exists")
+    
+    document = PolicyDocument(
+        **document_data.model_dump(),
+        organization_id=org_id,
+        created_by_id=current_user.id
+    )
+    
+    db.add(document)
+    await db.commit()
+    await db.refresh(document)
+    
+    return document
+
+
+@router.get("/policy-documents", response_model=List[PolicyDocumentResponse])
+async def get_policy_documents(
+    category: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    is_active: Optional[bool] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get policy documents"""
+    current_user, org_id = auth
+    
+    stmt = select(PolicyDocument).where(PolicyDocument.organization_id == org_id)
+    
+    if category:
+        stmt = stmt.where(PolicyDocument.category == category)
+    if status:
+        stmt = stmt.where(PolicyDocument.status == status)
+    if is_active is not None:
+        stmt = stmt.where(PolicyDocument.is_active == is_active)
+    
+    stmt = stmt.order_by(PolicyDocument.code, desc(PolicyDocument.version)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/policy-documents/{document_id}", response_model=PolicyDocumentResponse)
+async def update_policy_document(
+    document_id: int,
+    document_data: PolicyDocumentUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a policy document"""
+    current_user, org_id = auth
+    
+    stmt = select(PolicyDocument).where(
+        and_(
+            PolicyDocument.id == document_id,
+            PolicyDocument.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    document = result.scalar_one_or_none()
+    
+    if not document:
+        raise HTTPException(status_code=404, detail="Policy document not found")
+    
+    for field, value in document_data.model_dump(exclude_unset=True).items():
+        setattr(document, field, value)
+    
+    # Set published timestamp
+    if document_data.status == "published" and not document.published_at:
+        document.published_at = datetime.now(timezone.utc)
+    
+    await db.commit()
+    await db.refresh(document)
+    
+    return document
+
+
+# Policy Acknowledgments
+@router.post("/policy-acknowledgments", response_model=PolicyAcknowledgmentResponse)
+async def create_policy_acknowledgment(
+    ack_data: PolicyAcknowledgmentCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a policy acknowledgment request"""
+    current_user, org_id = auth
+    
+    ack = PolicyAcknowledgment(
+        **ack_data.model_dump(),
+        organization_id=org_id
+    )
+    
+    db.add(ack)
+    await db.commit()
+    await db.refresh(ack)
+    
+    return ack
+
+
+@router.get("/policy-acknowledgments", response_model=List[PolicyAcknowledgmentResponse])
+async def get_policy_acknowledgments(
+    policy_document_id: Optional[int] = Query(None),
+    employee_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get policy acknowledgments"""
+    current_user, org_id = auth
+    
+    stmt = select(PolicyAcknowledgment).where(PolicyAcknowledgment.organization_id == org_id)
+    
+    if policy_document_id:
+        stmt = stmt.where(PolicyAcknowledgment.policy_document_id == policy_document_id)
+    if employee_id:
+        stmt = stmt.where(PolicyAcknowledgment.employee_id == employee_id)
+    if status:
+        stmt = stmt.where(PolicyAcknowledgment.status == status)
+    
+    stmt = stmt.order_by(desc(PolicyAcknowledgment.created_at)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/policy-acknowledgments/{ack_id}/acknowledge")
+async def acknowledge_policy(
+    ack_id: int,
+    ip_address: Optional[str] = Query(None),
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Acknowledge a policy document"""
+    current_user, org_id = auth
+    
+    stmt = select(PolicyAcknowledgment).where(
+        and_(
+            PolicyAcknowledgment.id == ack_id,
+            PolicyAcknowledgment.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    ack = result.scalar_one_or_none()
+    
+    if not ack:
+        raise HTTPException(status_code=404, detail="Acknowledgment record not found")
+    
+    ack.status = "acknowledged"
+    ack.acknowledged_at = datetime.now(timezone.utc)
+    if ip_address:
+        ack.ip_address = ip_address
+    
+    await db.commit()
+    
+    return {"message": "Policy acknowledged successfully"}
+
+
+# Training Programs
+@router.post("/training-programs", response_model=TrainingProgramResponse)
+async def create_training_program(
+    program_data: TrainingProgramCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a training program"""
+    current_user, org_id = auth
+    
+    # Check for unique code
+    stmt = select(TrainingProgram).where(
+        and_(
+            TrainingProgram.organization_id == org_id,
+            TrainingProgram.code == program_data.code
+        )
+    )
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Training program code already exists")
+    
+    program = TrainingProgram(
+        **program_data.model_dump(),
+        organization_id=org_id,
+        created_by_id=current_user.id
+    )
+    
+    db.add(program)
+    await db.commit()
+    await db.refresh(program)
+    
+    return program
+
+
+@router.get("/training-programs", response_model=List[TrainingProgramResponse])
+async def get_training_programs(
+    category: Optional[str] = Query(None),
+    training_type: Optional[str] = Query(None),
+    is_mandatory: Optional[bool] = Query(None),
+    status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get training programs"""
+    current_user, org_id = auth
+    
+    stmt = select(TrainingProgram).where(TrainingProgram.organization_id == org_id)
+    
+    if category:
+        stmt = stmt.where(TrainingProgram.category == category)
+    if training_type:
+        stmt = stmt.where(TrainingProgram.training_type == training_type)
+    if is_mandatory is not None:
+        stmt = stmt.where(TrainingProgram.is_mandatory == is_mandatory)
+    if status:
+        stmt = stmt.where(TrainingProgram.status == status)
+    
+    stmt = stmt.order_by(TrainingProgram.title).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/training-programs/{program_id}", response_model=TrainingProgramResponse)
+async def update_training_program(
+    program_id: int,
+    program_data: TrainingProgramUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a training program"""
+    current_user, org_id = auth
+    
+    stmt = select(TrainingProgram).where(
+        and_(
+            TrainingProgram.id == program_id,
+            TrainingProgram.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    program = result.scalar_one_or_none()
+    
+    if not program:
+        raise HTTPException(status_code=404, detail="Training program not found")
+    
+    for field, value in program_data.model_dump(exclude_unset=True).items():
+        setattr(program, field, value)
+    
+    await db.commit()
+    await db.refresh(program)
+    
+    return program
+
+
+# Training Assignments
+@router.post("/training-assignments", response_model=TrainingAssignmentResponse)
+async def create_training_assignment(
+    assignment_data: TrainingAssignmentCreate,
+    auth: tuple = Depends(require_access("hr", "create")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a training assignment"""
+    current_user, org_id = auth
+    
+    # Check for existing assignment
+    stmt = select(TrainingAssignment).where(
+        and_(
+            TrainingAssignment.organization_id == org_id,
+            TrainingAssignment.training_program_id == assignment_data.training_program_id,
+            TrainingAssignment.employee_id == assignment_data.employee_id
+        )
+    )
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Training already assigned to this employee")
+    
+    assignment = TrainingAssignment(
+        **assignment_data.model_dump(),
+        organization_id=org_id,
+        assigned_by_id=assignment_data.assigned_by_id or current_user.id
+    )
+    
+    db.add(assignment)
+    await db.commit()
+    await db.refresh(assignment)
+    
+    return assignment
+
+
+@router.get("/training-assignments", response_model=List[TrainingAssignmentResponse])
+async def get_training_assignments(
+    employee_id: Optional[int] = Query(None),
+    training_program_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get training assignments"""
+    current_user, org_id = auth
+    
+    stmt = select(TrainingAssignment).where(TrainingAssignment.organization_id == org_id)
+    
+    if employee_id:
+        stmt = stmt.where(TrainingAssignment.employee_id == employee_id)
+    if training_program_id:
+        stmt = stmt.where(TrainingAssignment.training_program_id == training_program_id)
+    if status:
+        stmt = stmt.where(TrainingAssignment.status == status)
+    
+    stmt = stmt.order_by(desc(TrainingAssignment.assigned_date)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.put("/training-assignments/{assignment_id}", response_model=TrainingAssignmentResponse)
+async def update_training_assignment(
+    assignment_id: int,
+    assignment_data: TrainingAssignmentUpdate,
+    auth: tuple = Depends(require_access("hr", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a training assignment"""
+    current_user, org_id = auth
+    
+    stmt = select(TrainingAssignment).where(
+        and_(
+            TrainingAssignment.id == assignment_id,
+            TrainingAssignment.organization_id == org_id
+        )
+    )
+    result = await db.execute(stmt)
+    assignment = result.scalar_one_or_none()
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Training assignment not found")
+    
+    for field, value in assignment_data.model_dump(exclude_unset=True).items():
+        setattr(assignment, field, value)
+    
+    # Track completion
+    if assignment_data.status == "completed" and not assignment.completed_at:
+        assignment.completed_at = datetime.now(timezone.utc)
+    
+    await db.commit()
+    await db.refresh(assignment)
+    
+    return assignment
+
+
+# Compliance Audit Exports
+@router.post("/compliance-exports", response_model=ComplianceAuditExportResponse)
+async def create_compliance_export(
+    export_data: ComplianceAuditExportCreate,
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a compliance audit export"""
+    current_user, org_id = auth
+    
+    export = ComplianceAuditExport(
+        **export_data.model_dump(),
+        organization_id=org_id,
+        created_by_id=current_user.id,
+        status="pending"
+    )
+    
+    db.add(export)
+    await db.commit()
+    await db.refresh(export)
+    
+    # TODO: Trigger async export generation
+    
+    return export
+
+
+@router.get("/compliance-exports", response_model=List[ComplianceAuditExportResponse])
+async def get_compliance_exports(
+    export_type: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    auth: tuple = Depends(require_access("hr", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get compliance audit exports"""
+    current_user, org_id = auth
+    
+    stmt = select(ComplianceAuditExport).where(ComplianceAuditExport.organization_id == org_id)
+    
+    if export_type:
+        stmt = stmt.where(ComplianceAuditExport.export_type == export_type)
+    if status:
+        stmt = stmt.where(ComplianceAuditExport.status == status)
+    
+    stmt = stmt.order_by(desc(ComplianceAuditExport.created_at)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()

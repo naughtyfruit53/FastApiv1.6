@@ -509,8 +509,18 @@ export const menuItems = {
           { name: 'Employee Directory', path: '/hr/employees-directory', icon: <People />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'employee_directory' } },
           { name: 'Employee Records', path: '/hr/employees', icon: <People />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'employee_records' } },
           { name: 'Employee Onboarding', path: '/hr/onboarding', icon: <PersonAdd />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'employee_onboarding' } },
-          { name: 'Performance Management', path: '/hr/performance', icon: <Assessment />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'performance_management' } },
+          { name: 'Onboarding Tasks', path: '/hr/onboarding-tasks', icon: <AssignmentTurnedIn />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'onboarding_tasks' } },
           { name: 'Employee Records Archive', path: '/hr/records', icon: <Storage />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'employee_records_archive' } }
+        ]
+      },
+      {
+        title: 'Performance Management',
+        items: [
+          { name: 'Performance Dashboard', path: '/hr/performance', icon: <Assessment />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'performance_management' } },
+          { name: 'Goals & OKRs', path: '/hr/goals', icon: <TrendingUp />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'goals_okrs' } },
+          { name: 'Review Cycles', path: '/hr/review-cycles', icon: <Timeline />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'review_cycles' } },
+          { name: '360 Feedback', path: '/hr/feedback', icon: <Feedback />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'feedback_360' } },
+          { name: 'Performance Analytics', path: '/hr/performance-analytics', icon: <Analytics />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'performance_analytics' } }
         ]
       },
       {
@@ -535,15 +545,46 @@ export const menuItems = {
         title: 'Recruitment',
         items: [
           { name: 'Job Postings', path: '/hr/jobs', icon: <AddBusiness />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'job_postings' } },
-          { name: 'Candidate Management', path: '/hr/candidates', icon: <Person />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'candidate_management' } },
+          { name: 'Candidate Pipeline', path: '/hr/candidates', icon: <Person />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'candidate_management' } },
           { name: 'Interview Scheduling', path: '/hr/interviews', icon: <Schedule />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'interview_scheduling' } },
+          { name: 'Job Offers', path: '/hr/offers', icon: <NoteAdd />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'job_offers' } },
           { name: 'Hiring Pipeline', path: '/hr/hiring', icon: <Timeline />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'hiring_pipeline' } }
         ]
       },
       {
-        title: 'HR Analytics',
+        title: 'Compliance & Policies',
         items: [
-          { name: 'HR Analytics Dashboard', path: '/hr/analytics', icon: <Analytics />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'hr_analytics_dashboard' } }
+          { name: 'Policy Documents', path: '/hr/policies', icon: <Storage />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'policy_documents' } },
+          { name: 'Acknowledgments', path: '/hr/acknowledgments', icon: <AssignmentTurnedIn />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'acknowledgments' } },
+          { name: 'Training Programs', path: '/hr/training', icon: <Build />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'training_programs' } },
+          { name: 'Training Assignments', path: '/hr/training-assignments', icon: <Assignment />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'training_assignments' } },
+          { name: 'Audit Exports', path: '/hr/compliance-exports', icon: <CloudUpload />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'audit_exports' } }
+        ]
+      },
+      {
+        title: 'HR Analytics & Planning',
+        items: [
+          { name: 'HR Analytics Dashboard', path: '/hr/analytics', icon: <Analytics />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'hr_analytics_dashboard' } },
+          { name: 'Workforce Analytics', path: '/hr/workforce-analytics', icon: <TrendingUp />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'workforce_analytics' } },
+          { name: 'Position Budgeting', path: '/hr/position-budgets', icon: <AccountBalance />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'position_budgeting' } },
+          { name: 'Transfers & Promotions', path: '/hr/transfers', icon: <SwapHoriz />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'transfers_promotions' } },
+          { name: 'Org Structure', path: '/hr/org-structure', icon: <CorporateFare />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'org_structure' } }
+        ]
+      },
+      {
+        title: 'HR Integrations',
+        items: [
+          { name: 'Integration Adapters', path: '/hr/integrations', icon: <Settings />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'integration_adapters' } },
+          { name: 'SSO/IdP Configuration', path: '/hr/sso-config', icon: <Security />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'sso_config' } },
+          { name: 'Payroll Providers', path: '/hr/payroll-providers', icon: <Payment />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'payroll_providers' } },
+          { name: 'Attendance Hardware', path: '/hr/attendance-hardware', icon: <DeveloperMode />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'attendance_hardware' } }
+        ]
+      },
+      {
+        title: 'Data Governance',
+        items: [
+          { name: 'Data Retention', path: '/hr/data-retention', icon: <Storage />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'data_retention' } },
+          { name: 'Compliance Dashboard', path: '/hr/compliance-dashboard', icon: <Dashboard />, permission: 'hr.view', requireModule: 'hr', requireSubmodule: { module: 'hr', submodule: 'compliance_dashboard' } }
         ]
       }
     ]
