@@ -75,7 +75,7 @@ class JobPosting(Base):
     candidates: Mapped[List["JobApplication"]] = relationship("JobApplication", back_populates="job_posting")
 
     __table_args__ = (
-        UniqueConstraint('organization_id', 'job_code', name='uq_job_posting_org_code'),
+        UniqueConstraint('organization_id', 'job_code', name='uq_job_posting_code'),
         Index('idx_job_posting_org_status', 'organization_id', 'status'),
         Index('idx_job_posting_deadline', 'application_deadline'),
         {'extend_existing': True}
@@ -303,7 +303,7 @@ class JobOffer(Base):
     
     # Offer details
     offer_title: Mapped[str] = mapped_column(String, nullable=False)
-    offer_date: Mapped[date] = mapped_column(Date, nullable=False, default=func.current_date())
+    offer_date: Mapped[date] = mapped_column(Date, nullable=False)
     valid_until: Mapped[date] = mapped_column(Date, nullable=False)
     
     # Compensation package
@@ -325,7 +325,7 @@ class JobOffer(Base):
     start_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     work_location: Mapped[str] = mapped_column(String, nullable=False)
     
-    # Status and tracking
+    # Status
     status: Mapped[str] = mapped_column(String, nullable=False, default="draft")  # draft, sent, accepted, rejected, expired, withdrawn
     sent_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     response_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -407,3 +407,4 @@ class RecruitmentPipeline(Base):
         Index('idx_recruitment_pipeline_order', 'stage_order'),
         {'extend_existing': True}
     )
+    

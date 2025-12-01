@@ -1399,6 +1399,48 @@ class JobOfferResponse(JobOfferBase):
     created_by_id: Optional[int] = None
 
 
+# Recruitment Pipeline Schemas (added as per user request)
+class RecruitmentPipelineBase(BaseModel):
+    pipeline_name: str = Field(..., description="Pipeline name")
+    stage_name: str = Field(..., description="Stage name")
+    stage_order: int = Field(..., description="Stage order")
+    stage_type: str = Field(default="standard")
+    is_mandatory: bool = Field(default=True)
+    auto_progress: bool = Field(default=False)
+    requires_approval: bool = Field(default=False)
+    default_duration_days: Optional[int] = None
+    stage_description: Optional[str] = None
+    stage_instructions: Optional[str] = None
+    is_active: bool = Field(default=True)
+
+
+class RecruitmentPipelineCreate(RecruitmentPipelineBase):
+    pass
+
+
+class RecruitmentPipelineUpdate(BaseModel):
+    pipeline_name: Optional[str] = None
+    stage_name: Optional[str] = None
+    stage_order: Optional[int] = None
+    stage_type: Optional[str] = None
+    is_mandatory: Optional[bool] = None
+    auto_progress: Optional[bool] = None
+    requires_approval: Optional[bool] = None
+    default_duration_days: Optional[int] = None
+    stage_description: Optional[str] = None
+    stage_instructions: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class RecruitmentPipelineResponse(RecruitmentPipelineBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
 # Onboarding Task Schemas
 class OnboardingTaskBase(BaseModel):
     title: str = Field(..., description="Task title")
@@ -1445,243 +1487,3 @@ class OnboardingTaskResponse(OnboardingTaskBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     created_by_id: Optional[int] = None
-
-
-# =============================================================================
-# Compliance & Policies Schemas
-# =============================================================================
-
-# Policy Document Schemas
-class PolicyDocumentBase(BaseModel):
-    title: str = Field(..., description="Policy title")
-    code: str = Field(..., description="Policy code")
-    description: Optional[str] = None
-    category: str = Field(..., description="Category: hr, it, security, compliance, general")
-    version: str = Field(default="1.0")
-    effective_date: SkipValidation[date] = Field(..., description="Effective date")
-    review_date: Optional[SkipValidation[date]] = None
-    content: Optional[str] = None
-    applicable_to: str = Field(default="all")
-    applicable_departments: Optional[Dict[str, Any]] = None
-    applicable_positions: Optional[Dict[str, Any]] = None
-    requires_acknowledgment: bool = Field(default=True)
-    acknowledgment_deadline_days: int = Field(default=7)
-    re_acknowledgment_period_months: Optional[int] = None
-    status: str = Field(default="draft")
-    is_active: bool = Field(default=True)
-
-
-class PolicyDocumentCreate(PolicyDocumentBase):
-    pass
-
-
-class PolicyDocumentUpdate(BaseModel):
-    title: Optional[str] = None
-    code: Optional[str] = None
-    description: Optional[str] = None
-    category: Optional[str] = None
-    version: Optional[str] = None
-    effective_date: Optional[SkipValidation[date]] = None
-    review_date: Optional[SkipValidation[date]] = None
-    content: Optional[str] = None
-    applicable_to: Optional[str] = None
-    applicable_departments: Optional[Dict[str, Any]] = None
-    applicable_positions: Optional[Dict[str, Any]] = None
-    requires_acknowledgment: Optional[bool] = None
-    acknowledgment_deadline_days: Optional[int] = None
-    re_acknowledgment_period_months: Optional[int] = None
-    status: Optional[str] = None
-    is_active: Optional[bool] = None
-
-
-class PolicyDocumentResponse(PolicyDocumentBase):
-    model_config = ConfigDict(from_attributes=True)
-    
-    id: int
-    organization_id: int
-    file_path: Optional[str] = None
-    file_type: Optional[str] = None
-    published_at: Optional[datetime] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    created_by_id: Optional[int] = None
-
-
-# Policy Acknowledgment Schemas
-class PolicyAcknowledgmentBase(BaseModel):
-    acknowledged_version: str = Field(..., description="Version being acknowledged")
-    due_date: SkipValidation[date] = Field(..., description="Acknowledgment due date")
-    status: str = Field(default="pending")
-    notes: Optional[str] = None
-
-
-class PolicyAcknowledgmentCreate(PolicyAcknowledgmentBase):
-    policy_document_id: int = Field(..., description="Reference to PolicyDocument")
-    employee_id: int = Field(..., description="Reference to EmployeeProfile")
-
-
-class PolicyAcknowledgmentUpdate(BaseModel):
-    status: Optional[str] = None
-    notes: Optional[str] = None
-
-
-class PolicyAcknowledgmentResponse(PolicyAcknowledgmentBase):
-    model_config = ConfigDict(from_attributes=True)
-    
-    id: int
-    organization_id: int
-    policy_document_id: int
-    employee_id: int
-    acknowledged_at: Optional[datetime] = None
-    ip_address: Optional[str] = None
-    digital_signature: Optional[str] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-
-# Training Program Schemas
-class TrainingProgramBase(BaseModel):
-    title: str = Field(..., description="Training title")
-    code: str = Field(..., description="Training code")
-    description: Optional[str] = None
-    category: str = Field(..., description="Category: compliance, technical, soft_skills, leadership, safety")
-    training_type: str = Field(default="online")
-    duration_hours: Optional[Decimal] = None
-    content_url: Optional[str] = None
-    materials: Optional[Dict[str, Any]] = None
-    provider: Optional[str] = None
-    instructor: Optional[str] = None
-    scheduled_date: Optional[SkipValidation[date]] = None
-    scheduled_time: Optional[time] = None
-    location: Optional[str] = None
-    max_participants: Optional[int] = None
-    is_mandatory: bool = Field(default=False)
-    applicable_to: str = Field(default="all")
-    applicable_departments: Optional[Dict[str, Any]] = None
-    applicable_positions: Optional[Dict[str, Any]] = None
-    provides_certificate: bool = Field(default=False)
-    certificate_validity_months: Optional[int] = None
-    passing_score: Optional[int] = None
-    requires_assessment: bool = Field(default=False)
-    status: str = Field(default="draft")
-    is_active: bool = Field(default=True)
-
-
-class TrainingProgramCreate(TrainingProgramBase):
-    pass
-
-
-class TrainingProgramUpdate(BaseModel):
-    title: Optional[str] = None
-    code: Optional[str] = None
-    description: Optional[str] = None
-    category: Optional[str] = None
-    training_type: Optional[str] = None
-    duration_hours: Optional[Decimal] = None
-    content_url: Optional[str] = None
-    materials: Optional[Dict[str, Any]] = None
-    provider: Optional[str] = None
-    instructor: Optional[str] = None
-    scheduled_date: Optional[SkipValidation[date]] = None
-    scheduled_time: Optional[time] = None
-    location: Optional[str] = None
-    max_participants: Optional[int] = None
-    is_mandatory: Optional[bool] = None
-    applicable_to: Optional[str] = None
-    applicable_departments: Optional[Dict[str, Any]] = None
-    applicable_positions: Optional[Dict[str, Any]] = None
-    provides_certificate: Optional[bool] = None
-    certificate_validity_months: Optional[int] = None
-    passing_score: Optional[int] = None
-    requires_assessment: Optional[bool] = None
-    status: Optional[str] = None
-    is_active: Optional[bool] = None
-
-
-class TrainingProgramResponse(TrainingProgramBase):
-    model_config = ConfigDict(from_attributes=True)
-    
-    id: int
-    organization_id: int
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    created_by_id: Optional[int] = None
-
-
-# Training Assignment Schemas
-class TrainingAssignmentBase(BaseModel):
-    assigned_date: SkipValidation[date] = Field(..., description="Assignment date")
-    due_date: SkipValidation[date] = Field(..., description="Due date")
-    status: str = Field(default="assigned")
-    progress_percentage: Decimal = Field(default=Decimal("0"))
-    assessment_score: Optional[int] = None
-    assessment_attempts: int = Field(default=0)
-    passed: Optional[bool] = None
-    certificate_issued: bool = Field(default=False)
-    certificate_expiry: Optional[SkipValidation[date]] = None
-    notes: Optional[str] = None
-    exemption_reason: Optional[str] = None
-
-
-class TrainingAssignmentCreate(TrainingAssignmentBase):
-    training_program_id: int = Field(..., description="Reference to TrainingProgram")
-    employee_id: int = Field(..., description="Reference to EmployeeProfile")
-    assigned_by_id: Optional[int] = None
-
-
-class TrainingAssignmentUpdate(BaseModel):
-    due_date: Optional[SkipValidation[date]] = None
-    status: Optional[str] = None
-    progress_percentage: Optional[Decimal] = None
-    assessment_score: Optional[int] = None
-    assessment_attempts: Optional[int] = None
-    passed: Optional[bool] = None
-    certificate_issued: Optional[bool] = None
-    certificate_expiry: Optional[SkipValidation[date]] = None
-    notes: Optional[str] = None
-    exemption_reason: Optional[str] = None
-
-
-class TrainingAssignmentResponse(TrainingAssignmentBase):
-    model_config = ConfigDict(from_attributes=True)
-    
-    id: int
-    organization_id: int
-    training_program_id: int
-    employee_id: int
-    assigned_by_id: Optional[int] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    certificate_path: Optional[str] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-
-# Compliance Audit Export Schemas
-class ComplianceAuditExportBase(BaseModel):
-    export_type: str = Field(..., description="Export type")
-    export_name: str = Field(..., description="Export name")
-    description: Optional[str] = None
-    date_from: Optional[SkipValidation[date]] = None
-    date_to: Optional[SkipValidation[date]] = None
-    filters: Optional[Dict[str, Any]] = None
-    file_format: str = Field(default="csv")
-
-
-class ComplianceAuditExportCreate(ComplianceAuditExportBase):
-    pass
-
-
-class ComplianceAuditExportResponse(ComplianceAuditExportBase):
-    model_config = ConfigDict(from_attributes=True)
-    
-    id: int
-    organization_id: int
-    file_path: Optional[str] = None
-    file_size_bytes: Optional[int] = None
-    record_count: int
-    status: str
-    error_message: Optional[str] = None
-    created_at: datetime
-    completed_at: Optional[datetime] = None
-    created_by_id: int

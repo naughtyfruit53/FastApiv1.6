@@ -111,7 +111,7 @@ def register_subrouters():
         logger.error(f"Failed to import/include organizations_router: {str(e)}\n{traceback.format_exc()}")
 
     try:
-        from .hr import router as hr_router
+        from .hr import hr_router as hr_router
         logger.debug("Imported hr_router")
         api_v1_router.include_router(hr_router)
         hr_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in hr_router.routes if isinstance(route, APIRoute)]
@@ -501,7 +501,7 @@ def register_subrouters():
     # Organization User Management API (NEW 4-role system)
     try:
         from .org_user_management import router as org_user_mgmt_router
-        logger.debug("Imported org_user_management_router")
+        logger.debug("Imported org_user_mgmt_router")
         api_v1_router.include_router(org_user_mgmt_router, prefix="/org", tags=["Organization User Management"])
         org_user_mgmt_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} /org{route.path}" for route in org_user_mgmt_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered org_user_management endpoints: {len(org_user_mgmt_routes)} routes")
