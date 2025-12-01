@@ -1,6 +1,6 @@
 # app/models/talent_models.py
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Numeric
+from sqlalchemy import Integer, String, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -453,7 +453,7 @@ class LearningPathProgram(Base):
     )
 
 class EmployeeLearningPath(Base):
-    """Employee enrollment in learning paths"""
+    """Employee assignment to learning paths"""
     __tablename__ = "employee_learning_paths"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -500,3 +500,4 @@ class EmployeeLearningPath(Base):
         Index('idx_employee_learning_path_status', 'status'),
         {'extend_existing': True}
     )
+    

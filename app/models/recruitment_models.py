@@ -1,6 +1,6 @@
 # app/models/recruitment_models.py
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Numeric
+from sqlalchemy import Integer, String, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -248,7 +248,7 @@ class Interview(Base):
     
     # Status and results
     status: Mapped[str] = mapped_column(String, nullable=False, default="scheduled")  # scheduled, completed, cancelled, rescheduled, no_show
-    overall_rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 1-5 stars
+    overall_rating: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 1-5
     recommendation: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # proceed, reject, hold
     
     # Feedback and evaluation
@@ -267,7 +267,7 @@ class Interview(Base):
     cancellation_reason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     rescheduled_from: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     
-    # Custom evaluation criteria
+    # Custom evaluation
     custom_scores: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
     # Metadata
@@ -383,7 +383,7 @@ class RecruitmentPipeline(Base):
     
     # Stage configuration
     is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True)
-    auto_progress: Mapped[bool] = mapped_column(Boolean, default=False)  # Auto-progress to next stage
+    auto_progress: Mapped[bool] = mapped_column(Boolean, default=False)
     requires_approval: Mapped[bool] = mapped_column(Boolean, default=False)
     
     # Stage settings
