@@ -812,22 +812,18 @@ const PurchaseVoucherPage: React.FC = () => {
           <Grid size={4}>  
             <TextField   
               fullWidth   
-              label="Required by Date"   
-              type="date"   
-              {...control.register("required_by_date")}   
+              label="Reference"   
+              {...control.register("reference")}   
               disabled={mode === "view"}   
-              sx={{   
-                ...voucherFormStyles.field,   
-                '& .MuiInputBase-input': { textAlign: 'center' }   
-              }}   
+              sx={voucherFormStyles.field}   
               InputLabelProps={{ shrink: true }}   
             />  
           </Grid>  
           <Grid size={4}>  
             <TextField   
               fullWidth   
-              label="Reference"   
-              {...control.register("reference")}   
+              label="Vendor Voucher Number"   
+              {...control.register("vendor_voucher_number")}   
               disabled={mode === "view"}   
               sx={voucherFormStyles.field}   
               InputLabelProps={{ shrink: true }}   
@@ -1109,9 +1105,9 @@ const PurchaseVoucherPage: React.FC = () => {
           contextMenu={contextMenu}   
           voucher={null}   
           voucherType="Purchase Voucher"   
-          onView={handleViewWithData}   
-          onEdit={handleEditWithData}   
-          onDelete={handleDelete}   
+          onView={handleViewWithData}  
+          onEdit={handleEditWithData}  
+          onDelete={handleDelete}  
           onPrint={handleGeneratePDF}   
           onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Voucher")}  
           onCreateGRN={handleCreateGRN}  

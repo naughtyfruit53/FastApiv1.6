@@ -3,6 +3,7 @@
 {% block voucher_meta %}
 <tr><td class="label">Date</td><td class="value">{{ voucher.date|format_date(format_str=org.date_format or '%d/%m/%Y') }}</td></tr>
 <tr><td class="label">Voucher Number</td><td class="value">{{ voucher.voucher_number|default('N/A') }}</td></tr>
+{% if voucher.vendor_voucher_number %}<tr><td class="label">Vendor Voucher Number</td><td class="value">{{ voucher.vendor_voucher_number }}</td></tr>{% endif %}
 {% if voucher.reference_number %}<tr><td class="label">Reference</td><td class="value">{{ voucher.reference_number }}</td></tr>{% endif %}
 {% if voucher.due_date %}<tr><td class="label">Due Date</td><td class="value">{{ voucher.due_date|format_date(format_str=org.date_format or '%d/%m/%Y')|default('Immediate') }}</td></tr>{% endif %}
 {% endblock %}

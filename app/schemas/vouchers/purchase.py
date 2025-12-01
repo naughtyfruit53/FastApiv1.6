@@ -276,3 +276,4 @@ class TrackingUpdate(BaseModel):
     transporter_name: Optional[str] = None
     tracking_number: Optional[str] = None
     tracking_link: Optional[str] = None
+    
