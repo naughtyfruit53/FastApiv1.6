@@ -22,6 +22,7 @@ import {
 } from '../../components/mobile';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import ModernLoading from "../../components/ModernLoading";
+import { MobileNavProvider } from '../../context/MobileNavContext';
 
 // Mock data - TODO: Replace with real API integration
 const mockProjects = [
@@ -185,29 +186,32 @@ const MobileProjects: React.FC = () => {
 
   if (loading) {
     return (
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="Projects"
+          subtitle="Project management"
+          rightActions={rightActions}
+          showBottomNav={true}
+        >
+          <ModernLoading
+            type="skeleton"
+            skeletonType="dashboard"
+            count={6}
+            message="Loading project data..."
+          />
+        </MobileDashboardLayout>
+      </MobileNavProvider>
+    );
+  }
+
+  return (
+    <MobileNavProvider>
       <MobileDashboardLayout
         title="Projects"
         subtitle="Project management"
         rightActions={rightActions}
         showBottomNav={true}
       >
-        <ModernLoading
-          type="skeleton"
-          skeletonType="dashboard"
-          count={6}
-          message="Loading project data..."
-        />
-      </MobileDashboardLayout>
-    );
-  }
-
-  return (
-    <MobileDashboardLayout
-      title="Projects"
-      subtitle="Project management"
-      rightActions={rightActions}
-      showBottomNav={true}
-    >
       <MobilePullToRefresh
         onRefresh={handleRefresh}
         isRefreshing={refreshing}
@@ -489,6 +493,7 @@ const MobileProjects: React.FC = () => {
         }}
       />
     </MobileDashboardLayout>
+    </MobileNavProvider>
   );
 };
 
