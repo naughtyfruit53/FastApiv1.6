@@ -692,7 +692,7 @@ const SalesOrderPage: React.FC = () => {
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherFormStyles.formContainer}>
         <Grid container spacing={1}>
-          <Grid size={6}>
+          <Grid size={4}>
             <TextField 
               fullWidth 
               label="Voucher Number" 
@@ -705,7 +705,7 @@ const SalesOrderPage: React.FC = () => {
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid size={6}>
+          <Grid size={4}>
             <TextField 
               fullWidth 
               label="Date" 
@@ -716,6 +716,16 @@ const SalesOrderPage: React.FC = () => {
                 ...voucherFormStyles.field, 
                 '& .MuiInputBase-input': { textAlign: 'center' } 
               }} 
+              InputLabelProps={{ shrink: true }} 
+            />
+          </Grid>
+          <Grid size={4}>
+            <TextField 
+              fullWidth 
+              label="Customer Voucher Number" 
+              {...control.register("customer_voucher_number")} 
+              disabled={mode === "view"} 
+              sx={voucherFormStyles.field} 
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>

@@ -652,3 +652,4 @@ class VoucherSearchService:
         stmt = stmt.distinct()
         result = await db.execute(stmt)
         return result.scalars().all()
+    

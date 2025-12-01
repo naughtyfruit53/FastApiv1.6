@@ -113,3 +113,53 @@ class QuotationInDB(VoucherInDBBase):
     has_revisions: Optional[bool] = False  # NEW: Computed field for listing
     additional_charges: Optional[Dict[str, float]] = None
     items: List[QuotationItemInDB]
+
+# Sales Order
+class SalesOrderItemCreate(VoucherItemWithTax):
+    description: Optional[str] = None
+
+class SalesOrderItemInDB(SalesOrderItemCreate):
+    id: int
+    sales_order_id: int
+    product: Optional[ProductMinimal] = None
+
+class SalesOrderCreate(VoucherBase):
+    customer_id: int
+    delivery_date: Optional[datetime] = None
+    payment_terms: Optional[str] = None
+    terms_conditions: Optional[str] = None
+    customer_voucher_number: Optional[str] = None  # Reintroduced
+    parent_id: Optional[int] = None  # For revisions
+    revision_number: Optional[int] = 0
+    additional_charges: Optional[Dict[str, float]] = None
+    items: List[SalesOrderItemCreate] = []
+
+class SalesOrderUpdate(BaseModel):
+    customer_id: Optional[int] = None
+    delivery_date: Optional[datetime] = None
+    payment_terms: Optional[str] = None
+    terms_conditions: Optional[str] = None
+    customer_voucher_number: Optional[str] = None  # Reintroduced
+    total_amount: Optional[float] = None
+    cgst_amount: Optional[float] = None
+    sgst_amount: Optional[float] = None
+    igst_amount: Optional[float] = None
+    discount_amount: Optional[float] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+    parent_id: Optional[int] = None  # For revisions
+    revision_number: Optional[int] = None
+    additional_charges: Optional[Dict[str, float]] = None
+    items: Optional[List[SalesOrderItemCreate]] = None
+
+class SalesOrderInDB(VoucherInDBBase):
+    customer_id: int
+    delivery_date: Optional[datetime]
+    payment_terms: Optional[str]
+    terms_conditions: Optional[str]
+    customer_voucher_number: Optional[str] = None  # Reintroduced
+    parent_id: Optional[int]
+    revision_number: Optional[int] = 0
+    additional_charges: Optional[Dict[str, float]] = None
+    items: List[SalesOrderItemInDB]
+    

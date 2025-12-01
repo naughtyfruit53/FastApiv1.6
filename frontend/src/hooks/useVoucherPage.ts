@@ -27,7 +27,8 @@ import {
 } from "../utils/pdfUtils";  
 import { VoucherPageConfig } from "../types/voucher.types";  
 import api from "../lib/api";  
-  
+import { useVoucherNumbering, getVoucherApiEndpoint } from "./useVoucherNumbering";
+
 export const useVoucherPage = (config: VoucherPageConfig) => {  
   const router = useRouter();  
   const { id, mode: queryMode } = router.query;  
@@ -90,7 +91,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const [deleteRemarkDialogOpen, setDeleteRemarkDialogOpen] = useState(false);  // NEW: For delete remark  
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);  // NEW  
   const [deleteRemark, setDeleteRemark] = useState("");  // NEW  
-  
+  const [conflictInfo, setConflictInfo] = useState<any>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
+
   useEffect(() => {  
     const savedLineType = localStorage.getItem("voucherLineDiscountType");  
     if (savedLineType)  
@@ -225,6 +229,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const itemsWatch = watchedFields[0] || [];  
   const totalDiscountWatch = watchedFields[1] || 0;  
   
+  const date = useWatch({control, name: 'date'});
+  
   const { data: vendorList } = useQuery({  
     queryKey: ["vendors"],  
     queryFn: getVendors,  
@@ -355,7 +361,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const { data: voucherList, isLoading: isLoadingList, refetch: refetchVoucherList } = useQuery({  
     queryKey: [config.voucherType, currentPage, pageSize],  
     queryFn: () => {  
-      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers'];  
+      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers', 'sales-orders'];  
       const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${config.voucherType}` : `/${config.voucherType}`;  
       console.log(`[useVoucherPage] Fetching vouchers from endpoint: ${endpoint}`);  
       return api.get(endpoint, {  
@@ -399,18 +405,17 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     staleTime: 300000,  
   });  
   
-  const { data: nextVoucherNumber, isLoading: isNextNumberLoading, refetch: refetchNextNumber } = useQuery({  
-    queryKey: [`next${config.voucherType}Number`],  
-    queryFn: () => {  
-      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers'];  
-      const trimmedNextEndpoint = config.nextNumberEndpoint.replace(/^\/+/, ''); // Strip leading slashes to prevent //
-      const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${trimmedNextEndpoint}` : `/${trimmedNextEndpoint}`;  
-      console.log(`[useVoucherPage] Fetching next number from endpoint: ${endpoint}`);  
-      return voucherService.getNextVoucherNumber(endpoint);  
-    },  
-    enabled: mode === "create" && isOrgContextReady,  
-    staleTime: 300000,  
-  });  
+  const apiEndpoint = getVoucherApiEndpoint(config.voucherType);
+  const { nextVoucherNumber: hookNextVoucherNumber, refreshVoucherNumber } = useVoucherNumbering({
+    apiEndpoint,
+    mode,
+    setValue,
+    voucherData,
+  });
+  
+  // Use the hook's nextVoucherNumber
+  const nextVoucherNumber = hookNextVoucherNumber;
+  const isNextNumberLoading = false; // Since the hook handles it, we can derive if needed
   
   // NEW: Fetch next revision number for revise mode
   const { data: nextRevisionNumber, isLoading: isNextRevisionLoading } = useQuery({
@@ -420,10 +425,43 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     staleTime: 300000,
     select: (response) => response.data,
   });
+
+  // Date change logic for fetching number and checking conflict
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      if (date && mode === 'create') {
+        try {
+          const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers', 'sales-orders'];  
+          const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${config.voucherType}/next-number` : `/${config.voucherType}/next-number`;
+          const response = await api.get(
+            endpoint,
+            { params: { voucher_date: date } }
+          );
+          setValue('voucher_number', response.data);
+          
+          const conflictEndpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${config.voucherType}/check-backdated-conflict` : `/${config.voucherType}/check-backdated-conflict`;
+          const conflictResponse = await api.get(
+            conflictEndpoint,
+            { params: { voucher_date: date } }
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(date);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
+      }
+    };
+    
+    fetchVoucherNumber();
+  }, [date, mode, config.voucherType, setValue]);
   
   const createMutation = useMutation({  
     mutationFn: (data: any) => {  
-      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers'];  
+      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers', 'sales-orders'];  
       const trimmedApiEndpoint = (config.apiEndpoint || config.voucherType).replace(/^\/+/, ''); // Strip leading slashes
       const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${trimmedApiEndpoint}` : `/${trimmedApiEndpoint}`;  
       console.log(`[useVoucherPage] Creating voucher at endpoint: ${endpoint}`);  
@@ -461,10 +499,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       await refetchVoucherList();  
       router.push({ query: { mode: "create" } }, undefined, { shallow: true });  
       setMode("create");  
-      const { data: newNextNumber } = await refetchNextNumber();  
+      await refreshVoucherNumber();  
       reset({  
         ...defaultValues,  
-        voucher_number: newNextNumber,  
+        voucher_number: nextVoucherNumber,  
       });  
     },  
     onError: (error: any) => {  
@@ -495,10 +533,10 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       await refetchVoucherList();  
       router.push({ query: { mode: "create" } }, undefined, { shallow: true });  
       setMode("create");  
-      const { data: newNextNumber } = await refetchNextNumber();  
+      await refreshVoucherNumber();  
       reset({  
         ...defaultValues,  
-        voucher_number: newNextNumber,  
+        voucher_number: nextVoucherNumber,  
       });  
     },  
     onError: (error: any) => {  
@@ -509,7 +547,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   
   const updateMutation = useMutation({  
     mutationFn: (data: any) => {  
-      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers'];  
+      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers', 'sales-orders'];  
       const trimmedApiEndpoint = (config.apiEndpoint || config.voucherType).replace(/^\/+/, ''); // Strip leading slashes
       const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${trimmedApiEndpoint}` : `/${trimmedApiEndpoint}`;  
       console.log(`[useVoucherPage] Updating voucher at endpoint: ${endpoint}/${selectedId!}`);  
@@ -884,9 +922,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   
   useEffect(() => {  
     if (mode === "create" && isOrgContextReady) {  
-      refetchNextNumber();  
+      // No refetchNextNumber needed, hook handles it
     }  
-  }, [mode, isOrgContextReady, refetchNextNumber]);  
+  }, [mode, isOrgContextReady]);  
   
   useEffect(() => {  
     console.log("Next Voucher Number:", nextVoucherNumber);  
@@ -944,6 +982,27 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       setValue("voucher_number", nextRevisionNumber);
     }
   }, [mode, nextRevisionNumber, setValue]);
+
+  // Conflict handlers
+  const handleChangeDateToSuggested = () => {
+    if (conflictInfo?.suggested_date) {
+      setValue('date', conflictInfo.suggested_date.split('T')[0]);
+      setShowConflictModal(false);
+      setPendingDate(null);
+    }
+  };
+
+  const handleProceedAnyway = () => {
+    setShowConflictModal(false);
+  };
+
+  const handleCancelConflict = () => {
+    setShowConflictModal(false);
+    if (pendingDate) {
+      setValue('date', '');
+    }
+    setPendingDate(null);
+  };
   
   return {  
     mode,  
@@ -1059,5 +1118,12 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     discountDialogFor,  
     nextRevisionNumber,  // ADDED
     isNextRevisionLoading,  // ADDED
+    conflictInfo,
+    showConflictModal,
+    pendingDate,
+    handleChangeDateToSuggested,
+    handleProceedAnyway,
+    handleCancelConflict,
+    refreshVoucherNumber,  // ADDED for post-save refresh
   };  
 };  

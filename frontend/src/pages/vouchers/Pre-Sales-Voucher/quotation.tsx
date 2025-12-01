@@ -131,6 +131,12 @@ const QuotationPage: React.FC = () => {
     handleRevise,
     nextRevisionNumber,  // ADDED
     isNextRevisionLoading,  // ADDED
+    conflictInfo,
+    showConflictModal,
+    pendingDate,
+    handleChangeDateToSuggested,
+    handleProceedAnyway,
+    handleCancelConflict
   } = useVoucherPage(config);
 
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
@@ -170,11 +176,6 @@ const QuotationPage: React.FC = () => {
   });
   const [localAdditionalCharges, setLocalAdditionalCharges] = useState<AdditionalChargesData>(additionalCharges);
   
-  // State for voucher date conflict detection
-  const [conflictInfo, setConflictInfo] = useState<any>(null);
-  const [showConflictModal, setShowConflictModal] = useState(false);
-  const [pendingDate, setPendingDate] = useState<string | null>(null);
-
   const handleToggleDescription = (checked: boolean) => {
     setDescriptionEnabled(checked);
     if (!checked) {
@@ -280,45 +281,6 @@ const QuotationPage: React.FC = () => {
       }
     });
   }, [productIds, fields, stockLoading, setValue, watch]);
-
-  // Set initial voucher number from hook
-  useEffect(() => {
-    if (mode === 'create' && nextVoucherNumber) {
-      setValue('voucher_number', nextVoucherNumber);
-    }
-  }, [mode, nextVoucherNumber, setValue]);
-
-  // Fetch voucher number and check conflict when date changes
-  useEffect(() => {
-    const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
-        try {
-          const response = await api.get(
-            `/vouchers/quotations/next-number`,
-            { params: { voucher_date: currentDate } }
-          );
-          setValue('voucher_number', response.data);
-          
-          // Check for backdated conflicts
-          const conflictResponse = await api.get(
-            `/vouchers/quotations/check-backdated-conflict`,
-            { params: { voucher_date: currentDate } }
-          );
-          
-          if (conflictResponse.data.has_conflict) {
-            setConflictInfo(conflictResponse.data);
-            setShowConflictModal(true);
-            setPendingDate(currentDate);
-          }
-        } catch (error) {
-          console.error('Error fetching voucher number:', error);
-        }
-      }
-    };
-    
-    fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
 
   const handleVoucherClick = (voucher: any) => {
     // Use the voucher from list (assumes full data from backend joins)
@@ -442,25 +404,51 @@ const QuotationPage: React.FC = () => {
     }
   }, [voucherData, mode, reset, append, remove, isIntrastate, setValue, nextRevisionNumber, isNextRevisionLoading]);
 
+  const handleCancel = () => {
+    setMode("view");
+    if (voucherData) reset(voucherData);
+  };
+
+  const onSubmit = (data: any) => {
+    if (totalRoundOff !== 0) {
+      setSubmitData(data);
+      setRoundOffConfirmOpen(true);
+      return;
+    }
+    handleFinalSubmit(
+      data,
+      watch,
+      localComputedItems, // Use localComputedItems for consistency
+      isIntrastate,
+      finalTotalAmount,
+      totalRoundOff,
+      lineDiscountEnabled,
+      lineDiscountType,
+      totalDiscountEnabled,
+      totalDiscountType,
+      createMutation,
+      updateMutation,
+      mode,
+      handleGeneratePDF,
+      refreshMasterData,
+      config,
+      additionalCharges
+    );
+  };
+
+  const enhancedCustomerOptions = [...(customerList || []), { id: null, name: "Add New Customer..." }];
+
   // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
+  const handleChangeDateToSuggestedLocal = () => {
+    handleChangeDateToSuggested();
   };
 
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
+  const handleProceedAnywayLocal = () => {
+    handleProceedAnyway();
   };
 
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      setValue('date', '');
-    }
-    setPendingDate(null);
+  const handleCancelConflictLocal = () => {
+    handleCancelConflict();
   };
 
   const indexContent = (
@@ -785,10 +773,10 @@ const QuotationPage: React.FC = () => {
         <VoucherContextMenu contextMenu={contextMenu} voucher={null} voucherType="Quotation" onClose={handleCloseContextMenu} onView={handleViewWithData} onEdit={handleEditWithData} onDelete={handleDelete} onPrint={handleGeneratePDF} onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Quotation")} onRevise={handleReviseWithData} />
         <VoucherDateConflictModal
           open={showConflictModal}
-          onClose={handleCancelConflict}
+          onClose={handleCancelConflictLocal}
           conflictInfo={conflictInfo}
-          onChangeDateToSuggested={handleChangeDateToSuggested}
-          onProceedAnyway={handleProceedAnyway}
+          onChangeDateToSuggested={handleChangeDateToSuggestedLocal}
+          onProceedAnyway={handleProceedAnywayLocal}
           voucherType="Quotation"
         />
       </>
