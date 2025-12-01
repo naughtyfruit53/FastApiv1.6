@@ -1,6 +1,11 @@
 # .github/workflows/ci.yml
 name: CI
 on: [push, pull_request]
+
+# Minimum permissions required for all jobs
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
