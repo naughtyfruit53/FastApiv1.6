@@ -49,6 +49,7 @@ import {
   LeaveApplication,
   LeaveType,
   AttendanceRecord,
+  Payslip,
 } from "../../../services";
 import { ProtectedPage } from "../../../components/ProtectedPage";
 
@@ -97,9 +98,57 @@ const SelfServicePortal: NextPage = () => {
   const [clockedIn, setClockedIn] = useState(false);
   const [currentAttendance, setCurrentAttendance] = useState<AttendanceRecord | null>(null);
 
+  // Payslip state
+  const [payslips, setPayslips] = useState<Payslip[]>([]);
+
+  // Currency formatter
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+
   useEffect(() => {
     fetchData();
   }, [tabValue]);
+
+  const fetchPayslips = async () => {
+    try {
+      setLoading(true);
+      // Use hrService to fetch payslips
+      const data = await hrService.getPayslips(user?.id);
+      setPayslips(data);
+    } catch (err) {
+      console.error("Error fetching payslips:", err);
+      // Silently handle errors - payslips may not be available yet
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadPayslip = async (payslipId: number) => {
+    try {
+      setLoading(true);
+      // Use hrService to download payslip PDF
+      const blob = await hrService.downloadPayslipPdf(payslipId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payslip_${payslipId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setSuccess("Payslip downloaded successfully");
+    } catch (err) {
+      console.error("Error downloading payslip:", err);
+      setError("Failed to download payslip");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -133,6 +182,9 @@ const SelfServicePortal: NextPage = () => {
           setCurrentAttendance(todayRecord);
           setClockedIn(!!todayRecord.check_in_time && !todayRecord.check_out_time);
         }
+      } else if (tabValue === 2) {
+        // Fetch payslips data
+        await fetchPayslips();
       }
     } catch (err: unknown) {
       console.error("Error fetching data:", err);
@@ -478,33 +530,82 @@ const SelfServicePortal: NextPage = () => {
 
           {/* Payslips Tab */}
           <TabPanel value={tabValue} index={2}>
-            <Typography variant="h6" gutterBottom>
-              My Payslips
-            </Typography>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Payslip downloads will be available once payroll is processed for the period.
-            </Alert>
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Period</TableCell>
-                    <TableCell>Pay Date</TableCell>
-                    <TableCell>Gross Pay</TableCell>
-                    <TableCell>Deductions</TableCell>
-                    <TableCell>Net Pay</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      Payslip feature coming soon
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+              <Typography variant="h6">My Payslips</Typography>
+              <Button
+                startIcon={<RefreshIcon />}
+                onClick={fetchPayslips}
+              >
+                Refresh
+              </Button>
+            </Box>
+            {payslips.length === 0 ? (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                No payslips available. Payslips will appear here once payroll is processed.
+              </Alert>
+            ) : null}
+            {loading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Period</TableCell>
+                      <TableCell>Pay Date</TableCell>
+                      <TableCell align="right">Gross Pay</TableCell>
+                      <TableCell align="right">Deductions</TableCell>
+                      <TableCell align="right">Net Pay</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {payslips.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center">
+                          No payslips found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      payslips.map((payslip: Payslip) => (
+                        <TableRow key={payslip.id}>
+                          <TableCell>{payslip.payslip_number}</TableCell>
+                          <TableCell>{payslip.pay_date}</TableCell>
+                          <TableCell align="right">
+                            {formatCurrency(payslip.gross_pay)}
+                          </TableCell>
+                          <TableCell align="right">
+                            {formatCurrency(payslip.total_deductions)}
+                          </TableCell>
+                          <TableCell align="right">
+                            {formatCurrency(payslip.net_pay)}
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={payslip.status} 
+                              color={payslip.status === "sent" ? "success" : "default"}
+                              size="small" 
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => handleDownloadPayslip(payslip.id)}
+                            >
+                              Download PDF
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </TabPanel>
         </Paper>
 

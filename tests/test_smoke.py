@@ -103,6 +103,10 @@ class TestHRSmoke:
         assert AttendancePolicy is not None
         assert LeaveBalance is not None
         assert Timesheet is not None
+        assert PayrollArrear is not None
+        assert StatutoryDeduction is not None
+        assert BankPaymentExport is not None
+        assert PayrollApproval is not None
 
     def test_hr_schemas_imports(self):
         """Test that HR schemas import correctly."""
@@ -118,6 +122,38 @@ class TestHRSmoke:
         )
         assert EmployeeProfileCreate is not None
         assert HRDashboard is not None
+
+    def test_hr_phase2_schemas_imports(self):
+        """Test that HR Phase 2 schemas import correctly."""
+        from app.schemas.hr_schemas import (
+            AttendancePolicyCreate,
+            AttendancePolicyResponse,
+            LeaveBalanceCreate,
+            LeaveBalanceResponse,
+            TimesheetCreate,
+            TimesheetResponse,
+            PayrollArrearCreate,
+            PayrollArrearResponse,
+            StatutoryDeductionCreate,
+            StatutoryDeductionResponse,
+            BankPaymentExportCreate,
+            BankPaymentExportResponse,
+            PayrollApprovalCreate,
+            PayrollApprovalResponse,
+            PayrollExportRequest,
+            AttendanceExportRequest,
+            LeaveExportRequest,
+            ExportResult
+        )
+        assert AttendancePolicyCreate is not None
+        assert LeaveBalanceResponse is not None
+        assert TimesheetCreate is not None
+        assert PayrollArrearResponse is not None
+        assert StatutoryDeductionCreate is not None
+        assert BankPaymentExportResponse is not None
+        assert PayrollApprovalCreate is not None
+        assert PayrollExportRequest is not None
+        assert ExportResult is not None
 
 
 class TestAISmoke:
@@ -156,6 +192,22 @@ class TestPhase4ScaffoldingSmoke:
         """Test that integration adapter model imports correctly."""
         from app.models.hr_models import IntegrationAdapter
         assert IntegrationAdapter is not None
+
+    def test_phase4_schemas_imports(self):
+        """Test that Phase 4 scaffolding schemas import correctly."""
+        from app.schemas.hr_schemas import (
+            HRAnalyticsSnapshotResponse,
+            PositionBudgetCreate,
+            PositionBudgetResponse,
+            EmployeeTransferCreate,
+            EmployeeTransferResponse,
+            IntegrationAdapterCreate,
+            IntegrationAdapterResponse
+        )
+        assert HRAnalyticsSnapshotResponse is not None
+        assert PositionBudgetCreate is not None
+        assert EmployeeTransferCreate is not None
+        assert IntegrationAdapterCreate is not None
 
 
 class TestPayrollSmoke:
