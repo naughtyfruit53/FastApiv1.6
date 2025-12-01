@@ -574,7 +574,7 @@ def register_subrouters():
     try:
         from .vouchers.quotation import router as quotation_router
         logger.debug("Imported quotation_router")
-        api_v1_router.include_router(quotation_router, tags=["quotations"])
+        api_v1_router.include_router(quotation_router, prefix="/quotations", tags=["quotations"])
         quotation_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in quotation_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered quotation endpoints: {len(quotation_routes)} routes")
         for route_path in quotation_routes:

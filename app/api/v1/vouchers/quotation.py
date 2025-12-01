@@ -25,7 +25,6 @@ import re  # For filename sanitization
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["quotations"])
 
-@router.get("", response_model=List[QuotationInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[QuotationInDB])
 async def get_quotations(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
@@ -104,8 +103,6 @@ async def check_backdated_conflict(
         logger.error(f"Error checking backdated conflict: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
 
-# Register both "" and "/" for POST to support both /api/v1/quotations and /api/v1/quotations/
-@router.post("", response_model=QuotationInDB, include_in_schema=False)
 @router.post("/", response_model=QuotationInDB)
 async def create_quotation(
     quotation: QuotationCreate,
@@ -636,7 +633,7 @@ async def create_revision_from_quotation(
     current_user, org_id = auth
     
     try:
-        # Get the source quotation with items
+        # Get the source quotation
         stmt = select(Quotation).options(
             joinedload(Quotation.items)
         ).where(

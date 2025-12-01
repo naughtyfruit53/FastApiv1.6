@@ -751,6 +751,68 @@ class PayrollApprovalResponse(PayrollApprovalBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
+# =============================================================================
+# Compliance & Policies Module
+# =============================================================================
+class PolicyDocumentBase(BaseModel):
+    code: str = Field(..., description="Unique policy code")
+    version: str = Field(..., description="Policy version")
+    category: Optional[str] = Field(None, description="Policy category")
+    status: str = Field(default="draft", description="Policy status: draft, published, archived")
+    is_active: bool = Field(default=True, description="Active status")
+
+class PolicyDocumentCreate(PolicyDocumentBase):
+    pass
+
+class PolicyDocumentUpdate(BaseModel):
+    code: Optional[str] = None
+    version: Optional[str] = None
+    category: Optional[str] = None
+    status: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class PolicyDocumentResponse(PolicyDocumentBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    published_at: Optional[datetime] = None
+    created_by_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+class PolicyAcknowledgmentBase(BaseModel):
+    policy_document_id: int = Field(..., description="Reference to PolicyDocument")
+    employee_id: int = Field(..., description="Reference to EmployeeProfile")
+    status: str = Field(default="pending", description="Acknowledgment status: pending, acknowledged, rejected")
+
+class PolicyAcknowledgmentCreate(PolicyAcknowledgmentBase):
+    pass
+
+class PolicyAcknowledgmentUpdate(BaseModel):
+    status: Optional[str] = None
+
+class PolicyAcknowledgmentResponse(PolicyAcknowledgmentBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    organization_id: int
+    acknowledged_at: Optional[datetime] = None
+    ip_address: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+class ComplianceAuditExportCreate(BaseModel):
+    export_type: str = Field(..., description="Export type, e.g., payroll, attendance")
+
+class ComplianceAuditExportResponse(BaseModel):
+    id: int
+    organization_id: int
+    export_type: str
+    status: str = Field(default="pending")
+    created_by_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
 # =============================================================================
 # Phase 4 Scaffolding Schemas (Feature-flagged)
@@ -1487,3 +1549,4 @@ class OnboardingTaskResponse(OnboardingTaskBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     created_by_id: Optional[int] = None
+    
