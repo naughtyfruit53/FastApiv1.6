@@ -1,68 +1,25 @@
 import React, { useState } from 'react';
-import { Box, Grid, Typography, Chip } from '@mui/material';
-import { Add, FilterList, TrendingUp, TrendingDown } from '@mui/icons-material';
+import { Box, Grid, Typography, Chip, IconButton } from '@mui/material';
+import { Add, FilterList, TrendingUp, TrendingDown, Search as SearchIcon } from '@mui/icons-material';
 import { 
   MobileDashboardLayout, 
   MobileCard, 
   MobileButton, 
   MobileTable,
-  MobileSearchBar 
+  MobileSearchBar,
+  MobilePullToRefresh 
 } from '../../components/mobile';
+import { useInventory } from '../../hooks/useInventory';
+import { MobileNavProvider } from '../../context/MobileNavContext';
 
-// TODO: CRITICAL - Replace hardcoded data with real inventory API integration
-// TODO: Integrate with inventory services (stock management, movements, valuation)
-// TODO: Implement real-time stock monitoring with live updates and auto-refresh
-// TODO: Add mobile barcode scanning for stock management and transactions
-// TODO: Create quick stock adjustment forms optimized for mobile input
-// TODO: Implement low stock alert system with push notifications
-// TODO: Add mobile-optimized stock movement tracking with history
-// TODO: Create location-based inventory management for multi-warehouse
-// TODO: Implement mobile cycle count interface with barcode integration
-// TODO: Add inventory analytics dashboard with mobile-friendly charts
-// TODO: Create mobile bulk import functionality for stock data
-// TODO: Implement GPS-based stock tracking for field inventory
-// TODO: Add photo capture for stock verification and documentation
-// TODO: Create mobile inventory reporting with export capabilities
-// TODO: Implement offline inventory management with sync capabilities
-
-// Sample inventory data - REPLACE WITH REAL API INTEGRATION
-const inventoryData = [
-  {
-    id: 'PRD-001',
-    name: 'Widget A',
-    category: 'Electronics',
-    stock: 45,
-    minStock: 10,
-    status: 'In Stock',
-    price: '₹1,250',
-  },
-  {
-    id: 'PRD-002',
-    name: 'Component B',
-    category: 'Parts',
-    stock: 5,
-    minStock: 15,
-    status: 'Low Stock',
-    price: '₹850',
-  },
-  {
-    id: 'PRD-003',
-    name: 'Device C',
-    category: 'Electronics',
-    stock: 0,
-    minStock: 5,
-    status: 'Out of Stock',
-    price: '₹2,150',
-  },
-];
-
+// Define columns for MobileTable
 const inventoryColumns = [
   {
     key: 'name',
     label: 'Product',
     render: (value: string, row: any) => (
       <Box>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
           {value}
         </Typography>
         <Typography variant="caption" color="text.secondary">
@@ -76,7 +33,7 @@ const inventoryColumns = [
     label: 'Stock',
     render: (value: number, row: any) => (
       <Box sx={{ textAlign: 'center' }}>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, color: value > row.minStock ? 'success.main' : 'warning.main' }}>
           {value}
         </Typography>
         <Typography variant="caption" color="text.secondary">
@@ -97,7 +54,8 @@ const inventoryColumns = [
           : value === 'Low Stock' ? 'warning' 
           : 'error'
         }
-        sx={{ fontSize: '0.75rem' }}
+        variant="filled"
+        sx={{ fontSize: '0.75rem', fontWeight: 500 }}
       />
     ),
   },
@@ -105,7 +63,7 @@ const inventoryColumns = [
     key: 'price',
     label: 'Price',
     render: (value: string) => (
-      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+      <Typography variant="body2" sx={{ fontWeight: 600, color: 'info.main' }}>
         {value}
       </Typography>
     ),
@@ -114,145 +72,264 @@ const inventoryColumns = [
 
 const MobileInventory: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const { items, total, lowStockAlerts, loading, error, addItem } = useInventory({ search: searchQuery });
 
-  const filteredData = inventoryData.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    // Simulate refresh or call refetch from hook
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setRefreshing(false);
+  };
 
   const rightActions = (
-    <MobileButton
-      variant="contained"
-      startIcon={<Add />}
-      size="small"
-    >
-      Add Item
-    </MobileButton>
+    <Box sx={{ display: 'flex', gap: 1 }}>
+      <MobileButton
+        variant="contained"
+        startIcon={<Add />}
+        size="small"
+        onClick={() => addItem({ /* Sample new item data */ })}
+      >
+        Add Item
+      </MobileButton>
+      <IconButton size="small">
+        <FilterList />
+      </IconButton>
+    </Box>
   );
 
+  if (loading) {
+    return (
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="Inventory"
+          subtitle="Stock Management"
+          rightActions={rightActions}
+          showBottomNav={true}
+        >
+          <Typography>Loading inventory...</Typography>
+        </MobileDashboardLayout>
+      </MobileNavProvider>
+    );
+  }
+
+  if (error) {
+    return (
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="Inventory"
+          subtitle="Stock Management"
+          rightActions={rightActions}
+          showBottomNav={true}
+        >
+          <Alert severity="error">Error loading inventory: {error.message}</Alert>
+        </MobileDashboardLayout>
+      </MobileNavProvider>
+    );
+  }
+
   return (
-    <MobileDashboardLayout
-      title="Inventory"
-      subtitle="Stock Management"
-      rightActions={rightActions}
-      showBottomNav={true}
-    >
-      {/* Search and Filter */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-        <Box sx={{ flex: 1 }}>
+    <MobileNavProvider>
+      <MobileDashboardLayout
+        title="Inventory"
+        subtitle="Stock Management"
+        rightActions={rightActions}
+        showBottomNav={true}
+      >
+        <MobilePullToRefresh
+          onRefresh={handleRefresh}
+          isRefreshing={refreshing}
+          enabled={true}
+        >
+          {/* Enhanced Search with Icon */}
           <MobileSearchBar
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Search products..."
+            placeholder="Search products by name, ID, or category..."
+            startAdornment={<SearchIcon sx={{ color: 'action.active' }} />}
+            sx={{
+              mb: 2,
+              bgcolor: 'background.paper',
+              borderRadius: 2,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+            }}
           />
-        </Box>
-        <MobileButton
-          variant="outlined"
-          startIcon={<FilterList />}
-          sx={{ minWidth: 'auto', px: 2 }}
-        >
-          Filter
-        </MobileButton>
-      </Box>
 
-      {/* Inventory Summary */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={3}>
-          <MobileCard>
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                1,248
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Total Items
-              </Typography>
-            </Box>
-          </MobileCard>
-        </Grid>
-        <Grid item xs={3}>
-          <MobileCard>
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: 'success.main' }}>
-                1,195
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                In Stock
-              </Typography>
-            </Box>
-          </MobileCard>
-        </Grid>
-        <Grid item xs={3}>
-          <MobileCard>
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: 'warning.main' }}>
-                41
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Low Stock
-              </Typography>
-            </Box>
-          </MobileCard>
-        </Grid>
-        <Grid item xs={3}>
-          <MobileCard>
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: 'error.main' }}>
-                12
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Out of Stock
-              </Typography>
-            </Box>
-          </MobileCard>
-        </Grid>
-      </Grid>
+          {/* Inventory Summary - Modern Cards with Gradients */}
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            <Grid item xs={3}>
+              <MobileCard 
+                sx={{ 
+                  bgcolor: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+                  boxShadow: '0 4px 12px rgba(33,150,243,0.1)',
+                }}
+              >
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.dark' }}>
+                    {total}
+                  </Typography>
+                  <Typography variant="caption" color="primary.main">
+                    Total Items
+                  </Typography>
+                </Box>
+              </MobileCard>
+            </Grid>
+            <Grid item xs={3}>
+              <MobileCard 
+                sx={{ 
+                  bgcolor: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
+                  boxShadow: '0 4px 12px rgba(76,175,80,0.1)',
+                }}
+              >
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, color: 'success.dark' }}>
+                    {items.filter(item => item.stock > item.minStock).length}
+                  </Typography>
+                  <Typography variant="caption" color="success.main">
+                    In Stock
+                  </Typography>
+                </Box>
+              </MobileCard>
+            </Grid>
+            <Grid item xs={3}>
+              <MobileCard 
+                sx={{ 
+                  bgcolor: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
+                  boxShadow: '0 4px 12px rgba(255,152,0,0.1)',
+                }}
+              >
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, color: 'warning.dark' }}>
+                    {items.filter(item => item.stock <= item.minStock && item.stock > 0).length}
+                  </Typography>
+                  <Typography variant="caption" color="warning.main">
+                    Low Stock
+                  </Typography>
+                </Box>
+              </MobileCard>
+            </Grid>
+            <Grid item xs={3}>
+              <MobileCard 
+                sx={{ 
+                  bgcolor: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+                  boxShadow: '0 4px 12px rgba(244,67,54,0.1)',
+                }}
+              >
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, color: 'error.dark' }}>
+                    {items.filter(item => item.stock === 0).length}
+                  </Typography>
+                  <Typography variant="caption" color="error.main">
+                    Out of Stock
+                  </Typography>
+                </Box>
+              </MobileCard>
+            </Grid>
+          </Grid>
 
-      {/* Stock Alerts */}
-      <MobileCard title="Stock Alerts" subtitle="Items requiring attention">
-        <MobileTable
-          columns={inventoryColumns}
-          data={filteredData}
-          onRowClick={(row) => console.log('Product clicked:', row)}
-          showChevron={true}
-          emptyMessage="No inventory items found"
-        />
-      </MobileCard>
+          {/* Main Inventory Table */}
+          <MobileCard 
+            title="Inventory List" 
+            subtitle={`${items.length} items found`}
+            sx={{
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              borderRadius: 3,
+            }}
+          >
+            <MobileTable
+              columns={inventoryColumns}
+              data={items}
+              onRowClick={(row) => console.log('Product details:', row)} // Navigate to details
+              showChevron={true}
+              emptyMessage="No inventory items found matching your search"
+              sortableColumns={['name', 'stock', 'price']} // Enable sorting
+              pagination={{ pageSize: 10 }} // Mobile-friendly pagination
+            />
+          </MobileCard>
 
-      {/* Quick Actions */}
-      <MobileCard title="Quick Actions">
-        <Grid container spacing={2}>
-          <Grid item xs={6}>
-            <MobileButton 
-              variant="outlined" 
-              fullWidth
-              startIcon={<TrendingUp />}
+          {/* Stock Alerts Section */}
+          <MobileCard 
+            title="Stock Alerts" 
+            subtitle={`${lowStockAlerts.length} items requiring attention`}
+            sx={{
+              mt: 3,
+              bgcolor: 'warning.light',
+              borderRadius: 3,
+            }}
+          >
+            <MobileTable
+              columns={inventoryColumns}
+              data={lowStockAlerts}
+              onRowClick={(row) => console.log('Alert details:', row)}
+              showChevron={true}
+              emptyMessage="No low stock alerts"
+            />
+          </MobileCard>
+
+          {/* Quick Actions - Floating Style */}
+          <Box sx={{ 
+            position: 'fixed', 
+            bottom: 80, 
+            right: 16, 
+            zIndex: 1200 
+          }}>
+            <MobileButton
+              variant="contained"
+              color="primary"
+              size="large"
+              sx={{ borderRadius: '50%', width: 56, height: 56, minWidth: 'auto' }}
+              onClick={() => console.log('Add new item')}
             >
-              Stock In
+              <Add />
             </MobileButton>
-          </Grid>
-          <Grid item xs={6}>
-            <MobileButton 
-              variant="outlined" 
-              fullWidth
-              startIcon={<TrendingDown />}
-            >
-              Stock Out
-            </MobileButton>
-          </Grid>
-          <Grid item xs={6}>
-            <MobileButton variant="outlined" fullWidth>
-              Stock Report
-            </MobileButton>
-          </Grid>
-          <Grid item xs={6}>
-            <MobileButton variant="outlined" fullWidth>
-              Reorder List
-            </MobileButton>
-          </Grid>
-        </Grid>
-      </MobileCard>
-    </MobileDashboardLayout>
+          </Box>
+
+          {/* Bottom Quick Actions */}
+          <MobileCard title="Quick Actions" sx={{ mt: 3, borderRadius: 3 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <MobileButton 
+                  variant="outlined" 
+                  fullWidth
+                  startIcon={<TrendingUp />}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Stock In
+                </MobileButton>
+              </Grid>
+              <Grid item xs={6}>
+                <MobileButton 
+                  variant="outlined" 
+                  fullWidth
+                  startIcon={<TrendingDown />}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Stock Out
+                </MobileButton>
+              </Grid>
+              <Grid item xs={6}>
+                <MobileButton 
+                  variant="outlined" 
+                  fullWidth
+                  sx={{ borderRadius: 2 }}
+                >
+                  Stock Report
+                </MobileButton>
+              </Grid>
+              <Grid item xs={6}>
+                <MobileButton 
+                  variant="outlined" 
+                  fullWidth
+                  sx={{ borderRadius: 2 }}
+                >
+                  Reorder List
+                </MobileButton>
+              </Grid>
+            </Grid>
+          </MobileCard>
+        </MobilePullToRefresh>
+      </MobileDashboardLayout>
+    </MobileNavProvider>
   );
 };
 

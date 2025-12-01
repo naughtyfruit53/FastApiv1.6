@@ -311,7 +311,7 @@ const MobileDrawerNavigation: React.FC<MobileDrawerNavigationProps> = ({
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-                FastAPI v1.6
+                TritIQ BOS
               </Typography>
               {user && (
                 <Typography variant="body2" sx={{ opacity: 0.9, marginTop: 0.5 }}>

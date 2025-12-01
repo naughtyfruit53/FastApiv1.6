@@ -28,7 +28,7 @@ interface LogoBadgeProps {
 }
 
 const LogoBadge: React.FC<LogoBadgeProps> = ({
-  logoSrc,
+  logoSrc = "/Tritiq.png",
   logoAlt = "Logo",
   text = "TritiQ",
   visible = true,
@@ -51,12 +51,11 @@ const LogoBadge: React.FC<LogoBadgeProps> = ({
         alignItems: "center",
         gap: 1,
         padding: isMobile ? "6px 10px" : "8px 12px",
-        backgroundColor: "rgba(255, 255, 255, 0.9)",
-        backdropFilter: "blur(8px)",
+        backgroundColor: "transparent",
+        backdropFilter: "none",
         borderRadius: "8px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-        border: "1px solid",
-        borderColor: "divider",
+        boxShadow: "none",
+        border: "none",
         transition: "opacity 0.2s ease-in-out",
         // Hide during print/PDF
         "@media print": {
@@ -74,9 +73,9 @@ const LogoBadge: React.FC<LogoBadgeProps> = ({
         <Image
           src={logoSrc}
           alt={logoAlt}
-          width={isMobile ? 20 : 24}
-          height={isMobile ? 20 : 24}
-          style={{ objectFit: "contain" }}
+          width={98.4} // 25mm ≈ 98.4px
+          height={98.4} // 25mm ≈ 98.4px
+          style={{ objectFit: "contain", opacity: 0.5 }} // 80% transparent
         />
       ) : (
         <Box
@@ -102,17 +101,6 @@ const LogoBadge: React.FC<LogoBadgeProps> = ({
           </Typography>
         </Box>
       )}
-      <Typography
-        variant="caption"
-        sx={{
-          fontWeight: 600,
-          color: "text.secondary",
-          fontSize: isMobile ? "10px" : "12px",
-          letterSpacing: "0.5px",
-        }}
-      >
-        {text}
-      </Typography>
     </Box>
   );
 };
