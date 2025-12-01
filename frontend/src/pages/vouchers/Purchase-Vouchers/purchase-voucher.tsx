@@ -312,185 +312,6 @@ const PurchaseVoucherPage: React.FC = () => {
     });  
   }, [productIds, fields.length, setValue, watch, company?.organization_id]);  
   
-  useEffect(() => {  
-    if (mode === "create" && !nextVoucherNumber && !isLoading) {  
-      voucherService.getNextVoucherNumber(config.nextNumberEndpoint)  
-        .then(number => setValue("voucher_number", number))  
-        .catch(err => console.error("Failed to fetch voucher number:", err));  
-    }  
-  }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);  
-  
-  useEffect(() => {  
-    if (mode === "create" && productId && productList) {  
-      const product = productList.find((p) => p.id === Number(productId));  
-      if (product) {  
-        const gst_rate = normalizeGstRate(product.gst_rate ?? 18);  
-        if (fields.length === 1 && !watch(`items.0.product_id`)) {  
-          remove(0);  
-        }  
-        append({  
-          product_id: product.id,  
-          product_name: product.product_name || product.name,  
-          quantity: 0.0,  
-          unit_price: parseFloat(product.unit_price || 0),  
-          original_unit_price: parseFloat(product.unit_price || 0),  
-          discount_percentage: 0,  
-          discount_amount: 0,  
-          gst_rate: gst_rate,  
-          cgst_rate: isIntrastate ? gst_rate / 2 : 0,  
-          sgst_rate: isIntrastate ? gst_rate / 2 : 0,  
-          igst_rate: isIntrastate ? 0 : gst_rate,  
-          amount: 0,  
-          unit: product.unit || " ",  
-          current_stock: 0,  
-          reorder_level: parseFloat(product.reorder_level || 0),  
-          description: '',  
-        });  
-      }  
-    }  
-  }, [mode, productId, productList, append, isIntrastate, fields.length, watch, remove]);  
-  
-  useEffect(() => {  
-    if (mode === "create" && vendorId && vendorList && !watch("vendor_id")) {  
-      const vendor = vendorList.find((v) => v.id === Number(vendorId));  
-      if (vendor) {  
-        setValue("vendor_id", vendor.id);  
-        setSelectedVendor(vendor);  
-        console.log("Set initial vendor from query:", vendor.id);  
-      }  
-    }  
-  }, [mode, vendorId, vendorList, setValue, watch]);  
-  
-  useEffect(() => {  
-    console.log("Vendor list in purchase-voucher:", vendorList);  
-  }, [vendorList]);  
-  
-  const handleVendorAdded = (newVendor: any) => {  
-    if (!newVendor?.id) {  
-      console.error("New vendor ID is missing:", newVendor);  
-      return;  
-    }  
-    setValue("vendor_id", newVendor.id);  
-    setSelectedVendor(newVendor);  
-    console.log("Vendor added, updating vendor_id:", newVendor.id);  
-    queryClient.setQueryData(["vendors", "", company?.organization_id], (old: any[]) => {  
-      const updatedList = old ? [...old, newVendor] : [newVendor];  
-      console.log("Updated vendor list:", updatedList);  
-      return updatedList;  
-    });  
-    queryClient.invalidateQueries(["vendors"]);  
-    setShowAddVendorModal(false);  
-    refreshMasterData();  
-  };  
-  
-  const handleVoucherClick = (voucher: any) => {  
-    setMode("view");  
-    reset({  
-      ...voucher,  
-      date: voucher.date ? voucher.date.split('T')[0] : '',  
-      items: voucher.items.map((item: any) => ({  
-        ...item,  
-        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
-        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
-        igst_rate: isIntrastate ? 0 : item.gst_rate,  
-      })),  
-    });  
-    if (voucher.additional_charges) {  
-      setAdditionalCharges(voucher.additional_charges);  
-      setAdditionalChargesEnabled(Object.values(voucher.additional_charges).some(v => v > 0));  
-    } else {  
-      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });  
-      setAdditionalChargesEnabled(false);  
-    }  
-  };  
-  
-  const handleEditWithData = (voucher: any) => {  
-    if (!voucher || !voucher.id) return;  
-    handleEdit(voucher.id);  
-    reset({  
-      ...voucher,  
-      date: voucher.date ? voucher.date.split('T')[0] : '',  
-      items: voucher.items.map((item: any) => ({  
-        ...item,  
-        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
-        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
-        igst_rate: isIntrastate ? 0 : item.gst_rate,  
-      })),  
-    });  
-    if (voucher.additional_charges) {  
-      setAdditionalCharges(voucher.additional_charges);  
-      setAdditionalChargesEnabled(Object.values(voucher.additional_charges).some(v => v > 0));  
-    } else {  
-      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });  
-      setAdditionalChargesEnabled(false);  
-    }  
-    queryClient.setQueryData(['purchase-voucher', voucher.id], voucher);  
-  };  
-  
-  const handleViewWithData = (voucher: any) => {  
-    if (!voucher || !voucher.id) return;  
-    handleView(voucher.id);  
-    reset({  
-      ...voucher,  
-      date: voucher.date ? voucher.date.split('T')[0] : '',  
-      items: voucher.items.map((item: any) => ({  
-        ...item,  
-        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
-        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
-        igst_rate: isIntrastate ? 0 : item.gst_rate,  
-      })),  
-    });  
-    if (voucher.additional_charges) {  
-      setAdditionalCharges(voucher.additional_charges);  
-      setAdditionalChargesEnabled(Object.values(voucher.additional_charges).some(v => v > 0));  
-    } else {  
-      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });  
-      setAdditionalChargesEnabled(false);  
-    }  
-    queryClient.setQueryData(['purchase-voucher', voucher.id], voucher);  
-  };  
-  
-  useEffect(() => {  
-    if (voucherData && (mode === "view" || mode === "edit")) {  
-      const formattedDate = voucherData.date ? voucherData.date.split('T')[0] : '';  
-      const formattedData = {  
-        ...voucherData,  
-        date: formattedDate,  
-        items: voucherData.items?.map((item: any) => ({  
-          ...item,  
-          product_id: item.product_id,  
-          product_name: item.product?.product_name || item.product_name || "",  
-          unit_price: parseFloat(item.unit_price || 0),  
-          original_unit_price: parseFloat(item.product?.unit_price || item.unit_price || 0),  
-          discount_percentage: parseFloat(item.discount_percentage || 0),  
-          discount_amount: parseFloat(item.discount_amount || 0),  
-          gst_rate: normalizeGstRate(item.gst_rate ?? 18),  
-          cgst_rate: isIntrastate ? normalizeGstRate(item.gst_rate ?? 18) / 2 : 0,  
-          sgst_rate: isIntrastate ? normalizeGstRate(item.gst_rate ?? 18) / 2 : 0,  
-          igst_rate: isIntrastate ? 0 : normalizeGstRate(item.gst_rate ?? 18),  
-          unit: item.unit || item.product?.unit || "",  
-          current_stock: parseFloat(item.current_stock || 0),  
-          reorder_level: parseFloat(item.reorder_level || 0),  
-          description: item.description || '',  
-          quantity: parseFloat(item.quantity || 0),  
-        })) || [],  
-      };  
-      console.log("[PurchaseVoucherPage] Resetting form with voucherData:", formattedData);  
-      reset(formattedData);  
-      if (voucherData.additional_charges) {  
-        setAdditionalCharges(voucherData.additional_charges);  
-        setAdditionalChargesEnabled(Object.values(voucherData.additional_charges).some(v => v > 0));  
-      } else {  
-        setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });  
-        setAdditionalChargesEnabled(false);  
-      }  
-      // NEW: Set selectedVendor from voucherData.vendor if available  
-      if (voucherData.vendor) {  
-        setSelectedVendor(voucherData.vendor);  
-      }  
-    }  
-  }, [voucherData, mode, reset, setValue, isIntrastate]);  
-  
   // Fetch voucher number when date changes and check for conflicts  
   useEffect(() => {  
     const fetchVoucherNumber = async () => {  
@@ -499,14 +320,14 @@ const PurchaseVoucherPage: React.FC = () => {
         try {  
           // Fetch new voucher number based on date  
           const response = await api.get(  
-            `/purchase-vouchers/next-number`,  
+            `/vouchers/purchase-vouchers/next-number`,  
             { params: { voucher_date: currentDate } }  
           );  
           setValue('voucher_number', response.data);  
             
           // Check for backdated conflicts  
           const conflictResponse = await api.get(  
-            `/purchase-vouchers/check-backdated-conflict`,  
+            `/vouchers/purchase-vouchers/check-backdated-conflict`,  
             { params: { voucher_date: currentDate } }  
           );  
             
@@ -752,6 +573,132 @@ const PurchaseVoucherPage: React.FC = () => {
       toast.success('Pre-populated from GRN with accepted quantities');  
     }  
   }, [grnData, mode, setValue, remove, append, isIntrastate, productList]);  
+  
+  const handleVendorAdded = (newVendor: any) => {  
+    if (!newVendor?.id) {  
+      console.error("New vendor ID is missing:", newVendor);  
+      return;  
+    }  
+    setValue("vendor_id", newVendor.id);  
+    setSelectedVendor(newVendor);  
+    console.log("Vendor added, updating vendor_id:", newVendor.id);  
+    queryClient.setQueryData(["vendors", "", company?.organization_id], (old: any[]) => {  
+      const updatedList = old ? [...old, newVendor] : [newVendor];  
+      console.log("Updated vendor list:", updatedList);  
+      return updatedList;  
+    });  
+    queryClient.invalidateQueries(["vendors"]);  
+    setShowAddVendorModal(false);  
+    refreshMasterData();  
+  };  
+  
+  const handleVoucherClick = (voucher: any) => {  
+    setMode("view");  
+    reset({  
+      ...voucher,  
+      date: voucher.date ? voucher.date.split('T')[0] : '',  
+      items: voucher.items.map((item: any) => ({  
+        ...item,  
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
+        igst_rate: isIntrastate ? 0 : item.gst_rate,  
+      })),  
+    });  
+    if (voucher.additional_charges) {  
+      setAdditionalCharges(voucher.additional_charges);  
+      setAdditionalChargesEnabled(Object.values(voucher.additional_charges).some(v => v > 0));  
+    } else {  
+      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });  
+      setAdditionalChargesEnabled(false);  
+    }  
+  };  
+  
+  const handleEditWithData = (voucher: any) => {  
+    if (!voucher || !voucher.id) return;  
+    handleEdit(voucher.id);  
+    reset({  
+      ...voucher,  
+      date: voucher.date ? voucher.date.split('T')[0] : '',  
+      items: voucher.items.map((item: any) => ({  
+        ...item,  
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
+        igst_rate: isIntrastate ? 0 : item.gst_rate,  
+      })),  
+    });  
+    if (voucher.additional_charges) {  
+      setAdditionalCharges(voucher.additional_charges);  
+      setAdditionalChargesEnabled(Object.values(voucher.additional_charges).some(v => v > 0));  
+    } else {  
+      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });  
+      setAdditionalChargesEnabled(false);  
+    }  
+    queryClient.setQueryData(['purchase-voucher', voucher.id], voucher);  
+  };  
+  
+  const handleViewWithData = (voucher: any) => {  
+    if (!voucher || !voucher.id) return;  
+    handleView(voucher.id);  
+    reset({  
+      ...voucher,  
+      date: voucher.date ? voucher.date.split('T')[0] : '',  
+      items: voucher.items.map((item: any) => ({  
+        ...item,  
+        cgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
+        sgst_rate: isIntrastate ? item.gst_rate / 2 : 0,  
+        igst_rate: isIntrastate ? 0 : item.gst_rate,  
+      })),  
+    });  
+    if (voucher.additional_charges) {  
+      setAdditionalCharges(voucher.additional_charges);  
+      setAdditionalChargesEnabled(Object.values(voucher.additional_charges).some(v => v > 0));  
+    } else {  
+      setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });  
+      setAdditionalChargesEnabled(false);  
+    }  
+    queryClient.setQueryData(['purchase-voucher', voucher.id], voucher);  
+  };  
+  
+  useEffect(() => {  
+    if (voucherData && (mode === "view" || mode === "edit")) {  
+      const formattedDate = voucherData.date ? voucherData.date.split('T')[0] : '';  
+      const formattedData = {  
+        ...voucherData,  
+        date: formattedDate,  
+        items: voucherData.items?.map((item: any) => ({  
+          ...item,  
+          product_id: item.product_id,  
+          product_name: item.product?.product_name || item.product_name || "",  
+          unit_price: parseFloat(item.unit_price || 0),  
+          original_unit_price: parseFloat(item.product?.unit_price || item.unit_price || 0),  
+          discount_percentage: parseFloat(item.discount_percentage || 0),  
+          discount_amount: parseFloat(item.discount_amount || 0),  
+          gst_rate: normalizeGstRate(item.gst_rate ?? 18),  
+          cgst_rate: isIntrastate ? normalizeGstRate(item.gst_rate ?? 18) / 2 : 0,  
+          sgst_rate: isIntrastate ? normalizeGstRate(item.gst_rate ?? 18) / 2 : 0,  
+          igst_rate: isIntrastate ? 0 : normalizeGstRate(item.gst_rate ?? 18),  
+          unit: item.unit || item.product?.unit || "",  
+          current_stock: parseFloat(item.current_stock || 0),  
+          reorder_level: parseFloat(item.reorder_level || 0),  
+          description: item.description || '',  
+          quantity: parseFloat(item.quantity || 0),  
+        })) || [],  
+      };  
+      console.log("[PurchaseVoucherPage] Resetting form with voucherData:", formattedData);  
+      reset(formattedData);  
+      if (voucherData.additional_charges) {  
+        setAdditionalCharges(voucherData.additional_charges);  
+        setAdditionalChargesEnabled(Object.values(voucherData.additional_charges).some(v => v > 0));  
+      } else {  
+        setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });  
+        setAdditionalChargesEnabled(false);  
+      }  
+      // NEW: Set selectedVendor from voucherData.vendor if available  
+      if (voucherData.vendor) {  
+        setSelectedVendor(voucherData.vendor);  
+      }  
+    }  
+  }, [voucherData, mode, reset, setValue, isIntrastate]);  
   
   const indexContent = (  
     <TableContainer sx={{ maxHeight: 400 }}>  

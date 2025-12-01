@@ -23,7 +23,7 @@ import logging
 import re  # For filename sanitization
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/quotations", tags=["quotations"])
+router = APIRouter(tags=["quotations"])
 
 @router.get("", response_model=List[QuotationInDB])  # Added to handle without trailing /
 @router.get("/", response_model=List[QuotationInDB])

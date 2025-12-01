@@ -281,13 +281,44 @@ const QuotationPage: React.FC = () => {
     });
   }, [productIds, fields, stockLoading, setValue, watch]);
 
+  // Set initial voucher number from hook
   useEffect(() => {
-    if (mode === "create" && !nextVoucherNumber && !isLoading) {
-      voucherService.getNextVoucherNumber(config.nextNumberEndpoint)
-        .then((number) => setValue("voucher_number", number))
-        .catch((err) => console.error("Failed to fetch voucher number:", err));
+    if (mode === 'create' && nextVoucherNumber) {
+      setValue('voucher_number', nextVoucherNumber);
     }
-  }, [mode, nextVoucherNumber, isLoading, setValue, config.nextNumberEndpoint]);
+  }, [mode, nextVoucherNumber, setValue]);
+
+  // Fetch voucher number and check conflict when date changes
+  useEffect(() => {
+    const fetchVoucherNumber = async () => {
+      const currentDate = watch('date');
+      if (currentDate && mode === 'create') {
+        try {
+          const response = await api.get(
+            `/vouchers/quotations/next-number`,
+            { params: { voucher_date: currentDate } }
+          );
+          setValue('voucher_number', response.data);
+          
+          // Check for backdated conflicts
+          const conflictResponse = await api.get(
+            `/vouchers/quotations/check-backdated-conflict`,
+            { params: { voucher_date: currentDate } }
+          );
+          
+          if (conflictResponse.data.has_conflict) {
+            setConflictInfo(conflictResponse.data);
+            setShowConflictModal(true);
+            setPendingDate(currentDate);
+          }
+        } catch (error) {
+          console.error('Error fetching voucher number:', error);
+        }
+      }
+    };
+    
+    fetchVoucherNumber();
+  }, [watch('date'), mode, setValue]);
 
   const handleVoucherClick = (voucher: any) => {
     // Use the voucher from list (assumes full data from backend joins)
@@ -410,73 +441,6 @@ const QuotationPage: React.FC = () => {
       }
     }
   }, [voucherData, mode, reset, append, remove, isIntrastate, setValue, nextRevisionNumber, isNextRevisionLoading]);
-
-  // Fetch voucher number when date changes and check for conflicts
-  useEffect(() => {
-    const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
-        try {
-          // Fetch new voucher number based on date
-          const response = await api.get(
-            `/quotations/next-number`,
-            { params: { voucher_date: currentDate } }
-          );
-          setValue('voucher_number', response.data);
-          
-          // Check for backdated conflicts
-          const conflictResponse = await api.get(
-            `/quotations/check-backdated-conflict`,
-            { params: { voucher_date: currentDate } }
-          );
-          
-          if (conflictResponse.data.has_conflict) {
-            setConflictInfo(conflictResponse.data);
-            setShowConflictModal(true);
-            setPendingDate(currentDate);
-          }
-        } catch (error) {
-          console.error('Error fetching voucher number:', error);
-        }
-      }
-    };
-    
-    fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
-
-  const onSubmit = (data: any) => {
-    if (totalRoundOff !== 0) {
-      setSubmitData(data);
-      setRoundOffConfirmOpen(true);
-      return;
-    }
-    handleFinalSubmit(
-      data,
-      watch,
-      localComputedItems, // Use localComputedItems for consistency
-      isIntrastate,
-      finalTotalAmount,
-      totalRoundOff,
-      lineDiscountEnabled,
-      lineDiscountType,
-      totalDiscountEnabled,
-      totalDiscountType,
-      createMutation,
-      updateMutation,
-      mode,
-      handleGeneratePDF,
-      refreshMasterData,
-      config,
-      additionalCharges
-    );
-  };
-
-  const handleCancel = () => {
-    setMode("view");
-    if (voucherData) reset(voucherData);
-  };
-
-  const enhancedCustomerOptions = [...(customerList || []), { id: null, name: "Add New Customer..." }];
 
   // Conflict modal handlers
   const handleChangeDateToSuggested = () => {

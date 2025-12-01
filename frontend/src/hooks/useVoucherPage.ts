@@ -354,17 +354,24 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   
   const { data: voucherList, isLoading: isLoadingList, refetch: refetchVoucherList } = useQuery({  
     queryKey: [config.voucherType, currentPage, pageSize],  
-    queryFn: () =>  
-      voucherService.getVouchers(config.voucherType, {  
-        skip: (currentPage - 1) * pageSize,  
-        limit: 500,  
-        sort: "desc",  
-        sortBy: "created_at",  
-      }),  
+    queryFn: () => {  
+      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers'];  
+      const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${config.voucherType}` : `/${config.voucherType}`;  
+      console.log(`[useVoucherPage] Fetching vouchers from endpoint: ${endpoint}`);  
+      return api.get(endpoint, {  
+        params: {  
+          skip: (currentPage - 1) * pageSize,  
+          limit: 500,  
+          sort: "desc",  
+          sortBy: "created_at",  
+        },  
+      }).then(res => res.data);  
+    },  
     enabled: isOrgContextReady,  
     staleTime: 300000,  
     select: (data) => {  
       const vouchers = Array.isArray(data) ? data : data.vouchers || [];  
+      console.log(`[useVoucherPage] Selected vouchers data:`, vouchers);  
       return vouchers.map((voucher: any) => ({  
         ...voucher,  
         total_amount: calculateVoucherTotals(  
@@ -394,8 +401,13 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   
   const { data: nextVoucherNumber, isLoading: isNextNumberLoading, refetch: refetchNextNumber } = useQuery({  
     queryKey: [`next${config.voucherType}Number`],  
-    queryFn: () =>  
-      voucherService.getNextVoucherNumber(config.nextNumberEndpoint),  
+    queryFn: () => {  
+      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers'];  
+      const trimmedNextEndpoint = config.nextNumberEndpoint.replace(/^\/+/, ''); // Strip leading slashes to prevent //
+      const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${trimmedNextEndpoint}` : `/${trimmedNextEndpoint}`;  
+      console.log(`[useVoucherPage] Fetching next number from endpoint: ${endpoint}`);  
+      return voucherService.getNextVoucherNumber(endpoint);  
+    },  
     enabled: mode === "create" && isOrgContextReady,  
     staleTime: 300000,  
   });  
@@ -410,11 +422,16 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   });
   
   const createMutation = useMutation({  
-    mutationFn: (data: any) =>  
-      voucherService.createVoucher(  
-        config.apiEndpoint || config.voucherType,  
+    mutationFn: (data: any) => {  
+      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers'];  
+      const trimmedApiEndpoint = (config.apiEndpoint || config.voucherType).replace(/^\/+/, ''); // Strip leading slashes
+      const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${trimmedApiEndpoint}` : `/${trimmedApiEndpoint}`;  
+      console.log(`[useVoucherPage] Creating voucher at endpoint: ${endpoint}`);  
+      return voucherService.createVoucher(  
+        endpoint,  
         data,  
-      ),  
+      );  
+    },  
     onSuccess: async (newVoucher) => {  
       console.log("[useVoucherPage] Voucher created successfully:", newVoucher);  
       if (newVoucher.reference_id && newVoucher.reference_type) {  
@@ -491,12 +508,17 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   });  
   
   const updateMutation = useMutation({  
-    mutationFn: (data: any) =>  
-      voucherService.updateVoucher(  
-        config.apiEndpoint || config.voucherType,  
+    mutationFn: (data: any) => {  
+      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers'];  
+      const trimmedApiEndpoint = (config.apiEndpoint || config.voucherType).replace(/^\/+/, ''); // Strip leading slashes
+      const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${trimmedApiEndpoint}` : `/${trimmedApiEndpoint}`;  
+      console.log(`[useVoucherPage] Updating voucher at endpoint: ${endpoint}/${selectedId!}`);  
+      return voucherService.updateVoucher(  
+        endpoint,  
         selectedId!,  
         data,  
-      ),  
+      );  
+    },  
     onSuccess: () => {  
       console.log("[useVoucherPage] Voucher updated successfully");  
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });  
@@ -605,7 +627,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       fields.forEach((_, index) => remove(index));  
       referenceData.items.forEach((item: any) => {  
         append({  
-          product_id: item.product_id || null,  
+          ...item,  
           ordered_quantity: item.quantity || 0,  
           received_quantity: 0,  
           accepted_quantity: 0,  

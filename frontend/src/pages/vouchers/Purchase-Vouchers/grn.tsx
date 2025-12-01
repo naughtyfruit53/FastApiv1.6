@@ -31,7 +31,7 @@ import VoucherContextMenu from "../../../components/VoucherContextMenu";
 import VoucherLayout from "../../../components/VoucherLayout";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import VoucherListModal from "../../../components/VoucherListModal";
-import VoucherDateConflictModal from '../../../components/VoucherDateConflictModal';
+import VoucherDateConflictModal from "../../../components/VoucherDateConflictModal";
 import api from '../../../lib/api';
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import { getVoucherConfig, getVoucherStyles } from "../../../utils/voucherUtils";
@@ -167,7 +167,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     queryKey: ['grn-for-po', po_id],
     queryFn: () => {
       if (!po_id) return null;
-      return api.get(`/goods-receipt-notes/for-po/${po_id}`).then(res => res.data);
+      return api.get('/vouchers/goods-receipt-notes/for-po/${po_id}').then(res => res.data);  // FIXED PATH
     },
     enabled: !!po_id && isOrgContextReady,
   });
@@ -204,12 +204,12 @@ const GoodsReceiptNotePage: React.FC = () => {
   });
   const { data: purchaseVouchersData, refetch: refetchVouchers } = useQuery({
     queryKey: ['purchase-vouchers'],
-    queryFn: () => api.get('/purchase-vouchers').then(res => res.data),
+    queryFn: () => api.get('/vouchers/purchase-vouchers').then(res => res.data),  // FIXED PATH
     enabled: isOrgContextReady,
   });
   const { data: grns } = useQuery({
     queryKey: ['goods-receipt-notes'],
-    queryFn: () => api.get('/goods-receipt-notes').then(res => res.data),
+    queryFn: () => api.get('/vouchers/goods-receipt-notes').then(res => res.data),  // FIXED PATH
     enabled: isOrgContextReady,
   });
   const currentGrnId = mode === 'edit' ? voucherData?.id : null;
@@ -239,7 +239,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     queryKey: [selectedVoucherType, selectedVoucherId],
     queryFn: () => {
       if (!selectedVoucherType || !selectedVoucherId) {return null;}
-      const endpoint = selectedVoucherType === 'purchase-order' ? '/purchase-orders' : '/purchase-vouchers';
+      const endpoint = selectedVoucherType === 'purchase-order' ? '/purchase-orders' : '/vouchers/purchase-vouchers';  // FIXED PATH
       return api.get(`${endpoint}/${selectedVoucherId}`).then(res => res.data);
     },
     enabled: !!selectedVoucherType && !!selectedVoucherId && !grnCompleteDialogOpen,
@@ -507,14 +507,14 @@ const GoodsReceiptNotePage: React.FC = () => {
         try {
           // Fetch new voucher number based on date
           const response = await api.get(
-            `/goods-receipt-notes/next-number`,
+            `/vouchers/goods-receipt-notes/next-number`,  // FIXED PATH
             { params: { voucher_date: currentDate } }
           );
           setValue('voucher_number', response.data);
           
           // Check for backdated conflicts
           const conflictResponse = await api.get(
-            `/goods-receipt-notes/check-backdated-conflict`,
+            `/vouchers/goods-receipt-notes/check-backdated-conflict`,  // FIXED PATH
             { params: { voucher_date: currentDate } }
           );
           
