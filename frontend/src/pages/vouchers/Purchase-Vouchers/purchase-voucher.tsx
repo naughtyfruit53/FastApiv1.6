@@ -29,6 +29,7 @@ import VoucherContextMenu from "../../../components/VoucherContextMenu";
 import VoucherLayout from "../../../components/VoucherLayout";  
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";  
 import VoucherListModal from "../../../components/VoucherListModal";  
+import VoucherReferenceDropdown from "../../../components/VoucherReferenceDropdown";  
 import VoucherItemTable from "../../../components/VoucherItemTable";  
 import VoucherFormTotals from "../../../components/VoucherFormTotals";  
 import AdditionalCharges, { AdditionalChargesData } from '../../../components/AdditionalCharges';  
@@ -48,16 +49,17 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useWatch } from "react-hook-form";  
 import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntityBalance";  
 import Link from 'next/link';  
-import { toast } from "react-toastify"; // Added for toast notifications  
+import { toast } from "react-toastify";  
 import { useAuth } from '../../../context/AuthContext';  
   
 import { ProtectedPage } from '../../../components/ProtectedPage';  
+
 const PurchaseVoucherPage: React.FC = () => {  
   console.count('Render: PurchaseVoucherPage');  
   const { company, isLoading: companyLoading, error: companyError, refetch: refetchCompany } = useCompany();  
   const { isOrgContextReady } = useAuth();  
   const router = useRouter();  
-  console.log('router.query:', router.query);  // Debug log for query params  
+  console.log('router.query:', router.query);  
   const { productId, vendorId, from_grn_id } = router.query;  
   const config = getVoucherConfig("purchase-voucher");  
   const voucherStyles = getVoucherStyles();  
@@ -143,8 +145,8 @@ const PurchaseVoucherPage: React.FC = () => {
   const selectedVendorId = watch("vendor_id");  
     
   const [selectedVendor, setSelectedVendor] = useState(null as any);  
-  const [refetchLoading, setRefetchLoading] = useState(true);  // Local loading for refetch  
-    
+  const [refetchLoading, setRefetchLoading] = useState(true);  
+  
   useEffect(() => {  
     if (selectedVendorId && vendorList) {  
       const foundVendor = vendorList.find((v: any) => v.id === selectedVendorId);  
@@ -355,6 +357,10 @@ const PurchaseVoucherPage: React.FC = () => {
       setRoundOffConfirmOpen(true);  
       return;  
     }  
+    // Map reference to backend fields  
+    data.purchase_order_id = data.reference_type === 'PO' ? data.reference_id : null;  
+    data.grn_id = data.reference_type === 'GRN' ? data.reference_id : null;  
+  
     handleFinalSubmit(  
       data,  
       watch,  
@@ -542,7 +548,9 @@ const PurchaseVoucherPage: React.FC = () => {
       console.log('Pre-populating from GRN:', grnData);  
       setValue('vendor_id', grnData.vendor_id);  
       setValue('grn_id', Number(from_grn_id));  // Ensure grn_id is set  
-      setValue('reference', `GRN {grnData.voucher_number}`);  
+      setValue('reference_type', 'GRN');  
+      setValue('reference_id', Number(from_grn_id));  
+      setValue('reference_number', grnData.voucher_number);  
       setValue('date', new Date().toISOString().split('T')[0]);  
   
       // Clear existing items  
@@ -693,9 +701,19 @@ const PurchaseVoucherPage: React.FC = () => {
         setAdditionalCharges({ freight: 0, installation: 0, packing: 0, insurance: 0, loading: 0, unloading: 0, miscellaneous: 0 });  
         setAdditionalChargesEnabled(false);  
       }  
-      // NEW: Set selectedVendor from voucherData.vendor if available  
+      // Set selectedVendor from voucherData.vendor if available  
       if (voucherData.vendor) {  
         setSelectedVendor(voucherData.vendor);  
+      }  
+      // Set reference values  
+      if (voucherData.purchase_order_id) {  
+        setValue('reference_type', 'PO');  
+        setValue('reference_id', voucherData.purchase_order_id);  
+        setValue('reference_number', voucherData.purchase_order?.voucher_number || '');  
+      } else if (voucherData.grn_id) {  
+        setValue('reference_type', 'GRN');  
+        setValue('reference_id', voucherData.grn_id);  
+        setValue('reference_number', voucherData.grn?.voucher_number || '');  
       }  
     }  
   }, [voucherData, mode, reset, setValue, isIntrastate]);  
@@ -779,8 +797,10 @@ const PurchaseVoucherPage: React.FC = () => {
         </Alert>  
       )}  
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherFormStyles.formContainer}>  
-        {/* Hidden field for grn_id */}  
-        <input type="hidden" {...control.register("grn_id")} />  
+        {/* Hidden fields for reference */}  
+        <input type="hidden" {...control.register("reference_type")} />  
+        <input type="hidden" {...control.register("reference_id")} />  
+        <input type="hidden" {...control.register("reference_number")} />  
         <Grid container spacing={1}>  
           <Grid size={4}>  
             <TextField   
@@ -812,21 +832,50 @@ const PurchaseVoucherPage: React.FC = () => {
           <Grid size={4}>  
             <TextField   
               fullWidth   
-              label="Reference"   
-              {...control.register("reference")}   
+              label="Vendor Voucher Number"   
+              {...control.register("vendor_voucher_number")}   
               disabled={mode === "view"}   
               sx={voucherFormStyles.field}   
               InputLabelProps={{ shrink: true }}   
             />  
           </Grid>  
           <Grid size={4}>  
-            <TextField   
-              fullWidth   
-              label="Vendor Voucher Number"   
-              {...control.register("vendor_voucher_number")}   
-              disabled={mode === "view"}   
-              sx={voucherFormStyles.field}   
-              InputLabelProps={{ shrink: true }}   
+            <VoucherReferenceDropdown  
+              voucherType="purchase-voucher"  
+              value={{ referenceType: watch('reference_type'), referenceId: watch('reference_id'), referenceNumber: watch('reference_number') }}  
+              onChange={(reference) => {  
+                setValue('reference_type', reference.referenceType || '');  
+                setValue('reference_id', reference.referenceId || null);  
+                setValue('reference_number', reference.referenceNumber || '');  
+              }}  
+              disabled={mode === "view"}  
+              onReferenceSelected={(referenceData) => {  
+                const type = watch('reference_type');  
+                setValue('vendor_id', referenceData.vendor_id);  
+                remove(fields.map((_, index) => index));  
+                referenceData.items.forEach((item: any) => {  
+                  const product = productList?.find((p: any) => p.id === item.product_id) || {};  
+                  const quantity = type === 'PO' ? item.pending_quantity : item.accepted_quantity || 0;  
+                  append({  
+                    product_id: item.product_id,  
+                    product_name: item.product?.product_name || item.product_name || '',  
+                    quantity: quantity,  
+                    unit_price: item.unit_price || product.unit_price || 0,  
+                    original_unit_price: product.unit_price || 0,  
+                    discount_percentage: 0,  
+                    discount_amount: 0,  
+                    gst_rate: normalizeGstRate(product.gst_rate ?? 18),  
+                    cgst_rate: isIntrastate ? normalizeGstRate(product.gst_rate ?? 18) / 2 : 0,  
+                    sgst_rate: isIntrastate ? normalizeGstRate(product.gst_rate ?? 18) / 2 : 0,  
+                    igst_rate: isIntrastate ? 0 : normalizeGstRate(product.gst_rate ?? 18),  
+                    unit: item.unit || product.unit || '',  
+                    current_stock: 0,  
+                    reorder_level: product.reorder_level || 0,  
+                    description: '',  
+                  });  
+                });  
+                toast.success(`Pre-populated from ${type}`);  
+              }}  
             />  
           </Grid>  
           <Grid size={6}>  

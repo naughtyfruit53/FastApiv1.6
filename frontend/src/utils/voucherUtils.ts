@@ -1,3 +1,5 @@
+// frontend/src/utils/voucherUtils.ts
+
 import { UI_CONSTANTS } from "../constants/ui";
 
 // Type definitions for voucher calculations
@@ -524,7 +526,7 @@ export const VOUCHER_CONFIGS = {
     hasItems: true,
     voucherTitle: "Purchase Return",
   },
-  grn: {
+  "grn": {
     voucherType: "goods-receipt-notes",
     entityType: "purchase" as const,
     endpoint: "/goods-receipt-notes",
@@ -755,7 +757,6 @@ export const getReferenceVoucherOptions = (
   const options = config.allowedTypes.map((type) => ({
     value: type,
     label: VOUCHER_CONFIGS[type]?.voucherTitle || type,
-    endpoint: VOUCHER_CONFIGS[type]?.endpoint || `/${type}s`,
   }));
   // Add 'New' as the first option instead of 'None'
   return [{ value: "new", label: "New", endpoint: "" }, ...options];
@@ -921,12 +922,31 @@ export const getVoucherStyles = (): any => ({
   },
   // Table with center-aligned content
   centeredTable: {
-    "& .MuiTableCell-root": {
-      textAlign: "center" as const,
+    "& .MuiTableContainer-root": {
+      borderRadius: "4px",
     },
-    "& .MuiTableCell-head": {
-      textAlign: "center" as const,
+    "& .MuiTable-root": {
+      borderCollapse: "separate",
+      borderSpacing: 0,
+    },
+    "& .MuiTableCell-root": {
+      padding: "4px 4px",
+      "&:last-child": {
+        borderRight: "none",
+      },
+    },
+    "& .MuiTableHead-root .MuiTableCell-root": {
+      backgroundColor: "#fafafa",
+      fontSize: "12px",
       fontWeight: "bold",
+    },
+    "& .MuiTableBody-root .MuiTableRow-root": {
+      "&:hover": {
+        backgroundColor: "#f8f9fa",
+      },
+      "&:nth-of-type(even)": {
+        backgroundColor: "#fafbfc",
+      },
     },
   },
   // Rate field styling with 2 decimal places
