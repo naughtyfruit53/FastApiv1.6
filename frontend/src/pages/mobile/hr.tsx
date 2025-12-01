@@ -10,6 +10,7 @@ import {
 } from '../../components/mobile';
 import useSharedHR from '../../hooks/useSharedHR';
 import ModernLoading from "../../components/ModernLoading";
+import { MobileNavProvider } from '../../context/MobileNavContext';
 
 // Define mobile-optimized table columns for employees
 const employeeColumns = [
@@ -97,54 +98,59 @@ const MobileHR: React.FC = () => {
 
   if (loading) {
     return (
-      <MobileDashboardLayout
-        title="HR Management"
-        subtitle="Human Resources"
-        rightActions={rightActions}
-        showBottomNav={true}
-      >
-        <ModernLoading
-          type="skeleton"
-          skeletonType="dashboard"
-          count={6}
-          message="Loading HR data..."
-        />
-      </MobileDashboardLayout>
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="HR Management"
+          subtitle="Human Resources"
+          rightActions={rightActions}
+          showBottomNav={true}
+        >
+          <ModernLoading
+            type="skeleton"
+            skeletonType="dashboard"
+            count={6}
+            message="Loading HR data..."
+          />
+        </MobileDashboardLayout>
+      </MobileNavProvider>
     );
   }
 
   if (error) {
     return (
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="HR Management"
+          subtitle="Human Resources"
+          rightActions={rightActions}
+          showBottomNav={true}
+        >
+          <Box sx={{ p: 2 }}>
+            <Typography color="error" variant="body1">
+              Error: {error}
+            </Typography>
+            <MobileButton 
+              variant="outlined" 
+              onClick={refresh}
+              disabled={refreshing}
+              sx={{ mt: 2 }}
+            >
+              {refreshing ? 'Retrying...' : 'Retry'}
+            </MobileButton>
+          </Box>
+        </MobileDashboardLayout>
+      </MobileNavProvider>
+    );
+  }
+
+  return (
+    <MobileNavProvider>
       <MobileDashboardLayout
         title="HR Management"
         subtitle="Human Resources"
         rightActions={rightActions}
         showBottomNav={true}
       >
-        <Box sx={{ p: 2 }}>
-          <Typography color="error" variant="body1">
-            Error: {error}
-          </Typography>
-          <MobileButton 
-            variant="outlined" 
-            onClick={refresh}
-            disabled={refreshing}
-            sx={{ mt: 2 }}
-          >
-            {refreshing ? 'Retrying...' : 'Retry'}
-          </MobileButton>
-        </Box>
-      </MobileDashboardLayout>
-    );
-  }
-
-  return (
-    <MobileDashboardLayout
-      title="HR Management"
-      subtitle="Human Resources"
-      rightActions={rightActions}
-      showBottomNav={true}
-    >
       {/* Search */}
       <MobileSearchBar
         value={localSearchQuery}
@@ -371,6 +377,7 @@ const MobileHR: React.FC = () => {
       {/* TODO: Add employee onboarding process for mobile */}
       {/* TODO: Create time and attendance reporting with mobile charts */}
     </MobileDashboardLayout>
+    </MobileNavProvider>
   );
 };
 

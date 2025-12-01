@@ -26,6 +26,7 @@ import {
 } from '../../components/mobile';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import ModernLoading from "../../components/ModernLoading";
+import { MobileNavProvider } from '../../context/MobileNavContext';
 
 // Mock data - TODO: Replace with real API integration
 const mockCampaigns = [
@@ -167,29 +168,32 @@ const MobileMarketing: React.FC = () => {
 
   if (loading) {
     return (
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="Marketing"
+          subtitle="Campaigns and analytics"
+          rightActions={rightActions}
+          showBottomNav={true}
+        >
+          <ModernLoading
+            type="skeleton"
+            skeletonType="dashboard"
+            count={6}
+            message="Loading marketing data..."
+          />
+        </MobileDashboardLayout>
+      </MobileNavProvider>
+    );
+  }
+
+  return (
+    <MobileNavProvider>
       <MobileDashboardLayout
         title="Marketing"
         subtitle="Campaigns and analytics"
         rightActions={rightActions}
         showBottomNav={true}
       >
-        <ModernLoading
-          type="skeleton"
-          skeletonType="dashboard"
-          count={6}
-          message="Loading marketing data..."
-        />
-      </MobileDashboardLayout>
-    );
-  }
-
-  return (
-    <MobileDashboardLayout
-      title="Marketing"
-      subtitle="Campaigns and analytics"
-      rightActions={rightActions}
-      showBottomNav={true}
-    >
       <MobilePullToRefresh
         onRefresh={handleRefresh}
         isRefreshing={refreshing}
@@ -468,6 +472,7 @@ const MobileMarketing: React.FC = () => {
         }}
       />
     </MobileDashboardLayout>
+    </MobileNavProvider>
   );
 };
 

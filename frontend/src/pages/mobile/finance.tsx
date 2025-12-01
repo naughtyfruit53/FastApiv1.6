@@ -10,6 +10,7 @@ import {
 } from '../../components/mobile';
 import useSharedFinance from '../../hooks/useSharedFinance';
 import ModernLoading from "../../components/ModernLoading";
+import { MobileNavProvider } from '../../context/MobileNavContext';
 
 // Define mobile-optimized table columns for financial transactions
 const financeColumns = [
@@ -93,54 +94,59 @@ const MobileFinance: React.FC = () => {
 
   if (loading) {
     return (
-      <MobileDashboardLayout
-        title="Finance"
-        subtitle="Financial Management"
-        rightActions={rightActions}
-        showBottomNav={true}
-      >
-        <ModernLoading
-          type="skeleton"
-          skeletonType="dashboard"
-          count={6}
-          message="Loading financial data..."
-        />
-      </MobileDashboardLayout>
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="Finance"
+          subtitle="Financial Management"
+          rightActions={rightActions}
+          showBottomNav={true}
+        >
+          <ModernLoading
+            type="skeleton"
+            skeletonType="dashboard"
+            count={6}
+            message="Loading financial data..."
+          />
+        </MobileDashboardLayout>
+      </MobileNavProvider>
     );
   }
 
   if (error) {
     return (
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="Finance"
+          subtitle="Financial Management"
+          rightActions={rightActions}
+          showBottomNav={true}
+        >
+          <Box sx={{ p: 2 }}>
+            <Typography color="error" variant="body1">
+              Error: {error}
+            </Typography>
+            <MobileButton 
+              variant="outlined" 
+              onClick={refresh}
+              disabled={refreshing}
+              sx={{ mt: 2 }}
+            >
+              {refreshing ? 'Retrying...' : 'Retry'}
+            </MobileButton>
+          </Box>
+        </MobileDashboardLayout>
+      </MobileNavProvider>
+    );
+  }
+
+  return (
+    <MobileNavProvider>
       <MobileDashboardLayout
         title="Finance"
         subtitle="Financial Management"
         rightActions={rightActions}
         showBottomNav={true}
       >
-        <Box sx={{ p: 2 }}>
-          <Typography color="error" variant="body1">
-            Error: {error}
-          </Typography>
-          <MobileButton 
-            variant="outlined" 
-            onClick={refresh}
-            disabled={refreshing}
-            sx={{ mt: 2 }}
-          >
-            {refreshing ? 'Retrying...' : 'Retry'}
-          </MobileButton>
-        </Box>
-      </MobileDashboardLayout>
-    );
-  }
-
-  return (
-    <MobileDashboardLayout
-      title="Finance"
-      subtitle="Financial Management"
-      rightActions={rightActions}
-      showBottomNav={true}
-    >
       {/* Search */}
       <MobileSearchBar
         value={localSearchQuery}
@@ -262,6 +268,7 @@ const MobileFinance: React.FC = () => {
       {/* TODO: Implement offline financial data caching */}
       {/* TODO: Add export functionality (PDF, Excel) for mobile sharing */}
     </MobileDashboardLayout>
+    </MobileNavProvider>
   );
 };
 

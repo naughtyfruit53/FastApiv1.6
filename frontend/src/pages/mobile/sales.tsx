@@ -14,6 +14,7 @@ import {
 } from '../../components/mobile';
 import useSharedSales from '../../hooks/useSharedSales';
 import ModernLoading from "../../components/ModernLoading";
+import { MobileNavProvider } from '../../context/MobileNavContext';
 
 // Define mobile-optimized table columns for sales leads
 const leadsColumns = [
@@ -109,29 +110,32 @@ const MobileSales: React.FC = () => {
 
   if (loading) {
     return (
-      <MobileDashboardLayout
-        title="Sales"
-        subtitle="Manage leads and opportunities"
-        rightActions={rightActions}
-        showBottomNav={true}
-      >
-        <ModernLoading
-          type="skeleton"
-          skeletonType="dashboard"
-          count={6}
-          message="Loading sales data..."
-        />
-      </MobileDashboardLayout>
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="Sales"
+          subtitle="Manage leads and opportunities"
+          rightActions={rightActions}
+          showBottomNav={true}
+        >
+          <ModernLoading
+            type="skeleton"
+            skeletonType="dashboard"
+            count={6}
+            message="Loading sales data..."
+          />
+        </MobileDashboardLayout>
+      </MobileNavProvider>
     );
   }
 
   if (error) {
     return (
-      <MobileDashboardLayout
-        title="Sales"
-        subtitle="Manage leads and opportunities"
-        rightActions={rightActions}
-        showBottomNav={true}
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="Sales"
+          subtitle="Manage leads and opportunities"
+          rightActions={rightActions}
+          showBottomNav={true}
       >
         <Box sx={{ p: 2 }}>
           <Typography color="error" variant="body1">
@@ -147,16 +151,18 @@ const MobileSales: React.FC = () => {
           </MobileButton>
         </Box>
       </MobileDashboardLayout>
+      </MobileNavProvider>
     );
   }
 
   return (
-    <MobileDashboardLayout
-      title="Sales"
-      subtitle="Manage leads and opportunities"
-      rightActions={rightActions}
-      showBottomNav={true}
-    >
+    <MobileNavProvider>
+      <MobileDashboardLayout
+        title="Sales"
+        subtitle="Manage leads and opportunities"
+        rightActions={rightActions}
+        showBottomNav={true}
+      >
       <MobilePullToRefresh
         onRefresh={refresh}
         isRefreshing={refreshing}
@@ -464,6 +470,7 @@ const MobileSales: React.FC = () => {
         }}
       />
     </MobileDashboardLayout>
+    </MobileNavProvider>
   );
 };
 

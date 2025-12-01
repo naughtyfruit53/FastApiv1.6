@@ -26,6 +26,7 @@ import {
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { useAuth } from '../../context/AuthContext';
 import ModernLoading from "../../components/ModernLoading";
+import { MobileNavProvider } from '../../context/MobileNavContext';
 
 // Mock data - TODO: Replace with real API integration
 const mockAdminStats = {
@@ -184,43 +185,48 @@ const MobileAdmin: React.FC = () => {
 
   if (!isAdmin) {
     return (
-      <MobileDashboardLayout
-        title="Access Denied"
-        subtitle="Administrative access required"
-        showBottomNav={true}
-      >
-        <Alert severity="error" sx={{ mt: 2 }}>
-          You don't have permission to access administrative functions.
-        </Alert>
-      </MobileDashboardLayout>
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="Access Denied"
+          subtitle="Administrative access required"
+          showBottomNav={true}
+        >
+          <Alert severity="error" sx={{ mt: 2 }}>
+            You don't have permission to access administrative functions.
+          </Alert>
+        </MobileDashboardLayout>
+      </MobileNavProvider>
     );
   }
 
   if (loading) {
     return (
+      <MobileNavProvider>
+        <MobileDashboardLayout
+          title="Administration"
+          subtitle="System management"
+          rightActions={rightActions}
+          showBottomNav={true}
+        >
+          <ModernLoading
+            type="skeleton"
+            skeletonType="dashboard"
+            count={6}
+            message="Loading admin data..."
+          />
+        </MobileDashboardLayout>
+      </MobileNavProvider>
+    );
+  }
+
+  return (
+    <MobileNavProvider>
       <MobileDashboardLayout
         title="Administration"
         subtitle="System management"
         rightActions={rightActions}
         showBottomNav={true}
       >
-        <ModernLoading
-          type="skeleton"
-          skeletonType="dashboard"
-          count={6}
-          message="Loading admin data..."
-        />
-      </MobileDashboardLayout>
-    );
-  }
-
-  return (
-    <MobileDashboardLayout
-      title="Administration"
-      subtitle="System management"
-      rightActions={rightActions}
-      showBottomNav={true}
-    >
       <MobilePullToRefresh
         onRefresh={handleRefresh}
         isRefreshing={refreshing}
@@ -515,6 +521,7 @@ const MobileAdmin: React.FC = () => {
         }}
       />
     </MobileDashboardLayout>
+    </MobileNavProvider>
   );
 };
 
