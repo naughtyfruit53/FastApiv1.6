@@ -1,8 +1,9 @@
 // frontend/src/components/MobileNav.tsx
 // TritIQ BOS Brand Kit v1
+// Enhanced mobile navigation with complete MegaMenu alignment
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Drawer,
   List,
@@ -16,6 +17,8 @@ import {
   Divider,
   TextField,
   InputAdornment,
+  Chip,
+  IconButton,
 } from '@mui/material';
 import {
   ExpandLess,
@@ -33,14 +36,31 @@ import {
   Campaign,
   SupportAgent,
   ChevronRight,
+  Email,
+  Engineering,
+  ReceiptLong,
+  Assignment,
+  Groups,
+  Task,
+  CalendarToday,
+  SmartToy,
+  Close,
+  Home,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { isAppSuperAdmin } from '../types/user.types';
-import { mainMenuSections } from './menuConfig';
+import { mainMenuSections, menuItems } from './menuConfig';
 
 // TritIQ BOS Brand Tagline
 const TRITIQ_TAGLINE = "Business Made Simple";
+
+// Quick access items for mobile users
+const QUICK_ACCESS_ITEMS = [
+  { name: 'Dashboard', path: '/dashboard', icon: <Home /> },
+  { name: 'Email', path: '/email', icon: <Email /> },
+  { name: 'Tasks', path: '/tasks', icon: <Task /> },
+];
 
 interface MobileNavProps {
   open: boolean;  // Changed to controlled open prop
@@ -55,7 +75,7 @@ const MobileNav: React.FC<MobileNavProps> = ({
   onClose, 
   user, 
   onLogout, 
-  menuItems 
+  menuItems: passedMenuItems 
 }) => {
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [expandedSubSections, setExpandedSubSections] = useState<string[]>([]);
@@ -63,6 +83,70 @@ const MobileNav: React.FC<MobileNavProps> = ({
   const router = useRouter();
   const { isMobile } = useMobileDetection();
   const isSuperAdmin = isAppSuperAdmin(user);
+
+  // Enhanced icon mapping for all menu sections
+  const getIconForSection = (sectionTitle: string) => {
+    const iconMap: { [key: string]: React.ReactElement } = {
+      'Dashboard': <Dashboard />,
+      'Master Data': <Business />,
+      'Inventory': <Inventory />,
+      'Manufacturing': <Engineering />,
+      'Vouchers': <ReceiptLong />,
+      'Finance': <AccountBalance />,
+      'Accounting': <AccountBalance />,
+      'Reports & Analytics': <Assessment />,
+      'AI & Analytics': <SmartToy />,
+      'Sales': <Receipt />,
+      'Marketing': <Campaign />,
+      'Service': <SupportAgent />,
+      'HR Management': <Groups />,
+      'Projects': <Assignment />,
+      'Tasks & Calendar': <Task />,
+      'Email': <Email />,
+      'Settings': <Settings />,
+      'Administration': <Settings />,
+      'Quick Access': <Home />,
+    };
+    return iconMap[sectionTitle] || <ChevronRight />;
+  };
+
+  // Get all sections including Email and Settings for mobile
+  const getAllSections = useMemo(() => {
+    const baseSections = mainMenuSections(isSuperAdmin);
+    
+    // Add Email section if not present
+    const emailSection = {
+      title: 'Email',
+      subSections: menuItems.email?.sections || [{
+        title: 'Email Management',
+        items: [
+          { name: 'Inbox', path: '/email', icon: <Email /> },
+          { name: 'Compose', path: '/email?compose=true', icon: <Email /> },
+          { name: 'Account Settings', path: '/email/accounts', icon: <Settings /> },
+        ]
+      }]
+    };
+    
+    // Add Settings section if not present
+    const settingsSection = {
+      title: 'Settings',
+      subSections: menuItems.settings?.sections || []
+    };
+    
+    // Check if Email and Settings are already present
+    const hasEmail = baseSections.some((s: any) => s.title === 'Email');
+    const hasSettings = baseSections.some((s: any) => s.title === 'Settings');
+    
+    const allSections = [...baseSections];
+    if (!hasEmail) {
+      allSections.push(emailSection);
+    }
+    if (!hasSettings) {
+      allSections.push(settingsSection);
+    }
+    
+    return allSections;
+  }, [isSuperAdmin]);
 
   // Don't render on desktop
   if (!isMobile) {
@@ -112,7 +196,7 @@ const MobileNav: React.FC<MobileNavProps> = ({
   };
 
   const renderMenuItems = () => {
-    const sections = mainMenuSections(isSuperAdmin);
+    const sections = getAllSections;
     const filteredSections = filterMenuItems(sections, searchQuery);
 
     return filteredSections.map((section: any, index: number) => (
@@ -237,23 +321,6 @@ const MobileNav: React.FC<MobileNavProps> = ({
     ));
   };
 
-  const getIconForSection = (sectionTitle: string) => {
-    const iconMap: { [key: string]: React.ReactElement } = {
-      'Dashboard': <Dashboard />,
-      'Sales': <Receipt />,
-      'Purchase': <ShoppingCart />,
-      'Inventory': <Inventory />,
-      'Finance': <AccountBalance />,
-      'CRM': <People />,
-      'Marketing': <Campaign />,
-      'Service': <SupportAgent />,
-      'Reports': <Assessment />,
-      'Masters': <Business />,
-      'Administration': <Settings />,
-    };
-    return iconMap[sectionTitle] || <Receipt />;
-  };
-
   return (
     // Removed the toggle button, as it's now in the header
     <Drawer
@@ -263,6 +330,7 @@ const MobileNav: React.FC<MobileNavProps> = ({
       PaperProps={{
         sx: {
           width: 320,
+          maxWidth: '85vw',
           backgroundColor: 'background.paper',
         }
       }}
@@ -279,21 +347,28 @@ const MobileNav: React.FC<MobileNavProps> = ({
         {/* Header */}
         <Box sx={{ 
           display: 'flex', 
-          flexDirection: 'column',
           alignItems: 'center', 
-          justifyContent: 'center',
+          justifyContent: 'space-between',
           p: 2,
           borderBottom: '1px solid',
           borderColor: 'divider',
           backgroundColor: '#0A2A43',
           color: 'white'
         }}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-            TritIQ BOS
-          </Typography>
-          <Typography variant="caption" sx={{ fontWeight: 300, opacity: 0.9, fontStyle: 'italic' }}>
-            {TRITIQ_TAGLINE}
-          </Typography>
+          <Box>
+            <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+              TritIQ BOS
+            </Typography>
+            <Typography variant="caption" sx={{ fontWeight: 300, opacity: 0.9, fontStyle: 'italic' }}>
+              {TRITIQ_TAGLINE}
+            </Typography>
+          </Box>
+          <IconButton 
+            onClick={onClose}
+            sx={{ color: 'white', minWidth: 44, minHeight: 44 }}
+          >
+            <Close />
+          </IconButton>
         </Box>
 
         {/* User Info */}
@@ -302,11 +377,40 @@ const MobileNav: React.FC<MobileNavProps> = ({
             <Typography variant="body2" color="text.secondary">
               Welcome, {user.name || user.email}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {user.role || 'User'}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">
+                {user.role || 'User'}
+              </Typography>
+              {isSuperAdmin && (
+                <Chip label="Admin" size="small" color="primary" sx={{ height: 18, fontSize: '0.7rem' }} />
+              )}
+            </Box>
           </Box>
         )}
+
+        {/* Quick Access */}
+        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="caption" color="text.secondary" fontWeight="bold" sx={{ mb: 1, display: 'block' }}>
+            Quick Access
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {QUICK_ACCESS_ITEMS.map((item, index) => (
+              <Chip
+                key={index}
+                label={item.name}
+                icon={item.icon}
+                onClick={() => navigateTo(item.path)}
+                variant="outlined"
+                size="small"
+                sx={{ 
+                  borderRadius: 2,
+                  '&:hover': { bgcolor: 'action.hover' },
+                  '& .MuiChip-icon': { fontSize: '1rem' }
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
 
         {/* Search */}
         <Box sx={{ p: 2 }}>
@@ -332,14 +436,14 @@ const MobileNav: React.FC<MobileNavProps> = ({
         </Box>
 
         {/* Menu Items */}
-        <Box sx={{ flex: 1, overflow: 'auto' }}>
+        <Box sx={{ flex: 1, overflow: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <List sx={{ p: 0 }}>
             {renderMenuItems()}
           </List>
         </Box>
 
         {/* Footer Actions */}
-        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))' }}>
           <ListItemButton
             onClick={handleLogout}
             sx={{

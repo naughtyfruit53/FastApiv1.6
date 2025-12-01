@@ -36,11 +36,15 @@ import {
   ExpandMore,
   Close,
   Star,
-  Bookmark
+  Bookmark,
+  Engineering,
+  ReceiptLong,
+  SmartToy,
+  CalendarToday,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
-import { mainMenuSections } from '../menuConfig';
+import { mainMenuSections, menuItems } from '../menuConfig';
 
 interface MobileDrawerNavigationProps {
   open: boolean;
@@ -99,9 +103,14 @@ const MobileDrawerNavigation: React.FC<MobileDrawerNavigationProps> = ({
     const iconMap: { [key: string]: React.ReactElement } = {
       'Dashboard': <Dashboard />,
       'Master Data': <Business />,
-      'ERP': <ShoppingCart />,
+      'Inventory': <Inventory />,
+      'Manufacturing': <Engineering />,
+      'Vouchers': <ReceiptLong />,
+      'Finance': <AccountBalance />,
+      'Accounting': <AccountBalance />,
       'Finance & Accounting': <AccountBalance />,
       'Reports & Analytics': <Assessment />,
+      'AI & Analytics': <SmartToy />,
       'Sales': <Receipt />,
       'Marketing': <Campaign />,
       'Service': <SupportAgent />,
@@ -111,6 +120,8 @@ const MobileDrawerNavigation: React.FC<MobileDrawerNavigationProps> = ({
       'Email': <Email />,
       'Settings': <Settings />,
       'Administration': <Settings />,
+      'Quick Access': <Dashboard />,
+      'ERP': <ShoppingCart />,
     };
     return iconMap[sectionTitle] || <Business />;
   };
@@ -174,6 +185,12 @@ const MobileDrawerNavigation: React.FC<MobileDrawerNavigationProps> = ({
               badge: 'Mobile'
             },
             { 
+              name: 'Manufacturing', 
+              path: '/order-book', 
+              icon: <Engineering />,
+              favorite: favorites.includes('Manufacturing'),
+            },
+            { 
               name: 'HR', 
               path: '/hr/dashboard', 
               mobileRoute: '/mobile/hr',
@@ -196,14 +213,50 @@ const MobileDrawerNavigation: React.FC<MobileDrawerNavigationProps> = ({
               icon: <Assessment />,
               favorite: favorites.includes('Reports'),
               badge: 'Mobile'
-            }
+            },
+            { 
+              name: 'Email', 
+              path: '/email', 
+              icon: <Email />,
+              favorite: favorites.includes('Email'),
+            },
+            { 
+              name: 'Settings', 
+              path: '/settings', 
+              mobileRoute: '/mobile/settings',
+              icon: <Settings />,
+              favorite: favorites.includes('Settings'),
+              badge: 'Mobile'
+            },
           ]
         }]
       },
-      ...sections
+      ...sections,
+      // Ensure Email and Settings sections are always present
+      {
+        title: 'Email',
+        subSections: menuItems.email?.sections || [{
+          title: 'Email Management',
+          items: [
+            { name: 'Inbox', path: '/email', icon: <Email /> },
+            { name: 'Compose', path: '/email?compose=true', icon: <Email /> },
+            { name: 'Account Settings', path: '/email/accounts', icon: <Settings /> },
+          ]
+        }]
+      },
+      {
+        title: 'Settings',
+        subSections: menuItems.settings?.sections || []
+      }
     ];
 
-    return mobileEnhancedSections;
+    // Remove duplicate Email and Settings sections if they exist in mainMenuSections
+    const uniqueSections = mobileEnhancedSections.filter((section, index, self) => {
+      const firstIndex = self.findIndex(s => s.title === section.title);
+      return firstIndex === index || (section.title !== 'Email' && section.title !== 'Settings');
+    });
+
+    return uniqueSections;
   }, [isSuperAdmin, favorites]);
 
   // Filter items based on search query
