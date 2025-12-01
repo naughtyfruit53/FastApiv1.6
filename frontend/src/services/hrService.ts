@@ -829,4 +829,310 @@ class HRService {
   }
 }
 
+  // ==========================================================================
+  // HR Phase 2 Methods - Attendance Policies, Leave Balances, Timesheets
+  // ==========================================================================
+
+  /**
+   * Get attendance policies
+   */
+  async getAttendancePolicies(isActive?: boolean): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = {};
+      if (isActive !== undefined) params.is_active = isActive;
+      const response = await api.get(`${this.endpoint}/attendance-policies`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching attendance policies:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create attendance policy
+   */
+  async createAttendancePolicy(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/attendance-policies`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating attendance policy:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get leave balances
+   */
+  async getLeaveBalances(
+    employeeId?: number,
+    leaveTypeId?: number,
+    year?: number
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = {};
+      if (employeeId !== undefined) params.employee_id = employeeId;
+      if (leaveTypeId !== undefined) params.leave_type_id = leaveTypeId;
+      if (year !== undefined) params.year = year;
+      const response = await api.get(`${this.endpoint}/leave-balances`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching leave balances:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get timesheets
+   */
+  async getTimesheets(
+    employeeId?: number,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (employeeId !== undefined) params.employee_id = employeeId;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/timesheets`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching timesheets:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create timesheet
+   */
+  async createTimesheet(data: Record<string, unknown>): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/timesheets`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating timesheet:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Submit timesheet
+   */
+  async submitTimesheet(timesheetId: number): Promise<{ message: string }> {
+    try {
+      const response = await api.put(`${this.endpoint}/timesheets/${timesheetId}/submit`);
+      return response.data;
+    } catch (error) {
+      console.error("Error submitting timesheet:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve timesheet
+   */
+  async approveTimesheet(timesheetId: number): Promise<{ message: string }> {
+    try {
+      const response = await api.put(`${this.endpoint}/timesheets/${timesheetId}/approve`);
+      return response.data;
+    } catch (error) {
+      console.error("Error approving timesheet:", error);
+      throw error;
+    }
+  }
+
+  // ==========================================================================
+  // Statutory Deductions & Payroll Arrears
+  // ==========================================================================
+
+  /**
+   * Get statutory deductions
+   */
+  async getStatutoryDeductions(isActive?: boolean): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = {};
+      if (isActive !== undefined) params.is_active = isActive;
+      const response = await api.get(`${this.endpoint}/statutory-deductions`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching statutory deductions:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get payroll arrears
+   */
+  async getPayrollArrears(
+    employeeId?: number,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (employeeId !== undefined) params.employee_id = employeeId;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/payroll-arrears`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching payroll arrears:", error);
+      throw error;
+    }
+  }
+
+  // ==========================================================================
+  // Phase 4 Methods - Analytics, Position Budgets, Transfers
+  // ==========================================================================
+
+  /**
+   * Get HR analytics snapshots (Feature-flagged)
+   */
+  async getHRAnalyticsSnapshots(
+    snapshotType?: string,
+    startDate?: string,
+    endDate?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (snapshotType) params.snapshot_type = snapshotType;
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+      const response = await api.get(`${this.endpoint}/analytics/snapshots`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching HR analytics snapshots:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get position budgets (Feature-flagged)
+   */
+  async getPositionBudgets(
+    fiscalYear?: string,
+    departmentId?: number,
+    status?: string
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = {};
+      if (fiscalYear) params.fiscal_year = fiscalYear;
+      if (departmentId !== undefined) params.department_id = departmentId;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/position-budgets`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching position budgets:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get employee transfers (Feature-flagged)
+   */
+  async getEmployeeTransfers(
+    employeeId?: number,
+    transferType?: string,
+    status?: string,
+    skip: number = 0,
+    limit: number = 100
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = { skip, limit };
+      if (employeeId !== undefined) params.employee_id = employeeId;
+      if (transferType) params.transfer_type = transferType;
+      if (status) params.status = status;
+      const response = await api.get(`${this.endpoint}/employee-transfers`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching employee transfers:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get integration adapters (Feature-flagged)
+   */
+  async getIntegrationAdapters(
+    adapterType?: string,
+    isActive?: boolean
+  ): Promise<unknown[]> {
+    try {
+      const params: Record<string, unknown> = {};
+      if (adapterType) params.adapter_type = adapterType;
+      if (isActive !== undefined) params.is_active = isActive;
+      const response = await api.get(`${this.endpoint}/integration-adapters`, { params });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching integration adapters:", error);
+      throw error;
+    }
+  }
+
+  // ==========================================================================
+  // Export Methods
+  // ==========================================================================
+
+  /**
+   * Export payroll data
+   */
+  async exportPayrollData(payrollPeriodId: number, format: string = "csv"): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/export/payroll`, {
+        payroll_period_id: payrollPeriodId,
+        export_format: { format }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error exporting payroll data:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Export attendance data
+   */
+  async exportAttendanceData(
+    startDate: string,
+    endDate: string,
+    format: string = "csv"
+  ): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/export/attendance`, {
+        start_date: startDate,
+        end_date: endDate,
+        export_format: { format }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error exporting attendance data:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Export leave data
+   */
+  async exportLeaveData(
+    startDate: string,
+    endDate: string,
+    format: string = "csv"
+  ): Promise<unknown> {
+    try {
+      const response = await api.post(`${this.endpoint}/export/leave`, {
+        start_date: startDate,
+        end_date: endDate,
+        export_format: { format }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error exporting leave data:", error);
+      throw error;
+    }
+  }
+}
+
 export const hrService = new HRService();
