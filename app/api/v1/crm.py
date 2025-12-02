@@ -1,5 +1,3 @@
-# app/api/v1/crm.py
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, BackgroundTasks, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func, desc, asc
@@ -39,27 +37,29 @@ async def generate_unique_number(db: AsyncSession, model_class, org_id: int, pre
     """Generate unique number for leads/opportunities"""
     while True:
         random_suffix = ''.join(secrets.choice(string.digits) for _ in range(6))
-        number = f"{prefix}{random_suffix}"
+        random_number = f"{prefix}{random_suffix}"
+        
+        field_name = "lead_number" if model_class == Lead else "opportunity_number"
         
         stmt = select(model_class).where(
             and_(
                 model_class.organization_id == org_id,
-                getattr(model_class, f"{prefix.lower()}_number") == number
+                getattr(model_class, field_name) == random_number
             )
         )
         result = await db.execute(stmt)
         existing = result.scalar_one_or_none()
         
         if not existing:
-            return number
+            return random_number
 
 # Lead Management Endpoints
 @router.get("/leads", response_model=List[LeadSchema])
 async def get_leads(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    status: Optional[str] = Query(None),
-    source: Optional[str] = Query(None),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    source: Optional[str] = Query(None, description="Filter by source"),
     assigned_to_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
     auth: tuple = Depends(require_access("crm", "read")),
@@ -96,21 +96,25 @@ async def get_leads(
         
         # Apply filters
         if status:
-            if status not in [s.value for s in LeadStatus]:
+            try:
+                status_enum = LeadStatus[status.lower()]
+            except KeyError:
                 logger.error(f"Invalid status filter: {status}")
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Invalid status: {status}. Valid values are {[s.value for s in LeadStatus]}"
+                    detail=f"Invalid status: {status}. Valid values are {[s.name.lower() for s in LeadStatus]}"
                 )
-            stmt = stmt.where(Lead.status == status)
+            stmt = stmt.where(Lead.status == status_enum)
         if source:
-            if source not in [s.value for s in LeadSource]:
+            try:
+                source_enum = LeadSource[source.lower()]
+            except KeyError:
                 logger.error(f"Invalid source filter: {source}")
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Invalid source: {status}. Valid values are {[s.value for s in LeadSource]}"
+                    detail=f"Invalid source: {source}. Valid values are {[s.name.lower() for s in LeadSource]}"
                 )
-            stmt = stmt.where(Lead.source == source)
+            stmt = stmt.where(Lead.source == source_enum)
         if assigned_to_id:
             stmt = stmt.where(Lead.assigned_to_id == assigned_to_id)
         if search:
@@ -173,14 +177,23 @@ async def create_lead(
 
     try:
         # Generate unique lead number
-        lead_number = await generate_unique_number(db, Lead, org_id, "LD")
+        lead_number = await generate_unique_number(db, Lead, org_id, "LEAD")
+        
+        # Normalize and validate enums
+        try:
+            status_enum = LeadStatus[lead_data.status.lower()]
+            source_enum = LeadSource[lead_data.source.lower()]
+        except KeyError as ke:
+            raise ValueError(f"Invalid enum value: {str(ke)}")
         
         # Create lead
         lead = Lead(
             organization_id=org_id,
             lead_number=lead_number,
             created_by_id=current_user.id,
-            **lead_data.model_dump()
+            status=status_enum,
+            source=source_enum,
+            **lead_data.model_dump(exclude={"status", "source"})
         )
         
         db.add(lead)
@@ -190,6 +203,9 @@ async def create_lead(
         logger.info(f"Lead {lead_number} created by {current_user.email} in org {org_id}")
         return lead
 
+    except ValueError as ve:
+        logger.error(f"Invalid enum value during lead creation: {str(ve)}")
+        raise HTTPException(status_code=400, detail=f"Invalid status or source value. Valid statuses: {[s.name.lower() for s in LeadStatus]}, sources: {[s.name.lower() for s in LeadSource]}")
     except Exception as e:
         logger.error(f"Error creating lead for org_id={org_id}: {str(e)}")
         await db.rollback()
@@ -254,7 +270,18 @@ async def update_lead(
         # Update fields
         update_data = lead_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
-            setattr(lead, field, value)
+            if field == "status":
+                try:
+                    setattr(lead, field, LeadStatus[value.lower()])
+                except KeyError:
+                    raise ValueError(f"Invalid status: {value}")
+            elif field == "source":
+                try:
+                    setattr(lead, field, LeadSource[value.lower()])
+                except KeyError:
+                    raise ValueError(f"Invalid source: {value}")
+            else:
+                setattr(lead, field, value)
         
         lead.updated_at = datetime.utcnow()
         await db.commit()
@@ -263,6 +290,9 @@ async def update_lead(
         logger.info(f"Lead {lead_id} updated by {current_user.email} in org {org_id}")
         return lead
 
+    except ValueError as ve:
+        logger.error(f"Invalid enum value during lead update: {str(ve)}")
+        raise HTTPException(status_code=400, detail=f"Invalid status or source value. Valid statuses: {[s.name.lower() for s in LeadStatus]}, sources: {[s.name.lower() for s in LeadSource]}")
     except Exception as e:
         logger.error(f"Error updating lead {lead_id} for org_id={org_id}: {str(e)}")
         await db.rollback()
@@ -328,7 +358,7 @@ async def convert_lead(
             logger.error(f"Lead {lead_id} not found for org_id={org_id}")
             raise HTTPException(status_code=404, detail="Lead not found")
         
-        if lead.status == LeadStatus.CONVERTED:
+        if lead.status == LeadStatus.converted:
             logger.error(f"Lead {lead_id} already converted in org_id={org_id}")
             raise HTTPException(status_code=400, detail="Lead already converted")
         
@@ -348,7 +378,6 @@ async def convert_lead(
                 address2=lead.address2 or "",
                 city=lead.city or "",
                 state=lead.state or "",
-                pin_code=lead.pin_code or "",
                 **customer_data
             )
             db.add(customer)
@@ -358,21 +387,26 @@ async def convert_lead(
         # Convert to opportunity
         if conversion_data.convert_to_opportunity:
             opportunity_data = conversion_data.opportunity_data or {}
-            opportunity_number = await generate_unique_number(db, Opportunity, org_id, "OP")
+            opportunity_number = await generate_unique_number(db, Opportunity, org_id, "OPPORTUNITY")
+            try:
+                stage_str = opportunity_data.get("stage", "prospecting").lower()
+                stage_enum = OpportunityStage[stage_str]
+            except KeyError:
+                raise ValueError(f"Invalid stage: {stage_str}")
             opportunity = Opportunity(
                 organization_id=org_id,
                 opportunity_number=opportunity_number,
                 name=opportunity_data.get("name", f"Opportunity - {lead.company or lead.full_name}"),
                 amount=opportunity_data.get("amount", lead.estimated_value or 0),
                 expected_close_date=opportunity_data.get("expected_close_date", lead.expected_close_date or (date.today() + timedelta(days=30))),
-                stage=OpportunityStage.PROSPECTING,
+                stage=stage_enum,
                 probability=25.0,
                 customer_id=customer_id,
                 lead_id=lead.id,
                 assigned_to_id=lead.assigned_to_id,
                 source=lead.source,
                 created_by_id=current_user.id,
-                **{k: v for k, v in opportunity_data.items() if k not in ["name", "amount", "expected_close_date"]}
+                **{k: v for k, v in opportunity_data.items() if k not in ["name", "amount", "expected_close_date", "stage"]}
             )
             opportunity.expected_revenue = opportunity.amount * (opportunity.probability / 100)
             db.add(opportunity)
@@ -380,7 +414,7 @@ async def convert_lead(
             opportunity_id = opportunity.id
         
         # Update lead status
-        lead.status = LeadStatus.CONVERTED
+        lead.status = LeadStatus.converted
         lead.converted_at = datetime.utcnow()
         lead.converted_to_customer_id = customer_id
         lead.converted_to_opportunity_id = opportunity_id
@@ -395,6 +429,9 @@ async def convert_lead(
             message="Lead converted successfully"
         )
         
+    except ValueError as ve:
+        logger.error(f"Invalid enum value: {str(ve)}")
+        raise HTTPException(status_code=400, detail=f"Invalid stage value: {str(ve)}")
     except Exception as e:
         logger.error(f"Error converting lead {lead_id} for org_id={org_id}: {str(e)}")
         await db.rollback()
@@ -512,13 +549,15 @@ async def get_opportunities(
         
         # Apply filters
         if stage:
-            if stage not in [s.value for s in OpportunityStage]:
+            try:
+                stage_enum = OpportunityStage[stage.lower()]
+            except KeyError:
                 logger.error(f"Invalid stage filter: {stage}")
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Invalid stage: {stage}. Valid values are {[s.value for s in OpportunityStage]}"
+                    detail=f"Invalid stage: {stage}. Valid values are {[s.name.lower() for s in OpportunityStage]}"
                 )
-            stmt = stmt.where(Opportunity.stage == stage)
+            stmt = stmt.where(Opportunity.stage == stage_enum)
         if assigned_to_id:
             stmt = stmt.where(Opportunity.assigned_to_id == assigned_to_id)
         if customer_id:
@@ -559,16 +598,27 @@ async def create_opportunity(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new opportunity"""
+    current_user, org_id = auth
+
     try:
         # Generate unique opportunity number
-        opportunity_number = await generate_unique_number(db, Opportunity, org_id, "OP")
+        opportunity_number = await generate_unique_number(db, Opportunity, org_id, "OPPORTUNITY")
+        
+        # Normalize and validate enums
+        try:
+            stage_enum = OpportunityStage[opportunity_data.stage.lower()]
+            source_enum = LeadSource[opportunity_data.source.lower()]
+        except KeyError as ke:
+            raise ValueError(f"Invalid enum value: {str(ke)}")
         
         # Create opportunity
         opportunity = Opportunity(
             organization_id=org_id,
             opportunity_number=opportunity_number,
             created_by_id=current_user.id,
-            **opportunity_data.model_dump()
+            stage=stage_enum,
+            source=source_enum,
+            **opportunity_data.model_dump(exclude={"stage", "source"})
         )
         
         # Calculate expected revenue
@@ -581,6 +631,9 @@ async def create_opportunity(
         logger.info(f"Opportunity {opportunity_number} created by {current_user.email} in org {org_id}")
         return opportunity
 
+    except ValueError as ve:
+        logger.error(f"Invalid enum value during opportunity creation: {str(ve)}")
+        raise HTTPException(status_code=400, detail=f"Invalid stage or source value. Valid stages: {[s.name.lower() for s in OpportunityStage]}, sources: {[s.name.lower() for s in LeadSource]}")
     except Exception as e:
         logger.error(f"Error creating opportunity for org_id={org_id}: {str(e)}")
         await db.rollback()
@@ -649,14 +702,25 @@ async def update_opportunity(
         # Update fields
         update_data = opportunity_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
-            setattr(opportunity, field, value)
+            if field == "stage":
+                try:
+                    setattr(opportunity, field, OpportunityStage[value.lower()])
+                except KeyError:
+                    raise ValueError(f"Invalid stage: {value}")
+            elif field == "source":
+                try:
+                    setattr(opportunity, field, LeadSource[value.lower()])
+                except KeyError:
+                    raise ValueError(f"Invalid source: {value}")
+            else:
+                setattr(opportunity, field, value)
         
         # Recalculate expected revenue if amount or probability changed
         if "amount" in update_data or "probability" in update_data:
             opportunity.expected_revenue = opportunity.amount * (opportunity.probability / 100)
         
         # Set actual close date if stage changed to closed
-        if "stage" in update_data and opportunity.stage in [OpportunityStage.CLOSED_WON, OpportunityStage.CLOSED_LOST]:
+        if "stage" in update_data and opportunity.stage in [OpportunityStage.closed_won, OpportunityStage.closed_lost]:
             if not opportunity.actual_close_date:
                 opportunity.actual_close_date = date.today()
         
@@ -667,6 +731,9 @@ async def update_opportunity(
         logger.info(f"Opportunity {opportunity_id} updated by {current_user.email} in org {org_id}")
         return opportunity
 
+    except ValueError as ve:
+        logger.error(f"Invalid enum value during opportunity update: {str(ve)}")
+        raise HTTPException(status_code=400, detail=f"Invalid stage or source value. Valid stages: {[s.name.lower() for s in OpportunityStage]}, sources: {[s.name.lower() for s in LeadSource]}")
     except Exception as e:
         logger.error(f"Error updating opportunity {opportunity_id} for org_id={org_id}: {str(e)}")
         await db.rollback()
@@ -717,11 +784,11 @@ async def get_crm_analytics(
         
         for status in LeadStatus:
             count = len([l for l in leads if l.status == status])
-            leads_by_status[status.value] = count
+            leads_by_status[status.name.lower()] = count
         
         for source in LeadSource:
             count = len([l for l in leads if l.source == source])
-            leads_by_source[source.value] = count
+            leads_by_source[source.name.lower()] = count
         
         # Opportunity analytics
         opportunities_stmt = select(Opportunity).where(
@@ -738,13 +805,13 @@ async def get_crm_analytics(
         
         for stage in OpportunityStage:
             count = len([o for o in opportunities if o.stage == stage])
-            opportunities_by_stage[stage.value] = count
+            opportunities_by_stage[stage.name.lower()] = count
         
         # Pipeline values
         pipeline_stmt = select(func.sum(Opportunity.amount)).where(
             and_(
                 Opportunity.organization_id == org_id,
-                Opportunity.stage.notin_([OpportunityStage.CLOSED_WON, OpportunityStage.CLOSED_LOST])
+                Opportunity.stage.notin_([OpportunityStage.closed_won, OpportunityStage.closed_lost])
             )
         )
         pipeline_value = (await db.scalar(pipeline_stmt)) or 0
@@ -752,25 +819,25 @@ async def get_crm_analytics(
         weighted_stmt = select(func.sum(Opportunity.expected_revenue)).where(
             and_(
                 Opportunity.organization_id == org_id,
-                Opportunity.stage.notin_([OpportunityStage.CLOSED_WON, OpportunityStage.CLOSED_LOST])
+                Opportunity.stage.notin_([OpportunityStage.closed_won, OpportunityStage.closed_lost])
             )
         )
         weighted_pipeline_value = (await db.scalar(weighted_stmt)) or 0
         
         # Conversion rate
-        converted_leads = len([l for l in leads if l.status == LeadStatus.CONVERTED])
+        converted_leads = len([l for l in leads if l.status == LeadStatus.converted])
         conversion_rate = (converted_leads / leads_total * 100) if leads_total > 0 else 0
         
         # Win rate
-        won_opportunities = len([o for o in opportunities if o.stage == OpportunityStage.CLOSED_WON])
-        closed_opportunities = len([o for o in opportunities if o.stage in [OpportunityStage.CLOSED_WON, OpportunityStage.CLOSED_LOST]])
+        won_opportunities = len([o for o in opportunities if o.stage == OpportunityStage.closed_won])
+        closed_opportunities = len([o for o in opportunities if o.stage in [OpportunityStage.closed_won, OpportunityStage.closed_lost]])
         win_rate = (won_opportunities / closed_opportunities * 100) if closed_opportunities > 0 else 0
         
         # Average deal size
         avg_stmt = select(func.avg(Opportunity.amount)).where(
             and_(
                 Opportunity.organization_id == org_id,
-                Opportunity.stage == OpportunityStage.CLOSED_WON
+                Opportunity.stage == OpportunityStage.closed_won
             )
         )
         avg_deal_size = (await db.scalar(avg_stmt)) or 0
@@ -1230,3 +1297,4 @@ async def delete_commission(
             status_code=500,
             detail=f"Failed to delete commission: {str(e)}"
         )
+    

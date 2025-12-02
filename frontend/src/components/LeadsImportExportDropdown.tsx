@@ -38,6 +38,11 @@ const LeadsImportExportDropdown: React.FC<LeadsImportExportDropdownProps> = ({
   const [importError, setImportError] = useState<string | null>(null);
   const open = Boolean(anchorEl);
 
+  const sources = [
+    'website', 'referral', 'email_campaign', 'social_media', 
+    'cold_call', 'trade_show', 'partner', 'advertisement', 'other'
+  ];
+
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -117,16 +122,64 @@ const LeadsImportExportDropdown: React.FC<LeadsImportExportDropdownProps> = ({
       // Get first sheet
       const worksheet = workbook.worksheets[0];
 
-      // Convert to JSON
+      // Convert to JSON with proper value extraction
       const jsonData: any[] = [];
-      worksheet.eachRow((row, rowNumber) => {
+      worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
         if (rowNumber === 1) return; // Skip header row
 
         const rowData: any = {};
-        row.eachCell((cell, colNumber) => {
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
           const header = worksheet.getRow(1).getCell(colNumber).value as string;
-          rowData[header] = cell.value;
+          
+          let value = cell.value;
+          
+          // Handle hyperlink/rich text
+          if (cell.hyperlink && typeof value === 'string' && value.startsWith('=HYPERLINK')) {
+            // Extract display text from formula
+            const match = value.match(/",\s*"([^"]+)"/);
+            if (match) {
+              value = match[1];
+            }
+          } else if (value && typeof value === 'object') {
+            if ('text' in value) {
+              value = value.text;
+            } else if ('richText' in value) {
+              value = (value.richText as Array<{text: string}>).map(rt => rt.text).join('');
+            } else if ('hyperlink' in value) {
+              value = value.hyperlink;
+            }
+          }
+          
+          // Handle mailto hyperlinks
+          if (typeof value === 'string' && value.startsWith('mailto:')) {
+            value = value.replace('mailto:', '');
+          }
+          
+          // Convert numbers to strings where appropriate
+          if (typeof value === 'number' && (header === 'phone' || header === 'score' || header === 'estimated_value')) {
+            value = value.toString();
+          }
+          
+          // Handle null/undefined
+          if (value == null) {
+            value = '';
+          }
+
+          rowData[header] = value;
         });
+
+        // Handle required fields with defaults
+        if (!rowData.first_name) rowData.first_name = '';
+        if (!rowData.last_name) rowData.last_name = '';
+        
+        // Source validation
+        if (!rowData.source || !sources.includes(rowData.source.toLowerCase())) {
+          rowData.source = 'other';
+        }
+        
+        if (!rowData.status) rowData.status = 'new';
+        if (!rowData.score) rowData.score = 0;
+
         jsonData.push(rowData);
       });
 

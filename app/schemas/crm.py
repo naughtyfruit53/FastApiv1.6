@@ -7,33 +7,33 @@ from enum import Enum
 
 # Enums
 class LeadStatusEnum(str, Enum):
-    NEW = "new"
-    CONTACTED = "contacted"
-    QUALIFIED = "qualified"
-    PROPOSAL = "proposal"
-    NEGOTIATION = "negotiation"
-    CONVERTED = "converted"
-    LOST = "lost"
-    NURTURING = "nurturing"
+    new = "new"
+    contacted = "contacted"
+    qualified = "qualified"
+    proposal = "proposal"
+    negotiation = "negotiation"
+    converted = "converted"
+    lost = "lost"
+    nurturing = "nurturing"
 
 class LeadSourceEnum(str, Enum):
-    WEBSITE = "website"
-    REFERRAL = "referral"
-    EMAIL_CAMPAIGN = "email_campaign"
-    SOCIAL_MEDIA = "social_media"
-    COLD_CALL = "cold_call"
-    TRADE_SHOW = "trade_show"
-    PARTNER = "partner"
-    ADVERTISEMENT = "advertisement"
-    OTHER = "other"
+    website = "website"
+    referral = "referral"
+    email_campaign = "email_campaign"
+    social_media = "social_media"
+    cold_call = "cold_call"
+    trade_show = "trade_show"
+    partner = "partner"
+    advertisement = "advertisement"
+    other = "other"
 
 class OpportunityStageEnum(str, Enum):
-    PROSPECTING = "prospecting"
-    QUALIFICATION = "qualification"
-    PROPOSAL = "proposal"
-    NEGOTIATION = "negotiation"
-    CLOSED_WON = "closed_won"
-    CLOSED_LOST = "closed_lost"
+    prospecting = "prospecting"
+    qualification = "qualification"
+    proposal = "proposal"
+    negotiation = "negotiation"
+    closed_won = "closed_won"
+    closed_lost = "closed_lost"
 
 # Lead Schemas
 class LeadBase(BaseModel):
@@ -49,8 +49,8 @@ class LeadBase(BaseModel):
     state: Optional[str] = Field(None, description="State")
     pin_code: Optional[str] = Field(None, description="PIN code")
     country: Optional[str] = Field(None, description="Country")
-    status: LeadStatusEnum = Field(LeadStatusEnum.NEW, description="Lead status")
-    source: LeadSourceEnum = Field(LeadSourceEnum.OTHER, description="Lead source")
+    status: LeadStatusEnum = Field(LeadStatusEnum.new, description="Lead status")
+    source: LeadSourceEnum = Field(LeadSourceEnum.other, description="Lead source")
     description: Optional[str] = Field(None, description="Lead description")
     notes: Optional[str] = Field(None, description="Lead notes")
     score: int = Field(0, ge=0, le=100, description="Lead score (0-100)")
@@ -60,6 +60,8 @@ class LeadBase(BaseModel):
     expected_close_date: Optional[date] = Field(None, description="Expected close date")
     assigned_to_id: Optional[int] = Field(None, description="Assigned user ID")
     custom_fields: Optional[Dict[str, Any]] = Field(None, description="Custom fields")
+    owner: Optional[str] = Field(None, description="Lead owner")
+    industry: Optional[str] = Field(None, description="Lead industry")
 
 class LeadCreate(LeadBase):
     pass
@@ -88,6 +90,8 @@ class LeadUpdate(BaseModel):
     expected_close_date: Optional[date] = None
     assigned_to_id: Optional[int] = None
     custom_fields: Optional[Dict[str, Any]] = None
+    owner: Optional[str] = None
+    industry: Optional[str] = None
 
 class LeadInDB(LeadBase):
     model_config = ConfigDict(from_attributes=True)
@@ -144,7 +148,7 @@ class LeadActivity(LeadActivityInDB):
 class OpportunityBase(BaseModel):
     name: str = Field(..., description="Opportunity name")
     description: Optional[str] = Field(None, description="Opportunity description")
-    stage: OpportunityStageEnum = Field(OpportunityStageEnum.PROSPECTING, description="Opportunity stage")
+    stage: OpportunityStageEnum = Field(OpportunityStageEnum.prospecting, description="Opportunity stage")
     probability: float = Field(0.0, ge=0, le=100, description="Probability of closing (0-100%)")
     amount: float = Field(..., ge=0, description="Opportunity amount")
     expected_close_date: date = Field(..., description="Expected close date")
@@ -154,7 +158,7 @@ class OpportunityBase(BaseModel):
     competitors: Optional[str] = Field(None, description="Competitors")
     win_reason: Optional[str] = Field(None, description="Win reason")
     loss_reason: Optional[str] = Field(None, description="Loss reason")
-    source: LeadSourceEnum = Field(LeadSourceEnum.OTHER, description="Opportunity source")
+    source: LeadSourceEnum = Field(LeadSourceEnum.other, description="Opportunity source")
     custom_fields: Optional[Dict[str, Any]] = Field(None, description="Custom fields")
 
 class OpportunityCreate(OpportunityBase):
@@ -410,3 +414,4 @@ class Commission(CommissionBase):
     created_by_id: Optional[int] = None
     
     model_config = ConfigDict(from_attributes=True)
+    

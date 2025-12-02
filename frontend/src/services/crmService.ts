@@ -19,6 +19,8 @@ export interface Lead {
   created_at: string;
   updated_at?: string;
   last_contacted?: string;
+  owner?: string;
+  industry?: string;
 }
 
 export interface Opportunity {
@@ -143,7 +145,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error("Error fetching leads:", error.response?.data || error.message);
+      console.error("Error fetching leads:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to fetch leads");
     }
   }
@@ -155,7 +157,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error(`Error fetching lead ${id}:`, error.response?.data || error.message);
+      console.error(`Error fetching lead ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to fetch lead ${id}`);
     }
   }
@@ -167,7 +169,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error("Error creating lead:", error.response?.data || error.message);
+      console.error("Error creating lead:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to create lead");
     }
   }
@@ -179,7 +181,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error(`Error updating lead ${id}:`, error.response?.data || error.message);
+      console.error(`Error updating lead ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to update lead ${id}`);
     }
   }
@@ -190,7 +192,7 @@ class CRMService {
         headers: this.getAuthHeaders(),
       });
     } catch (error: any) {
-      console.error(`Error deleting lead ${id}:`, error.response?.data || error.message);
+      console.error(`Error deleting lead ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to delete lead ${id}`);
     }
   }
@@ -203,7 +205,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error("Error fetching opportunities:", error.response?.data || error.message);
+      console.error("Error fetching opportunities:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to fetch opportunities");
     }
   }
@@ -215,7 +217,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error(`Error fetching opportunity ${id}:`, error.response?.data || error.message);
+      console.error(`Error fetching opportunity ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to fetch opportunity ${id}`);
     }
   }
@@ -227,7 +229,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error("Error creating opportunity:", error.response?.data || error.message);
+      console.error("Error creating opportunity:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to create opportunity");
     }
   }
@@ -239,7 +241,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error(`Error updating opportunity ${id}:`, error.response?.data || error.message);
+      console.error(`Error updating opportunity ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to update opportunity ${id}`);
     }
   }
@@ -250,7 +252,7 @@ class CRMService {
         headers: this.getAuthHeaders(),
       });
     } catch (error: any) {
-      console.error(`Error deleting opportunity ${id}:`, error.response?.data || error.message);
+      console.error(`Error deleting opportunity ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to delete opportunity ${id}`);
     }
   }
@@ -263,7 +265,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error("Error fetching customers:", error.response?.data || error.message);
+      console.error("Error fetching customers:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to fetch customers");
     }
   }
@@ -275,7 +277,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error(`Error converting lead ${leadId} to opportunity:`, error.response?.data || error.message);
+      console.error(`Error converting lead ${leadId} to opportunity:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to convert lead ${leadId} to opportunity`);
     }
   }
@@ -287,7 +289,7 @@ class CRMService {
       });
       return response.data;
     } catch (error: any) {
-      console.error(`Error fetching activities for lead ${leadId}:`, error.response?.data || error.message);
+      console.error(`Error fetching activities for lead ${leadId}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to fetch lead activities`);
     }
   }

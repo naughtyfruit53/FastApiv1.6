@@ -181,14 +181,14 @@ const LeadManagement: React.FC = () => {
   });
 
   const createLeadMutation = useMutation({
-    mutationFn: crmService.createLead,
+    mutationFn: (leadData: any) => crmService.createLead(leadData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success("Lead created successfully");
       setAddDialog(false);
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to create lead");
+      toast.error(JSON.stringify(err.response?.data?.detail) || err.message || "Failed to create lead");
     },
   });
 
@@ -216,10 +216,22 @@ const LeadManagement: React.FC = () => {
     setAddDialog(true);
   };
 
-  const handleImportLeads = (importedLeads: any[]) => {
-    importedLeads.forEach(leadData => {
-      createLeadMutation.mutate(leadData);
-    });
+  const handleImportLeads = async (importedLeads: any[]) => {
+    const errors: string[] = [];
+    for (const leadData of importedLeads) {
+      try {
+        await createLeadMutation.mutateAsync(leadData);
+      } catch (err: any) {
+        const errorDetail = err.response?.data?.detail ? JSON.stringify(err.response.data.detail) : err.message;
+        errors.push(`Lead "${leadData.first_name} ${leadData.last_name}": ${errorDetail}`);
+      }
+    }
+    if (errors.length > 0) {
+      toast.error(`Some leads failed to import:\n${errors.join('\n')}`);
+    } else {
+      toast.success('All leads imported successfully');
+    }
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
   };
 
   const handleCall = () => {
@@ -547,6 +559,8 @@ const LeadManagement: React.FC = () => {
               <TableCell padding="checkbox"></TableCell>
               <TableCell>Lead</TableCell>
               <TableCell>Company</TableCell>
+              <TableCell>Owner</TableCell>
+              <TableCell>Industry</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Priority</TableCell>
               <TableCell>Temperature</TableCell>
@@ -591,6 +605,16 @@ const LeadManagement: React.FC = () => {
                     {lead.company}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
+                    {lead.industry}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight="medium">
+                    {lead.owner}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight="medium">
                     {lead.industry}
                   </Typography>
                 </TableCell>

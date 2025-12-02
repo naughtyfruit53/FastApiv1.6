@@ -1,5 +1,3 @@
-# app/models/crm_models.py
-
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -9,33 +7,33 @@ from datetime import datetime, date
 import enum
 
 class LeadStatus(enum.Enum):
-    NEW = "new"
-    CONTACTED = "contacted"
-    QUALIFIED = "qualified" 
-    PROPOSAL = "proposal"
-    NEGOTIATION = "negotiation"
-    CONVERTED = "converted"
-    LOST = "lost"
-    NURTURING = "nurturing"
+    new = "new"
+    contacted = "contacted"
+    qualified = "qualified"
+    proposal = "proposal"
+    negotiation = "negotiation"
+    converted = "converted"
+    lost = "lost"
+    nurturing = "nurturing"
 
 class LeadSource(enum.Enum):
-    WEBSITE = "website"
-    REFERRAL = "referral"
-    EMAIL_CAMPAIGN = "email_campaign"
-    SOCIAL_MEDIA = "social_media"
-    COLD_CALL = "cold_call"
-    TRADE_SHOW = "trade_show"
-    PARTNER = "partner"
-    ADVERTISEMENT = "advertisement"
-    OTHER = "other"
+    website = "website"
+    referral = "referral"
+    email_campaign = "email_campaign"
+    social_media = "social_media"
+    cold_call = "cold_call"
+    trade_show = "trade_show"
+    partner = "partner"
+    advertisement = "advertisement"
+    other = "other"
 
 class OpportunityStage(enum.Enum):
-    PROSPECTING = "prospecting"
-    QUALIFICATION = "qualification"
-    PROPOSAL = "proposal"
-    NEGOTIATION = "negotiation"
-    CLOSED_WON = "closed_won"
-    CLOSED_LOST = "closed_lost"
+    prospecting = "prospecting"
+    qualification = "qualification"
+    proposal = "proposal"
+    negotiation = "negotiation"
+    closed_won = "closed_won"
+    closed_lost = "closed_lost"
 
 class Lead(Base):
     """
@@ -69,8 +67,8 @@ class Lead(Base):
     country: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # Lead details
-    status: Mapped[LeadStatus] = mapped_column(Enum(LeadStatus), default=LeadStatus.NEW, index=True)
-    source: Mapped[LeadSource] = mapped_column(Enum(LeadSource), default=LeadSource.OTHER, index=True)
+    status: Mapped[LeadStatus] = mapped_column(Enum(LeadStatus), default=LeadStatus.new, index=True)
+    source: Mapped[LeadSource] = mapped_column(Enum(LeadSource), default=LeadSource.other, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
@@ -98,6 +96,10 @@ class Lead(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())
     last_contacted: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # New columns
+    owner: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    industry: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # Relationships
     organization: Mapped["Organization"] = relationship("Organization")
@@ -139,7 +141,7 @@ class Opportunity(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Sales pipeline
-    stage: Mapped[OpportunityStage] = mapped_column(Enum(OpportunityStage), default=OpportunityStage.PROSPECTING, index=True)
+    stage: Mapped[OpportunityStage] = mapped_column(Enum(OpportunityStage), default=OpportunityStage.prospecting, index=True)
     probability: Mapped[float] = mapped_column(Float, default=0.0) # Probability of closing (0-100%)
     
     # Financial details
@@ -162,7 +164,7 @@ class Opportunity(Base):
     loss_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Source tracking
-    source: Mapped[LeadSource] = mapped_column(Enum(LeadSource), default=LeadSource.OTHER, index=True)
+    source: Mapped[LeadSource] = mapped_column(Enum(LeadSource), default=LeadSource.other, index=True)
     
     # Custom fields
     custom_fields: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)

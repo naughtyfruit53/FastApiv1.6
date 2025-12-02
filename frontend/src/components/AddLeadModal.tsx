@@ -45,6 +45,8 @@ interface LeadFormData {
   estimated_value?: number;
   expected_close_date?: string;
   notes?: string;
+  owner?: string;
+  industry?: string;
 }
 
 const leadSources = [
@@ -103,6 +105,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       estimated_value: 0,
       expected_close_date: "",
       notes: "",
+      owner: "",
+      industry: "",
     },
   });
 
@@ -272,6 +276,22 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
                 <TextField
                   {...register("website")}
                   label="Website"
+                  fullWidth
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  {...register("owner")}
+                  label="Owner"
+                  fullWidth
+                  disabled={loading}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  {...register("industry")}
+                  label="Industry"
                   fullWidth
                   disabled={loading}
                 />
