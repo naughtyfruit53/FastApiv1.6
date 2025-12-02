@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime
@@ -28,6 +28,7 @@ async def get_goods_receipt_notes(
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
+    used: Optional[bool] = Query(None, description="Filter by whether the GRN is used in a purchase voucher"),
     db: AsyncSession = Depends(get_db),
     auth: tuple = Depends(require_access("voucher", "read"))
 ):
@@ -45,6 +46,13 @@ async def get_goods_receipt_notes(
         
         if status:
             stmt = stmt.where(GoodsReceiptNote.status == status)
+
+        if used is not None:
+            subquery = select(PurchaseVoucher.id).where(PurchaseVoucher.grn_id == GoodsReceiptNote.id)
+            if used:
+                stmt = stmt.where(exists(subquery))
+            else:
+                stmt = stmt.where(~exists(subquery))
         
         if hasattr(GoodsReceiptNote, sortBy):
             sort_attr = getattr(GoodsReceiptNote, sortBy)
@@ -86,6 +94,8 @@ async def get_goods_receipt_notes(
                         color_status = 'orange' if has_pr else 'red'
                     else:
                         color_status = 'blue' if has_pr else 'red'  # Partial rejection no PR: red (consistent with full)
+                else:
+                    color_status = 'pending'
             
             grn.has_purchase_voucher = has_pv
             grn.has_purchase_return = has_pr

@@ -534,6 +534,30 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include purchase_order_router: {str(e)}\n{traceback.format_exc()}")
 
+    # Purchase Voucher API (fixed 404 on /purchase-vouchers/next-number)
+    try:
+        from .vouchers.purchase_voucher import router as purchase_voucher_router
+        logger.debug("Imported purchase_voucher_router")
+        api_v1_router.include_router(purchase_voucher_router, prefix="/purchase-vouchers", tags=["purchase-vouchers"])
+        purchase_voucher_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in purchase_voucher_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered purchase_voucher endpoints: {len(purchase_voucher_routes)} routes")
+        for route_path in purchase_voucher_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include purchase_voucher_router: {str(e)}\n{traceback.format_exc()}")
+
+    # Goods Receipt Note API (fixed 404 on /goods-receipt-notes)
+    try:
+        from .vouchers.goods_receipt_note import router as goods_receipt_note_router
+        logger.debug("Imported goods_receipt_note_router")
+        api_v1_router.include_router(goods_receipt_note_router, prefix="/goods-receipt-notes", tags=["goods-receipt-notes"])
+        goods_receipt_note_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in goods_receipt_note_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered goods_receipt_note endpoints: {len(goods_receipt_note_routes)} routes")
+        for route_path in goods_receipt_note_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include goods_receipt_note_router: {str(e)}\n{traceback.format_exc()}")
+
     # GST Search API (fixed 404 on /gst/search/{gst_number})
     try:
         from .gst_search import router as gst_search_router
