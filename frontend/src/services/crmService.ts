@@ -94,7 +94,7 @@ export interface User {
 class CRMService {
   private endpoint = "/crm";
 
-  private getAuthHeaders(): Record<string, string> {
+  private getAuthHeaders = (): Record<string, string> => {
     const token = localStorage.getItem("access_token");
     if (!token) {
       throw new Error("No authentication token found");
@@ -103,9 +103,9 @@ class CRMService {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     };
-  }
+  };
 
-  async getAnalytics(params: { period_start: string; period_end: string }): Promise<CRMAnalytics> {
+  getAnalytics = async (params: { period_start: string; period_end: string }): Promise<CRMAnalytics> => {
     try {
       const response = await api.get(`${this.endpoint}/analytics`, {
         headers: this.getAuthHeaders(),
@@ -122,9 +122,9 @@ class CRMService {
       });
       throw new Error(`Failed to fetch analytics data: ${status} - ${detail}`);
     }
-  }
+  };
 
-  async getCustomerAnalytics(params: { period_start: string; period_end: string }): Promise<CustomerAnalytics> {
+  getCustomerAnalytics = async (params: { period_start: string; period_end: string }): Promise<CustomerAnalytics> => {
     try {
       const response = await api.get(`${this.endpoint}/customer-analytics`, {
         headers: this.getAuthHeaders(),
@@ -141,9 +141,9 @@ class CRMService {
       });
       throw new Error(`Failed to fetch customer analytics data: ${status} - ${detail}`);
     }
-  }
+  };
 
-  async getLeads(skip: number = 0, limit: number = 100): Promise<Lead[]> {
+  getLeads = async (skip: number = 0, limit: number = 100): Promise<Lead[]> => {
     try {
       const response = await api.get(`${this.endpoint}/leads`, {
         headers: this.getAuthHeaders(),
@@ -154,9 +154,9 @@ class CRMService {
       console.error("Error fetching leads:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to fetch leads");
     }
-  }
+  };
 
-  async getLead(id: number): Promise<Lead> {
+  getLead = async (id: number): Promise<Lead> => {
     try {
       const response = await api.get(`${this.endpoint}/leads/${id}`, {
         headers: this.getAuthHeaders(),
@@ -166,9 +166,9 @@ class CRMService {
       console.error(`Error fetching lead ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to fetch lead ${id}`);
     }
-  }
+  };
 
-  async createLead(leadData: any): Promise<Lead> {
+  createLead = async (leadData: any): Promise<Lead> => {
     try {
       const response = await api.post(`${this.endpoint}/leads`, leadData, {
         headers: this.getAuthHeaders(),
@@ -178,9 +178,9 @@ class CRMService {
       console.error("Error creating lead:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to create lead");
     }
-  }
+  };
 
-  async updateLead(id: number, leadData: any): Promise<Lead> {
+  updateLead = async (id: number, leadData: any): Promise<Lead> => {
     try {
       const response = await api.put(`${this.endpoint}/leads/${id}`, leadData, {
         headers: this.getAuthHeaders(),
@@ -190,9 +190,9 @@ class CRMService {
       console.error(`Error updating lead ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to update lead ${id}`);
     }
-  }
+  };
 
-  async assignLead(leadId: number, assigned_to_id: number): Promise<Lead> {
+  assignLead = async (leadId: number, assigned_to_id: number): Promise<Lead> => {
     try {
       const response = await api.put(`${this.endpoint}/leads/${leadId}/assign`, null, {
         headers: this.getAuthHeaders(),
@@ -203,9 +203,22 @@ class CRMService {
       console.error(`Error assigning lead ${leadId}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to assign lead ${leadId}`);
     }
-  }
+  };
 
-  async getSalesUsers(): Promise<User[]> {
+  transferLeadOwnership = async (leadId: number, owner_id: number): Promise<Lead> => {
+    try {
+      const response = await api.put(`${this.endpoint}/leads/${leadId}/transfer-ownership`, null, {
+        headers: this.getAuthHeaders(),
+        params: { owner_id },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Error transferring ownership for lead ${leadId}:`, JSON.stringify(error.response?.data?.detail || error.message));
+      throw new Error(error.response?.data?.detail || `Failed to transfer ownership for lead ${leadId}`);
+    }
+  };
+
+  getSalesUsers = async (): Promise<User[]> => {
     try {
       const response = await api.get(`${this.endpoint}/sales-users`, {
         headers: this.getAuthHeaders(),
@@ -215,9 +228,9 @@ class CRMService {
       console.error("Error fetching sales users:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to fetch sales users");
     }
-  }
+  };
 
-  async deleteLead(id: number): Promise<void> {
+  deleteLead = async (id: number): Promise<void> => {
     try {
       await api.delete(`${this.endpoint}/leads/${id}`, {
         headers: this.getAuthHeaders(),
@@ -226,9 +239,9 @@ class CRMService {
       console.error(`Error deleting lead ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to delete lead ${id}`);
     }
-  }
+  };
 
-  async getOpportunities(skip: number = 0, limit: number = 100): Promise<Opportunity[]> {
+  getOpportunities = async (skip: number = 0, limit: number = 100): Promise<Opportunity[]> => {
     try {
       const response = await api.get(`${this.endpoint}/opportunities`, {
         headers: this.getAuthHeaders(),
@@ -239,9 +252,9 @@ class CRMService {
       console.error("Error fetching opportunities:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to fetch opportunities");
     }
-  }
+  };
 
-  async getOpportunity(id: number): Promise<Opportunity> {
+  getOpportunity = async (id: number): Promise<Opportunity> => {
     try {
       const response = await api.get(`${this.endpoint}/opportunities/${id}`, {
         headers: this.getAuthHeaders(),
@@ -251,9 +264,9 @@ class CRMService {
       console.error(`Error fetching opportunity ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to fetch opportunity ${id}`);
     }
-  }
+  };
 
-  async createOpportunity(opportunityData: any): Promise<Opportunity> {
+  createOpportunity = async (opportunityData: any): Promise<Opportunity> => {
     try {
       const response = await api.post(`${this.endpoint}/opportunities`, opportunityData, {
         headers: this.getAuthHeaders(),
@@ -263,9 +276,9 @@ class CRMService {
       console.error("Error creating opportunity:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to create opportunity");
     }
-  }
+  };
 
-  async updateOpportunity(id: number, opportunityData: any): Promise<Opportunity> {
+  updateOpportunity = async (id: number, opportunityData: any): Promise<Opportunity> => {
     try {
       const response = await api.put(`${this.endpoint}/opportunities/${id}`, opportunityData, {
         headers: this.getAuthHeaders(),
@@ -275,9 +288,9 @@ class CRMService {
       console.error(`Error updating opportunity ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to update opportunity ${id}`);
     }
-  }
+  };
 
-  async deleteOpportunity(id: number): Promise<void> {
+  deleteOpportunity = async (id: number): Promise<void> => {
     try {
       await api.delete(`${this.endpoint}/opportunities/${id}`, {
         headers: this.getAuthHeaders(),
@@ -286,9 +299,9 @@ class CRMService {
       console.error(`Error deleting opportunity ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to delete opportunity ${id}`);
     }
-  }
+  };
 
-  async getCustomers(skip: number = 0, limit: number = 100): Promise<Customer[]> {
+  getCustomers = async (skip: number = 0, limit: number = 100): Promise<Customer[]> => {
     try {
       const response = await api.get("/customers", {
         headers: this.getAuthHeaders(),
@@ -299,9 +312,9 @@ class CRMService {
       console.error("Error fetching customers:", JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || "Failed to fetch customers");
     }
-  }
+  };
 
-  async convertLeadToOpportunity(leadId: number, opportunityData: any): Promise<Opportunity> {
+  convertLeadToOpportunity = async (leadId: number, opportunityData: any): Promise<Opportunity> => {
     try {
       const response = await api.post(`${this.endpoint}/leads/${leadId}/convert`, opportunityData, {
         headers: this.getAuthHeaders(),
@@ -311,9 +324,9 @@ class CRMService {
       console.error(`Error converting lead ${leadId} to opportunity:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to convert lead ${leadId} to opportunity`);
     }
-  }
+  };
 
-  async getLeadActivities(leadId: number): Promise<LeadActivity[]> {
+  getLeadActivities = async (leadId: number): Promise<LeadActivity[]> => {
     try {
       const response = await api.get(`${this.endpoint}/leads/${leadId}/activities`, {
         headers: this.getAuthHeaders(),
@@ -323,7 +336,8 @@ class CRMService {
       console.error(`Error fetching activities for lead ${leadId}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to fetch lead activities`);
     }
-  }
+  };
 }
 
 export const crmService = new CRMService();
+  

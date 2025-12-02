@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { usePincodeLookup } from "../hooks/usePincodeLookup";
+import { useAuth } from "../context/AuthContext";  // Added import
 
 interface AddLeadModalProps {
   open: boolean;
@@ -79,6 +80,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   onAdd,
   loading = false,
 }) => {
+  const { currentUser } = useAuth();  // Get current user from auth context
   const {
     register,
     handleSubmit,
@@ -105,7 +107,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
       estimated_value: 0,
       expected_close_date: "",
       notes: "",
-      owner: "",
+      owner: currentUser?.full_name || currentUser?.email || "",  // Default to current user name/email
       industry: "",
     },
   });

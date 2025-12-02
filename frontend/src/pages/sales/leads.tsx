@@ -55,6 +55,7 @@ import {
   PersonAdd,
   NotesOutlined,
   AssignmentInd as AssignIcon,
+  SwapHoriz as TransferIcon,  // New icon for transfer
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -63,6 +64,7 @@ import { crmService, Lead } from "../../services/crmService";
 import AddLeadModal from "../../components/AddLeadModal";
 import EditLeadModal from "../../components/EditLeadModal";
 import AssignLeadModal from "../../components/AssignLeadModal";
+import TransferOwnershipModal from "../../components/TransferOwnershipModal";  // New import
 import LeadsImportExportDropdown from "../../components/LeadsImportExportDropdown";
 import { formatCurrency } from "../../utils/currencyUtils";
 import { ProtectedPage } from "../../components/ProtectedPage";
@@ -103,8 +105,10 @@ const LeadManagement: React.FC = () => {
   const [addDialog, setAddDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
   const [assignDialog, setAssignDialog] = useState(false);
+  const [transferDialog, setTransferDialog] = useState(false);  // New state for transfer dialog
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [assignLead, setAssignLead] = useState<Lead | null>(null);
+  const [transferLead, setTransferLead] = useState<Lead | null>(null);  // New state for transfer lead
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuLead, setMenuLead] = useState<Lead | null>(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -153,11 +157,11 @@ const LeadManagement: React.FC = () => {
     enabled: !!selectedLead && detailDialog,
   });
 
-  // Fetch sales users for assign modal
+  // Fetch sales users for assign and transfer modals
   const { data: salesUsers = [] } = useQuery<User[]>({
     queryKey: ['salesUsers'],
     queryFn: crmService.getSalesUsers,
-    enabled: assignDialog,
+    enabled: assignDialog || transferDialog,
   });
 
   // Mutations
@@ -198,6 +202,20 @@ const LeadManagement: React.FC = () => {
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to assign lead");
+    },
+  });
+
+  const transferOwnershipMutation = useMutation({
+    mutationFn: ({ leadId, owner_id }: { leadId: number; owner_id: number }) =>
+      crmService.transferLeadOwnership(leadId, owner_id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success("Lead ownership transferred successfully");
+      setTransferDialog(false);
+      setTransferLead(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to transfer ownership");
     },
   });
 
@@ -245,6 +263,12 @@ const LeadManagement: React.FC = () => {
   const handleAssignLead = (lead: Lead) => {
     setAssignLead(lead);
     setAssignDialog(true);
+    handleMenuClose();
+  };
+
+  const handleTransferOwnership = (lead: Lead) => {
+    setTransferLead(lead);
+    setTransferDialog(true);
     handleMenuClose();
   };
 
@@ -765,6 +789,10 @@ const LeadManagement: React.FC = () => {
           <AssignIcon sx={{ mr: 1 }} fontSize="small" />
           Assign Lead
         </MenuItem>
+        <MenuItem onClick={() => menuLead && handleTransferOwnership(menuLead)}>
+          <TransferIcon sx={{ mr: 1 }} fontSize="small" />
+          Transfer Ownership
+        </MenuItem>
         <MenuItem onClick={handleScheduleFollowUp}>
           <ScheduleIcon sx={{ mr: 1 }} fontSize="small" />
           Schedule Follow-up
@@ -817,6 +845,21 @@ const LeadManagement: React.FC = () => {
           await assignLeadMutation.mutateAsync({ leadId, assigned_to_id: userId });
         }}
         loading={assignLeadMutation.isPending}
+      />
+
+      {/* Transfer Ownership Modal */}
+      <TransferOwnershipModal
+        open={transferDialog}
+        lead={transferLead}
+        users={salesUsers}
+        onClose={() => {
+          setTransferDialog(false);
+          setTransferLead(null);
+        }}
+        onTransfer={async (leadId, ownerId) => {
+          await transferOwnershipMutation.mutateAsync({ leadId, owner_id: ownerId });
+        }}
+        loading={transferOwnershipMutation.isPending}
       />
 
       {/* Lead Detail Dialog */}

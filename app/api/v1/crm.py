@@ -13,7 +13,6 @@ from app.models.crm_models import (
 )
 from app.models.customer_models import Customer
 from app.models.user_models import User
-from app.models.vouchers.sales import SalesVoucher
 from app.schemas.crm import (
     Lead as LeadSchema, LeadCreate, LeadUpdate,
     Opportunity as OpportunitySchema, OpportunityCreate, OpportunityUpdate,
@@ -396,7 +395,6 @@ async def get_sales_users(
     auth: tuple = Depends(require_access("crm", "read")),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get all users with sales permission"""
     current_user, org_id = auth
 
     try:
@@ -408,7 +406,7 @@ async def get_sales_users(
         rbac = RBACService(db)
         for user in users:
             permissions = await rbac.get_user_permissions(user.id)
-            if "sales_permission" in permissions:
+            if user.is_super_admin or user.role == "org_admin" or "crm" in user.assigned_modules or "sales_permission" in permissions:
                 sales_users.append({
                     "id": user.id,
                     "name": user.full_name or user.email,
@@ -423,6 +421,54 @@ async def get_sales_users(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch sales users: {str(e)}"
+        )
+
+@router.put("/leads/{lead_id}/transfer-ownership", response_model=LeadSchema)
+async def transfer_lead_ownership(
+    lead_id: int = Path(...),
+    owner_id: int = Query(...),
+    auth: tuple = Depends(require_access("crm", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    current_user, org_id = auth
+
+    try:
+        stmt = select(Lead).where(
+            and_(Lead.id == lead_id, Lead.organization_id == org_id)
+        )
+        result = await db.execute(stmt)
+        lead = result.scalar_one_or_none()
+        
+        if not lead:
+            logger.error(f"Lead {lead_id} not found for org_id={org_id}")
+            raise HTTPException(status_code=404, detail="Lead not found")
+        
+        # Get new owner user
+        user_stmt = select(User).where(
+            and_(User.id == owner_id, User.organization_id == org_id)
+        )
+        user_result = await db.execute(user_stmt)
+        new_owner = user_result.scalar_one_or_none()
+        
+        if not new_owner:
+            logger.error(f"User {owner_id} not found in org_id={org_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        lead.owner = new_owner.full_name or new_owner.email
+        lead.updated_at = datetime.utcnow()
+        
+        await db.commit()
+        await db.refresh(lead)
+        
+        logger.info(f"Lead {lead_id} ownership transferred to {owner_id} by {current_user.email} in org {org_id}")
+        return lead
+
+    except Exception as e:
+        logger.error(f"Error transferring ownership for lead {lead_id}: {str(e)}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to transfer ownership: {str(e)}"
         )
 
 @router.post("/leads/{lead_id}/convert", response_model=LeadConversionResponse)
@@ -1387,4 +1433,3 @@ async def delete_commission(
             status_code=500,
             detail=f"Failed to delete commission: {str(e)}"
         )
-    
