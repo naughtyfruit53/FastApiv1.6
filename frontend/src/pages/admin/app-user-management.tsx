@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/app-user-management.tsx
+
 "use client";
 import React, { useState } from "react";
 import {
@@ -75,7 +77,7 @@ const AppUserManagement: React.FC = () => {
   // Check if current user is the god account
   const isGodAccount = user?.email === "naughtyfruit53@gmail.com";
   const queryClient = useQueryClient();
-  const { data: appUsers } = useQuery({
+  const { data: appUsers, isLoading: loading } = useQuery({
     queryKey: ["appUsers"],
     queryFn: async () => {
       const token = localStorage.getItem("token");
@@ -230,7 +232,6 @@ const AppUserManagement: React.FC = () => {
       </Container>
     );
   }
-  // TODO: Define or import loading
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
