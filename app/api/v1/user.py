@@ -58,9 +58,11 @@ async def get_user(
     if current_user.id == user_id:
         return current_user
     
-    result = await db.execute(
-        select(User).where(User.id == user_id, User.organization_id == org_id)
-    )
+    stmt = select(User).where(User.id == user_id)
+    if not current_user.is_super_admin:
+        stmt = stmt.where(User.organization_id == org_id)
+    
+    result = await db.execute(stmt)
     user = result.scalars().first()
     if not user:
         raise HTTPException(
@@ -195,9 +197,11 @@ async def update_user(
     current_user, org_id = auth
     
     # Find user with tenant isolation
-    result = await db.execute(
-        select(User).where(User.id == user_id, User.organization_id == org_id)
-    )
+    stmt = select(User).where(User.id == user_id)
+    if not current_user.is_super_admin:
+        stmt = stmt.where(User.organization_id == org_id)
+    
+    result = await db.execute(stmt)
     user = result.scalars().first()
     if not user:
         raise HTTPException(
@@ -217,28 +221,22 @@ async def update_user(
             # Users need admin permission to update administrative fields
             pass  # Will be caught by permission check above
     
+    update_data = user_update.dict(exclude_unset=True)
+    
     # Check email uniqueness if being updated
-    if user_update.email and user_update.email != user.email:
-        result = await db.execute(select(User).filter_by(email=user_update.email, organization_id=org_id))
+    if 'email' in update_data and update_data['email'] != user.email:
+        result = await db.execute(select(User).filter_by(email=update_data['email'], organization_id=user.organization_id))
         existing_email = result.scalars().first()
         if existing_email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered in this organization"
             )
-    
-    # Check username uniqueness if being updated
-    if user_update.username and user_update.username != user.username:
-        result = await db.execute(select(User).filter_by(username=user_update.username, organization_id=org_id))
-        existing_username = result.scalars().first()
-        if existing_username:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken in this organization"
-            )
+        # Sync username with email
+        update_data['username'] = update_data['email']
     
     # Update user
-    for field, value in user_update.dict(exclude_unset=True).items():
+    for field, value in update_data.items():
         setattr(user, field, value)
     
     await db.commit()
@@ -263,9 +261,11 @@ async def delete_user(
         )
     
     # Find user with tenant isolation
-    result = await db.execute(
-        select(User).where(User.id == user_id, User.organization_id == org_id)
-    )
+    stmt = select(User).where(User.id == user_id)
+    if not current_user.is_super_admin:
+        stmt = stmt.where(User.organization_id == org_id)
+    
+    result = await db.execute(stmt)
     user = result.scalars().first()
     if not user:
         raise HTTPException(

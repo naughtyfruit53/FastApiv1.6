@@ -32,6 +32,7 @@ interface CreateOrganizationLicenseModalProps {
 interface LicenseFormData {
   organization_name: string;
   superadmin_email: string;
+  superadmin_full_name: string;
   primary_phone: string;
   address1: string;
   pin_code: string;
@@ -224,6 +225,7 @@ const CreateOrganizationLicenseModal: React.FC<
     const submissionData = {
       organization_name: data.organization_name.trim(),
       superadmin_email: data.superadmin_email.trim(),
+      superadmin_full_name: data.superadmin_full_name.trim(),
       primary_phone: data.primary_phone?.trim(),
       address1: data.address1.trim(),
       pin_code: data.pin_code.trim(),
@@ -328,6 +330,9 @@ const CreateOrganizationLicenseModal: React.FC<
                     <strong>Admin Email:</strong> {success.superadmin_email}
                   </Typography>
                   <Typography variant="body2" gutterBottom>
+                    <strong>Super Admin Name:</strong> {success.superadmin_full_name}
+                  </Typography>
+                  <Typography variant="body2" gutterBottom>
                     <strong>Temporary Password:</strong>
                     <Box
                       component="span"
@@ -390,6 +395,27 @@ const CreateOrganizationLicenseModal: React.FC<
                         helperText={
                           errors.organization_name?.message ||
                           "This will be used for official documents and branding"
+                        }
+                        disabled={loading}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Super Admin Full Name"
+                        placeholder="John Doe"
+                        {...register("superadmin_full_name", {
+                          required: "Super admin full name is required",
+                          minLength: {
+                            value: 3,
+                            message: "Full name must be at least 3 characters",
+                          },
+                        })}
+                        error={!!errors.superadmin_full_name}
+                        helperText={
+                          errors.superadmin_full_name?.message ||
+                          "Full name of the organization admin"
                         }
                         disabled={loading}
                         variant="outlined"

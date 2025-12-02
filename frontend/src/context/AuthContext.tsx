@@ -383,7 +383,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     try {
       // Check for return URL
       const returnUrl = sessionStorage.getItem("returnUrlAfterLogin");
-      if (returnUrl) {
+      if (returnUrl && !returnUrl.includes('[') && !returnUrl.includes(']')) {  // NEW: Skip if invalid (contains placeholders)
         sessionStorage.removeItem("returnUrlAfterLogin");
         router.replace(returnUrl);
         setTimeout(() => {

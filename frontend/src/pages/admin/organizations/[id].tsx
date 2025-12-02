@@ -53,16 +53,27 @@ interface Organization {
   currency: string;
   created_at: string;
   updated_at?: string;
+  superadmin_full_name?: string;  // Added full name field
+}
+interface AdminUser {
+  id: number;
+  full_name: string;
+  email: string;
+  role: string;
 }
 const OrganizationDetailPage: React.FC = () => {
   const router = useRouter();
   const { id } = router.query;
   const [organization, setOrganization] = useState<Organization | null>(null);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editedOrg, setEditedOrg] = useState<Organization | null>(null);
+  const [editedFullName, setEditedFullName] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userError, setUserError] = useState<string | null>(null);
   const [openResetDialog, setOpenResetDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [resetPassword, setResetPassword] = useState<string | null>(null);
@@ -72,6 +83,7 @@ const OrganizationDetailPage: React.FC = () => {
     if (id) {
       // fetchOrganization is defined later in this file
       fetchOrganization();
+      fetchAdminUser();
     }
   }, [id]);
   useEffect(() => {
@@ -87,7 +99,9 @@ const OrganizationDetailPage: React.FC = () => {
   const fetchOrganization = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/organizations/${id}`);
+      const response = await api.get(`/organizations/${id}`, {
+        headers: { 'X-Organization-ID': `${id}` }
+      });
       const data = response.data;
       setOrganization(data);
       setEditedOrg(data);
@@ -101,20 +115,52 @@ const OrganizationDetailPage: React.FC = () => {
       setLoading(false);
     }
   };
+  const fetchAdminUser = async () => {
+    try {
+      setUserLoading(true);
+      // Fetch organization users and find the org_admin
+      const response = await api.get(`/organizations/${id}/members`, {
+        headers: { 'X-Organization-ID': `${id}` }
+      });
+      const users = response.data;
+      const orgAdmin = users.find((user: AdminUser) => user.role === 'org_admin');
+      setAdminUser(orgAdmin || null);
+      setUserError(null);
+      setEditedFullName(orgAdmin?.full_name || '');
+    } catch (err: any) {
+      console.error(err);
+      setUserError(
+        err.response?.data?.detail || "Failed to load admin user details",
+      );
+    } finally {
+      setUserLoading(false);
+    }
+  };
   const handleEdit = () => {
     setEditing(true);
     setEditedOrg({ ...organization! });
+    setEditedFullName(adminUser?.full_name || '');
   };
   const handleCancel = () => {
     setEditing(false);
     setEditedOrg({ ...organization! });
+    setEditedFullName(adminUser?.full_name || '');
   };
   const handleSave = async () => {
     try {
       setSaving(true);
-      const response = await api.put(`/organizations/${id}`, editedOrg);
+      const response = await api.put(`/organizations/${id}`, editedOrg, {
+        headers: { 'X-Organization-ID': `${id}` }
+      });
       const updatedOrg = response.data;
       setOrganization(updatedOrg);
+      // Update admin full name if changed
+      if (adminUser && editedFullName !== adminUser.full_name) {
+        await api.put(`/users/${adminUser.id}`, { full_name: editedFullName }, {
+          headers: { 'X-Organization-ID': `${id}` }
+        });
+        setAdminUser({ ...adminUser, full_name: editedFullName });
+      }
       setEditing(false);
       toast.success("Organization updated successfully");
     } catch (err) {
@@ -202,7 +248,7 @@ const OrganizationDetailPage: React.FC = () => {
         return "default";
     }
   };
-  if (loading) {
+  if (loading || userLoading) {
     return (
       <Box
         display="flex"
@@ -214,10 +260,10 @@ const OrganizationDetailPage: React.FC = () => {
       </Box>
     );
   }
-  if (error || !organization) {
+  if (error || userError || !organization) {
     return (
       <Box p={3}>
-        <Alert severity="error">{error || "Organization not found"}</Alert>
+        <Alert severity="error">{error || userError || "Organization not found"}</Alert>
         <Button
           variant="contained"
           onClick={() => router.push("/admin/organizations")}
@@ -230,7 +276,7 @@ const OrganizationDetailPage: React.FC = () => {
   }
   const currentOrg = editing ? editedOrg! : organization;
   return (
-    <ProtectedPage moduleKey="admin" action="read">
+    <ProtectedPage moduleKey="admin" action="read" customCheck={(pc) => pc.checkIsSuperAdmin()}>
     <Box p={3}>
       <Box
         display="flex"
@@ -320,6 +366,15 @@ const OrganizationDetailPage: React.FC = () => {
                     }
                     disabled={!editing}
                     helperText="Used for subdomain-specific access"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <TextField
+                    fullWidth
+                    label="Super Admin Full Name"
+                    value={editing ? editedFullName : (adminUser?.full_name || currentOrg.superadmin_full_name || "")}
+                    onChange={(e) => setEditedFullName(e.target.value)}
+                    disabled={!editing}
                   />
                 </Grid>
                 <Grid size={{ xs: 12 }}>

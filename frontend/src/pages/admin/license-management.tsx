@@ -29,12 +29,12 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { organizationService } from '../../services/authService';
-import adminService from '../../services/adminService';
+import { organizationService } from "../../services/organizationService";
+import adminService from "../../services/adminService";
 import CreateOrganizationLicenseModal from '../../components/CreateOrganizationLicenseModal';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from "../../context/AuthContext";
+import { ProtectedPage } from "../../components/ProtectedPage"; // Import ProtectedPage
 
-import { ProtectedPage } from '@/components/ProtectedPage';
 interface Organization {
   id: number;
   name: string;
@@ -138,9 +138,7 @@ const LicenseManagement: React.FC = () => {
   ) || [];
 
   return (
-
-
-    <ProtectedPage moduleKey="admin" action="read">
+    <ProtectedPage moduleKey="admin" action="read" customCheck={(pc) => pc.checkIsSuperAdmin()}>
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
@@ -162,7 +160,7 @@ const LicenseManagement: React.FC = () => {
         <Divider sx={{ mb: 2 }} />
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
-            <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="primary">
                 {organizations?.length || 0}
               </Typography>
@@ -172,7 +170,7 @@ const LicenseManagement: React.FC = () => {
             </Box>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="success.main">
                 {organizations?.filter((org: Organization) => org.status === 'active').length || 0}
               </Typography>
@@ -182,7 +180,7 @@ const LicenseManagement: React.FC = () => {
             </Box>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="info.main">
                 {organizations?.filter((org: Organization) => org.status === 'trial').length || 0}
               </Typography>
@@ -192,7 +190,7 @@ const LicenseManagement: React.FC = () => {
             </Box>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Box sx={{ textAlign: 'center' }}>
+            <Box sx={{ textAlign: "center" }}>
               <Typography variant="h4" color="error.main">
                 {organizations?.filter((org: Organization) => org.status === 'suspended').length || 0}
               </Typography>
@@ -247,8 +245,8 @@ const LicenseManagement: React.FC = () => {
               filteredOrganizations.map((org: Organization) => (
                 <TableRow key={org.id}>
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Business sx={{ mr: 1, color: 'primary.main' }} />
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <Business sx={{ mr: 1, color: "primary.main" }} />
                       <Box>
                         <Typography 
                           variant="body2" 
@@ -279,7 +277,7 @@ const LicenseManagement: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="primary">
-                      {org.subdomain}.tritiq.com
+                      {org.subdomain}.trtiq.com
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -336,12 +334,7 @@ const LicenseManagement: React.FC = () => {
         onSuccess={handleCreateLicense}
       />
     </Container>
-
-
     </ProtectedPage>
-
-
-  
   );
 };
 

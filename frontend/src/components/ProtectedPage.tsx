@@ -87,7 +87,7 @@ export const ProtectedPage: React.FC<ProtectedPageProps> = ({
 }) => {
   const router = useRouter();
   const permissionCheck = usePermissionCheck();
-  const { permissionsLoading } = useAuth(); // NEW: Get permissionsLoading from AuthContext
+  const { permissionsLoading, user } = useAuth(); // NEW: Get permissionsLoading from AuthContext
   const {
     isReady,
     isLoading,
@@ -133,6 +133,11 @@ export const ProtectedPage: React.FC<ProtectedPageProps> = ({
     hasAccess = result.hasPermission;
     denialReason = result.reason || 'Access denied';
     enforcementLevel = result.enforcementLevel || '';
+  }
+  // NEW: If user is super_admin, override and grant access
+  if (user?.is_super_admin) {
+    hasAccess = true;
+    denialReason = '';
   }
   // Handle access denied
   if (!hasAccess) {

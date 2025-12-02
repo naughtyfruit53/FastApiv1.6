@@ -86,6 +86,7 @@ class OrganizationLicenseCreate(BaseModel):
     license_duration_months: Optional[int] = None
     organization_id: Optional[int] = None
     superadmin_email: str = Field(..., max_length=255)
+    superadmin_full_name: str = Field(..., max_length=100)
     primary_phone: str = Field(..., max_length=20)
     address1: str = Field(..., max_length=255)
     city: str = Field(..., max_length=100)
@@ -102,6 +103,7 @@ class OrganizationLicenseResponse(BaseModel):
     organization_name: str
     subdomain: str
     superadmin_email: str
+    superadmin_full_name: str
     temp_password: str
     license_type: str
     license_status: str = Field(..., description="Derived status: 'active' or 'trial'")
@@ -279,3 +281,4 @@ class TotalInventoryValue(BaseModel):
     last_updated: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+    

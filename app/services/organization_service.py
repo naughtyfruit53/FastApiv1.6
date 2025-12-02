@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 class OrganizationService:
     @staticmethod
-    def create_license(db: AsyncSession, license_data: OrganizationLicenseCreate, current_user: User) -> OrganizationLicenseResponse:
+    async def create_license(db: AsyncSession, license_data: OrganizationLicenseCreate, current_user: User) -> OrganizationLicenseResponse:
         """Create new organization license with super admin account and send credentials via email"""
         # Generate unique subdomain and org_code
         subdomain = license_data.organization_name.lower().replace(" ", "-")
@@ -52,7 +52,8 @@ class OrganizationService:
             license_issued_date=datetime.utcnow(),
             license_duration_months=license_data.license_duration_months,
             plan_type="premium" if license_data.license_type != "trial" else "trial",
-            created_by_id=current_user.id
+            created_by_id=current_user.id,
+            superadmin_full_name=license_data.superadmin_full_name  # Added
         )
         
         # Set expiry date based on license type
@@ -68,24 +69,24 @@ class OrganizationService:
             org.license_duration_months = 1
             org.license_expiry_date = datetime.utcnow() + timedelta(days=7)  # Changed to 7 days for trial
         
-        db.add(org)
-        db.commit()
-        db.refresh(org)
+        await db.add(org)
+        await db.commit()
+        await db.refresh(org)
         
         # Seed standard chart of accounts for the new organization
-        create_default_accounts(db, org.id)
+        await create_default_accounts(db, org.id)
         
         # Generate temp password for org super admin
         alphabet = string.ascii_letters + string.digits + string.punctuation
         temp_password = ''.join(secrets.choice(alphabet) for _ in range(12))
         
         # Create org super admin user with temp password
-        super_admin = UserService.create_user(
+        super_admin = await UserService.create_user(
             db=db,
             user_data=UserCreate(
                 email=license_data.superadmin_email,
                 password=temp_password,
-                full_name="Org Super Admin",
+                full_name=license_data.superadmin_full_name,
                 role=UserRole.ORG_ADMIN,
                 organization_id=org.id,
                 is_active=True,
@@ -95,11 +96,11 @@ class OrganizationService:
         
         # Initialize RBAC for organization
         rbac_service = RBACService(db)
-        rbac_service.initialize_default_permissions()
-        rbac_service.initialize_default_roles(org.id)
+        await rbac_service.initialize_default_permissions()
+        await rbac_service.initialize_default_roles(org.id)
         
         # Assign admin role
-        RoleManagementService.assign_role_to_user(
+        await RoleManagementService.assign_role_to_user(
             db=db,
             user_id=super_admin.id,
             role_name="admin",
@@ -108,7 +109,7 @@ class OrganizationService:
         
         # Send email with temp password (system-level: account creation)
         try:
-            success, error = asyncio.run(system_email_service.send_user_creation_email(
+            success, error = await asyncio.run(system_email_service.send_user_creation_email(
                 user_email=super_admin.email,
                 user_name=super_admin.full_name,
                 temp_password=temp_password,
@@ -144,8 +145,8 @@ class OrganizationService:
             organization_id=org.id,
             organization_name=org.name,
             subdomain=org.subdomain,
-            org_code=org.org_code,
             superadmin_email=super_admin.email,
+            superadmin_full_name=super_admin.full_name,  # Added
             temp_password=temp_password if success else None,
             email_sent=success,
             email_error=error if not success else None,
@@ -231,3 +232,4 @@ class OrganizationService:
         } for activity in activities]
 
     # ... (rest of the original methods unchanged)
+    

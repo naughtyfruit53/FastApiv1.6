@@ -5,7 +5,7 @@ User Models
 Defines models for users, organizations, and companies
 """
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index, UniqueConstraint, Date
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, JSON, Index, UniqueConstraint, Date, Text, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -20,7 +20,7 @@ from app.models.entitlement_models import OrgEntitlement, OrgSubentitlement, Ent
 class PlatformUser(Base):
     __tablename__ = "platform_users"
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     # User credentials
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
@@ -96,6 +96,7 @@ class Organization(Base):
     license_issued_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     license_expiry_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     license_duration_months: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # null for perpetual
+    superadmin_full_name: Mapped[Optional[str]] = mapped_column(String(length=100), nullable=True)  # Added field
 
     # Settings
     timezone: Mapped[str] = mapped_column(String, default="Asia/Kolkata")
@@ -934,3 +935,4 @@ class VoucherApproval(Base):
         Index('idx_voucher_approval_current', 'current_approver_id'),
         {'extend_existing': True}
     )
+    

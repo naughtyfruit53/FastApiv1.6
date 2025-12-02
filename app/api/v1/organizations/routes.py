@@ -356,21 +356,35 @@ async def get_organization_members(
     organization_id: int,
     skip: int = 0,
     limit: int = 100,
-    auth: tuple = Depends(require_access("organization", "read")),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Get organization members (org admin permission required)"""
-    current_user, org_id = auth
     
-    # Enforce tenant isolation - can only view members of own organization
-    if organization_id != org_id:
+    if current_user.is_super_admin:
+        # Super admin can view any organization's members
+        org_id = organization_id
+    else:
+        # For non-super admins, enforce tenant isolation
+        if current_user.organization_id is None or organization_id != current_user.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found"
+            )
+        org_id = current_user.organization_id
+    
+    # Verify organization exists
+    result = await db.execute(select(Organization).filter_by(id=org_id))
+    org = result.scalars().first()
+    if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found"
         )
-  
+    
+    # Fetch active members
     result = await db.execute(
-        select(User).filter_by(organization_id=organization_id, is_active=True).offset(skip).limit(limit)
+        select(User).filter_by(organization_id=org_id, is_active=True).offset(skip).limit(limit)
     )
     members = result.scalars().all()
   
