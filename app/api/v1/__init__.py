@@ -526,7 +526,7 @@ def register_subrouters():
     try:
         from .vouchers.purchase_order import router as purchase_order_router
         logger.debug("Imported purchase_order_router")
-        api_v1_router.include_router(purchase_order_router, tags=["purchase-orders"])
+        api_v1_router.include_router(purchase_order_router, prefix="/purchase-orders", tags=["purchase-orders"])
         purchase_order_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in purchase_order_router.routes if isinstance(route, APIRoute)]
         logger.debug(f"Registered purchase_order endpoints: {len(purchase_order_routes)} routes")
         for route_path in purchase_order_routes:

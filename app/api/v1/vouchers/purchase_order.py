@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from io import BytesIO
@@ -23,7 +23,7 @@ import re
 from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/purchase-orders", tags=["purchase-orders"])
+router = APIRouter(tags=["purchase-orders"])
 
 @router.get("", response_model=List[PurchaseOrderInDB])
 @router.get("/", response_model=List[PurchaseOrderInDB])
@@ -33,73 +33,91 @@ async def get_purchase_orders(
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
+    used: Optional[bool] = Query(None, description="Filter by whether the PO is used/complete (e.g., used=false for incomplete POs)"),
     db: AsyncSession = Depends(get_db),
     auth: tuple = Depends(require_access("voucher", "read"))
 ):
     """Get all purchase orders with GRN completion status for color coding"""
     current_user, org_id = auth
     
-    stmt = select(PurchaseOrder).options(
-        joinedload(PurchaseOrder.vendor),
-        joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
-    ).where(
-        PurchaseOrder.organization_id == org_id
-    )
-    
-    if status:
-        stmt = stmt.where(PurchaseOrder.status == status)
-    
-    if hasattr(PurchaseOrder, sortBy):
-        sort_attr = getattr(PurchaseOrder, sortBy)
-        if sort.lower() == "asc":
-            stmt = stmt.order_by(sort_attr.asc())
-        else:
-            stmt = stmt.order_by(sort_attr.desc())
-    else:
-        stmt = stmt.order_by(PurchaseOrder.created_at.desc())
-    
-    result = await db.execute(stmt.offset(skip).limit(limit))
-    purchase_orders = result.unique().scalars().all()
-    
-    for po in purchase_orders:
-        grn_stmt = select(GoodsReceiptNote).where(
-            GoodsReceiptNote.purchase_order_id == po.id,
-            GoodsReceiptNote.organization_id == org_id
+    try:
+        stmt = select(PurchaseOrder).options(
+            joinedload(PurchaseOrder.vendor),
+            joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
+        ).where(
+            PurchaseOrder.organization_id == org_id
         )
-        grn_result = await db.execute(grn_stmt)
-        grns = grn_result.scalars().all()
         
-        total_ordered_quantity = 0.0
-        total_pending_quantity = 0.0
-        total_received_quantity = 0.0
+        if status:
+            stmt = stmt.where(PurchaseOrder.status == status)
+
+        if used is not None:
+            # Subquery to check if PO is complete (all items fully delivered)
+            subquery = select(PurchaseOrderItem.id).where(
+                PurchaseOrderItem.purchase_order_id == PurchaseOrder.id,
+                PurchaseOrderItem.delivered_quantity < PurchaseOrderItem.quantity
+            )
+            if used:
+                stmt = stmt.where(~exists(subquery))  # Complete POs (no pending items)
+            else:
+                stmt = stmt.where(exists(subquery))   # Incomplete POs (has pending items)
         
-        if po.items:
-            for item in po.items:
-                total_ordered_quantity += item.quantity
-                total_pending_quantity += item.pending_quantity
-                # Use delivered_quantity from PO items for accurate tracking
-                total_received_quantity += (item.delivered_quantity or 0)
-        
-        remaining_quantity = total_ordered_quantity - total_received_quantity
-        
-        logger.debug(f"PO {po.voucher_number}: "
-                    f"ordered={total_ordered_quantity}, "
-                    f"received={total_received_quantity}, "
-                    f"pending={total_pending_quantity}, "
-                    f"remaining={remaining_quantity}, "
-                    f"grns_exist={bool(grns)}")
-        
-        # Fix color-coding: green only when fully received, yellow for partial
-        if remaining_quantity <= 0 and grns:
-            po.grn_status = "complete"
-        elif grns and total_received_quantity > 0:
-            po.grn_status = "partial"
+        if hasattr(PurchaseOrder, sortBy):
+            sort_attr = getattr(PurchaseOrder, sortBy)
+            if sort.lower() == "asc":
+                stmt = stmt.order_by(sort_attr.asc())
+            else:
+                stmt = stmt.order_by(sort_attr.desc())
         else:
-            po.grn_status = "pending"
+            stmt = stmt.order_by(PurchaseOrder.created_at.desc())
         
-        logger.debug(f"PO {po.voucher_number} assigned grn_status: {po.grn_status}")
-    
-    return purchase_orders
+        logger.debug(f"Generated SQL for purchase orders: {str(stmt)}")
+        
+        result = await db.execute(stmt.offset(skip).limit(limit))
+        purchase_orders = result.unique().scalars().all()
+        
+        for po in purchase_orders:
+            grn_stmt = select(GoodsReceiptNote).where(
+                GoodsReceiptNote.purchase_order_id == po.id,
+                GoodsReceiptNote.organization_id == org_id
+            )
+            grn_result = await db.execute(grn_stmt)
+            grns = grn_result.scalars().all()
+            
+            total_ordered_quantity = 0.0
+            total_pending_quantity = 0.0
+            total_received_quantity = 0.0
+            
+            if po.items:
+                for item in po.items:
+                    total_ordered_quantity += item.quantity
+                    total_pending_quantity += item.pending_quantity
+                    # Use delivered_quantity from PO items for accurate tracking
+                    total_received_quantity += (item.delivered_quantity or 0)
+            
+            remaining_quantity = total_ordered_quantity - total_received_quantity
+            
+            logger.debug(f"PO {po.voucher_number}: "
+                        f"ordered={total_ordered_quantity}, "
+                        f"received={total_received_quantity}, "
+                        f"pending={total_pending_quantity}, "
+                        f"remaining={remaining_quantity}, "
+                        f"grns_exist={bool(grns)}")
+            
+            # Color-coding: green only when fully received (complete), yellow for partial
+            if grns and remaining_quantity <= 0:
+                po.grn_status = "complete"
+            elif grns and total_received_quantity > 0:
+                po.grn_status = "partial"
+            else:
+                po.grn_status = "pending"
+            
+            logger.debug(f"PO {po.voucher_number} assigned grn_status: {po.grn_status}")
+        
+        return purchase_orders
+    except Exception as e:
+        logger.error(f"Error in get_purchase_orders: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/next-number", response_model=str)
 async def get_next_purchase_order_number(
@@ -725,3 +743,4 @@ async def get_previous_discount(
     except Exception as e:
         logger.error(f"Error fetching previous discount: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch previous discount")
+    
