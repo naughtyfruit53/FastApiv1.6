@@ -71,7 +71,7 @@ const FactoryReset: React.FC = () => {
   };
   return (
     <ProtectedPage
-      customCheck={(pc) => pc.isAdmin() || pc.isSuperAdmin()}
+      customCheck={(pc) => pc.isSuperAdmin}
       accessDeniedMessage="Factory reset is only accessible to administrators."
     >
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
@@ -149,7 +149,7 @@ const FactoryReset: React.FC = () => {
       >
         <DialogTitle>
           <Box sx={{ display: "flex", alignItems: "center" }}>
-            <Warning color="error" sx={{ mr: 1 }} />
+            <Warning sx={{ mr: 1, color: "error" }} />
             Confirm{" "}
             {resetType === "organization_data"
               ? "Data Reset"

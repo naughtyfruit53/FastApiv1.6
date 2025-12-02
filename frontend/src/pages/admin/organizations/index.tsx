@@ -41,6 +41,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { ProtectedPage } from '../../../components/ProtectedPage';
+import { useAuth } from "../../../context/AuthContext";
 interface Organization {
   id: number;
   name: string;
@@ -66,11 +67,10 @@ const OrganizationsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   // Get user info for authorization
+  const { user } = useAuth();
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const userRole =
-    typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
-  const isSuperAdmin = userRole === "super_admin";
+  const isSuperAdmin = user?.is_super_admin || false;
   // Fetch organizations
   const { data: organizations, isLoading } = useQuery({
     queryKey: ["organizations"],
@@ -247,7 +247,7 @@ const OrganizationsPage: React.FC = () => {
     );
   }
   return (
-    <ProtectedPage moduleKey="admin" action="read">
+    <ProtectedPage moduleKey="admin" action="read" customCheck={(pc) => pc.checkIsSuperAdmin()}>
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box
         sx={{
