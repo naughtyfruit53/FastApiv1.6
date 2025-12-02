@@ -53,12 +53,16 @@ import {
   Campaign,
   Assignment,
   PersonAdd,
+  NotesOutlined,
+  AssignmentInd as AssignIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { crmService, Lead } from "../../services/crmService";
 import AddLeadModal from "../../components/AddLeadModal";
+import EditLeadModal from "../../components/EditLeadModal";
+import AssignLeadModal from "../../components/AssignLeadModal";
 import LeadsImportExportDropdown from "../../components/LeadsImportExportDropdown";
 import { formatCurrency } from "../../utils/currencyUtils";
 import { ProtectedPage } from "../../components/ProtectedPage";
@@ -81,6 +85,12 @@ interface LeadStats {
   pipeline_value: number;
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
 const LeadManagement: React.FC = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -91,6 +101,10 @@ const LeadManagement: React.FC = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailDialog, setDetailDialog] = useState(false);
   const [addDialog, setAddDialog] = useState(false);
+  const [editDialog, setEditDialog] = useState(false);
+  const [assignDialog, setAssignDialog] = useState(false);
+  const [editLead, setEditLead] = useState<Lead | null>(null);
+  const [assignLead, setAssignLead] = useState<Lead | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuLead, setMenuLead] = useState<Lead | null>(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -139,6 +153,13 @@ const LeadManagement: React.FC = () => {
     enabled: !!selectedLead && detailDialog,
   });
 
+  // Fetch sales users for assign modal
+  const { data: salesUsers = [] } = useQuery<User[]>({
+    queryKey: ['salesUsers'],
+    queryFn: crmService.getSalesUsers,
+    enabled: assignDialog,
+  });
+
   // Mutations
   const updateStatusMutation = useMutation({
     mutationFn: ({ leadId, status }: { leadId: number; status: Lead["status"] }) =>
@@ -167,13 +188,13 @@ const LeadManagement: React.FC = () => {
   });
 
   const assignLeadMutation = useMutation({
-    mutationFn: ({ leadId, userId }: { leadId: number; userId: number }) => {
-      // TODO: Implement assign lead API call
-      return Promise.resolve();
-    },
+    mutationFn: ({ leadId, assigned_to_id }: { leadId: number; assigned_to_id: number }) =>
+      crmService.assignLead(leadId, assigned_to_id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success("Lead assigned successfully");
+      setAssignDialog(false);
+      setAssignLead(null);
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to assign lead");
@@ -192,6 +213,23 @@ const LeadManagement: React.FC = () => {
     },
   });
 
+  const updateLeadMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => crmService.updateLead(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success("Lead updated successfully");
+      setEditDialog(false);
+      setEditLead(null);
+      if (detailDialog) {
+        // Refresh selected lead
+        setSelectedLead((prev) => (prev ? { ...prev, ...data } : null));
+      }
+    },
+    onError: (err: any) => {
+      toast.error(JSON.stringify(err.response?.data?.detail) || err.message || "Failed to update lead");
+    },
+  });
+
   const handleViewDetails = (lead: Lead) => {
     setSelectedLead(lead);
     setDetailDialog(true);
@@ -199,7 +237,15 @@ const LeadManagement: React.FC = () => {
   };
 
   const handleEditLead = (lead: Lead) => {
-    toast.info("Edit lead functionality not implemented yet");
+    setEditLead(lead);
+    setEditDialog(true);
+    handleMenuClose();
+  };
+
+  const handleAssignLead = (lead: Lead) => {
+    setAssignLead(lead);
+    setAssignDialog(true);
+    handleMenuClose();
   };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, lead: Lead) => {
@@ -715,6 +761,10 @@ const LeadManagement: React.FC = () => {
           <EditIcon sx={{ mr: 1 }} fontSize="small" />
           Edit Lead
         </MenuItem>
+        <MenuItem onClick={() => menuLead && handleAssignLead(menuLead)}>
+          <AssignIcon sx={{ mr: 1 }} fontSize="small" />
+          Assign Lead
+        </MenuItem>
         <MenuItem onClick={handleScheduleFollowUp}>
           <ScheduleIcon sx={{ mr: 1 }} fontSize="small" />
           Schedule Follow-up
@@ -738,6 +788,35 @@ const LeadManagement: React.FC = () => {
           await createLeadMutation.mutateAsync(data);
         }}
         loading={createLeadMutation.isPending}
+      />
+
+      {/* Edit Lead Modal */}
+      <EditLeadModal
+        open={editDialog}
+        lead={editLead}
+        onClose={() => {
+          setEditDialog(false);
+          setEditLead(null);
+        }}
+        onUpdate={async (id, data) => {
+          await updateLeadMutation.mutateAsync({ id, data });
+        }}
+        loading={updateLeadMutation.isPending}
+      />
+
+      {/* Assign Lead Modal */}
+      <AssignLeadModal
+        open={assignDialog}
+        lead={assignLead}
+        users={salesUsers}
+        onClose={() => {
+          setAssignDialog(false);
+          setAssignLead(null);
+        }}
+        onAssign={async (leadId, userId) => {
+          await assignLeadMutation.mutateAsync({ leadId, assigned_to_id: userId });
+        }}
+        loading={assignLeadMutation.isPending}
       />
 
       {/* Lead Detail Dialog */}

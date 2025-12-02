@@ -19,11 +19,13 @@ import {
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { usePincodeLookup } from "../hooks/usePincodeLookup";
+import { Lead } from "@services/crmService";
 
-interface AddLeadModalProps {
+interface EditLeadModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (data: any) => Promise<void>;
+  onUpdate: (id: number, data: any) => Promise<void>;
+  lead: Lead | null;
   loading?: boolean;
 }
 
@@ -73,10 +75,11 @@ const leadStatuses = [
   "disqualified",
 ];
 
-const AddLeadModal: React.FC<AddLeadModalProps> = ({
+const EditLeadModal: React.FC<EditLeadModalProps> = ({
   open,
   onClose,
-  onAdd,
+  onUpdate,
+  lead,
   loading = false,
 }) => {
   const {
@@ -113,10 +116,30 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   const { lookupPincode, loading: pincodeLoading } = usePincodeLookup();
 
   useEffect(() => {
-    if (open) {
-      reset();
+    if (open && lead) {
+      reset({
+        first_name: lead.first_name,
+        last_name: lead.last_name,
+        email: lead.email,
+        phone: lead.phone || "",
+        company: lead.company || "",
+        job_title: lead.job_title || "",
+        website: "",
+        address: lead.address1 || "",
+        city: lead.city || "",
+        state: lead.state || "",
+        postal_code: lead.pin_code || "",
+        source: lead.source,
+        status: lead.status,
+        score: lead.score,
+        estimated_value: lead.estimated_value || 0,
+        expected_close_date: lead.expected_close_date || "",
+        notes: lead.notes || "",
+        owner: lead.owner || "",
+        industry: lead.industry || "",
+      });
     }
-  }, [open, reset]);
+  }, [open, lead, reset]);
 
   const onSubmit = async (leadData: LeadFormData) => {
     try {
@@ -128,7 +151,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
           return value !== undefined && value !== null && value !== "";
         }),
       );
-      await onAdd(cleanData);
+      if (lead?.id) {
+        await onUpdate(lead.id, cleanData);
+      }
       reset();
       onClose();
     } catch (err) {
@@ -186,7 +211,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Typography variant="h6" component="div">
-          Add New Lead
+          Edit Lead
         </Typography>
       </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -474,7 +499,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
             disabled={loading}
             startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            {loading ? "Adding..." : "Add Lead"}
+            {loading ? "Updating..." : "Update Lead"}
           </Button>
         </DialogActions>
       </form>
@@ -482,4 +507,4 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({
   );
 };
 
-export default AddLeadModal;
+export default EditLeadModal;

@@ -7,33 +7,33 @@ from datetime import datetime, date
 import enum
 
 class LeadStatus(enum.Enum):
-    new = "new"
-    contacted = "contacted"
-    qualified = "qualified"
-    proposal = "proposal"
-    negotiation = "negotiation"
-    converted = "converted"
-    lost = "lost"
-    nurturing = "nurturing"
+    new = "NEW"
+    contacted = "CONTACTED"
+    qualified = "QUALIFIED"
+    proposal = "PROPOSAL"
+    negotiation = "NEGOTIATION"
+    converted = "CONVERTED"
+    lost = "LOST"
+    nurturing = "NURTURING"
 
 class LeadSource(enum.Enum):
-    website = "website"
-    referral = "referral"
-    email_campaign = "email_campaign"
-    social_media = "social_media"
-    cold_call = "cold_call"
-    trade_show = "trade_show"
-    partner = "partner"
-    advertisement = "advertisement"
-    other = "other"
+    website = "WEBSITE"
+    referral = "REFERRAL"
+    email_campaign = "EMAIL_CAMPAIGN"
+    social_media = "SOCIAL_MEDIA"
+    cold_call = "COLD_CALL"
+    trade_show = "TRADE_SHOW"
+    partner = "PARTNER"
+    advertisement = "ADVERTISEMENT"
+    other = "OTHER"
 
 class OpportunityStage(enum.Enum):
-    prospecting = "prospecting"
-    qualification = "qualification"
-    proposal = "proposal"
-    negotiation = "negotiation"
-    closed_won = "closed_won"
-    closed_lost = "closed_lost"
+    prospecting = "PROSPECTING"
+    qualification = "QUALIFICATION"
+    proposal = "PROPOSAL"
+    negotiation = "NEGOTIATION"
+    closed_won = "CLOSED_WON"
+    closed_lost = "CLOSED_LOST"
 
 class Lead(Base):
     """
@@ -443,3 +443,4 @@ class Commission(Base):
         Index('idx_commission_org_person', 'organization_id', 'sales_person_id'),
         Index('idx_commission_payment_status', 'payment_status', 'commission_date'),
     )
+    

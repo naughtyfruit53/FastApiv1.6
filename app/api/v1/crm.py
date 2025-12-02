@@ -58,8 +58,8 @@ async def generate_unique_number(db: AsyncSession, model_class, org_id: int, pre
 async def get_leads(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    status: Optional[str] = Query(None, description="Filter by status"),
-    source: Optional[str] = Query(None, description="Filter by source"),
+    status: Optional[str] = Query(None),
+    source: Optional[str] = Query(None),
     assigned_to_id: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
     auth: tuple = Depends(require_access("crm", "read")),
@@ -79,7 +79,7 @@ async def get_leads(
         has_admin_access = (
             "crm_lead_manage_all" in user_permissions or 
             "crm_admin" in user_permissions or
-            current_user.is_company_admin
+            current_user.role == "org_admin"
         )
         
         # If user doesn't have admin access, only show leads assigned to them or created by them
@@ -146,7 +146,7 @@ async def get_leads(
                     assigned_user_result = await db.execute(assigned_user_stmt)
                     assigned_user = assigned_user_result.scalar_one_or_none()
                     if assigned_user:
-                        lead.assigned_to_name = f"{assigned_user.first_name} {assigned_user.last_name}".strip() or assigned_user.email
+                        lead.assigned_to_name = assigned_user.full_name or assigned_user.email
                 
                 # Fetch created_by user name if exists
                 if lead.created_by_id:
@@ -154,7 +154,7 @@ async def get_leads(
                     created_user_result = await db.execute(created_user_stmt)
                     created_user = created_user_result.scalar_one_or_none()
                     if created_user:
-                        lead.created_by_name = f"{created_user.first_name} {created_user.last_name}".strip() or created_user.email
+                        lead.created_by_name = created_user.full_name or created_user.email
         
         logger.info(f"Fetched {len(leads)} leads for org_id={org_id}, user={current_user.email}")
         return leads
@@ -193,6 +193,7 @@ async def create_lead(
             created_by_id=current_user.id,
             status=status_enum,
             source=source_enum,
+            assigned_to_id=current_user.id,
             **lead_data.model_dump(exclude={"status", "source"})
         )
         
@@ -336,6 +337,94 @@ async def delete_lead(
             detail=f"Failed to delete lead: {str(e)}"
         )
 
+@router.put("/leads/{lead_id}/assign", response_model=LeadSchema)
+async def assign_lead(
+    lead_id: int = Path(...),
+    assigned_to_id: int = Query(...),
+    auth: tuple = Depends(require_access("crm", "update")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Assign a lead to a user"""
+    current_user, org_id = auth
+
+    try:
+        stmt = select(Lead).where(
+            and_(Lead.id == lead_id, Lead.organization_id == org_id)
+        )
+        result = await db.execute(stmt)
+        lead = result.scalar_one_or_none()
+        
+        if not lead:
+            logger.error(f"Lead {lead_id} not found for org_id={org_id}")
+            raise HTTPException(status_code=404, detail="Lead not found")
+        
+        # Check if assigned_to user exists and has sales permission
+        user_stmt = select(User).where(
+            and_(User.id == assigned_to_id, User.organization_id == org_id)
+        )
+        user_result = await db.execute(user_stmt)
+        assigned_user = user_result.scalar_one_or_none()
+        
+        if not assigned_user:
+            logger.error(f"User {assigned_to_id} not found in org_id={org_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        rbac = RBACService(db)
+        user_permissions = await rbac.get_user_permissions(assigned_to_id)
+        if "sales_permission" not in user_permissions:
+            raise HTTPException(status_code=400, detail="User does not have sales permission")
+        
+        lead.assigned_to_id = assigned_to_id
+        lead.updated_at = datetime.utcnow()
+        
+        await db.commit()
+        await db.refresh(lead)
+        
+        logger.info(f"Lead {lead_id} assigned to {assigned_to_id} by {current_user.email} in org {org_id}")
+        return lead
+
+    except Exception as e:
+        logger.error(f"Error assigning lead {lead_id} for org_id={org_id}: {str(e)}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to assign lead: {str(e)}"
+        )
+
+@router.get("/sales-users", response_model=List[Dict[str, Any]])
+async def get_sales_users(
+    auth: tuple = Depends(require_access("crm", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all users with sales permission"""
+    current_user, org_id = auth
+
+    try:
+        stmt = select(User).where(User.organization_id == org_id)
+        result = await db.execute(stmt)
+        users = result.scalars().all()
+        
+        sales_users = []
+        rbac = RBACService(db)
+        for user in users:
+            permissions = await rbac.get_user_permissions(user.id)
+            if "sales_permission" in permissions:
+                sales_users.append({
+                    "id": user.id,
+                    "name": user.full_name or user.email,
+                    "email": user.email
+                })
+        
+        logger.info(f"Fetched {len(sales_users)} sales users for org_id={org_id}")
+        return sales_users
+
+    except Exception as e:
+        logger.error(f"Error fetching sales users for org_id={org_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch sales users: {str(e)}"
+        )
+
 @router.post("/leads/{lead_id}/convert", response_model=LeadConversionResponse)
 async def convert_lead(
     conversion_data: LeadConversionRequest,
@@ -378,6 +467,7 @@ async def convert_lead(
                 address2=lead.address2 or "",
                 city=lead.city or "",
                 state=lead.state or "",
+                pin_code=lead.pin_code or "",
                 **customer_data
             )
             db.add(customer)
@@ -1040,7 +1130,7 @@ async def get_commissions(
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_permissions(current_user.id)
-    if "crm_commission_read" not in user_permissions and not current_user.is_company_admin:
+    if "crm_commission_read" not in user_permissions and current_user.role != "org_admin":
         logger.error(f"User {current_user.email} lacks 'crm_commission_read' permission. User permissions: {user_permissions}")
         raise HTTPException(
             status_code=403,
@@ -1088,7 +1178,7 @@ async def get_commission(
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_permissions(current_user.id)
-    if "crm_commission_read" not in user_permissions and not current_user.is_company_admin:
+    if "crm_commission_read" not in user_permissions and current_user.role != "org_admin":
         logger.error(f"User {current_user.email} lacks 'crm_commission_read' permission. User permissions: {user_permissions}")
         raise HTTPException(
             status_code=403,
@@ -1137,7 +1227,7 @@ async def create_commission(
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_permissions(current_user.id)
-    if "crm_commission_create" not in user_permissions and not current_user.is_company_admin:
+    if "crm_commission_create" not in user_permissions and current_user.role != "org_admin":
         logger.error(f"User {current_user.email} lacks 'crm_commission_create' permission")
         raise HTTPException(
             status_code=403,
@@ -1196,7 +1286,7 @@ async def update_commission(
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_permissions(current_user.id)
-    if "crm_commission_update" not in user_permissions and not current_user.is_company_admin:
+    if "crm_commission_update" not in user_permissions and current_user.role != "org_admin":
         logger.error(f"User {current_user.email} lacks 'crm_commission_update' permission")
         raise HTTPException(
             status_code=403,
@@ -1258,7 +1348,7 @@ async def delete_commission(
     # Check RBAC permissions
     rbac = RBACService(db)
     user_permissions = await rbac.get_user_permissions(current_user.id)
-    if "crm_commission_delete" not in user_permissions and not current_user.is_company_admin:
+    if "crm_commission_delete" not in user_permissions and current_user.role != "org_admin":
         logger.error(f"User {current_user.email} lacks 'crm_commission_delete' permission")
         raise HTTPException(
             status_code=403,

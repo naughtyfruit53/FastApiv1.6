@@ -85,6 +85,12 @@ export interface Customer {
   updated_at?: string;
 }
 
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
 class CRMService {
   private endpoint = "/crm";
 
@@ -183,6 +189,31 @@ class CRMService {
     } catch (error: any) {
       console.error(`Error updating lead ${id}:`, JSON.stringify(error.response?.data?.detail || error.message));
       throw new Error(error.response?.data?.detail || `Failed to update lead ${id}`);
+    }
+  }
+
+  async assignLead(leadId: number, assigned_to_id: number): Promise<Lead> {
+    try {
+      const response = await api.put(`${this.endpoint}/leads/${leadId}/assign`, null, {
+        headers: this.getAuthHeaders(),
+        params: { assigned_to_id },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Error assigning lead ${leadId}:`, JSON.stringify(error.response?.data?.detail || error.message));
+      throw new Error(error.response?.data?.detail || `Failed to assign lead ${leadId}`);
+    }
+  }
+
+  async getSalesUsers(): Promise<User[]> {
+    try {
+      const response = await api.get(`${this.endpoint}/sales-users`, {
+        headers: this.getAuthHeaders(),
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error("Error fetching sales users:", JSON.stringify(error.response?.data?.detail || error.message));
+      throw new Error(error.response?.data?.detail || "Failed to fetch sales users");
     }
   }
 

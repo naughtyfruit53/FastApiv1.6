@@ -1,6 +1,6 @@
 # app/schemas/crm.py
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 from enum import Enum
@@ -112,6 +112,22 @@ class Lead(LeadInDB):
     assigned_to_name: Optional[str] = Field(None, description="Name of assigned user")
     created_by_name: Optional[str] = Field(None, description="Name of user who created lead")
 
+    @field_validator('status', mode='before')
+    @classmethod
+    def validate_status(cls, v):
+        from app.models.crm_models import LeadStatus
+        if isinstance(v, LeadStatus):
+            return v.name.lower()
+        return v
+
+    @field_validator('source', mode='before')
+    @classmethod
+    def validate_source(cls, v):
+        from app.models.crm_models import LeadSource
+        if isinstance(v, LeadSource):
+            return v.name.lower()
+        return v
+
 # Lead Activity Schemas
 class LeadActivityBase(BaseModel):
     activity_type: str = Field(..., description="Activity type (call, email, meeting, note, task)")
@@ -194,7 +210,21 @@ class OpportunityInDB(OpportunityBase):
     updated_at: Optional[datetime] = None
 
 class Opportunity(OpportunityInDB):
-    pass
+    @field_validator('stage', mode='before')
+    @classmethod
+    def validate_stage(cls, v):
+        from app.models.crm_models import OpportunityStage
+        if isinstance(v, OpportunityStage):
+            return v.name.lower()
+        return v
+
+    @field_validator('source', mode='before')
+    @classmethod
+    def validate_source(cls, v):
+        from app.models.crm_models import LeadSource
+        if isinstance(v, LeadSource):
+            return v.name.lower()
+        return v
 
 # Opportunity Activity Schemas
 class OpportunityActivityBase(BaseModel):
