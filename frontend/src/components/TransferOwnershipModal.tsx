@@ -13,6 +13,7 @@ import {
   Typography,
   CircularProgress,
   Box,
+  Chip,
 } from "@mui/material";
 import { Lead } from "@services/crmService";
 
@@ -21,7 +22,7 @@ interface TransferOwnershipModalProps {
   onClose: () => void;
   onTransfer: (leadId: number, ownerId: number) => Promise<void>;
   lead: Lead | null;
-  users: Array<{ id: number; name: string; email: string }>;
+  users: Array<{ id: number; name: string; email: string; role: string; account_type: string }>;
   loading?: boolean;
 }
 
@@ -71,6 +72,7 @@ const TransferOwnershipModal: React.FC<TransferOwnershipModalProps> = ({
                   primary={user.name}
                   secondary={user.email}
                 />
+                <Chip label={user.account_type} size="small" sx={{ ml: 2 }} />
               </ListItem>
             ))}
             {users.length === 0 && (

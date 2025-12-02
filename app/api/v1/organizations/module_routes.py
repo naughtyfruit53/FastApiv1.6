@@ -35,6 +35,42 @@ def get_sorted_valid_modules():
         _VALID_MODULES_SORTED = sorted(get_all_modules())
     return _VALID_MODULES_SORTED
 
+@router.get("/current/modules")
+async def get_current_organization_modules(
+    auth: tuple = Depends(require_access("organization_module", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get current organization's enabled modules (read-only).
+    
+    Returns both enabled modules and list of all available modules in the system.
+    This endpoint is read-only. Only super_admin can update module entitlements
+    via the PUT endpoint.
+    
+    **Requires**: organization_module read permission (org_admin or super_admin)
+    """
+    current_user, org_id = auth
+  
+    result = await db.execute(select(Organization).filter(Organization.id == org_id))
+    organization = result.scalars().first()
+    if not organization:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
+        )
+  
+    from app.core.modules_registry import get_default_enabled_modules, get_all_modules
+    
+    enabled_modules = organization.enabled_modules or get_default_enabled_modules()
+    available_modules = get_all_modules()
+  
+    return {
+        "enabled_modules": enabled_modules,
+        "available_modules": available_modules,
+        "organization_id": org_id,
+        "organization_name": organization.name
+    }
+
 @router.get("/{organization_id:int}/modules")
 async def get_organization_modules(
     organization_id: int,
@@ -525,3 +561,4 @@ async def update_user_modules(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update user modules"
         )
+    

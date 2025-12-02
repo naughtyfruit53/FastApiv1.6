@@ -46,12 +46,28 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to get organization");
     }
   },
-  updateOrganizationById: async (id: number, data: any) => {
+  updateOrganizationById: async (id: number, data: any, config?: any) => {
     try {
-      const response = await api.put(`/organizations/${id}`, data);
+      const response = await api.put(`/organizations/${id}`, data, config);
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || "Failed to update organization");
+    }
+  },
+  getOrganizationModules: async (id: number, config?: any) => {
+    try {
+      const response = await api.get(`/organizations/${id}/modules`, config);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get organization modules");
+    }
+  },
+  resetOrganizationData: async (config?: any) => {
+    try {
+      const response = await api.post("/organizations/current/reset-data", {}, config);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to reset organization data");
     }
   },
 };

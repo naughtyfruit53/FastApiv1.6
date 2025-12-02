@@ -89,6 +89,8 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  role: string;
+  account_type: string;
 }
 
 class CRMService {
@@ -340,4 +342,3 @@ class CRMService {
 }
 
 export const crmService = new CRMService();
-  

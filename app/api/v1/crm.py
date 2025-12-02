@@ -193,6 +193,7 @@ async def create_lead(
             status=status_enum,
             source=source_enum,
             assigned_to_id=current_user.id,
+            owner=current_user.full_name or current_user.email,
             **lead_data.model_dump(exclude={"status", "source"})
         )
         
@@ -370,7 +371,7 @@ async def assign_lead(
         
         rbac = RBACService(db)
         user_permissions = await rbac.get_user_permissions(assigned_to_id)
-        if "sales_permission" not in user_permissions:
+        if assigned_user.role not in ["org_admin", "super_admin", "management"] and "sales_permission" not in user_permissions:
             raise HTTPException(status_code=400, detail="User does not have sales permission")
         
         lead.assigned_to_id = assigned_to_id
@@ -406,11 +407,16 @@ async def get_sales_users(
         rbac = RBACService(db)
         for user in users:
             permissions = await rbac.get_user_permissions(user.id)
-            if user.is_super_admin or user.role == "org_admin" or "crm" in user.assigned_modules or "sales_permission" in permissions:
+            role = user.role or "User"
+            name = user.full_name or user.email or role.capitalize()
+            account_type = "Org Admin" if role == "org_admin" else "Management" if role in ["super_admin", "management"] else "Manager" if "crm_lead_manage_all" in permissions else "Executive" if "sales_permission" in permissions else "Standard"
+            if user.is_super_admin or user.role in ["org_admin", "management"] or "crm" in user.assigned_modules or "sales_permission" in permissions:
                 sales_users.append({
                     "id": user.id,
-                    "name": user.full_name or user.email,
-                    "email": user.email
+                    "name": name,
+                    "email": user.email,
+                    "role": role,
+                    "account_type": account_type
                 })
         
         logger.info(f"Fetched {len(sales_users)} sales users for org_id={org_id}")
@@ -1433,3 +1439,4 @@ async def delete_commission(
             status_code=500,
             detail=f"Failed to delete commission: {str(e)}"
         )
+    
