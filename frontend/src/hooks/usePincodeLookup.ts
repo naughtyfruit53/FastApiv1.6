@@ -1,5 +1,6 @@
+// frontend/src/hooks/usePincodeLookup.ts
+
 import { useState, useRef } from "react";
-import { apiClient } from "../services/api/client";
 
 interface PincodeData {
   city: string;
@@ -20,6 +21,47 @@ const pincodeCache = new Map<string, PincodeData>();
 
 // Single-flight map to prevent duplicate concurrent requests
 const inflightRequests = new Map<string, Promise<PincodeData | null>>();
+
+// State to GST state code mapping (from the modal component)
+const stateToCodeMap: { [key: string]: string } = {
+  "Andhra Pradesh": "37",
+  "Arunachal Pradesh": "12",
+  "Assam": "18",
+  "Bihar": "10",
+  "Chhattisgarh": "22",
+  "Goa": "30",
+  "Gujarat": "24",
+  "Haryana": "06",
+  "Himachal Pradesh": "02",
+  "Jammu and Kashmir": "01",
+  "Jharkhand": "20",
+  "Karnataka": "29",
+  "Kerala": "32",
+  "Madhya Pradesh": "23",
+  "Maharashtra": "27",
+  "Manipur": "14",
+  "Meghalaya": "17",
+  "Mizoram": "15",
+  "Nagaland": "13",
+  "Odisha": "21",
+  "Punjab": "03",
+  "Rajasthan": "08",
+  "Sikkim": "11",
+  "Tamil Nadu": "33",
+  "Telangana": "36",
+  "Tripura": "16",
+  "Uttar Pradesh": "09",
+  "Uttarakhand": "05",
+  "West Bengal": "19",
+  "Andaman and Nicobar Islands": "35",
+  "Chandigarh": "04",
+  "Dadra and Nagar Haveli and Daman and Diu": "26",
+  "Lakshadweep": "31",
+  "Delhi": "07",
+  "Puducherry": "34",
+  "Ladakh": "38",
+};
+
 export const usePincodeLookup = (): UsePincodeLookupReturn => {
   const [pincodeData, setPincodeData] = useState<PincodeData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,14 +95,35 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
     // Create the request promise
     const requestPromise = (async () => {
       try {
-        // Use the centralized apiClient with auth support
-        // Note: Backend endpoint is now public, so this will work without auth too
-        const response = await apiClient.get<PincodeData>(`/pincode/lookup/${pincode}`);
-        const data = response.data;
+        // Use public API: https://api.postalpincode.in/pincode/{pincode}
+        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
         
-        setPincodeData(data);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data: any[] = await response.json();
+        
+        if (!data || data.length === 0 || data[0].Status !== "Success" || !data[0].PostOffice || data[0].PostOffice.length === 0) {
+          throw new Error("PIN code not found");
+        }
+        
+        // Extract from first PostOffice
+        const postOffice = data[0].PostOffice[0];
+        const result: PincodeData = {
+          city: postOffice.District || postOffice.Block || postOffice.Name,
+          state: postOffice.State,
+          state_code: stateToCodeMap[postOffice.State.trim()] || "",
+        };
+        
+        // Validate state code
+        if (!result.state_code) {
+          console.warn(`No state code found for state: ${result.state}`);
+        }
+        
+        setPincodeData(result);
         // Cache successful lookup for the session
-        pincodeCache.set(pincode, data);
+        pincodeCache.set(pincode, result);
         
         // Limit cache size to prevent memory bloat (keep last 100 lookups)
         if (pincodeCache.size > 100) {
@@ -68,16 +131,14 @@ export const usePincodeLookup = (): UsePincodeLookupReturn => {
           pincodeCache.delete(firstKey);
         }
         
-        return data;
+        return result;
       } catch (err: any) {
         let errorMessage = "Failed to lookup PIN code. Please enter details manually.";
         
-        if (err.response?.status === 404) {
+        if (err.message.includes("not found")) {
           errorMessage = "PIN code not found. Please enter city and state manually.";
-        } else if (err.response?.status === 503) {
+        } else if (err.message.includes("HTTP error")) {
           errorMessage = "PIN code lookup service is currently unavailable. Please try again later or enter details manually.";
-        } else if (err.response?.status === 401) {
-          errorMessage = "Authentication required. Please try again after logging in.";
         }
         
         setError(errorMessage);

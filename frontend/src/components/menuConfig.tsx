@@ -53,6 +53,8 @@ import {
   Menu as MenuIcon,
   NotificationsActive,
   Dashboard as DashboardIcon,
+  Groups as GroupsIcon,
+  CorporateFare as CorporateFareIcon,
 } from '@mui/icons-material';
 // Removed import { PERMISSIONS } from '../types/rbac.types'; 
 
@@ -705,8 +707,6 @@ export const menuItems = {
       {
         title: 'Administration',
         items: [
-          { name: 'App Users', path: '/admin/app-user-management', icon: <Groups />, superAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'app_users' } },
-          { name: 'Organization Management', path: '/admin/manage-organizations', icon: <CorporateFare />, superAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'organization_management' } },
           { name: 'Role Management', path: '/admin/rbac', icon: <SupervisorAccount />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'role_management' }, orgSpecific: true },
           { name: 'Service Settings', path: '/admin/service-settings', icon: <Settings />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'service_settings' }, orgSpecific: true },
           { name: 'Audit Logs', path: '/admin/audit-logs', icon: <History />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'audit_logs' }, orgSpecific: true },
@@ -745,6 +745,8 @@ export const mainMenuSections = (isSuperAdmin: boolean) => {
             {
               title: 'Administration',
               items: [
+                { name: 'App Users', path: '/admin/app-user-management', icon: <GroupsIcon />, permission: 'settings.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'app_users' } },
+                { name: 'Organization Management', path: '/admin/manage-organizations', icon: <CorporateFareIcon />, permission: 'settings.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'organization_management' } },
                 { name: 'Demo', path: '/demo', icon: <DeveloperMode />, permission: 'admin.view', requireModule: 'administration', requireSubmodule: { module: 'administration', submodule: 'demo' } }
               ]
             }

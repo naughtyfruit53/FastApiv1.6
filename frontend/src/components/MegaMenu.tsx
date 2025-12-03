@@ -217,6 +217,11 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, menuName: string) => {
     const menuItem = menuItems[menuName as keyof typeof menuItems];
+    // For super admin and 'settings', directly navigate to general settings
+    if (menuName === 'settings' && isSuperAdmin) {
+      router.push('/settings/general-settings');
+      return;
+    }
     // Check if the menu item has a direct path and no subsections
     if (menuItem && 'path' in menuItem && menuItem.path && (!menuItem.sections || menuItem.sections.length === 0)) {
       router.push(menuItem.path); // Navigate directly to the path
@@ -296,7 +301,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
 
   const flattenMenuItems = (menu: any) => {
     let items: any[] = [];
-    menu.sections.forEach((section: any) => {
+    (menu.sections || []).forEach((section: any) => {
       (section.subSections || []).forEach((subSection: any) => {
         (subSection.items || []).forEach((item: any) => {
           if (item.subItems) {
@@ -344,7 +349,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
     }
 
     const filterMenuItems = (subSection: any) => {
-      return subSection.items
+      const items = Array.isArray(subSection.items) ? subSection.items : [];
+      return items
         .filter((item: any) => {
           // Filter out items that require god superadmin access
           if (item.godSuperAdminOnly && !isGodSuperAdmin) {
@@ -404,43 +410,64 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         });
     };
 
-    const normalizedSections = menu.sections.map((section: any) => {
-      if (!section.subSections) {
-        return {
-          ...section,
+    let filteredSections = [];
+    if (activeMenu === 'settings' && isSuperAdmin) {
+      // Custom sections for super admin in settings: only General Settings
+      const generalSettingsItem = {
+        name: 'General Settings',
+        path: '/settings/general-settings',
+        icon: <Settings />,
+        permission: 'settings.view',
+        requireModule: 'settings',
+        requireSubmodule: { module: 'settings', submodule: 'general_settings' }
+      };
+      filteredSections = [
+        {
+          title: 'General Settings',
           subSections: [
             {
               title: '',
-              items: section.items || [],
+              items: filterMenuItems({items: [generalSettingsItem]}),
             },
           ],
-        };
-      }
-      return section;
-    });
+        },
+      ];
+    } else {
+      // Normal menu rendering
+      const normalizedSections = (menu.sections || []).map((section: any) => {
+        if (!section.subSections) {
+          return {
+            ...section,
+            subSections: [
+              {
+                title: '',
+                items: section.items || [],
+              },
+            ],
+          };
+        }
+        return section;
+      });
 
-    // Filter sections - include all sections for visibility, even if empty (but filter items inside)
-    const filteredSections = normalizedSections
-      .map((section: any) => {
-        // Check if this section has a direct path (e.g., Email)
+      filteredSections = normalizedSections.map((section: any) => {
         const menuItemKey = Object.keys(menuItems).find(
           (key) => menuItems[key as keyof typeof menuItems]?.title === section.title
         );
         const menuItemWithPath = menuItemKey ? menuItems[menuItemKey as keyof typeof menuItems] : null;
         const hasDirectPath = menuItemWithPath && 'path' in menuItemWithPath && menuItemWithPath.path;
 
-        const processedSubSections = section.subSections
-          .map((subSection: any) => ({
-            ...subSection,
-            items: filterMenuItems(subSection),
-          })); // Keep all subsections visible, even if no items
+        const processedSubSections = (section.subSections || []).map((subSection: any) => ({
+          ...subSection,
+          items: filterMenuItems(subSection),
+        }));
 
         return {
           ...section,
           subSections: processedSubSections,
-          hasDirectPath: hasDirectPath,
+          hasDirectPath,
         };
-      }); // Keep all sections visible
+      });
+    }
 
     if (filteredSections.length === 0) {
       // Show a helpful message instead of returning null
@@ -578,7 +605,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                   <Grid container spacing= {2}>
                     {filteredSections
                       .find((s: any) => s.title === selectedSection)
-                      ?.subSections.map((subSection: any, subIndex: number) => (
+                      ?.subSections?.map((subSection: any, subIndex: number) => (
                         <Grid item xs={12} sm={6} md={4} key={subIndex}>
                           {subSection.title && (
                             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
@@ -586,7 +613,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                             </Typography>
                           )}
                           <List dense>
-                            {subSection.items.map((item: any, itemIndex: number) => {
+                            {(subSection.items || []).map((item: any, itemIndex: number) => {
                               const disabled =
                                 (item.role && !canManageUsers(user)) ||
                                 (item.servicePermission && !(isModuleEnabled('service') || hasPermission(item.servicePermission.split('.')[0], item.servicePermission.split('.')[1])));
@@ -641,7 +668,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
                             })}
                           </List>
                         </Grid>
-                      ))}
+                      )) || <Typography>No subsections available</Typography>}
                   </Grid>
                 ) : (
                   <Typography variant="body2" color="text.secondary">Select a category on the left to view submenu items.</Typography>
@@ -802,7 +829,7 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
               <Button
                 color="inherit"
                 startIcon={<Settings />}
-                endIcon={<ExpandMore />}
+                endIcon={isSuperAdmin ? null : <ExpandMore />}
                 onClick={(e) => handleMenuClick(e, 'settings')}
                 className="modern-menu-button"
                 sx={modernButtonStyle}
