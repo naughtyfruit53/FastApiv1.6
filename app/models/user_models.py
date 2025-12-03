@@ -96,7 +96,7 @@ class Organization(Base):
     license_issued_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     license_expiry_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     license_duration_months: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # null for perpetual
-    superadmin_full_name: Mapped[Optional[str]] = mapped_column(String(length=100), nullable=True)  # Added field
+    superadmin_full_name: Mapped[Optional[str]] = mapped_column(String(length=100), nullable=True)  # Added
 
     # Settings
     timezone: Mapped[str] = mapped_column(String, default="Asia/Kolkata")

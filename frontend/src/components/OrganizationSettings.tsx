@@ -22,11 +22,12 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { ExpandMore, Email, Security, Settings, Sync, IntegrationInstructions } from "@mui/icons-material";
+import { ExpandMore, Email, Security, Settings, Sync, IntegrationInstructions, CalendarToday } from "@mui/icons-material";
 import { organizationService } from "../services/organizationService";
 import tallyService from "../services/tallyService"; // NEW: Import tallyService
 import { useAuth } from "../context/AuthContext";
 import { useSnackbar } from "notistack";
+import OrganizationLicenseModal from "./OrganizationLicenseModal"; // Import modal for extend
 
 interface OrganizationSettingsData {
   id?: number;
@@ -36,6 +37,9 @@ interface OrganizationSettingsData {
   custom_settings?: any;
   created_at?: string;
   updated_at?: string;
+  license_expiry_date?: string;
+  license_type?: string;
+  status?: string;
 }
 
 interface TallyConfig {
@@ -55,6 +59,8 @@ const OrganizationSettings: React.FC = () => {
   const [settings, setSettings] = useState<OrganizationSettingsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [extendModalOpen, setExtendModalOpen] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<any>(null);
 
   // Tally integration state
   const [tallyConfig, setTallyConfig] = useState<TallyConfig>({
@@ -81,7 +87,9 @@ const OrganizationSettings: React.FC = () => {
       setLoading(true);
       setError(null);
       const data = await organizationService.getOrganizationSettings();
-      setSettings(data);
+      const licenseData = await organizationService.getCurrentLicense();
+      setSettings({ ...data, ...licenseData });
+      setSelectedOrg(licenseData);
     } catch (err: any) {
       setError(err.message || "Failed to load organization settings");
       setSettings({
@@ -185,6 +193,10 @@ const OrganizationSettings: React.FC = () => {
     }
   };
 
+  const handleExtendLicense = () => {
+    setExtendModalOpen(true);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" p={3}>
@@ -284,6 +296,36 @@ const OrganizationSettings: React.FC = () => {
                 </Box>
               }
             />
+          </AccordionDetails>
+        </Accordion>
+
+        {/* License Information Section */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
+              <CalendarToday sx={{ mr: 1 }} />
+              <Typography variant="subtitle1">License Information</Typography>
+              <Box sx={{ ml: "auto", mr: 2 }}>
+                <Chip label={settings?.status || "Unknown"} color={settings?.status === "active" ? "success" : "warning"} size="small" />
+              </Box>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Typography>
+                <strong>License Type:</strong> {settings?.license_type}
+              </Typography>
+              <Typography onClick={handleExtendLicense} sx={{ cursor: "pointer", color: "primary.main" }}>
+                <strong>Expiry Date:</strong> {settings?.license_expiry_date ? new Date(settings.license_expiry_date).toLocaleDateString() : "N/A"} (Click to extend)
+              </Typography>
+              <Button
+                variant="outlined"
+                onClick={handleExtendLicense}
+                sx={{ mt: 2 }}
+              >
+                Extend License
+              </Button>
+            </Box>
           </AccordionDetails>
         </Accordion>
 
@@ -444,6 +486,15 @@ const OrganizationSettings: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Extend License Modal */}
+      <OrganizationLicenseModal
+        open={extendModalOpen}
+        onClose={() => setExtendModalOpen(false)}
+        onSuccess={loadSettings}
+        mode="extend"
+        selectedOrg={selectedOrg}
+      />
     </Paper>
   );
 };

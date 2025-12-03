@@ -43,6 +43,8 @@ class OrganizationUpdate(BaseModel):
     currency: Optional[str] = Field(None, max_length=10)
     date_format: Optional[str] = Field(None, max_length=50)
     financial_year_start: Optional[str] = Field(None, max_length=10, min_length=1)
+    # License fields for update
+    license_type: Optional[str] = None
 
 
 class OrganizationInDB(OrganizationBase):
@@ -150,6 +152,10 @@ class OrganizationSettingsBase(BaseModel):
     tally_company_name: Optional[str] = Field(None, max_length=255)
     tally_sync_frequency: Optional[str] = Field(None, max_length=50)
     tally_last_sync: Optional[datetime] = None
+    # License fields for settings
+    license_type: Optional[str] = None
+    license_expiry_date: Optional[datetime] = None
+    status: Optional[str] = None
 
 
 class OrganizationSettingsCreate(OrganizationSettingsBase):

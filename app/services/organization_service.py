@@ -3,7 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import Dict, List
-from app.models import Organization, User
+from app.models.user_models import Organization, User
 from app.models.product_models import Product
 from app.models.customer_models import Customer
 from app.models.vendors import Vendor
@@ -13,7 +13,6 @@ from app.schemas.organization import OrganizationLicenseCreate, OrganizationLice
 from app.schemas.user import UserCreate, UserRole
 from app.core.security import get_password_hash
 from app.services.otp_service import OTPService
-from app.core.logging import log_license_creation, log_email_operation
 from app.services.system_email_service import system_email_service
 from app.services.rbac import RBACService
 from app.services.role_management_service import RoleManagementService
@@ -53,14 +52,15 @@ class OrganizationService:
             license_issued_date=datetime.utcnow(),
             license_duration_months=license_data.license_duration_months,
             plan_type="premium" if not license_data.license_type.startswith("trial") else "trial",
+            status="active" if not license_data.license_type.startswith("trial") else "trial",
             created_by_id=current_user.id,
             superadmin_full_name=license_data.superadmin_full_name  # Added
         )
         
         # Set expiry date based on license type
         if license_data.license_type == "perpetual":
-            org.license_expiry_date = None
             org.license_duration_months = None
+            org.license_expiry_date = None
         elif license_data.license_type == "month_1":
             org.license_duration_months = 1
             org.license_expiry_date = datetime.utcnow() + timedelta(days=30)
@@ -240,5 +240,3 @@ class OrganizationService:
         } for activity in activities]
 
     # ... (rest of the original methods unchanged)
-    
-    

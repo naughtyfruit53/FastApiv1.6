@@ -32,8 +32,8 @@ interface OrganizationLicenseModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: (_result: any) => void;
-  mode: 'create' | 'view' | 'edit'; // New: Mode prop
-  selectedOrg?: any; // New: Pre-populated org data for view/edit
+  mode: 'create' | 'view' | 'edit' | 'extend'; // Added 'extend'
+  selectedOrg?: any; // New: Pre-populated org data for view/edit/extend
 }
 
 interface LicenseFormData {
@@ -60,6 +60,7 @@ interface LicenseFormData {
   storage_limit_gb?: number;
   timezone?: string;
   currency?: string;
+  license_type?: string;
 }
 
 // Indian states for dropdown selection
@@ -165,7 +166,9 @@ const OrganizationLicenseModal: React.FC<
   const [resetPassword, setResetPassword] = useState<string | null>(null); // From [id].tsx
   const [resetSnackbarOpen, setResetSnackbarOpen] = useState(false); // From [id].tsx
   const [adminFullName, setAdminFullName] = useState<string>(''); // New state for fetched full name
-  const [internalMode, setInternalMode] = useState<'create' | 'view' | 'edit'>(propMode); // Internal mode for view -> edit switch
+  const [internalMode, setInternalMode] = useState<'create' | 'view' | 'edit' | 'extend'>(propMode); // Internal mode for view -> edit switch
+  const [confirmationOpen, setConfirmationOpen] = useState(false); // For confirmation after save
+  const [formDataForConfirm, setFormDataForConfirm] = useState<any>(null); // Store form data for confirmation
   const {
     register,
     handleSubmit,
@@ -177,6 +180,7 @@ const OrganizationLicenseModal: React.FC<
     defaultValues: {
       max_users: 5, // Default value
       plan_type: "perpetual", // Default to perpetual to fix MUI warning
+      license_type: "trial_7",
     },
   });
   // Use the enhanced pincode lookup hook
@@ -189,6 +193,7 @@ const OrganizationLicenseModal: React.FC<
   const pin_code = watch("pin_code");
   const state = watch("state");
   const state_code = watch("state_code");
+  const license_type = watch("license_type");
   // Auto-populate city, state, and state_code when pin code changes
   useEffect(() => {
     if (pin_code && pin_code.length === 6 && /^\d{6}$/.test(pin_code)) {
@@ -218,7 +223,7 @@ const OrganizationLicenseModal: React.FC<
   // Fetch admin full name for view/edit modes
   useEffect(() => {
     const fetchAdminFullName = async () => {
-      if (selectedOrg?.id && (internalMode === 'view' || internalMode === 'edit')) {
+      if (selectedOrg?.id && (internalMode === 'view' || internalMode === 'edit' || internalMode === 'extend')) {
         try {
           const response = await api.get(`/organizations/${selectedOrg.id}/members`, {
             headers: { 'X-Organization-ID': `${selectedOrg.id}` }
@@ -236,9 +241,9 @@ const OrganizationLicenseModal: React.FC<
     };
     fetchAdminFullName();
   }, [selectedOrg, internalMode, setValue]);
-  // Pre-populate form for view/edit modes
+  // Pre-populate form for view/edit/extend modes
   useEffect(() => {
-    if (selectedOrg && (internalMode === 'view' || internalMode === 'edit')) {
+    if (selectedOrg && (internalMode !== 'create')) {
       reset({
         organization_name: selectedOrg.name || '',
         superadmin_email: selectedOrg.primary_email || '',
@@ -263,6 +268,7 @@ const OrganizationLicenseModal: React.FC<
         storage_limit_gb: selectedOrg.storage_limit_gb || 0,
         timezone: selectedOrg.timezone || '',
         currency: selectedOrg.currency || '',
+        license_type: selectedOrg.license_type || 'trial_7',
       });
       // Load modules if available
       if (selectedOrg.enabled_modules) {
@@ -293,6 +299,7 @@ const OrganizationLicenseModal: React.FC<
         storage_limit_gb: 0,
         timezone: '',
         currency: '',
+        license_type: 'trial_7',
       });
       setSelectedModules({
         crm: true,
@@ -336,6 +343,7 @@ const OrganizationLicenseModal: React.FC<
         storage_limit_gb: 0,
         timezone: '',
         currency: '',
+        license_type: 'trial_7',
       });
       setSelectedModules({
         crm: true,
@@ -376,6 +384,7 @@ const OrganizationLicenseModal: React.FC<
       storage_limit_gb: 0,
       timezone: '',
       currency: '',
+      license_type: 'trial_7',
     });
     setError(null);
     setSuccess(null);
@@ -389,6 +398,8 @@ const OrganizationLicenseModal: React.FC<
       hr: true,
       analytics: true
     });
+    setConfirmationOpen(false);
+    setFormDataForConfirm(null);
     onClose();
   };
   const onSubmit = async (data: LicenseFormData) => {
@@ -426,23 +437,32 @@ const OrganizationLicenseModal: React.FC<
       state_code: data.state_code.trim(),
       gst_number: data.gst_number?.trim() || undefined, // Optional field
       enabled_modules: selectedModules, // Send object {crm: true, ...}
+      license_type: data.license_type || activationPeriod, // Use from form or activation
     };
     try {
       let result;
       if (internalMode === 'create') {
+        // For create, save org first, then show confirmation
         result = await organizationService.createLicense(submissionData);
+        setFormDataForConfirm(result);
+        setConfirmationOpen(true);
       } else if (internalMode === 'edit' && selectedOrg?.id) {
+        await organizationService.updateLicense(selectedOrg.id, { license_type: submissionData.license_type });
         result = await organizationService.updateOrganizationById(selectedOrg.id, submissionData);
+        setSuccess(result);
+        if (onSuccess) {
+          onSuccess(result);
+        }
+        setTimeout(handleClose, 2000);
+      } else if (internalMode === 'extend' && selectedOrg?.id) {
+        await organizationService.updateLicense(selectedOrg.id, { license_type: submissionData.license_type });
+        result = await organizationService.getOrganization(selectedOrg.id);
+        setSuccess(result);
+        if (onSuccess) {
+          onSuccess(result);
+        }
+        setTimeout(handleClose, 2000);
       }
-      if (!result || typeof result !== "object") {
-        throw new Error("Invalid response from server");
-      }
-      setSuccess(result);
-      if (onSuccess) {
-        onSuccess(result);
-      }
-      // Show license activation dialog after successful creation/update
-      setLicenseActivationOpen(true);
     } catch (err: any) {
       setError(
         err.message ||
@@ -450,6 +470,25 @@ const OrganizationLicenseModal: React.FC<
       );
     } finally {
       setLoading(false);
+    }
+  };
+  const handleConfirmActivate = async () => {
+    if (formDataForConfirm && formDataForConfirm.organization_id) {
+      try {
+        setLoading(true);
+        await organizationService.updateLicense(formDataForConfirm.organization_id, { license_type: activationPeriod });
+        const result = await organizationService.getOrganization(formDataForConfirm.organization_id);
+        setSuccess(result);
+        if (onSuccess) {
+          onSuccess(result);
+        }
+        setConfirmationOpen(false);
+        setTimeout(handleClose, 2000);
+      } catch (err: any) {
+        setError(err.message || "Failed to activate license");
+      } finally {
+        setLoading(false);
+      }
     }
   };
   const handleDelete = async () => {
@@ -479,24 +518,10 @@ const OrganizationLicenseModal: React.FC<
   const handleStartEdit = () => {
     setInternalMode('edit');
   };
-  const handleActivateLicense = async () => {
-    if (selectedOrg?.id) {
-      try {
-        const data = { license_type: activationPeriod };
-        await organizationService.updateLicense(selectedOrg.id, data);
-        console.log(`Activated license for ${activationPeriod}`);
-        setSuccess("License activated successfully");
-        if (onSuccess) onSuccess();
-      } catch (err: any) {
-        setError(err.message || "Failed to activate license");
-      } finally {
-        setLicenseActivationOpen(false);
-      }
-    }
-  };
   const isViewMode = internalMode === 'view';
   const isEditMode = internalMode === 'edit';
   const isCreateMode = internalMode === 'create';
+  const isExtendMode = internalMode === 'extend';
   const disabled = loading || isViewMode;
   return (
     <>
@@ -510,7 +535,7 @@ const OrganizationLicenseModal: React.FC<
             borderColor: "divider",
           }}
         >
-          {isCreateMode ? 'Create Organization License' : isViewMode ? 'View Organization License' : 'Edit Organization License'}
+          {isCreateMode ? 'Create Organization License' : isViewMode ? 'View Organization License' : isExtendMode ? 'Extend License' : 'Edit Organization License'}
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Box>
@@ -526,7 +551,7 @@ const OrganizationLicenseModal: React.FC<
                   gutterBottom
                   sx={{ fontWeight: "bold", color: "success.dark" }}
                 >
-                  🎉 License {isCreateMode ? 'Created' : 'Updated'} Successfully!
+                  🎉 License {isCreateMode ? 'Created' : isExtendMode ? 'Extended' : 'Updated'} Successfully!
                 </Typography>
                 <Box
                   sx={{
@@ -578,17 +603,14 @@ const OrganizationLicenseModal: React.FC<
                 </Alert>
               </Alert>
             )}
-            {!success && (
+            {!success && !confirmationOpen && (
               <form onSubmit={handleSubmit(onSubmit)}>
                 {/* License Validity Section - Moved to top and full width */}
                 <Box sx={{ mb: 4, p: 3, bgcolor: "primary.50", borderRadius: 2, border: "1px solid", borderColor: "primary.200" }}>
                   <Typography
                     variant="h6"
-                    sx={{
-                      mb: 2,
-                      fontWeight: "bold",
-                      color: "primary.main",
-                    }}
+                    gutterBottom
+                    sx={{ fontWeight: "bold", color: "primary.main" }}
                   >
                     License Validity
                   </Typography>
@@ -598,10 +620,10 @@ const OrganizationLicenseModal: React.FC<
                         <InputLabel>Plan Type</InputLabel>
                         <Select
                           label="Plan Type"
-                          {...register("plan_type", { required: "Plan type is required" })}
-                          error={!!errors.plan_type}
+                          {...register("license_type", { required: "Plan type is required" })}
+                          error={!!errors.license_type}
                           disabled={disabled}
-                          defaultValue="perpetual"
+                          defaultValue="trial_7"
                         >
                           <MenuItem value="trial_7">Trial (7 Days)</MenuItem>
                           <MenuItem value="trial_15">Trial (15 Days)</MenuItem>
@@ -612,457 +634,478 @@ const OrganizationLicenseModal: React.FC<
                         </Select>
                         <Typography
                           variant="caption"
-                          color={errors.plan_type ? "error" : "text.secondary"}
+                          color={errors.license_type ? "error" : "text.secondary"}
                           sx={{ mt: 0.5, ml: 2 }}
                         >
-                          {errors.plan_type?.message || "Select the license validity period"}
+                          {errors.license_type?.message || "Select the license validity period"}
                         </Typography>
                       </FormControl>
                     </Grid>
                   </Grid>
                 </Box>
 
-                {/* Organization Information Section */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      mb: 2,
-                      fontWeight: "bold",
-                      color: "primary.main",
-                      borderBottom: "2px solid",
-                      borderColor: "primary.main",
-                      pb: 0.5,
-                    }}
-                  >
-                    📋 Organization Information
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid size={12}>
-                      <TextField
-                        fullWidth
-                        label="Organization Name"
-                        placeholder="Enter your organization's full legal name"
-                        {...register("organization_name", {
-                          required: "Organization name is required",
-                          minLength: {
-                            value: 3,
-                            message:
-                              "Organization name must be at least 3 characters",
-                          },
-                        })}
-                        error={!!errors.organization_name}
-                        helperText={
-                          errors.organization_name?.message ||
-                          "This will be used for official documents and branding"
-                        }
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Super Admin Full Name"
-                        placeholder="John Doe"
-                        {...register("superadmin_full_name", {
-                          required: "Super admin full name is required",
-                          minLength: {
-                            value: 3,
-                            message: "Full name must be at least 3 characters",
-                          },
-                        })}
-                        error={!!errors.superadmin_full_name}
-                        helperText={
-                          errors.superadmin_full_name?.message ||
-                          "Full name of the organization admin"
-                        }
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Primary/Admin Email"
-                        type="email"
-                        placeholder="admin@yourorganization.com"
-                        {...register("superadmin_email", {
-                          required: "Primary email is required",
-                          pattern: {
-                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                            message: "Please enter a valid email address",
-                          },
-                        })}
-                        error={!!errors.superadmin_email}
-                        helperText={
-                          errors.superadmin_email?.message ||
-                          "This will be the admin login email"
-                        }
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Primary Phone Number"
-                        placeholder="+91-1234567890"
-                        {...register("primary_phone", {
-                          required: "Primary phone is required",
-                          pattern: {
-                            value: /^[+\0-9\s()-]{10,15}$/,
-                            message:
-                              "Enter a valid phone number (10-15 digits)",
-                          },
-                        })}
-                        error={!!errors.primary_phone}
-                        helperText={
-                          errors.primary_phone?.message ||
-                          "Include country code for international numbers"
-                        }
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Maximum Users"
-                        type="number"
-                        inputProps={{ min: 1, max: 1000 }}
-                        {...register("max_users", {
-                          required: "Maximum users is required",
-                          min: {
-                            value: 1,
-                            message: "Must allow at least 1 user",
-                          },
-                          max: {
-                            value: 1000,
-                            message: "Cannot exceed 1000 users",
-                          },
-                        })}
-                        error={!!errors.max_users}
-                        helperText={
-                          errors.max_users?.message ||
-                          "Number of users allowed in this organization"
-                        }
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="GST Number (Optional)"
-                        placeholder="22AAAAA0000A1Z5"
-                        {...register("gst_number", {
-                          pattern: {
-                            value:
-                              /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
-                            message:
-                              "Invalid GST format (15 characters: 22AAAAA0000A1Z5)",
-                          },
-                        })}
-                        error={!!errors.gst_number}
-                        helperText={
-                          errors.gst_number?.message ||
-                          "Leave empty if not applicable"
-                        }
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Subdomain"
-                        {...register("subdomain")}
-                        error={!!errors.subdomain}
-                        helperText={errors.subdomain?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Business Type"
-                        {...register("business_type")}
-                        error={!!errors.business_type}
-                        helperText={errors.business_type?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Industry"
-                        {...register("industry")}
-                        error={!!errors.industry}
-                        helperText={errors.industry?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Website"
-                        {...register("website")}
-                        error={!!errors.website}
-                        helperText={errors.website?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="PAN Number"
-                        {...register("pan_number")}
-                        error={!!errors.pan_number}
-                        helperText={errors.pan_number?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="CIN Number"
-                        {...register("cin_number")}
-                        error={!!errors.cin_number}
-                        helperText={errors.cin_number?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Storage Limit (GB)"
-                        type="number"
-                        {...register("storage_limit_gb")}
-                        error={!!errors.storage_limit_gb}
-                        helperText={errors.storage_limit_gb?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Timezone"
-                        {...register("timezone")}
-                        error={!!errors.timezone}
-                        helperText={errors.timezone?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Currency"
-                        {...register("currency")}
-                        error={!!errors.currency}
-                        helperText={errors.currency?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={12}>
-                      <TextField
-                        fullWidth
-                        label="Description"
-                        multiline
-                        rows={3}
-                        {...register("description")}
-                        error={!!errors.description}
-                        helperText={errors.description?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                  </Grid>
-                </Box>
-                {/* Address Information Section */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      mb: 2,
-                      fontWeight: "bold",
-                      color: "secondary.main",
-                      borderBottom: "2px solid",
-                      borderColor: "secondary.main",
-                      pb: 0.5,
-                    }}
-                  >
-                    🏢 Address Information
-                  </Typography>
-                  <Grid container spacing={3}>
-                    <Grid size={12}>
-                      <TextField
-                        fullWidth
-                        label="Full Address"
-                        multiline
-                        rows={3}
-                        placeholder="Enter complete address including building, street, and area"
-                        {...register("address1", {
-                          required: "Address is required",
-                          minLength: {
-                            value: 10,
-                            message: "Please provide a complete address",
-                          },
-                        })}
-                        error={!!errors.address1}
-                        helperText={
-                          errors.address1?.message ||
-                          "Include building name, street, and locality"
-                        }
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        label="PIN Code"
-                        placeholder="123456"
-                        {...register("pin_code", {
-                          required: "PIN code is required",
-                          pattern: {
-                            value: /^\d{6}$/,
-                            message: "PIN code must be exactly 6 digits",
-                          },
-                        })}
-                        error={!!errors.pin_code || !!pincodeError}
-                        helperText={
-                          pincodeLoading
-                            ? "Looking up location..."
-                            : errors.pin_code?.message ||
-                              pincodeError ||
-                              "6-digit postal code (automatically fetches city & state)"
-                        }
-                        disabled={disabled || pincodeLoading}
-                        variant="outlined"
-                        InputProps={{
-                          endAdornment: pincodeLoading ? (
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                pr: 1,
-                              }}
-                            >
-                              <CircularProgress size={20} />
-                            </Box>
-                          ) : null,
-                        }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        label="City"
-                        placeholder="Enter city name"
-                        {...register("city", {
-                          required: "City is required",
-                          minLength: {
-                            value: 2,
-                            message: "City name must be at least 2 characters",
-                          },
-                        })}
-                        error={!!errors.city}
-                        helperText={
-                          errors.city?.message ||
-                          (pincodeData
-                            ? "Auto-filled from PIN code"
-                            : "Will be auto-filled when PIN is entered")
-                        }
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <FormControl
-                        fullWidth
-                        error={!!errors.state}
-                        variant="outlined"
-                      >
-                        <InputLabel>State</InputLabel>
-                        <Select
-                          label="State"
-                          value={watch("state") || ""}
-                          onChange={(e) =>
-                            setValue("state", e.target.value as string, {
-                              shouldValidate: true,
-                            })
+                {/* Organization Information Section - Hide for extend */}
+                {!isExtendMode && (
+                  <Box sx={{ mb: 4 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 2,
+                        fontWeight: "bold",
+                        color: "primary.main",
+                        borderBottom: "2px solid",
+                        borderColor: "primary.main",
+                        pb: 0.5,
+                      }}
+                    >
+                      📋 Organization Information
+                    </Typography>
+                    <Grid container spacing={3}>
+                      <Grid size={12}>
+                        <TextField
+                          fullWidth
+                          label="Organization Name"
+                          placeholder="Enter your organization's full legal name"
+                          {...register("organization_name", {
+                            required: "Organization name is required",
+                            minLength: {
+                              value: 3,
+                              message:
+                                "Organization name must be at least 3 characters",
+                            },
+                          })}
+                          error={!!errors.organization_name}
+                          helperText={
+                            errors.organization_name?.message ||
+                            "This will be used for official documents and branding"
                           }
                           disabled={disabled}
-                        >
-                          <MenuItem value="">
-                            <em>Select a state</em>
-                          </MenuItem>
-                          {INDIAN_STATES.map((stateName) => (
-                            <MenuItem key={stateName} value={stateName}>
-                              {stateName}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                        <Typography
-                          variant="caption"
-                          color={errors.state ? "error" : "text.secondary"}
-                          sx={{ mt: 0.5, ml: 2 }}
-                        >
-                          {errors.state?.message ||
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Super Admin Full Name"
+                          placeholder="John Doe"
+                          {...register("superadmin_full_name", {
+                            required: "Super admin full name is required",
+                            minLength: {
+                              value: 3,
+                              message: "Full name must be at least 3 characters",
+                            },
+                          })}
+                          error={!!errors.superadmin_full_name}
+                          helperText={
+                            errors.superadmin_full_name?.message ||
+                            "Full name of the organization admin"
+                          }
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Primary/Admin Email"
+                          type="email"
+                          placeholder="admin@yourorganization.com"
+                          {...register("superadmin_email", {
+                            required: "Primary email is required",
+                            pattern: {
+                              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                              message: "Please enter a valid email address",
+                            },
+                          })}
+                          error={!!errors.superadmin_email}
+                          helperText={
+                            errors.superadmin_email?.message ||
+                            "This will be the admin login email"
+                          }
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Primary Phone Number"
+                          placeholder="+91-1234567890"
+                          {...register("primary_phone", {
+                            required: "Primary phone is required",
+                            pattern: {
+                              value: /^[+\0-9\s()-]{10,15}$/,
+                              message:
+                                "Enter a valid phone number (10-15 digits)",
+                            },
+                          })}
+                          error={!!errors.primary_phone}
+                          helperText={
+                            errors.primary_phone?.message ||
+                            "Include country code for international numbers"
+                          }
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Maximum Users"
+                          type="number"
+                          inputProps={{ min: 1, max: 1000 }}
+                          {...register("max_users", {
+                            required: "Maximum users is required",
+                            min: {
+                              value: 1,
+                              message: "Must allow at least 1 user",
+                            },
+                            max: {
+                              value: 1000,
+                              message: "Cannot exceed 1000 users",
+                            },
+                          })}
+                          error={!!errors.max_users}
+                          helperText={
+                            errors.max_users?.message ||
+                            "Number of users allowed in this organization"
+                          }
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="GST Number (Optional)"
+                          placeholder="22AAAAA0000A1Z5"
+                          {...register("gst_number", {
+                            pattern: {
+                              value:
+                                /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+                              message:
+                                "Invalid GST format (15 characters: 22AAAAA0000A1Z5)",
+                            },
+                          })}
+                          error={!!errors.gst_number}
+                          helperText={
+                            errors.gst_number?.message ||
+                            "Leave empty if not applicable"
+                          }
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Subdomain"
+                          {...register("subdomain")}
+                          error={!!errors.subdomain}
+                          helperText={errors.subdomain?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Business Type"
+                          {...register("business_type")}
+                          error={!!errors.business_type}
+                          helperText={errors.business_type?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Industry"
+                          {...register("industry")}
+                          error={!!errors.industry}
+                          helperText={errors.industry?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Website"
+                          {...register("website")}
+                          error={!!errors.website}
+                          helperText={errors.website?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="PAN Number"
+                          {...register("pan_number")}
+                          error={!!errors.pan_number}
+                          helperText={errors.pan_number?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="CIN Number"
+                          {...register("cin_number")}
+                          error={!!errors.cin_number}
+                          helperText={errors.cin_number?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Storage Limit (GB)"
+                          type="number"
+                          {...register("storage_limit_gb")}
+                          error={!!errors.storage_limit_gb}
+                          helperText={errors.storage_limit_gb?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Timezone"
+                          {...register("timezone")}
+                          error={!!errors.timezone}
+                          helperText={errors.timezone?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Currency"
+                          {...register("currency")}
+                          error={!!errors.currency}
+                          helperText={errors.currency?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={12}>
+                        <TextField
+                          fullWidth
+                          label="Description"
+                          multiline
+                          rows={3}
+                          {...register("description")}
+                          error={!!errors.description}
+                          helperText={errors.description?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+                {/* Address Information Section - Hide for extend */}
+                {!isExtendMode && (
+                  <Box sx={{ mb: 4 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 2,
+                        fontWeight: "bold",
+                        color: "secondary.main",
+                        borderBottom: "2px solid",
+                        borderColor: "secondary.main",
+                        pb: 0.5,
+                      }}
+                    >
+                      🏢 Address Information
+                    </Typography>
+                    <Grid container spacing={3}>
+                      <Grid size={12}>
+                        <TextField
+                          fullWidth
+                          label="Full Address"
+                          multiline
+                          rows={3}
+                          placeholder="Enter complete address including building, street, and area"
+                          {...register("address1", {
+                            required: "Address is required",
+                            minLength: {
+                              value: 10,
+                              message: "Please provide a complete address",
+                            },
+                          })}
+                          error={!!errors.address1}
+                          helperText={
+                            errors.address1?.message ||
+                            "Include building name, street, and locality"
+                          }
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <TextField
+                          fullWidth
+                          label="PIN Code"
+                          placeholder="123456"
+                          {...register("pin_code", {
+                            required: "PIN code is required",
+                            pattern: {
+                              value: /^\d{6}$/,
+                              message: "PIN code must be exactly 6 digits",
+                            },
+                          })}
+                          error={!!errors.pin_code || !!pincodeError}
+                          helperText={
+                            pincodeLoading
+                              ? "Looking up location..."
+                              : errors.pin_code?.message ||
+                                pincodeError ||
+                                "6-digit postal code (automatically fetches city & state)"
+                          }
+                          disabled={disabled || pincodeLoading}
+                          variant="outlined"
+                          InputProps={{
+                            endAdornment: pincodeLoading ? (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  pr: 1,
+                                }}
+                              >
+                                <CircularProgress size={20} />
+                              </Box>
+                            ) : null,
+                          }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <TextField
+                          fullWidth
+                          label="City"
+                          placeholder="Enter city name"
+                          {...register("city", {
+                            required: "City is required",
+                            minLength: {
+                              value: 2,
+                              message: "City name must be at least 2 characters",
+                            },
+                          })}
+                          error={!!errors.city}
+                          helperText={
+                            errors.city?.message ||
                             (pincodeData
                               ? "Auto-filled from PIN code"
-                              : "Will be auto-filled when PIN is entered")}
-                        </Typography>
-                      </FormControl>
+                              : "Will be auto-filled when PIN is entered")
+                          }
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <FormControl
+                          fullWidth
+                          error={!!errors.state}
+                          variant="outlined"
+                        >
+                          <InputLabel>State</InputLabel>
+                          <Select
+                            label="State"
+                            value={watch("state") || ""}
+                            onChange={(e) =>
+                              setValue("state", e.target.value as string, {
+                                shouldValidate: true,
+                              })
+                            }
+                            disabled={disabled}
+                          >
+                            <MenuItem value="">
+                              <em>Select a state</em>
+                            </MenuItem>
+                            {INDIAN_STATES.map((stateName) => (
+                              <MenuItem key={stateName} value={stateName}>
+                                {stateName}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          <Typography
+                            variant="caption"
+                            color={errors.state ? "error" : "text.secondary"}
+                            sx={{ mt: 0.5, ml: 2 }}
+                          >
+                            {errors.state?.message ||
+                              (pincodeData
+                                ? "Auto-filled from PIN code"
+                                : "Will be auto-filled when PIN is entered")}
+                          </Typography>
+                        </FormControl>
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="State Code"
+                          {...register("state_code", {
+                            required: "State code is required",
+                            pattern: {
+                              value: /^\d{2}$/,
+                              message: "State code must be 2 digits",
+                            },
+                          })}
+                          error={!!errors.state_code}
+                          helperText={
+                            errors.state_code?.message ||
+                            "Automatically set based on selected state"
+                          }
+                          disabled={disabled}
+                          variant="outlined"
+                          InputProps={{
+                            readOnly: true,
+                          }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <TextField
+                          fullWidth
+                          label="Country"
+                          {...register("country", { required: "Country is required" })}
+                          error={!!errors.country}
+                          helperText={errors.country?.message}
+                          disabled={disabled}
+                          variant="outlined"
+                        />
+                      </Grid>
                     </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="State Code"
-                        {...register("state_code", {
-                          required: "State code is required",
-                          pattern: {
-                            value: /^\d{2}$/,
-                            message: "State code must be 2 digits",
-                          },
-                        })}
-                        error={!!errors.state_code}
-                        helperText={
-                          errors.state_code?.message ||
-                          "Automatically set based on selected state"
-                        }
-                        disabled={disabled}
-                        variant="outlined"
-                        InputProps={{
-                          readOnly: true,
-                        }}
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Country"
-                        {...register("country", { required: "Country is required" })}
-                        error={!!errors.country}
-                        helperText={errors.country?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                  </Grid>
-                </Box>
-                {/* Information Notice */}
+                  </Box>
+                )}
               </form>
+            )}
+            {confirmationOpen && formDataForConfirm && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Confirm Organization Details
+                </Typography>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Please verify the details below before activating the license.
+                </Alert>
+                <Typography><strong>Name:</strong> {formDataForConfirm.organization_name}</Typography>
+                <Typography><strong>Admin Email:</strong> {formDataForConfirm.superadmin_email}</Typography>
+                <Typography><strong>Admin Name:</strong> {formDataForConfirm.superadmin_full_name}</Typography>
+                <Typography><strong>Phone:</strong> {formDataForConfirm.primary_phone}</Typography>
+                <Typography><strong>Address:</strong> {formDataForConfirm.address1}, {formDataForConfirm.city}, {formDataForConfirm.state} {formDataForConfirm.pin_code}</Typography>
+                <Typography><strong>GST:</strong> {formDataForConfirm.gst_number || 'N/A'}</Typography>
+                <Typography><strong>Max Users:</strong> {formDataForConfirm.max_users}</Typography>
+                {/* Add more details as needed */}
+              </Box>
             )}
           </Box>
         </DialogContent>
@@ -1078,9 +1121,9 @@ const OrganizationLicenseModal: React.FC<
           >
             {success ? "Close" : "Cancel"}
           </Button>
-          {!success && (
+          {!success && !confirmationOpen && (
             <>
-              {!isViewMode && (
+              {!isViewMode && !isExtendMode && (
                 <>
                   <Button
                     onClick={() => setModuleDialogOpen(true)}
@@ -1119,7 +1162,30 @@ const OrganizationLicenseModal: React.FC<
                   Edit
                 </Button>
               )}
+              {isExtendMode && (
+                <Button
+                  onClick={handleSubmit(onSubmit)}
+                  variant="contained"
+                  disabled={loading}
+                  size="large"
+                  sx={{ minWidth: 150 }}
+                >
+                  Extend License
+                </Button>
+              )}
             </>
+          )}
+          {confirmationOpen && (
+            <Button
+              onClick={handleConfirmActivate}
+              variant="contained"
+              color="primary"
+              disabled={loading}
+              size="large"
+              sx={{ minWidth: 150 }}
+            >
+              {loading ? "Activating..." : "Activate License"}
+            </Button>
           )}
           {!isCreateMode && isViewMode && (
             <>
@@ -1188,64 +1254,6 @@ const OrganizationLicenseModal: React.FC<
         onChange={setSelectedModules}
         isSuperAdmin={user?.is_super_admin}  // Add this prop
       />
-      {/* License Activation Dialog */}
-      <Dialog
-        open={licenseActivationOpen}
-        onClose={() => setLicenseActivationOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Activate License</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" sx={{ mb: 3 }}>
-            The organization license has been {isCreateMode ? 'created' : 'updated'} successfully. Please set
-            the license activation period:
-          </Typography>
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel id="activation-period-label">License Period</InputLabel>
-            <Select
-              labelId="activation-period-label"
-              value={activationPeriod}
-              label="License Period"
-              onChange={(e) =>
-                setActivationPeriod(
-                  e.target.value as string,
-                )
-              }
-            >
-              <MenuItem value="trial_7">Trial (7 Days)</MenuItem>
-              <MenuItem value="trial_15">Trial (15 Days)</MenuItem>
-              <MenuItem value="month_1">1 Month</MenuItem>
-              <MenuItem value="month_3">3 Months</MenuItem>
-              <MenuItem value="year_1">1 Year</MenuItem>
-              <MenuItem value="perpetual">Perpetual</MenuItem>
-            </Select>
-          </FormControl>
-          {success && (
-            <Box
-              sx={{ mt: 2, p: 2, bgcolor: "success.light", borderRadius: 1 }}
-            >
-              <Typography variant="body2" color="success.dark">
-                <strong>Organization:</strong> {success.organization_name}
-                <br />
-                <strong>Subdomain:</strong> {success.subdomain}
-                <br />
-                <strong>Admin Email:</strong> {success.superadmin_email}
-              </Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLicenseActivationOpen(false)}>Skip</Button>
-          <Button
-            onClick={handleActivateLicense}
-            variant="contained"
-            color="primary"
-          >
-            Activate License
-          </Button>
-        </DialogActions>
-      </Dialog>
       {/* Reset Password Dialog from [id].tsx */}
       <Dialog open={openResetDialog} onClose={() => setOpenResetDialog(false)}>
         <DialogTitle>Reset Password</DialogTitle>

@@ -78,6 +78,9 @@ async def update_organization_license(
     
     if not license_type.startswith("trial"):
         org.plan_type = "premium"
+        org.status = "active"
+    else:
+        org.status = "trial"
     
     await db.commit()
     await db.refresh(org)
