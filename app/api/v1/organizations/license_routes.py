@@ -13,7 +13,7 @@ from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
 from app.models.user_models import Organization, User
 from app.schemas.user import UserRole
-from app.schemas.organization import OrganizationLicenseCreate, OrganizationLicenseResponse
+from app.schemas.organization import OrganizationLicenseCreate, OrganizationLicenseResponse, LicenseExtendUpdate
 from .services import OrganizationService
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ license_router = router  # Alias for backward compatibility
 @router.put("/{organization_id:int}/license")
 async def update_organization_license(
     organization_id: int,
-    license_data: dict,
+    license_data: LicenseExtendUpdate,
     auth: tuple = Depends(require_access("organization_license", "update")),
     db: AsyncSession = Depends(get_db)
 ):
@@ -47,12 +47,17 @@ async def update_organization_license(
             detail="Organization not found"
         )
     
-    license_type = license_data.get("license_type")
-    if license_type not in ["trial_7", "trial_15", "month_1", "month_3", "year_1", "perpetual"]:
+    license_type = license_data.license_type
+    if license_type not in ["trial_7", "trial_15", "month_1", "month_3", "year_1", "perpetual", "custom"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="license_type must be one of: trial_7, trial_15, month_1, month_3, year_1, perpetual"
+            detail="license_type must be one of: trial_7, trial_15, month_1, month_3, year_1, perpetual, custom"
         )
+    
+    if license_data.extend:
+        base_date = org.license_expiry_date or datetime.utcnow()
+    else:
+        base_date = datetime.utcnow()
     
     org.license_type = license_type
     org.license_issued_date = datetime.utcnow()
@@ -62,19 +67,38 @@ async def update_organization_license(
         org.license_expiry_date = None
     elif license_type == "month_1":
         org.license_duration_months = 1
-        org.license_expiry_date = datetime.utcnow() + timedelta(days=30)
+        org.license_expiry_date = base_date + timedelta(days=30)
     elif license_type == "month_3":
         org.license_duration_months = 3
-        org.license_expiry_date = datetime.utcnow() + timedelta(days=90)
+        org.license_expiry_date = base_date + timedelta(days=90)
     elif license_type == "year_1":
         org.license_duration_months = 12
-        org.license_expiry_date = datetime.utcnow() + timedelta(days=365)
+        org.license_expiry_date = base_date + timedelta(days=365)
     elif license_type == "trial_7":
         org.license_duration_months = None
-        org.license_expiry_date = datetime.utcnow() + timedelta(days=7)
+        org.license_expiry_date = base_date + timedelta(days=7)
     elif license_type == "trial_15":
         org.license_duration_months = None
-        org.license_expiry_date = datetime.utcnow() + timedelta(days=15)
+        org.license_expiry_date = base_date + timedelta(days=15)
+    elif license_type == "custom":
+        if not license_data.custom_number or not license_data.custom_unit:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="custom_number and custom_unit required for custom type"
+            )
+        if license_data.custom_unit == 'days':
+            delta = timedelta(days=license_data.custom_number)
+        elif license_data.custom_unit == 'months':
+            delta = timedelta(days=30 * license_data.custom_number)
+        elif license_data.custom_unit == 'years':
+            delta = timedelta(days=365 * license_data.custom_number)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="custom_unit must be days, months, or years"
+            )
+        org.license_duration_months = None if license_data.custom_unit != 'months' else license_data.custom_number
+        org.license_expiry_date = base_date + delta
     
     if not license_type.startswith("trial"):
         org.plan_type = "premium"

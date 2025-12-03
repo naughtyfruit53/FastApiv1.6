@@ -27,7 +27,7 @@ import { organizationService } from "../services/organizationService";
 import tallyService from "../services/tallyService"; // NEW: Import tallyService
 import { useAuth } from "../context/AuthContext";
 import { useSnackbar } from "notistack";
-import OrganizationLicenseModal from "./OrganizationLicenseModal"; // Import modal for extend
+import ExtendLicenseModal from "./ExtendLicenseModal"; // New small modal
 
 interface OrganizationSettingsData {
   id?: number;
@@ -199,10 +199,10 @@ const OrganizationSettings: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" p={3}>
+      <Container display="flex" justifyContent="center" alignItems="center" p={3}>
         <CircularProgress />
         <Typography sx={{ ml: 2 }}>Loading organization settings...</Typography>
-      </Box>
+      </Container>
     );
   }
 
@@ -488,11 +488,10 @@ const OrganizationSettings: React.FC = () => {
       </Dialog>
 
       {/* Extend License Modal */}
-      <OrganizationLicenseModal
+      <ExtendLicenseModal
         open={extendModalOpen}
         onClose={() => setExtendModalOpen(false)}
         onSuccess={loadSettings}
-        mode="extend"
         selectedOrg={selectedOrg}
       />
     </Paper>

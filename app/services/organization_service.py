@@ -240,3 +240,4 @@ class OrganizationService:
         } for activity in activities]
 
     # ... (rest of the original methods unchanged)
+    

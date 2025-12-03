@@ -36,7 +36,6 @@ import {
   Settings,
   DataUsage,
   Delete,
-  Edit as EditIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -44,6 +43,7 @@ import { organizationService } from "../../services/organizationService";
 import { useAuth } from "../../context/AuthContext";
 import ModuleSelectionModal from '../../components/ModuleSelectionModal';
 import OrganizationLicenseModal from '../../components/OrganizationLicenseModal'; // Updated import
+import ExtendLicenseModal from '../../components/ExtendLicenseModal'; // New import
 
 import { ProtectedPage } from '@/components/ProtectedPage';
 interface Organization {
@@ -72,6 +72,7 @@ const ManageOrganizations: React.FC = () => {
   const [resetDataDialogOpen, setResetDataDialogOpen] = useState(false);
   const [moduleControlDialogOpen, setModuleControlDialogOpen] = useState(false);
   const [licenseModalOpen, setLicenseModalOpen] = useState(false); // Unified modal open state
+  const [extendModalOpen, setExtendModalOpen] = useState(false);
   const [licenseModalMode, setLicenseModalMode] = useState<'create' | 'view' | 'edit'>('create'); // Mode for modal
   const [actionType, setActionType] = useState<
     "hold" | "activate" | "reset" | "delete" | null
@@ -171,10 +172,9 @@ const ManageOrganizations: React.FC = () => {
     setLicenseModalMode('view');
     setLicenseModalOpen(true);
   };
-  const handleEditLicense = (org: Organization) => {
+  const handleExtendLicense = (org: Organization) => {
     setSelectedOrg(org);
-    setLicenseModalMode('edit');
-    setLicenseModalOpen(true);
+    setExtendModalOpen(true);
   };
   const handleCreateLicense = () => {
     setSelectedOrg(null);
@@ -371,7 +371,7 @@ const ManageOrganizations: React.FC = () => {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
+                    <Typography variant="body2" onClick={() => handleExtendLicense(org)} sx={{ cursor: "pointer", color: "primary.main" }}>
                       {org.license_type === 'perpetual' ? 'Perpetual' : org.license_expiry_date ? new Date(org.license_expiry_date).toLocaleDateString() : 'N/A'}
                     </Typography>
                   </TableCell>
@@ -383,14 +383,6 @@ const ManageOrganizations: React.FC = () => {
                       title="View Details"
                     >
                       <Visibility />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={() => handleEditLicense(org)}
-                      title="Edit License Validity"
-                    >
-                      <EditIcon />
                     </IconButton>
                     {isSuperAdmin ? (
                       <Tooltip title="Manage module entitlements (Super Admin only)">
@@ -578,6 +570,13 @@ const ManageOrganizations: React.FC = () => {
         onClose={() => setLicenseModalOpen(false)}
         onSuccess={handleLicenseSuccess}
         mode={licenseModalMode}
+        selectedOrg={selectedOrg}
+      />
+      {/* Extend License Modal */}
+      <ExtendLicenseModal
+        open={extendModalOpen}
+        onClose={() => setExtendModalOpen(false)}
+        onSuccess={handleLicenseSuccess}
         selectedOrg={selectedOrg}
       />
     </Container>
