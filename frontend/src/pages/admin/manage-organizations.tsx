@@ -58,8 +58,9 @@ interface Organization {
   created_at: string;
   company_details_completed: boolean;
   enabled_modules: { [key: string]: boolean }; // Object for modules
-  license_expires_at?: string;
+  license_expiry_date?: string;
   trial_expires_at?: string;
+  license_type?: string;
 }
 const ManageOrganizations: React.FC = () => {
   const router = useRouter();
@@ -371,7 +372,7 @@ const ManageOrganizations: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {org.plan_type === 'perpetual' ? 'Perpetual' : org.license_expires_at ? new Date(org.license_expires_at).toLocaleDateString() : 'N/A'}
+                      {org.license_type === 'perpetual' ? 'Perpetual' : org.license_expiry_date ? new Date(org.license_expiry_date).toLocaleDateString() : 'N/A'}
                     </Typography>
                   </TableCell>
                   <TableCell>

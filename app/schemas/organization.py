@@ -42,7 +42,7 @@ class OrganizationUpdate(BaseModel):
     timezone: Optional[str] = Field(None, max_length=100)
     currency: Optional[str] = Field(None, max_length=10)
     date_format: Optional[str] = Field(None, max_length=50)
-    financial_year_start: Optional[str] = Field(None, max_length=10)
+    financial_year_start: Optional[str] = Field(None, max_length=10, min_length=1)
 
 
 class OrganizationInDB(OrganizationBase):
@@ -74,6 +74,12 @@ class OrganizationInDB(OrganizationBase):
     financial_year_start: Optional[str] = "04/01"
     # Module access
     enabled_modules: Optional[Dict] = None
+    # License fields (added for license expiry display)
+    status: Optional[str] = None
+    plan_type: Optional[str] = None
+    license_type: Optional[str] = None
+    license_expiry_date: Optional[datetime] = None
+    max_users: Optional[int] = None
     # Metadata
     created_at: datetime
     updated_at: Optional[datetime] = None

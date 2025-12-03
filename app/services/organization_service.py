@@ -13,6 +13,7 @@ from app.schemas.organization import OrganizationLicenseCreate, OrganizationLice
 from app.schemas.user import UserCreate, UserRole
 from app.core.security import get_password_hash
 from app.services.otp_service import OTPService
+from app.core.logging import log_license_creation, log_email_operation
 from app.services.system_email_service import system_email_service
 from app.services.rbac import RBACService
 from app.services.role_management_service import RoleManagementService
@@ -51,7 +52,7 @@ class OrganizationService:
             license_type=license_data.license_type,
             license_issued_date=datetime.utcnow(),
             license_duration_months=license_data.license_duration_months,
-            plan_type="premium" if license_data.license_type != "trial" else "trial",
+            plan_type="premium" if not license_data.license_type.startswith("trial") else "trial",
             created_by_id=current_user.id,
             superadmin_full_name=license_data.superadmin_full_name  # Added
         )
@@ -59,15 +60,22 @@ class OrganizationService:
         # Set expiry date based on license type
         if license_data.license_type == "perpetual":
             org.license_expiry_date = None
-        elif license_data.license_type == "month":
+            org.license_duration_months = None
+        elif license_data.license_type == "month_1":
             org.license_duration_months = 1
             org.license_expiry_date = datetime.utcnow() + timedelta(days=30)
-        elif license_data.license_type == "year":
+        elif license_data.license_type == "month_3":
+            org.license_duration_months = 3
+            org.license_expiry_date = datetime.utcnow() + timedelta(days=90)
+        elif license_data.license_type == "year_1":
             org.license_duration_months = 12
             org.license_expiry_date = datetime.utcnow() + timedelta(days=365)
-        elif license_data.license_type == "trial":
-            org.license_duration_months = 1
-            org.license_expiry_date = datetime.utcnow() + timedelta(days=7)  # Changed to 7 days for trial
+        elif license_data.license_type == "trial_7":
+            org.license_duration_months = None
+            org.license_expiry_date = datetime.utcnow() + timedelta(days=7)
+        elif license_data.license_type == "trial_15":
+            org.license_duration_months = None
+            org.license_expiry_date = datetime.utcnow() + timedelta(days=15)
         
         await db.add(org)
         await db.commit()
@@ -114,7 +122,7 @@ class OrganizationService:
                 user_name=super_admin.full_name,
                 temp_password=temp_password,
                 organization_name=org.name,
-                login_url=f"https://{org.subdomain}.app.tritiq.com" if org.subdomain else "https://app.tritiq.com",
+                login_url=f"https://{org.subdomain}.app.trtiq.com" if org.subdomain else "https://app.trtiq.com",
                 organization_id=org.id,
                 user_id=super_admin.id
             ))
@@ -129,7 +137,7 @@ class OrganizationService:
                         user_name=super_admin.full_name,
                         temp_password=temp_password,
                         organization_name=org.name,
-                        login_url=f"https://{org.subdomain}.app.tritiq.com" if org.subdomain else "https://app.tritiq.com",
+                        login_url=f"https://{org.subdomain}.app.trtiq.com" if org.subdomain else "https://app.trtiq.com",
                         organization_id=org.id,
                         user_id=super_admin.id
                     )
@@ -139,7 +147,7 @@ class OrganizationService:
         if not success:
             logger.warning(f"License created but welcome email failed: {error}")
         
-        license_status = "trial" if license_data.license_type == "trial" else "active"
+        license_status = "trial" if license_data.license_type.startswith("trial") else "active"
         
         return OrganizationLicenseResponse(
             organization_id=org.id,
@@ -232,4 +240,5 @@ class OrganizationService:
         } for activity in activities]
 
     # ... (rest of the original methods unchanged)
+    
     

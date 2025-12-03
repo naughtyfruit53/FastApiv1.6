@@ -479,6 +479,21 @@ const OrganizationLicenseModal: React.FC<
   const handleStartEdit = () => {
     setInternalMode('edit');
   };
+  const handleActivateLicense = async () => {
+    if (selectedOrg?.id) {
+      try {
+        const data = { license_type: activationPeriod };
+        await organizationService.updateLicense(selectedOrg.id, data);
+        console.log(`Activated license for ${activationPeriod}`);
+        setSuccess("License activated successfully");
+        if (onSuccess) onSuccess();
+      } catch (err: any) {
+        setError(err.message || "Failed to activate license");
+      } finally {
+        setLicenseActivationOpen(false);
+      }
+    }
+  };
   const isViewMode = internalMode === 'view';
   const isEditMode = internalMode === 'edit';
   const isCreateMode = internalMode === 'create';
@@ -1223,11 +1238,7 @@ const OrganizationLicenseModal: React.FC<
         <DialogActions>
           <Button onClick={() => setLicenseActivationOpen(false)}>Skip</Button>
           <Button
-            onClick={() => {
-              // Here you would typically make an API call to activate the license
-              console.log(`Activating license for ${activationPeriod}`);
-              setLicenseActivationOpen(false);
-            }}
+            onClick={handleActivateLicense}
             variant="contained"
             color="primary"
           >

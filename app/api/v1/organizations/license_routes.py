@@ -1,7 +1,8 @@
 # app/api/v1/organizations/license_routes.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import Dict
 from datetime import datetime, timedelta
 import logging
@@ -10,9 +11,9 @@ from app.core.database import get_db
 from app.core.enforcement import require_access
 from app.core.security import get_current_user
 from app.api.v1.auth import get_current_active_user
-from app.models import Organization, User
+from app.models.user_models import Organization, User
 from app.schemas.user import UserRole
-from app.schemas import OrganizationLicenseCreate, OrganizationLicenseResponse
+from app.schemas.organization import OrganizationLicenseCreate, OrganizationLicenseResponse
 from .services import OrganizationService
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ async def update_organization_license(
     organization_id: int,
     license_data: dict,
     auth: tuple = Depends(require_access("organization_license", "update")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Update organization license duration and expiry (requires organization_license update permission)"""
     current_user, org_id = auth
@@ -38,7 +39,8 @@ async def update_organization_license(
             detail="Organization not found"
         )
     
-    org = db.query(Organization).filter(Organization.id == organization_id).first()
+    org_result = await db.execute(select(Organization).filter_by(id=organization_id))
+    org = org_result.scalar_one_or_none()
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -46,10 +48,10 @@ async def update_organization_license(
         )
     
     license_type = license_data.get("license_type")
-    if license_type not in ["trial", "month", "year", "perpetual"]:
+    if license_type not in ["trial_7", "trial_15", "month_1", "month_3", "year_1", "perpetual"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="license_type must be one of: trial, month, year, perpetual"
+            detail="license_type must be one of: trial_7, trial_15, month_1, month_3, year_1, perpetual"
         )
     
     org.license_type = license_type
@@ -58,23 +60,29 @@ async def update_organization_license(
     if license_type == "perpetual":
         org.license_duration_months = None
         org.license_expiry_date = None
-    elif license_type == "month":
+    elif license_type == "month_1":
         org.license_duration_months = 1
         org.license_expiry_date = datetime.utcnow() + timedelta(days=30)
-    elif license_type == "year":
+    elif license_type == "month_3":
+        org.license_duration_months = 3
+        org.license_expiry_date = datetime.utcnow() + timedelta(days=90)
+    elif license_type == "year_1":
         org.license_duration_months = 12
         org.license_expiry_date = datetime.utcnow() + timedelta(days=365)
-    elif license_type == "trial":
-        org.license_duration_months = 1
-        org.license_expiry_date = datetime.utcnow() + timedelta(days=7)  # Changed to 7 days for trial
+    elif license_type == "trial_7":
+        org.license_duration_months = None
+        org.license_expiry_date = datetime.utcnow() + timedelta(days=7)
+    elif license_type == "trial_15":
+        org.license_duration_months = None
+        org.license_expiry_date = datetime.utcnow() + timedelta(days=15)
     
-    if license_type != "trial":
+    if not license_type.startswith("trial"):
         org.plan_type = "premium"
     
-    db.commit()
-    db.refresh(org)
+    await db.commit()
+    await db.refresh(org)
     
-    license_status = "active" if license_type != "trial" else "trial"
+    license_status = "active" if not license_type.startswith("trial") else "trial"
     
     return {
         "message": "Organization license updated successfully",
@@ -90,7 +98,7 @@ async def update_organization_license(
 async def get_organization_license(
     organization_id: int,
     auth: tuple = Depends(require_access("organization_license", "read")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get organization license information"""
     current_user, org_id = auth
@@ -102,7 +110,8 @@ async def get_organization_license(
             detail="Organization not found"
         )
     
-    org = db.query(Organization).filter(Organization.id == organization_id).first()
+    org_result = await db.execute(select(Organization).filter_by(id=organization_id))
+    org = org_result.scalar_one_or_none()
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -113,7 +122,7 @@ async def get_organization_license(
     if org.license_expiry_date and datetime.utcnow() > org.license_expiry_date:
         is_expired = True
     
-    license_status = "trial" if org.license_type == "trial" else "active"
+    license_status = "trial" if org.license_type.startswith("trial") else "active"
     
     return {
         "organization_id": organization_id,
@@ -131,7 +140,7 @@ async def get_organization_license(
 async def create_organization_license(
     license_data: OrganizationLicenseCreate,
     auth: tuple = Depends(require_access("organization_license", "create")),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """Create new organization license (requires organization_license create permission)"""
     current_user, org_id = auth

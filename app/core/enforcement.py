@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models import User
+from app.models.user_models import User
 from app.api.v1.auth import get_current_active_user
 from app.core.tenant import TenantContext, require_current_organization_id
 from app.services.rbac import RBACService
@@ -302,6 +302,13 @@ class CombinedEnforcement:
         # NEW: Bypass all checks for org_admin
         if current_user.role.lower() == 'org_admin':
             logger.debug(f"Granting full access to org_admin {current_user.email} for module {self.module}")
+            return current_user, org_id
+        
+        # NEW: Bypass for super_admin - no entitlement check needed
+        if getattr(current_user, 'is_super_admin', False):
+            logger.debug(f"Bypassing entitlement check for super_admin {current_user.email}")
+            # Still perform RBAC if applicable, but for super_admin, likely bypass
+            await RBACEnforcement.check_permission(current_user, self.module, self.action, db)
             return current_user, org_id
         
         # Step 1: Check entitlement (org-level access)

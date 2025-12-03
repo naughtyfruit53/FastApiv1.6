@@ -358,6 +358,11 @@ class EntitlementService:
 
     async def get_app_entitlements(self, org_id: int) -> AppEntitlementsResponse:
         """Get entitlements for app use (optimized, cacheable format)"""
+        if org_id is None:
+            return AppEntitlementsResponse(
+                org_id=0,
+                entitlements={}
+            )
         # Get org entitlements
         org_ent_result = await self.db.execute(
             select(OrgEntitlement)
@@ -1118,3 +1123,4 @@ class EntitlementService:
             await self.db.commit()
             await self.db.refresh(user)
             logger.info(f"Updated permissions for org_admin in org {org_id}")
+            

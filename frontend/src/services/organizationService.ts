@@ -11,6 +11,14 @@ export const organizationService = {
       );
     }
   },
+  updateLicense: async (orgId: number, data: any) => {
+    try {
+      const response = await api.put(`/organizations/${orgId}/license`, data);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to update organization license");
+    }
+  },
   getCurrentOrganization: async () => {
     try {
       const response = await api.get("/organizations/current");
