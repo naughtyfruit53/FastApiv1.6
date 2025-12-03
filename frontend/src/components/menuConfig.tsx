@@ -698,7 +698,8 @@ export const menuItems = {
           { name: 'Company Profile', path: '/settings/company', icon: <Business />, permission: 'settings.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'company_profile' } },
           { name: 'Voucher Settings', path: '/settings/voucher-settings', icon: <ReceiptLong />, permission: 'settings.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'voucher_settings' } },
           { name: 'Data Management', path: '/settings/DataManagement', icon: <Storage />, godSuperAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'data_management' } },
-          { name: 'Factory Reset', path: '/settings/FactoryReset', icon: <Build />, godSuperAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'factory_reset' } }
+          { name: 'Factory Reset', path: '/settings/FactoryReset', icon: <Build />, godSuperAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'factory_reset' } },
+          { name: 'User Management', path: '/settings/user-management', icon: <People />, permission: 'settings.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'user_management' }, orgSpecific: true }
         ]
       },
       {
@@ -709,11 +710,10 @@ export const menuItems = {
           { name: 'Organization List', path: '/admin/organizations', icon: <CorporateFare />, superAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'organization_list' } },
           { name: 'Create Organization', path: '/admin/organizations/create', icon: <AddBusiness />, superAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'create_organization' } },
           { name: 'License Management', path: '/admin/license-management', icon: <Security />, superAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'license_management' } },
-          { name: 'Role Management', path: '/admin/rbac', icon: <SupervisorAccount />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'role_management' } },
-          { name: 'Service Settings', path: '/admin/service-settings', icon: <Settings />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'service_settings' } },
-          { name: 'Audit Logs', path: '/admin/audit-logs', icon: <History />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'audit_logs' } },
-          { name: 'Notification Management', path: '/admin/notifications', icon: <NotificationsActive />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'notification_management' } },
-          { name: 'User Management', path: '/settings/user-management', icon: <People />, permission: 'settings.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'user_management' } }
+          { name: 'Role Management', path: '/admin/rbac', icon: <SupervisorAccount />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'role_management' }, orgSpecific: true },
+          { name: 'Service Settings', path: '/admin/service-settings', icon: <Settings />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'service_settings' }, orgSpecific: true },
+          { name: 'Audit Logs', path: '/admin/audit-logs', icon: <History />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'audit_logs' }, orgSpecific: true },
+          { name: 'Notification Management', path: '/admin/notifications', icon: <NotificationsActive />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'notification_management' }, orgSpecific: true }
         ]
       },
       {

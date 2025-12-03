@@ -362,6 +362,8 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
           if (item.servicePermission && isSuperAdmin) return false;
           // Hide org-role specific items for app superadmin
           if (item.role && isSuperAdmin) return false;
+          // Hide org-specific items for app superadmin
+          if (item.orgSpecific && isSuperAdmin) return false;
           
           // Use evalMenuItemAccess for entitlement-based access control
           const accessResult = precomputedAccess.accessMap.get(item.name || item.title || item.path) || { result: 'disabled' };
