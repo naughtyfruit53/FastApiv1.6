@@ -23,6 +23,7 @@ import {
   Divider,
   TableContainer,
   Tooltip,
+  TextField,
 } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import {
@@ -34,12 +35,14 @@ import {
   Add,
   Settings,
   DataUsage,
+  Delete,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { organizationService } from "../../services/organizationService";
 import { useAuth } from "../../context/AuthContext";
 import ModuleSelectionModal from '../../components/ModuleSelectionModal';
+import CreateOrganizationLicenseModal from '../../components/CreateOrganizationLicenseModal';
 
 import { ProtectedPage } from '@/components/ProtectedPage';
 interface Organization {
@@ -54,6 +57,8 @@ interface Organization {
   created_at: string;
   company_details_completed: boolean;
   enabled_modules: { [key: string]: boolean }; // Object for modules
+  license_expires_at?: string;
+  trial_expires_at?: string;
 }
 const ManageOrganizations: React.FC = () => {
   const router = useRouter();
@@ -64,11 +69,12 @@ const ManageOrganizations: React.FC = () => {
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [resetDataDialogOpen, setResetDataDialogOpen] = useState(false);
   const [moduleControlDialogOpen, setModuleControlDialogOpen] = useState(false);
+  const [createLicenseDialogOpen, setCreateLicenseDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<
     "hold" | "activate" | "reset" | "delete" | null
   >(null);
   const [orgModules, setOrgModules] = useState<{ [key: string]: boolean }>({});
-  
+  const [confirmationText, setConfirmationText] = useState("");
   // API calls using real service
   const { data: organizations, isLoading, error } = useQuery({
     queryKey: ["organizations"],
@@ -110,6 +116,8 @@ const ManageOrganizations: React.FC = () => {
         // TODO: Implement password reset API call
         console.log("Password reset for org:", orgId);
         return { message: "Password reset successfully" };
+      } else if (action === "delete") {
+        return organizationService.deleteOrganizationById(orgId, config);
       }
       return { message: `Organization ${action} successfully` };
     },
@@ -155,8 +163,15 @@ const ManageOrganizations: React.FC = () => {
     }
     setModuleControlDialogOpen(true);
   };
+  const handleCreateLicense = () => {
+    // License creation is handled by the modal
+    queryClient.invalidateQueries({ queryKey: ['organizations'] });
+  };
   const confirmAction = () => {
     if (selectedOrg && actionType) {
+      if (actionType === "delete" && confirmationText !== selectedOrg.name) {
+        return;
+      }
       const config = isSuperAdmin ? {headers: {'X-Organization-ID': `${selectedOrg.id}`}} : undefined;
       updateOrganizationMutation.mutate({
         orgId: selectedOrg.id,
@@ -197,12 +212,12 @@ const ManageOrganizations: React.FC = () => {
         }}
       >
         <Typography variant="h4" component="h1">
-          Manage Organizations
+          Manage Organizations & Licenses
         </Typography>
         <Button
           variant="outlined"
           startIcon={<Add />}
-          onClick={() => router.push("/admin/license-management")}
+          onClick={() => setCreateLicenseDialogOpen(true)}
         >
           Create New License
         </Button>
@@ -276,19 +291,20 @@ const ManageOrganizations: React.FC = () => {
               <TableCell>Plan</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Created</TableCell>
+              <TableCell>License Expires</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan= {7} align="center">
+                <TableCell colSpan= {8} align="center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : organizations?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   No organizations found.
                 </TableCell>
               </TableRow>
@@ -335,6 +351,11 @@ const ManageOrganizations: React.FC = () => {
                   <TableCell>
                     <Typography variant="body2">
                       {new Date(org.created_at).toLocaleDateString()}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {org.license_expires_at ? new Date(org.license_expires_at).toLocaleDateString() : 'N/A'}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -406,6 +427,14 @@ const ManageOrganizations: React.FC = () => {
                         <LockOpen />
                       </IconButton>
                     )}
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleAction(org, "delete")}
+                      title="Delete Organization"
+                    >
+                      <Delete />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))
@@ -424,7 +453,9 @@ const ManageOrganizations: React.FC = () => {
             ? "Suspend Organization"
             : actionType === "activate"
               ? "Activate Organization"
-              : "Reset Password"}
+              : actionType === "delete"
+                ? "Delete Organization"
+                : "Reset Password"}
         </DialogTitle>
         <DialogContent>
           <Typography>
@@ -433,7 +464,9 @@ const ManageOrganizations: React.FC = () => {
               ? "suspend"
               : actionType === "activate"
                 ? "activate"
-                : "reset password for"}
+                : actionType === "delete"
+                  ? "delete"
+                  : "reset password for"}
             <strong> {selectedOrg?.name}</strong>?
           </Typography>
           {actionType === "reset" && (
@@ -442,13 +475,29 @@ const ManageOrganizations: React.FC = () => {
               organization admin.
             </Alert>
           )}
+          {actionType === "delete" && (
+            <>
+              <Alert severity="error" sx={{ mt: 2 }}>
+                This will permanently delete the organization and all its data.
+                This action cannot be undone.
+              </Alert>
+              <TextField
+                fullWidth
+                label={`Type "${selectedOrg?.name}" to confirm deletion`}
+                value={confirmationText}
+                onChange={(e) => setConfirmationText(e.target.value)}
+                placeholder={selectedOrg?.name}
+                sx={{ mt: 2 }}
+              />
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setActionDialogOpen(false)}>Cancel</Button>
           <Button
             onClick={confirmAction}
             variant="contained"
-            color={actionType === "hold" ? "warning" : "primary"}
+            color={actionType === "hold" ? "warning" : actionType === "delete" ? "error" : "primary"}
             disabled={updateOrganizationMutation.isPending}
           >
             {updateOrganizationMutation.isPending ? "Processing..." : "Confirm"}
@@ -499,6 +548,12 @@ const ManageOrganizations: React.FC = () => {
         orgId={selectedOrg?.id}
         orgName={selectedOrg?.name}
         isSuperAdmin={isSuperAdmin}
+      />
+      {/* Create License Modal */}
+      <CreateOrganizationLicenseModal
+        open={createLicenseDialogOpen}
+        onClose={() => setCreateLicenseDialogOpen(false)}
+        onSuccess={handleCreateLicense}
       />
     </Container>
 

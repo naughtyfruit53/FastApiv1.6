@@ -1,3 +1,5 @@
+// frontend/src/pages/admin/index.tsx
+
 "use client";
 // fastapi_migration/frontend/src/pages/admin/index.tsx
 import React from "react";
@@ -12,7 +14,6 @@ import {
   Grid as Grid,
 } from "@mui/material";
 import {
-  Security,
   Business,
   AdminPanelSettings,
   Dashboard,
@@ -41,34 +42,6 @@ const AdminDashboard: React.FC = () => {
         application.
       </Typography>
       <Grid container spacing={3}>
-        {/* License Management - Only for App-Level Admins */}
-        {isAppLevelAdmin && (
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Paper>
-              <Box sx={{ p: 3 }}>
-                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                  <Security sx={{ mr: 2, color: "primary.main" }} />
-                  <Typography variant="h6">License Management</Typography>
-                  <Chip
-                    label="App-Level Only"
-                    color="info"
-                    size="small"
-                    sx={{ ml: 1 }}
-                  />
-                </Box>
-                <Typography variant="body2" color="textSecondary" paragraph>
-                  Create new organization licenses and view existing licenses.
-                  Restricted to platform administrators only.
-                </Typography>
-                <Link href="/admin/license-management" passHref>
-                  <Button variant="contained" fullWidth>
-                    Manage Licenses
-                  </Button>
-                </Link>
-              </Box>
-            </Paper>
-          </Grid>
-        )}
         {/* Manage Organizations - Only for App-Level Admins */}
         {isAppLevelAdmin && (
           <Grid size={{ xs: 12, md: 6 }}>
@@ -76,7 +49,7 @@ const AdminDashboard: React.FC = () => {
               <Box sx={{ p: 3 }}>
                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <Business sx={{ mr: 2, color: "primary.main" }} />
-                  <Typography variant="h6">Manage Organizations</Typography>
+                  <Typography variant="h6">Manage Organizations & Licenses</Typography>
                   <Chip
                     label="App-Level Only"
                     color="info"
@@ -85,12 +58,12 @@ const AdminDashboard: React.FC = () => {
                   />
                 </Box>
                 <Typography variant="body2" color="textSecondary" paragraph>
-                  Full organization management including password resets, status
+                  Full organization and license management including creation, password resets, status
                   changes, and data operations. Platform administrators only.
                 </Typography>
                 <Link href="/admin/manage-organizations" passHref>
                   <Button variant="contained" fullWidth>
-                    Manage Organizations
+                    Manage Organizations & Licenses
                   </Button>
                 </Link>
               </Box>

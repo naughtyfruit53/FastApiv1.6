@@ -707,9 +707,6 @@ export const menuItems = {
         items: [
           { name: 'App Users', path: '/admin/app-user-management', icon: <Groups />, superAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'app_users' } },
           { name: 'Organization Management', path: '/admin/manage-organizations', icon: <CorporateFare />, superAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'organization_management' } },
-          { name: 'Organization List', path: '/admin/organizations', icon: <CorporateFare />, superAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'organization_list' } },
-          { name: 'Create Organization', path: '/admin/organizations/create', icon: <AddBusiness />, superAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'create_organization' } },
-          { name: 'License Management', path: '/admin/license-management', icon: <Security />, superAdminOnly: true, requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'license_management' } },
           { name: 'Role Management', path: '/admin/rbac', icon: <SupervisorAccount />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'role_management' }, orgSpecific: true },
           { name: 'Service Settings', path: '/admin/service-settings', icon: <Settings />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'service_settings' }, orgSpecific: true },
           { name: 'Audit Logs', path: '/admin/audit-logs', icon: <History />, permission: 'admin.view', requireModule: 'settings', requireSubmodule: { module: 'settings', submodule: 'audit_logs' }, orgSpecific: true },
