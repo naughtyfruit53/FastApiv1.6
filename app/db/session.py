@@ -15,6 +15,9 @@ import time
 import logging
 import asyncio
 
+# NEW: Import for tenant context
+from app.core.tenant import TenantContext
+
 logger = get_logger("session")
 
 # Add sync SessionLocal
@@ -38,6 +41,11 @@ class SessionManager:
                 await db.commit()  # Explicit commit required
         """
         session = self.session_factory()
+        # NEW: Set RLS session variable if org_id available
+        org_id = TenantContext.get_organization_id()
+        if org_id is not None:
+            await session.execute(f"SET app.current_organization_id = {org_id};")
+            logger.debug(f"Set session var: app.current_organization_id = {org_id}")
         try:
             yield session
         except Exception as e:
@@ -62,6 +70,11 @@ class SessionManager:
                 # automatic commit on success, rollback on error
         """
         session = self.session_factory()
+        # NEW: Set RLS session variable if org_id available
+        org_id = TenantContext.get_organization_id()
+        if org_id is not None:
+            await session.execute(f"SET app.current_organization_id = {org_id};")
+            logger.debug(f"Set session var: app.current_organization_id = {org_id}")
         try:
             yield session
             if auto_commit:
@@ -312,3 +325,4 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     async with session_manager.get_session() as session:
         yield session
+        
