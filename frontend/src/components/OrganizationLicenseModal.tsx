@@ -1,4 +1,4 @@
-// frontend/src/components/CreateOrganizationLicenseModal.tsx
+// frontend/src/components/OrganizationLicenseModal.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import {
@@ -17,18 +17,25 @@ import {
   Select,
   MenuItem,
   Grid as Grid,
+  Snackbar,
 } from "@mui/material";
+import { Delete as DeleteIcon, Edit as EditIcon } from "@mui/icons-material";
 import { useForm } from "react-hook-form";
 import { organizationService } from "../services/organizationService"; // Adjust if needed
 import { usePincodeLookup } from "../hooks/usePincodeLookup";
 import ModuleSelectionModal from './ModuleSelectionModal'; // Import reusable modal
-import { useAuth } from "../context/AuthContext";  // Add this import
+import { useAuth } from "../context/AuthContext";  // Add this to get user context
+import { useRouter } from "next/navigation"; // For redirect after delete
+import api from "../utils/api"; // Import api for fetching admin user
 
-interface CreateOrganizationLicenseModalProps {
+interface OrganizationLicenseModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: (_result: any) => void;
+  mode: 'create' | 'view' | 'edit'; // New: Mode prop
+  selectedOrg?: any; // New: Pre-populated org data for view/edit
 }
+
 interface LicenseFormData {
   organization_name: string;
   superadmin_email: string;
@@ -41,7 +48,20 @@ interface LicenseFormData {
   state_code: string;
   gst_number?: string;
   max_users: number;
+  subdomain?: string; // Added from [id].tsx
+  business_type?: string;
+  industry?: string;
+  website?: string;
+  description?: string;
+  country?: string;
+  pan_number?: string;
+  cin_number?: string;
+  plan_type?: string;
+  storage_limit_gb?: number;
+  timezone?: string;
+  currency?: string;
 }
+
 // Indian states for dropdown selection
 const INDIAN_STATES = [
   "Andhra Pradesh",
@@ -120,10 +140,11 @@ const stateToCodeMap: { [key: string]: string } = {
   Puducherry: "34",
   Ladakh: "38",
 };
-const CreateOrganizationLicenseModal: React.FC<
-  CreateOrganizationLicenseModalProps
-> = ({ open, onClose, onSuccess }) => {
+const OrganizationLicenseModal: React.FC<
+  OrganizationLicenseModalProps
+> = ({ open, onClose, onSuccess, mode: propMode, selectedOrg }) => {
   const { user } = useAuth();  // Add this to get user context
+  const router = useRouter(); // For redirect after delete
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<any | null>(null);
@@ -139,6 +160,12 @@ const CreateOrganizationLicenseModal: React.FC<
     hr: true,
     analytics: true
   }); // Pre-ticked object
+  const [openResetDialog, setOpenResetDialog] = useState(false); // From [id].tsx
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false); // From [id].tsx
+  const [resetPassword, setResetPassword] = useState<string | null>(null); // From [id].tsx
+  const [resetSnackbarOpen, setResetSnackbarOpen] = useState(false); // From [id].tsx
+  const [adminFullName, setAdminFullName] = useState<string>(''); // New state for fetched full name
+  const [internalMode, setInternalMode] = useState<'create' | 'view' | 'edit'>(propMode); // Internal mode for view -> edit switch
   const {
     register,
     handleSubmit,
@@ -187,23 +214,187 @@ const CreateOrganizationLicenseModal: React.FC<
       }
     }
   }, [state, state_code, setValue]);
+  // Fetch admin full name for view/edit modes
+  useEffect(() => {
+    const fetchAdminFullName = async () => {
+      if (selectedOrg?.id && (internalMode === 'view' || internalMode === 'edit')) {
+        try {
+          const response = await api.get(`/organizations/${selectedOrg.id}/members`, {
+            headers: { 'X-Organization-ID': `${selectedOrg.id}` }
+          });
+          const users = response.data;
+          const orgAdmin = users.find((user: any) => user.role === 'org_admin');
+          if (orgAdmin) {
+            setAdminFullName(orgAdmin.full_name || '');
+            setValue("superadmin_full_name", orgAdmin.full_name || '');
+          }
+        } catch (err: any) {
+          setError(err.message || "Failed to fetch admin full name");
+        }
+      }
+    };
+    fetchAdminFullName();
+  }, [selectedOrg, internalMode, setValue]);
+  // Pre-populate form for view/edit modes
+  useEffect(() => {
+    if (selectedOrg && (internalMode === 'view' || internalMode === 'edit')) {
+      reset({
+        organization_name: selectedOrg.name || '',
+        superadmin_email: selectedOrg.primary_email || '',
+        superadmin_full_name: adminFullName, // Use fetched name
+        primary_phone: selectedOrg.primary_phone || '',
+        address1: selectedOrg.address1 || '',
+        pin_code: selectedOrg.pin_code || '',
+        city: selectedOrg.city || '',
+        state: selectedOrg.state || '',
+        state_code: selectedOrg.state_code || '',
+        gst_number: selectedOrg.gst_number || '',
+        max_users: selectedOrg.max_users || 5,
+        subdomain: selectedOrg.subdomain || '',
+        business_type: selectedOrg.business_type || '',
+        industry: selectedOrg.industry || '',
+        website: selectedOrg.website || '',
+        description: selectedOrg.description || '',
+        country: selectedOrg.country || '',
+        pan_number: selectedOrg.pan_number || '',
+        cin_number: selectedOrg.cin_number || '',
+        plan_type: selectedOrg.plan_type || '',
+        storage_limit_gb: selectedOrg.storage_limit_gb || 0,
+        timezone: selectedOrg.timezone || '',
+        currency: selectedOrg.currency || '',
+      });
+      // Load modules if available
+      if (selectedOrg.enabled_modules) {
+        setSelectedModules(selectedOrg.enabled_modules);
+      }
+    } else if (internalMode === 'create') {
+      reset({
+        organization_name: '',
+        superadmin_email: '',
+        superadmin_full_name: '',
+        primary_phone: '',
+        address1: '',
+        pin_code: '',
+        city: '',
+        state: '',
+        state_code: '',
+        gst_number: '',
+        max_users: 5,
+        subdomain: '',
+        business_type: '',
+        industry: '',
+        website: '',
+        description: '',
+        country: '',
+        pan_number: '',
+        cin_number: '',
+        plan_type: '',
+        storage_limit_gb: 0,
+        timezone: '',
+        currency: '',
+      });
+      setSelectedModules({
+        crm: true,
+        erp: true,
+        manufacturing: true,
+        finance: true,
+        service: true,
+        hr: true,
+        analytics: true
+      });
+      setAdminFullName('');
+    }
+  }, [selectedOrg, internalMode, reset, adminFullName]);
+  // Reset internalMode when propMode changes (e.g., new open)
+  useEffect(() => {
+    setInternalMode(propMode);
+  }, [propMode]);
+  // Force reset for create mode when modal opens
+  useEffect(() => {
+    if (open && propMode === 'create') {
+      reset({
+        organization_name: '',
+        superadmin_email: '',
+        superadmin_full_name: '',
+        primary_phone: '',
+        address1: '',
+        pin_code: '',
+        city: '',
+        state: '',
+        state_code: '',
+        gst_number: '',
+        max_users: 5,
+        subdomain: '',
+        business_type: '',
+        industry: '',
+        website: '',
+        description: '',
+        country: '',
+        pan_number: '',
+        cin_number: '',
+        plan_type: '',
+        storage_limit_gb: 0,
+        timezone: '',
+        currency: '',
+      });
+      setSelectedModules({
+        crm: true,
+        erp: true,
+        manufacturing: true,
+        finance: true,
+        service: true,
+        hr: true,
+        analytics: true
+      });
+      setAdminFullName('');
+      setError(null);
+      setSuccess(null);
+    }
+  }, [open, propMode, reset]);
   const handleClose = () => {
-    reset();
+    reset({
+      organization_name: '',
+      superadmin_email: '',
+      superadmin_full_name: '',
+      primary_phone: '',
+      address1: '',
+      pin_code: '',
+      city: '',
+      state: '',
+      state_code: '',
+      gst_number: '',
+      max_users: 5,
+      subdomain: '',
+      business_type: '',
+      industry: '',
+      website: '',
+      description: '',
+      country: '',
+      pan_number: '',
+      cin_number: '',
+      plan_type: '',
+      storage_limit_gb: 0,
+      timezone: '',
+      currency: '',
+    });
     setError(null);
     setSuccess(null);
+    setAdminFullName('');
+    setSelectedModules({
+      crm: true,
+      erp: true,
+      manufacturing: true,
+      finance: true,
+      service: true,
+      hr: true,
+      analytics: true
+    });
     onClose();
   };
   const onSubmit = async (data: LicenseFormData) => {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    console.log("[LicenseModal] Starting license creation process");
-    console.log("[LicenseModal] Current auth state before license creation:", {
-      hasToken: !!localStorage.getItem("token"),
-      userRole: localStorage.getItem("user_role"),
-      timestamp: new Date().toISOString(),
-      note: "Organization context managed by backend session",
-    });
     // Enhanced validation before submission
     if (!data.state_code) {
       if (data.state) {
@@ -223,6 +414,7 @@ const CreateOrganizationLicenseModal: React.FC<
     }
     // Prepare the data for submission
     const submissionData = {
+      ...data,
       organization_name: data.organization_name.trim(),
       superadmin_email: data.superadmin_email.trim(),
       superadmin_full_name: data.superadmin_full_name.trim(),
@@ -233,53 +425,64 @@ const CreateOrganizationLicenseModal: React.FC<
       state: data.state.trim(),
       state_code: data.state_code.trim(),
       gst_number: data.gst_number?.trim() || undefined, // Optional field
-      max_users: data.max_users,
       enabled_modules: selectedModules, // Send object {crm: true, ...}
     };
-    console.log("[LicenseModal] Submitting license data:", submissionData);
     try {
-      const result = await organizationService.createLicense(submissionData);
+      let result;
+      if (internalMode === 'create') {
+        result = await organizationService.createLicense(submissionData);
+      } else if (internalMode === 'edit' && selectedOrg?.id) {
+        result = await organizationService.updateOrganizationById(selectedOrg.id, submissionData);
+      }
       if (!result || typeof result !== "object") {
         throw new Error("Invalid response from server");
       }
-      console.log("[LicenseModal] License creation successful:", {
-        organizationName: result.organization_name,
-        subdomain: result.subdomain,
-        adminEmail: result.superadmin_email,
-      });
-      // Verify current user's session is still intact
-      console.log("[LicenseModal] Verifying session after license creation:", {
-        hasToken: !!localStorage.getItem("token"),
-        userRole: localStorage.getItem("user_role"),
-        timestamp: new Date().toISOString(),
-        note: "Organization context managed by backend session",
-      });
       setSuccess(result);
       if (onSuccess) {
         onSuccess(result);
       }
-      // Show license activation dialog after successful creation
+      // Show license activation dialog after successful creation/update
       setLicenseActivationOpen(true);
-      // IMPORTANT: Auto-login functionality removed to preserve current user's session
-      // The current super admin remains logged in and sees the success message
-      console.log(
-        "[LicenseModal] License creation complete - current user session preserved",
-      );
     } catch (err: any) {
-      console.error("[LicenseModal] License creation error:", err);
-      console.error("[LicenseModal] Error details:", {
-        message: err.message,
-        status: err.status,
-        userMessage: err.userMessage,
-      });
       setError(
         err.message ||
-          "Failed to create organization license. Please check if RBAC initialization succeeded or run init_rbac_for_org.py manually.",
+          "Failed to process organization license. Please check if RBAC initialization succeeded or run init_rbac_for_org.py manually.",
       );
     } finally {
       setLoading(false);
     }
   };
+  const handleDelete = async () => {
+    if (selectedOrg?.id) {
+      try {
+        await organizationService.deleteOrganizationById(selectedOrg.id);
+        setOpenDeleteDialog(false);
+        handleClose();
+        router.push("/admin/manage-organizations"); // Redirect to list
+      } catch (err: any) {
+        setError(err.message || "Failed to delete organization");
+      }
+    }
+  };
+  const handleResetPassword = async () => {
+    if (selectedOrg?.primary_email) {
+      try {
+        const result = await passwordService.adminResetPassword(selectedOrg.primary_email);
+        setResetPassword(result.new_password);
+        setOpenResetDialog(false);
+        setResetSnackbarOpen(true);
+      } catch (err: any) {
+        setError(err.message || "Failed to reset password");
+      }
+    }
+  };
+  const handleStartEdit = () => {
+    setInternalMode('edit');
+  };
+  const isViewMode = internalMode === 'view';
+  const isEditMode = internalMode === 'edit';
+  const isCreateMode = internalMode === 'create';
+  const disabled = loading || isViewMode;
   return (
     <>
       <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
@@ -292,7 +495,7 @@ const CreateOrganizationLicenseModal: React.FC<
             borderColor: "divider",
           }}
         >
-          Create Organization License
+          {isCreateMode ? 'Create Organization License' : isViewMode ? 'View Organization License' : 'Edit Organization License'}
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Box>
@@ -308,7 +511,7 @@ const CreateOrganizationLicenseModal: React.FC<
                   gutterBottom
                   sx={{ fontWeight: "bold", color: "success.dark" }}
                 >
-                  🎉 License Created Successfully!
+                  🎉 License {isCreateMode ? 'Created' : 'Updated'} Successfully!
                 </Typography>
                 <Box
                   sx={{
@@ -396,7 +599,7 @@ const CreateOrganizationLicenseModal: React.FC<
                           errors.organization_name?.message ||
                           "This will be used for official documents and branding"
                         }
-                        disabled={loading}
+                        disabled={disabled}
                         variant="outlined"
                       />
                     </Grid>
@@ -417,7 +620,7 @@ const CreateOrganizationLicenseModal: React.FC<
                           errors.superadmin_full_name?.message ||
                           "Full name of the organization admin"
                         }
-                        disabled={loading}
+                        disabled={disabled}
                         variant="outlined"
                       />
                     </Grid>
@@ -439,7 +642,7 @@ const CreateOrganizationLicenseModal: React.FC<
                           errors.superadmin_email?.message ||
                           "This will be the admin login email"
                         }
-                        disabled={loading}
+                        disabled={disabled}
                         variant="outlined"
                       />
                     </Grid>
@@ -461,7 +664,7 @@ const CreateOrganizationLicenseModal: React.FC<
                           errors.primary_phone?.message ||
                           "Include country code for international numbers"
                         }
-                        disabled={loading}
+                        disabled={disabled}
                         variant="outlined"
                       />
                     </Grid>
@@ -487,7 +690,7 @@ const CreateOrganizationLicenseModal: React.FC<
                           errors.max_users?.message ||
                           "Number of users allowed in this organization"
                         }
-                        disabled={loading}
+                        disabled={disabled}
                         variant="outlined"
                       />
                     </Grid>
@@ -509,7 +712,131 @@ const CreateOrganizationLicenseModal: React.FC<
                           errors.gst_number?.message ||
                           "Leave empty if not applicable"
                         }
-                        disabled={loading}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Subdomain"
+                        {...register("subdomain")}
+                        error={!!errors.subdomain}
+                        helperText={errors.subdomain?.message}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Business Type"
+                        {...register("business_type")}
+                        error={!!errors.business_type}
+                        helperText={errors.business_type?.message}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Industry"
+                        {...register("industry")}
+                        error={!!errors.industry}
+                        helperText={errors.industry?.message}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Website"
+                        {...register("website")}
+                        error={!!errors.website}
+                        helperText={errors.website?.message}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="PAN Number"
+                        {...register("pan_number")}
+                        error={!!errors.pan_number}
+                        helperText={errors.pan_number?.message}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="CIN Number"
+                        {...register("cin_number")}
+                        error={!!errors.cin_number}
+                        helperText={errors.cin_number?.message}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Plan Type"
+                        {...register("plan_type")}
+                        error={!!errors.plan_type}
+                        helperText={errors.plan_type?.message}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Storage Limit (GB)"
+                        type="number"
+                        {...register("storage_limit_gb")}
+                        error={!!errors.storage_limit_gb}
+                        helperText={errors.storage_limit_gb?.message}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Timezone"
+                        {...register("timezone")}
+                        error={!!errors.timezone}
+                        helperText={errors.timezone?.message}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Currency"
+                        {...register("currency")}
+                        error={!!errors.currency}
+                        helperText={errors.currency?.message}
+                        disabled={disabled}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        fullWidth
+                        label="Description"
+                        multiline
+                        rows={3}
+                        {...register("description")}
+                        error={!!errors.description}
+                        helperText={errors.description?.message}
+                        disabled={disabled}
                         variant="outlined"
                       />
                     </Grid>
@@ -550,7 +877,7 @@ const CreateOrganizationLicenseModal: React.FC<
                           errors.address1?.message ||
                           "Include building name, street, and locality"
                         }
-                        disabled={loading}
+                        disabled={disabled}
                         variant="outlined"
                       />
                     </Grid>
@@ -574,7 +901,7 @@ const CreateOrganizationLicenseModal: React.FC<
                               pincodeError ||
                               "6-digit postal code (automatically fetches city & state)"
                         }
-                        disabled={loading || pincodeLoading}
+                        disabled={disabled || pincodeLoading}
                         variant="outlined"
                         InputProps={{
                           endAdornment: pincodeLoading ? (
@@ -610,7 +937,7 @@ const CreateOrganizationLicenseModal: React.FC<
                             ? "Auto-filled from PIN code"
                             : "Will be auto-filled when PIN is entered")
                         }
-                        disabled={loading}
+                        disabled={disabled}
                         variant="outlined"
                       />
                     </Grid>
@@ -629,7 +956,7 @@ const CreateOrganizationLicenseModal: React.FC<
                               shouldValidate: true,
                             })
                           }
-                          disabled={loading}
+                          disabled={disabled}
                         >
                           <MenuItem value="">
                             <em>Select a state</em>
@@ -668,11 +995,22 @@ const CreateOrganizationLicenseModal: React.FC<
                           errors.state_code?.message ||
                           "Automatically set based on selected state"
                         }
-                        disabled={loading}
+                        disabled={disabled}
                         variant="outlined"
                         InputProps={{
                           readOnly: true,
                         }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Country"
+                        {...register("country", { required: "Country is required" })}
+                        error={!!errors.country}
+                        helperText={errors.country?.message}
+                        disabled={disabled}
+                        variant="outlined"
                       />
                     </Grid>
                   </Grid>
@@ -696,28 +1034,69 @@ const CreateOrganizationLicenseModal: React.FC<
           </Button>
           {!success && (
             <>
+              {!isViewMode && (
+                <>
+                  <Button
+                    onClick={() => setModuleDialogOpen(true)}
+                    variant="text"
+                    disabled={loading}
+                    size="large"
+                    sx={{ minWidth: 150 }}
+                  >
+                    Manage Modules
+                  </Button>
+                  <Button
+                    onClick={handleSubmit(onSubmit)}
+                    variant="contained"
+                    disabled={loading}
+                    size="large"
+                    sx={{ minWidth: 150 }}
+                    startIcon={
+                      loading ? (
+                        <CircularProgress size={20} color="inherit" />
+                      ) : null
+                    }
+                  >
+                    {loading ? "Processing..." : isCreateMode ? "Create License" : "Save Changes"}
+                  </Button>
+                </>
+              )}
+              {isViewMode && (
+                <Button
+                  onClick={handleStartEdit}
+                  variant="contained"
+                  startIcon={<EditIcon />}
+                  disabled={loading}
+                  size="large"
+                  sx={{ minWidth: 150 }}
+                >
+                  Edit
+                </Button>
+              )}
+            </>
+          )}
+          {!isCreateMode && isViewMode && (
+            <>
               <Button
-                onClick={() => setModuleDialogOpen(true)}
-                variant="text"
+                onClick={() => setOpenResetDialog(true)}
+                variant="outlined"
+                color="secondary"
                 disabled={loading}
                 size="large"
                 sx={{ minWidth: 150 }}
               >
-                Manage Modules
+                Reset Password
               </Button>
               <Button
-                onClick={handleSubmit(onSubmit)}
-                variant="contained"
+                onClick={() => setOpenDeleteDialog(true)}
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
                 disabled={loading}
                 size="large"
                 sx={{ minWidth: 150 }}
-                startIcon={
-                  loading ? (
-                    <CircularProgress size={20} color="inherit" />
-                  ) : null
-                }
               >
-                {loading ? "Creating..." : "Create License"}
+                Delete License
               </Button>
             </>
           )}
@@ -748,7 +1127,7 @@ const CreateOrganizationLicenseModal: React.FC<
           >
             <CircularProgress sx={{ mb: 2 }} />
             <Typography variant="h6">
-              Creating license...
+              Processing license...
             </Typography>
             <Typography variant="body2" color="text.secondary">
               This may take up to 30 seconds. Please wait...
@@ -773,7 +1152,7 @@ const CreateOrganizationLicenseModal: React.FC<
         <DialogTitle>Activate License</DialogTitle>
         <DialogContent>
           <Typography variant="body1" sx={{ mb: 3 }}>
-            The organization license has been created successfully. Please set
+            The organization license has been {isCreateMode ? 'created' : 'updated'} successfully. Please set
             the license activation period:
           </Typography>
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -825,7 +1204,67 @@ const CreateOrganizationLicenseModal: React.FC<
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Reset Password Dialog from [id].tsx */}
+      <Dialog open={openResetDialog} onClose={() => setOpenResetDialog(false)}>
+        <DialogTitle>Reset Password</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to reset the password for this organization's
+            admin? The new password will be emailed and also shown here for
+            manual sharing.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenResetDialog(false)} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleResetPassword} color="secondary">
+            Reset
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Password Display Snackbar from [id].tsx */}
+      <Snackbar
+        open={resetSnackbarOpen}
+        autoHideDuration={null}
+        onClose={() => setResetSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        action={
+          <Button
+            color="secondary"
+            size="small"
+            onClick={() => setResetSnackbarOpen(false)}
+          >
+            Close
+          </Button>
+        }
+      >
+        <Alert severity="info" onClose={() => setResetSnackbarOpen(false)}>
+          New Password: {resetPassword} (Copy this for manual sharing)
+        </Alert>
+      </Snackbar>
+      {/* Delete Confirmation Dialog from [id].tsx */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
+      >
+        <DialogTitle>Delete License</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this organization's license? This
+            action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDeleteDialog(false)} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleDelete} color="error">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
-export default CreateOrganizationLicenseModal;
+export default OrganizationLicenseModal;

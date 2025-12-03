@@ -33,7 +33,7 @@ import {
   Lock as LockIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import CreateOrganizationLicenseModal from './CreateOrganizationLicenseModal';
+import OrganizationLicenseModal from './OrganizationLicenseModal'; // Updated import
 import { isAppSuperAdmin, isOrgSuperAdmin, canManageUsers } from '../types/user.types';
 import { useQuery } from '@tanstack/react-query';
 import { organizationService } from '../services/organizationService';
@@ -945,11 +945,13 @@ const MegaMenu: React.FC<MegaMenuProps> = ({ user, onLogout, isVisible = true })
         menuItems={menuItems}
       />
 
-      <CreateOrganizationLicenseModal
+      <OrganizationLicenseModal // Updated component
         open={createLicenseModalOpen}
         onClose={() => setCreateLicenseModalOpen(false)}
         onSuccess={(result) => {
         }}
+        mode="create"
+        selectedOrg={null}
       />
     </>
   );

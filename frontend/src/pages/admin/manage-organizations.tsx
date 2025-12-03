@@ -42,7 +42,7 @@ import { useRouter } from "next/navigation";
 import { organizationService } from "../../services/organizationService";
 import { useAuth } from "../../context/AuthContext";
 import ModuleSelectionModal from '../../components/ModuleSelectionModal';
-import CreateOrganizationLicenseModal from '../../components/CreateOrganizationLicenseModal';
+import OrganizationLicenseModal from '../../components/OrganizationLicenseModal'; // Updated import
 
 import { ProtectedPage } from '@/components/ProtectedPage';
 interface Organization {
@@ -69,7 +69,8 @@ const ManageOrganizations: React.FC = () => {
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [resetDataDialogOpen, setResetDataDialogOpen] = useState(false);
   const [moduleControlDialogOpen, setModuleControlDialogOpen] = useState(false);
-  const [createLicenseDialogOpen, setCreateLicenseDialogOpen] = useState(false);
+  const [licenseModalOpen, setLicenseModalOpen] = useState(false); // Unified modal open state
+  const [licenseModalMode, setLicenseModalMode] = useState<'create' | 'view' | 'edit'>('create'); // Mode for modal
   const [actionType, setActionType] = useState<
     "hold" | "activate" | "reset" | "delete" | null
   >(null);
@@ -163,8 +164,17 @@ const ManageOrganizations: React.FC = () => {
     }
     setModuleControlDialogOpen(true);
   };
+  const handleViewOrg = (org: Organization) => {
+    setSelectedOrg(org);
+    setLicenseModalMode('view');
+    setLicenseModalOpen(true);
+  };
   const handleCreateLicense = () => {
-    // License creation is handled by the modal
+    setSelectedOrg(null);
+    setLicenseModalMode('create');
+    setLicenseModalOpen(true);
+  };
+  const handleLicenseSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['organizations'] });
   };
   const confirmAction = () => {
@@ -201,7 +211,7 @@ const ManageOrganizations: React.FC = () => {
   };
   return (
 
-    <ProtectedPage moduleKey="admin" action="read">
+    <ProtectedPage module="admin" action="read">
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box
         sx={{
@@ -217,7 +227,7 @@ const ManageOrganizations: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<Add />}
-          onClick={() => setCreateLicenseDialogOpen(true)}
+          onClick={handleCreateLicense}
         >
           Create New License
         </Button>
@@ -362,9 +372,7 @@ const ManageOrganizations: React.FC = () => {
                     <IconButton
                       size="small"
                       color="info"
-                      onClick={() =>
-                        router.push(`/admin/organizations/${org.id}`)
-                      }
+                      onClick={() => handleViewOrg(org)} // Updated: Open modal instead of route
                       title="View Details"
                     >
                       <Visibility />
@@ -549,11 +557,13 @@ const ManageOrganizations: React.FC = () => {
         orgName={selectedOrg?.name}
         isSuperAdmin={isSuperAdmin}
       />
-      {/* Create License Modal */}
-      <CreateOrganizationLicenseModal
-        open={createLicenseDialogOpen}
-        onClose={() => setCreateLicenseDialogOpen(false)}
-        onSuccess={handleCreateLicense}
+      {/* Unified License Modal */}
+      <OrganizationLicenseModal
+        open={licenseModalOpen}
+        onClose={() => setLicenseModalOpen(false)}
+        onSuccess={handleLicenseSuccess}
+        mode={licenseModalMode}
+        selectedOrg={selectedOrg}
       />
     </Container>
 
