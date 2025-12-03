@@ -1,18 +1,20 @@
 // frontend/src/pages/dashboard/index.tsx
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";  // NEW: Add useState for loader timeout
 import { useRouter } from "next/router";
 import { useAuth } from "../../context/AuthContext";
 import { useMobileDetection } from "../../hooks/useMobileDetection";
 import AppSuperAdminDashboard from "./AppSuperAdminDashboard";
 import OrgDashboard from "./OrgDashboard";
 import RoleGate from "../../components/RoleGate";  // Import RoleGate
+import { toast } from "react-toastify";  // NEW: Import toast for timeout message
 
 const Dashboard: React.FC = () => {
   console.count('Render: Dashboard');
   const { user, loading, permissionsLoading } = useAuth();  // NEW: Added permissionsLoading to check full auth load
   const { isMobile } = useMobileDetection();
   const router = useRouter();
+  const [showTimeoutToast, setShowTimeoutToast] = useState(false);  // NEW: State for loader timeout
 
   const isSuperAdmin =
     user?.is_super_admin ||
@@ -40,6 +42,20 @@ const Dashboard: React.FC = () => {
       router.push("/mobile/dashboard");
     }
   }, [user, loading, permissionsLoading, router, isMobile, isSuperAdmin]);  // NEW: Added permissionsLoading to dependency
+
+  // NEW: Timeout for loader - show toast if loading > 5s
+  useEffect(() => {
+    if (loading || permissionsLoading) {
+      const timeoutId = setTimeout(() => {
+        setShowTimeoutToast(true);
+        toast.error("Verification taking longer than expected. Please refresh or check connection.", {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      }, 5000);  // 5 second timeout
+      return () => clearTimeout(timeoutId);
+    }
+  }, [loading, permissionsLoading]);
 
   // Prevent any rendering until we have confirmed auth state
   if (loading || permissionsLoading) {  // NEW: Check both loading states

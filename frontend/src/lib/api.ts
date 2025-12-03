@@ -105,6 +105,8 @@ const waitForAuthIfNeeded = async (config: any) => {
     "/companies/current",
     "/organizations/org-statistics",
     "/organizations/recent-activities",
+    "/rbac/permissions",  // Add more to skip wait
+    "/rbac/roles",
   ];
   const isPublicEndpoint = publicEndpoints.some((endpoint) =>
     config.url?.includes(endpoint),
@@ -114,11 +116,13 @@ const waitForAuthIfNeeded = async (config: any) => {
   }
   if (!isAuthReady && authReadyPromise) {
     const timeoutPromise = new Promise<void>((_, reject) => {
-      setTimeout(() => reject(new Error("Auth wait timeout")), 10000);
+      setTimeout(() => reject(new Error("Auth wait timeout")), 5000);  // Reduced timeout to 5s
     });
     try {
       await Promise.race([authReadyPromise, timeoutPromise]);
     } catch (error: any) {
+      console.warn('[API Interceptor] Auth wait timed out for:', config.url);
+      // Don't reject - proceed with request to avoid full block
     }
   }
 };

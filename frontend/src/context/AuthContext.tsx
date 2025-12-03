@@ -6,6 +6,7 @@ import React, {
   useEffect,
   ReactNode,
   useRef,
+  useMemo,  // NEW: Import for memoizing user
 } from "react";
 import { useRouter } from "next/router";
 import { toast } from "react-toastify";
@@ -15,6 +16,20 @@ import { markAuthReady, resetAuthReady } from "../lib/api";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY } from "../constants/auth";
 import { Role } from "../types/rbac.types";
 import { rbacService } from "../services/rbacService";
+
+// Custom debounce function (no lodash needed)
+const debounce = (func: (...args: any[]) => any, delay: number) => {
+  let timeoutId: NodeJS.Timeout | null = null;
+  return (...args: any[]) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      func(...args);
+      timeoutId = null;
+    }, delay);
+  };
+};
 
 interface UserPermissions {
   role: string;
@@ -195,13 +210,12 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   };
 
   // Fetch user permissions from RBAC service with timeout
-  const fetchUserPermissions = async (userId: number) => {
-    setPermissionsLoading(true);
+  const updateUserPermissions = async (userId: number) => {
     try {
      
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Permissions fetch timeout')), 30000) // Increased timeout to 30s
+        setTimeout(() => reject(new Error('Permissions fetch timeout')), 10000) // Reduced timeout to 10s for faster fallback
       );
      
       // Race the API call with timeout
@@ -246,21 +260,16 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       setUserPermissions(permissions);
       return permissions;
     } catch (error) {
-      // Set fallback permissions on error
-      const fallbackPermissions = computeRoleBasedPermissions(user);
-      setUserPermissions(fallbackPermissions);
-      toast.error('Failed to load user permissions - using default access. Some features may be unavailable.', {
+      // On error, keep the fallback permissions (already set)
+      toast.error('Failed to update permissions from server - continuing with default access.', {
         position: "top-right",
         autoClose: 5000,
       });
-      return fallbackPermissions;
-    } finally {
-      setPermissionsLoading(false);
     }
   };
 
   // Fetch the current user from API using the token in localStorage with timeout
-  const fetchUser = async (retryCount = 0) => {
+  const debouncedFetchUser = debounce(async (retryCount = 0) => {  // NEW: Use custom debounce
     if (isFetching.current || !isMounted.current) return; // NEW: Prevent concurrent and unmounted fetches
     isFetching.current = true;
     const maxRetries = 1; // Reduced to 1 for faster failure
@@ -287,8 +296,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       };
       setUser(newUser);
      
-      // Fetch user permissions from RBAC service
-      await fetchUserPermissions(userData.id);
+      // Set fallback permissions immediately to unblock UI
+      const fallback = computeRoleBasedPermissions(newUser);
+      setUserPermissions(fallback);
+      setPermissionsLoading(false);
      
       // Check org context for non-super-admins
       if (!userData.is_super_admin && !userData.organization_id) {
@@ -301,6 +312,8 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       if (router.pathname === "/login") {
         handlePostLoginRedirect();
       }
+      // Asynchronously update with real permissions
+      updateUserPermissions(userData.id);
     } catch (error: any) {
       // Only retry on non-auth errors
       if (
@@ -309,7 +322,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         error?.status !== 403
       ) {
         const retryDelay = Math.pow(2, retryCount) * 1000;
-        setTimeout(() => fetchUser(retryCount + 1), retryDelay);
+        setTimeout(() => debouncedFetchUser(retryCount + 1), retryDelay);
         return;
       }
       // Improved error handling: Don't clear storage on connection/network errors
@@ -327,19 +340,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
             position: "top-right",
             autoClose: 5000,
           });
-          if (router.pathname !== "/login") {
-            // Save current path as return URL before redirect
-            // NEW: Don't save if pathname includes '404' or invalid
-            if (
-              router.pathname !== '/login' && 
-              !router.pathname.includes('404') && 
-              !sessionStorage.getItem("returnUrlAfterLogin")
-            ) {
-              sessionStorage.setItem("returnUrlAfterLogin", router.asPath);
-            } else if (router.pathname.includes('404')) {
-            }
-            router.push("/login");
-          }
+          router.push("/login");
         } else {
           // Server errors (500 etc.): Don't clear token, just notify
           toast.error(error?.userMessage || "Server error occurred. Please try refreshing the page.", {
@@ -357,16 +358,15 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     } finally {
       isFetching.current = false;
       setLoading(false); // Ensure loading is set to false in finally
-      setPermissionsLoading(false); // NEW: Ensure permissionsLoading false even on error
     }
-  };
+  }, 300);  // Debounce 300ms
 
   // On mount, check for token and initialize user session
   useEffect(() => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (token && !hasFetched.current) {
       hasFetched.current = true; // Mark as fetched to prevent multiple calls
-      fetchUser();
+      debouncedFetchUser();
     } else {
       markAuthReady();
       setLoading(false);
@@ -375,8 +375,11 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
 
     return () => {
       isMounted.current = false;  // NEW: Set unmounted on cleanup to prevent async updates
+      // No need for cancel - custom debounce clears internally
     };
   }, [router]); // NEW: Added router to dependency list to handle path changes properly
+
+  const memoizedUser = useMemo(() => user, [user?.id, user?.role, user?.is_super_admin]);  // NEW: Memoize user for stable deps
 
   // Handle post-login redirect with state preservation
   const handlePostLoginRedirect = () => {
@@ -448,7 +451,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     if (!userData.is_super_admin && !userData.organization_id) {
       throw new Error(
         "Login failed: User account is not properly configured with organization context",
-      );
+        );
     }
     const newUser = {
       id: userData.id,
@@ -460,10 +463,10 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     };
     setUser(newUser);
     // Verify session immediately after setting token and user
-    await refreshUser();
+    await debouncedFetchUser();  // NEW: Use debounced version
    
     // Fetch user permissions
-    await fetchUserPermissions(userData.id);
+    await updateUserPermissions(userData.id);
    
     resetAuthReady();
     markAuthReady();
@@ -487,13 +490,13 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
 
   // Manual refresh of user (e.g., after profile update)
   const refreshUser = async () => {
-    await fetchUser();
+    await debouncedFetchUser();  // NEW: Debounced
   };
 
   // Refresh permissions without fetching full user data
   const refreshPermissions = async () => {
     if (user) {
-      await fetchUserPermissions(user.id);
+      await updateUserPermissions(user.id);
     }
   };
 
@@ -557,6 +560,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       border-radius: 50%;
       animation: authSpinner 2s linear infinite;
       margin-bottom: 15px;
+      margin: 0 auto;
     }
     @keyframes pulse {
       0% { opacity: 0.6; }
@@ -570,7 +574,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: memoizedUser,  // NEW: Use memoized user
         loading,
         permissionsLoading,
         displayRole: user

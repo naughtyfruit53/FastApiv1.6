@@ -1,6 +1,6 @@
 // Service Worker for TRITIQ BOS PWA
-const CACHE_NAME = 'tritiq-erp-v1.6.3'; // Bump version to bust old caches
-const RUNTIME_CACHE = 'tritiq-runtime-v1.6.3';
+const CACHE_NAME = 'tritiq-erp-v1.6.4'; // Bump version to bust old caches
+const RUNTIME_CACHE = 'tritiq-runtime-v1.6.4';
 
 // Assets to cache on install (static only, no API)
 const PRECACHE_ASSETS = [
@@ -19,9 +19,14 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('[Service Worker] Precaching assets');
-        return cache.addAll(PRECACHE_ASSETS);
+        return cache.addAll(PRECACHE_ASSETS).catch(error => {
+          console.error('[Service Worker] Precaching failed:', error);
+        });
       })
       .then(() => self.skipWaiting())
+      .catch(error => {
+        console.error('[Service Worker] Install failed:', error);
+      })
   );
 });
 
@@ -45,6 +50,9 @@ self.addEventListener('activate', (event) => {
         );
       })
       .then(() => self.clients.claim())
+      .catch(error => {
+        console.error('[Service Worker] Activate failed:', error);
+      })
   );
 });
 

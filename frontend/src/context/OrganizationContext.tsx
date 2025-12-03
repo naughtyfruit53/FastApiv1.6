@@ -29,6 +29,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import apiClient from '../services/api/client';
+import { toast } from 'react-toastify';  // NEW: Import toast for timeout/error messages
 
 interface OrganizationContextType {
   /** Current organization ID */
@@ -105,10 +106,17 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({ chil
       setError(null);
       
       // Get current user info which includes organization
-      const response = await apiClient.get<{
-        organization_id: number;
-        organization_name: string;
-      }>('/users/me');
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Organization load timeout')), 5000)
+      );
+      
+      const response = await Promise.race([
+        timeoutPromise,
+        apiClient.get<{
+          organization_id: number;
+          organization_name: string;
+        }>('/users/me')
+      ]) as { data: { organization_id: number; organization_name: string } };
       
       const orgId = response.data.organization_id;
       const orgName = response.data.organization_name;
@@ -117,12 +125,16 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({ chil
       setOrganizationName(orgName);
       
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to load organization';
+      const errorMessage = err.message || err.response?.data?.detail || 'Failed to load organization';
       setError(errorMessage);
       
       // On error, clear organization data
       setOrganizationId(null);
       setOrganizationName(null);
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+      });
     } finally {
       setLoading(false);
     }
@@ -163,6 +175,10 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({ chil
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to switch organization';
       setError(errorMessage);
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+      });
       throw err;
     }
   }, [clearOrganizationCache]);

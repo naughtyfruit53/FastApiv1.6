@@ -23,6 +23,11 @@ import {
   ServiceModule,
   ServiceAction,
 } from "../types/rbac.types";
+
+// Simple in-memory cache for permissions (per userId)
+const permissionsCache: Record<number, { data: UserPermissions; timestamp: number }> = {};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export const rbacService = {
   // Permission Management
   getPermissions: async (params?: {
@@ -201,8 +206,19 @@ export const rbacService = {
       console.error('[RBAC Service] Invalid userId provided:', userId);
       throw new Error('Invalid user ID - must be a number');
     }
+    // Check cache first
+    const cached = permissionsCache[userId];
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log('[RBAC Service] Returning cached permissions for user:', userId);
+      return cached.data;
+    }
     try {
       const response = await api.get(`/rbac/users/${userId}/permissions`);
+      // Cache the result
+      permissionsCache[userId] = {
+        data: response.data,
+        timestamp: Date.now(),
+      };
       return response.data;
     } catch (error: any) {
       console.error("Failed to fetch user permissions:", error);
@@ -251,7 +267,7 @@ export const rbacService = {
     try {
       const permissions = await rbacService.getCurrentUserPermissions();
       return permissions.includes(permission);
-    } catch (error: any) {
+    } catch (error) {
       console.warn("Failed to check current user permission:", error);
       return false;
     }

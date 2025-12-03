@@ -2,6 +2,10 @@
 import api from "../lib/api"; // Use the api client
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY } from "../constants/auth";
 
+// Simple in-memory cache for current user (TTL 1 minute)
+let currentUserCache: { data: any; timestamp: number } | null = null;
+const USER_CACHE_TTL = 60 * 1000; // 1 minute
+
 export const authService = {
   login: async (username: string, password: string): Promise<any> => {
     try {
@@ -108,6 +112,11 @@ export const authService = {
   getCurrentUser: async (): Promise<any> => {
     try {
       console.log("[AuthService] Fetching current user data");
+      // Check cache
+      if (currentUserCache && Date.now() - currentUserCache.timestamp < USER_CACHE_TTL) {
+        console.log("[AuthService] Returning cached user data");
+        return currentUserCache.data;
+      }
       const response = await api.get("/users/me");
       console.log("[AuthService] User data received from /users/me:", {
         id: response.data.id,
@@ -141,6 +150,11 @@ export const authService = {
       console.log(
         "[AuthService] getCurrentUser complete - all localStorage updated",
       );
+      // Cache the result
+      currentUserCache = {
+        data: response.data,
+        timestamp: Date.now(),
+      };
       return response.data;
     } catch (error: any) {
       console.error("[AuthService] Failed to fetch current user:", error);
@@ -347,7 +361,6 @@ export const voucherService = {
 export const masterDataService = {
   getVendors: async ({ signal, params = {} } = {}) => {
     try {
-      // Organization context is derived from backend session, no need to add manually
       const response = await api.get("/vendors", { params, signal });
       return response.data;
     } catch (error: any) {
