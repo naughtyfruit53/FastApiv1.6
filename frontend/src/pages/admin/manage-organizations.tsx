@@ -36,6 +36,7 @@ import {
   Settings,
   DataUsage,
   Delete,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -167,6 +168,11 @@ const ManageOrganizations: React.FC = () => {
   const handleViewOrg = (org: Organization) => {
     setSelectedOrg(org);
     setLicenseModalMode('view');
+    setLicenseModalOpen(true);
+  };
+  const handleEditLicense = (org: Organization) => {
+    setSelectedOrg(org);
+    setLicenseModalMode('edit');
     setLicenseModalOpen(true);
   };
   const handleCreateLicense = () => {
@@ -365,7 +371,7 @@ const ManageOrganizations: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {org.license_expires_at ? new Date(org.license_expires_at).toLocaleDateString() : 'N/A'}
+                      {org.plan_type === 'perpetual' ? 'Perpetual' : org.license_expires_at ? new Date(org.license_expires_at).toLocaleDateString() : 'N/A'}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -376,6 +382,14 @@ const ManageOrganizations: React.FC = () => {
                       title="View Details"
                     >
                       <Visibility />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => handleEditLicense(org)}
+                      title="Edit License Validity"
+                    >
+                      <EditIcon />
                     </IconButton>
                     {isSuperAdmin ? (
                       <Tooltip title="Manage module entitlements (Super Admin only)">

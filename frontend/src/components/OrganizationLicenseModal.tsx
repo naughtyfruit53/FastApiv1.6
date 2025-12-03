@@ -176,6 +176,7 @@ const OrganizationLicenseModal: React.FC<
   } = useForm<LicenseFormData>({
     defaultValues: {
       max_users: 5, // Default value
+      plan_type: "perpetual", // Default to perpetual to fix MUI warning
     },
   });
   // Use the enhanced pincode lookup hook
@@ -258,7 +259,7 @@ const OrganizationLicenseModal: React.FC<
         country: selectedOrg.country || '',
         pan_number: selectedOrg.pan_number || '',
         cin_number: selectedOrg.cin_number || '',
-        plan_type: selectedOrg.plan_type || '',
+        plan_type: selectedOrg.plan_type || 'perpetual',
         storage_limit_gb: selectedOrg.storage_limit_gb || 0,
         timezone: selectedOrg.timezone || '',
         currency: selectedOrg.currency || '',
@@ -288,7 +289,7 @@ const OrganizationLicenseModal: React.FC<
         country: '',
         pan_number: '',
         cin_number: '',
-        plan_type: '',
+        plan_type: 'perpetual',
         storage_limit_gb: 0,
         timezone: '',
         currency: '',
@@ -302,7 +303,6 @@ const OrganizationLicenseModal: React.FC<
         hr: true,
         analytics: true
       });
-      setAdminFullName('');
     }
   }, [selectedOrg, internalMode, reset, adminFullName]);
   // Reset internalMode when propMode changes (e.g., new open)
@@ -332,7 +332,7 @@ const OrganizationLicenseModal: React.FC<
         country: '',
         pan_number: '',
         cin_number: '',
-        plan_type: '',
+        plan_type: 'perpetual',
         storage_limit_gb: 0,
         timezone: '',
         currency: '',
@@ -372,7 +372,7 @@ const OrganizationLicenseModal: React.FC<
       country: '',
       pan_number: '',
       cin_number: '',
-      plan_type: '',
+      plan_type: 'perpetual',
       storage_limit_gb: 0,
       timezone: '',
       currency: '',
@@ -565,6 +565,48 @@ const OrganizationLicenseModal: React.FC<
             )}
             {!success && (
               <form onSubmit={handleSubmit(onSubmit)}>
+                {/* License Validity Section - Moved to top and full width */}
+                <Box sx={{ mb: 4, p: 3, bgcolor: "primary.50", borderRadius: 2, border: "1px solid", borderColor: "primary.200" }}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      mb: 2,
+                      fontWeight: "bold",
+                      color: "primary.main",
+                    }}
+                  >
+                    License Validity
+                  </Typography>
+                  <Grid container spacing={3}>
+                    <Grid size={12}>
+                      <FormControl fullWidth>
+                        <InputLabel>Plan Type</InputLabel>
+                        <Select
+                          label="Plan Type"
+                          {...register("plan_type", { required: "Plan type is required" })}
+                          error={!!errors.plan_type}
+                          disabled={disabled}
+                          defaultValue="perpetual"
+                        >
+                          <MenuItem value="trial_7">Trial (7 Days)</MenuItem>
+                          <MenuItem value="trial_15">Trial (15 Days)</MenuItem>
+                          <MenuItem value="month_1">1 Month</MenuItem>
+                          <MenuItem value="month_3">3 Months</MenuItem>
+                          <MenuItem value="year_1">1 Year</MenuItem>
+                          <MenuItem value="perpetual">Perpetual</MenuItem>
+                        </Select>
+                        <Typography
+                          variant="caption"
+                          color={errors.plan_type ? "error" : "text.secondary"}
+                          sx={{ mt: 0.5, ml: 2 }}
+                        >
+                          {errors.plan_type?.message || "Select the license validity period"}
+                        </Typography>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                </Box>
+
                 {/* Organization Information Section */}
                 <Box sx={{ mb: 4 }}>
                   <Typography
@@ -778,17 +820,6 @@ const OrganizationLicenseModal: React.FC<
                         {...register("cin_number")}
                         error={!!errors.cin_number}
                         helperText={errors.cin_number?.message}
-                        disabled={disabled}
-                        variant="outlined"
-                      />
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        label="Plan Type"
-                        {...register("plan_type")}
-                        error={!!errors.plan_type}
-                        helperText={errors.plan_type?.message}
                         disabled={disabled}
                         variant="outlined"
                       />
