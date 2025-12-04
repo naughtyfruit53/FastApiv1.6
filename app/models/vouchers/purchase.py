@@ -25,10 +25,12 @@ class PurchaseOrder(BaseVoucher):
     transporter_name = Column(String)
     tracking_number = Column(String)
     tracking_link = Column(String)
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)  # Soft delete flag
+    deletion_remark = Column(Text)  # Delete reason
     
-    vendor = relationship("Vendor")
-    items = relationship("PurchaseOrderItem", back_populates="purchase_order", cascade="all, delete-orphan")
-    purchase_requisition = relationship("app.models.procurement_models.PurchaseRequisition", back_populates="purchase_order", uselist=False)
+    vendor = relationship("Vendor", lazy='selectin')  # Async-safe lazy loading
+    items = relationship("PurchaseOrderItem", back_populates="purchase_order", cascade="all, delete-orphan", lazy='selectin')
+    purchase_requisition = relationship("app.models.procurement_models.PurchaseRequisition", back_populates="purchase_order", uselist=False, lazy='selectin')
     
     __table_args__ = (
         # Unique voucher number per organization
@@ -55,8 +57,8 @@ class PurchaseOrderItem(SimpleVoucherItemBase):
     description = Column(Text)
     discounted_price = Column(Float, default=0.0, nullable=False)
     
-    purchase_order = relationship("PurchaseOrder", back_populates="items")
-    product = relationship("Product")  # Added relationship to Product
+    purchase_order = relationship("PurchaseOrder", back_populates="items", lazy='selectin')
+    product = relationship("Product", lazy='selectin')  # Added relationship to Product
 
 # Goods Receipt Note (GRN) - Enhanced for auto-population from PO
 class GoodsReceiptNote(BaseVoucher):
@@ -72,10 +74,12 @@ class GoodsReceiptNote(BaseVoucher):
     lr_rr_number = Column(String)
     inspection_status = Column(String, default="pending")  # pending, completed, rejected
     additional_charges = Column(JSONB, default=dict)
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)  # Soft delete flag
+    deletion_remark = Column(Text)  # Delete reason
     
-    purchase_order = relationship("PurchaseOrder")
-    vendor = relationship("Vendor")
-    items = relationship("GoodsReceiptNoteItem", back_populates="grn", cascade="all, delete-orphan")
+    purchase_order = relationship("PurchaseOrder", lazy='selectin')
+    vendor = relationship("Vendor", lazy='selectin')
+    items = relationship("GoodsReceiptNoteItem", back_populates="grn", cascade="all, delete-orphan", lazy='selectin')
     
     __table_args__ = (
         # Unique voucher number per organization
@@ -105,9 +109,9 @@ class GoodsReceiptNoteItem(Base):
     expiry_date = Column(DateTime(timezone=True))
     quality_status = Column(String, default="pending")  # pending, passed, failed
     
-    grn = relationship("GoodsReceiptNote", back_populates="items")
-    product = relationship("Product")
-    po_item = relationship("PurchaseOrderItem")
+    grn = relationship("GoodsReceiptNote", back_populates="items", lazy='selectin')
+    product = relationship("Product", lazy='selectin')
+    po_item = relationship("PurchaseOrderItem", lazy='selectin')
 
 # Purchase Voucher - Enhanced for auto-population from GRN
 class PurchaseVoucher(BaseVoucher):
@@ -126,11 +130,13 @@ class PurchaseVoucher(BaseVoucher):
     e_way_bill_number = Column(String)
     vendor_voucher_number = Column(String)  # Vendor's own voucher/invoice reference number
     additional_charges = Column(JSONB, default=dict)
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)  # Soft delete flag
+    deletion_remark = Column(Text)  # Delete reason
     
-    vendor = relationship("Vendor")
-    purchase_order = relationship("PurchaseOrder")
-    grn = relationship("GoodsReceiptNote")
-    items = relationship("PurchaseVoucherItem", back_populates="purchase_voucher", cascade="all, delete-orphan")
+    vendor = relationship("Vendor", lazy='selectin')
+    purchase_order = relationship("PurchaseOrder", lazy='selectin')
+    grn = relationship("GoodsReceiptNote", lazy='selectin')
+    items = relationship("PurchaseVoucherItem", back_populates="purchase_voucher", cascade="all, delete-orphan", lazy='selectin')
     
     __table_args__ = (
         # Unique voucher number per organization
@@ -151,9 +157,9 @@ class PurchaseVoucherItem(VoucherItemBase):
     grn_item_id = Column(Integer, ForeignKey("goods_receipt_note_items.id"))  # Link to GRN item
     description = Column(Text)
     
-    purchase_voucher = relationship("PurchaseVoucher", back_populates="items")
-    grn_item = relationship("GoodsReceiptNoteItem")
-    product = relationship("Product")  # Added relationship to Product
+    purchase_voucher = relationship("PurchaseVoucher", back_populates="items", lazy='selectin')
+    grn_item = relationship("GoodsReceiptNoteItem", lazy='selectin')
+    product = relationship("Product", lazy='selectin')  # Added relationship to Product
 
 # Purchase Return (Rejection In)
 class PurchaseReturn(BaseVoucher):
@@ -164,11 +170,13 @@ class PurchaseReturn(BaseVoucher):
     grn_id = Column(Integer, ForeignKey("goods_receipt_notes.id"))  
     reason = Column(Text)
     additional_charges = Column(JSONB, default=dict)
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)  # Soft delete flag
+    deletion_remark = Column(Text)  # Delete reason
     
-    vendor = relationship("Vendor")
-    reference_voucher = relationship("PurchaseVoucher")
-    grn = relationship("GoodsReceiptNote")
-    items = relationship("PurchaseReturnItem", back_populates="purchase_return", cascade="all, delete-orphan")
+    vendor = relationship("Vendor", lazy='selectin')
+    reference_voucher = relationship("PurchaseVoucher", lazy='selectin')
+    grn = relationship("GoodsReceiptNote", lazy='selectin')
+    items = relationship("PurchaseReturnItem", back_populates="purchase_return", cascade="all, delete-orphan", lazy='selectin')
     
     __table_args__ = (
         # Unique voucher number per organization
@@ -183,6 +191,6 @@ class PurchaseReturnItem(VoucherItemBase):
     __tablename__ = "purchase_return_items"
     
     purchase_return_id = Column(Integer, ForeignKey("purchase_returns.id"), nullable=False)
-    purchase_return = relationship("PurchaseReturn", back_populates="items")
-    product = relationship("Product")  # Added relationship to Product
+    purchase_return = relationship("PurchaseReturn", back_populates="items", lazy='selectin')
+    product = relationship("Product", lazy='selectin')  # Added relationship to Product
     

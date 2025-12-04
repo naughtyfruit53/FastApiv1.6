@@ -141,6 +141,21 @@ async def check_backdated_conflict(
     
     try:
         parsed_date = date_parser.parse(voucher_date)
+        # Only check if date is before last voucher
+        stmt = select(func.max(GoodsReceiptNote.date)).where(
+            GoodsReceiptNote.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        last_date = result.scalar()
+        
+        if last_date and parsed_date.date() >= last_date.date():
+            return {
+                "has_conflict": False,
+                "later_voucher_count": 0,
+                "suggested_date": last_date.isoformat() if last_date else None,
+                "period": "N/A"
+            }
+        
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "GRN", org_id, GoodsReceiptNote, parsed_date
         )
@@ -284,6 +299,13 @@ async def create_goods_receipt_note(
         db_invoice.total_amount = total_amount
         
         await db.commit()
+        
+        # Check if backdated and reindex if necessary
+        reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+            db, "GRN", org_id, GoodsReceiptNote, db_invoice.date, db_invoice.id
+        )
+        if reindex_result['success'] and reindex_result['vouchers_reindexed'] > 0:
+            logger.info(f"Reindexed {reindex_result['vouchers_reindexed']} GRNs after backdated insert")
         
         stmt = select(GoodsReceiptNote).options(
             joinedload(GoodsReceiptNote.vendor),

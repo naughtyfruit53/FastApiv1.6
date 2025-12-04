@@ -1,7 +1,7 @@
 // frontend/src/hooks/useVoucherPage.ts  
 import { useState, useCallback, useEffect, useMemo } from "react";  
 import { useRouter } from "next/router";  
-import { useForm, useFieldArray, useWatch } from "react-hook-form";  
+import { useForm, useFieldArray, useWatch, Controller } from "react-hook-form";  
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";  
 import { voucherService } from "../services/vouchersService";  
 import {  
@@ -28,6 +28,8 @@ import {
 import { VoucherPageConfig } from "../types/voucher.types";  
 import api from "../lib/api";  
 import { useVoucherNumbering, getVoucherApiEndpoint } from "./useVoucherNumbering";
+import * as yup from 'yup';
+import { yupResolver } from '@hookform/resolvers/yup';
 
 export const useVoucherPage = (config: VoucherPageConfig) => {  
   const router = useRouter();  
@@ -164,6 +166,25 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }  
   };  
   
+  const schema = useMemo(() => yup.object({
+    date: yup.string().required('Date is required'),
+    ...(config.entityType === 'purchase' ? {
+      vendor_id: yup.number().required('Vendor is required'),
+    } : {}),
+    ...(config.entityType === 'sales' ? {
+      customer_id: yup.number().required('Customer is required'),
+    } : {}),
+    ...(config.hasItems !== false ? {
+      items: yup.array().min(1, 'At least one item is required').of(
+        yup.object({
+          product_id: yup.number().required('Product is required'),
+          quantity: yup.number().min(1, 'Quantity must be at least 1').required('Quantity is required'),
+          unit_price: yup.number().min(0, 'Unit price cannot be negative').required('Unit price is required'),
+        })
+      ),
+    } : {}),
+  }).required(), [config]);
+
   const defaultValues = useMemo(() => {  
     const baseValues = {  
       voucher_number: "Loading...",  
@@ -217,7 +238,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     watch,  
     formState: { errors },  
   } = useForm<any>({  
-    defaultValues,  
+    defaultValues,
+    resolver: yupResolver(schema),
   });  
   
   const { fields, append, remove, replace } = useFieldArray({  
@@ -1119,8 +1141,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     nextRevisionNumber,  // ADDED
     isNextRevisionLoading,  // ADDED
     conflictInfo,
+    setConflictInfo,  // FIXED: Added setter
     showConflictModal,
+    setShowConflictModal,  // FIXED: Added setter
     pendingDate,
+    setPendingDate,  // FIXED: Added setter
     handleChangeDateToSuggested,
     handleProceedAnyway,
     handleCancelConflict,

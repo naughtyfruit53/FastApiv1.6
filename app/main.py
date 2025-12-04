@@ -133,7 +133,7 @@ async def init_default_permissions(background_tasks: BackgroundTasks):
     async with AsyncSessionLocal() as db:
         try:
             rbac = RBACService(db)
-            await rbac.initialize_default_permissions()
+            await rbac.initialize_default_default_permissions()
             logger.info("Default permissions initialized")
         except Exception as e:
             logger.error(f"Error initializing default permissions: {str(e)}")
@@ -577,6 +577,14 @@ def include_minimal_routers():
     except Exception as e:
         logger.warning(f"Failed to import websocket router: {str(e)}")
 
+    try:
+        from app.api.v1 import gst as v1_gst
+        routers.append((v1_gst.router, "/api/v1/gst", ["gst"]))
+        logger.info("GST router included unconditionally")
+    except Exception as e:
+        logger.error(f"Failed to import gst router: {str(e)}")
+        raise
+
     if os.getenv("ENABLE_EXTENDED_ROUTERS", "false").lower() == "true":
         try:
             from app.api.v1 import pdf_extraction as v1_pdf_extraction
@@ -586,12 +594,6 @@ def include_minimal_routers():
             )
         except Exception as e:
             logger.warning(f"Failed to import pdf_extraction router: {str(e)}")
-        try:
-            from app.api.v1 import gst as v1_gst
-
-            routers.append((v1_gst.router, "/api/v1/gst", ["gst"]))
-        except Exception as e:
-            logger.warning(f"Failed to import gst router: {str(e)}")
 
     try:
         from app.api.v1 import pdf_generation as v1_pdf_generation
@@ -678,3 +680,4 @@ if __name__ == "__main__":
         proxy_headers=True,
         forwarded_allow_ips="*",
     )
+    

@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, exists
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload  # Added selectinload for nested eager
 from typing import List, Optional
 from io import BytesIO
 from app.core.database import get_db
@@ -21,6 +21,8 @@ from datetime import timezone, datetime
 from dateutil import parser as date_parser
 import re
 from fastapi.responses import StreamingResponse
+from app.models.organization_settings import OrganizationSettings, VoucherCounterResetPeriod
+from app.services.pdf_generation_service import pdf_generator
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["purchase-orders"])
@@ -45,7 +47,8 @@ async def get_purchase_orders(
             joinedload(PurchaseOrder.vendor),
             joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
         ).where(
-            PurchaseOrder.organization_id == org_id
+            PurchaseOrder.organization_id == org_id,
+            PurchaseOrder.is_deleted == False  # Exclude deleted
         )
         
         if status:
@@ -114,7 +117,8 @@ async def get_purchase_orders(
             
             logger.debug(f"PO {po.voucher_number} assigned grn_status: {po.grn_status}")
         
-        return purchase_orders
+        # Convert to Pydantic models before returning (to avoid serialization issues after session close)
+        return [PurchaseOrderInDB.model_validate(po) for po in purchase_orders]
     except Exception as e:
         logger.error(f"Error in get_purchase_orders: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -185,22 +189,10 @@ async def create_purchase_order(
         if 'delivery_date' in invoice_data and invoice_data['delivery_date']:
             invoice_data['delivery_date'] = invoice_data['delivery_date'].replace(tzinfo=timezone.utc)
         
-        if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
-            # Generate voucher number based on the entered date
-            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "PO", org_id, PurchaseOrder, voucher_date=voucher_date
-            )
-        else:
-            stmt = select(PurchaseOrder).where(
-                PurchaseOrder.organization_id == org_id,
-                PurchaseOrder.voucher_number == invoice_data['voucher_number']
-            )
-            result = await db.execute(stmt)
-            existing = result.scalar_one_or_none()
-            if existing:
-                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "PO", org_id, PurchaseOrder, voucher_date=voucher_date
-                )
+        # ALWAYS generate voucher number - never allow manual override to prevent duplicates/wrong data
+        invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
+            db, "PO", org_id, PurchaseOrder, voucher_date=voucher_date
+        )
         
         product_ids = [item.product_id for item in invoice.items]
         stmt = select(Product).where(
@@ -304,13 +296,39 @@ async def create_purchase_order(
         db_invoice.discount_amount = total_discount
         
         await db.commit()
+        await db.refresh(db_invoice)  # Refresh for fresh data post-commit
+
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "PO", org_id, PurchaseOrder, db_invoice.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "PO", org_id, PurchaseOrder, db_invoice.date, db_invoice.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback creation
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback creation; log only
         
+        # Final query with full eager loading to prevent lazy loads
         stmt = select(PurchaseOrder).options(
             joinedload(PurchaseOrder.vendor),
-            joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
+            selectinload(PurchaseOrder.items).selectinload(PurchaseOrderItem.product)  # Nested eager for async safety
         ).where(PurchaseOrder.id == db_invoice.id)
         result = await db.execute(stmt)
-        db_invoice = result.unique().scalar_one_or_none()
+        db_invoice = result.unique().scalars().first()
+        
+        # Async-safe model_validate (with error handling)
+        try:
+            validated_invoice = PurchaseOrderInDB.model_validate(db_invoice)
+        except Exception as validate_err:
+            logger.error(f"Validation error post-load: {str(validate_err)}")
+            # Fallback to dict serialization if Pydantic fails on rels
+            validated_invoice = PurchaseOrderInDB.model_validate(db_invoice.__dict__)
         
         if send_email and db_invoice.vendor and db_invoice.vendor.email:
             background_tasks.add_task(
@@ -322,14 +340,19 @@ async def create_purchase_order(
             )
         
         logger.info(f"Purchase order {db_invoice.voucher_number} created by {current_user.email}")
-        return db_invoice
         
+        # Convert to Pydantic model before returning (ensures data access while session is open)
+        return validated_invoice
+        
+    except HTTPException as he:
+        await db.rollback()
+        raise he
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error creating purchase order: {e}")
+        logger.error(f"Error creating purchase order: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create purchase order"
+            detail=f"Failed to create purchase order: {str(e)}"
         )
 
 @router.get("/{invoice_id}", response_model=PurchaseOrderInDB)
@@ -348,7 +371,7 @@ async def get_purchase_order(
         PurchaseOrder.organization_id == org_id
     )
     result = await db.execute(stmt)
-    invoice = result.unique().scalar_one_or_none()
+    invoice = result.unique().scalars().first()
     if not invoice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -398,7 +421,8 @@ async def get_purchase_order(
     
     logger.debug(f"PO {invoice.voucher_number} assigned grn_status: {invoice.grn_status}")
     
-    return invoice
+    # Convert to Pydantic model before returning
+    return PurchaseOrderInDB.model_validate(invoice)
 
 @router.get("/{invoice_id}/pdf")
 async def generate_purchase_order_pdf(
@@ -417,7 +441,7 @@ async def generate_purchase_order_pdf(
             PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
-        voucher = result.unique().scalar_one_or_none()
+        voucher = result.unique().scalars().first()
         if not voucher:
             raise HTTPException(status_code=404, detail="Purchase order not found")
         
@@ -456,7 +480,7 @@ async def update_purchase_order(
             PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
-        invoice = result.scalar_one_or_none()
+        invoice = result.scalars().first()
         if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -469,6 +493,38 @@ async def update_purchase_order(
             update_data['date'] = update_data['date'].replace(tzinfo=timezone.utc)
         if 'delivery_date' in update_data and update_data['delivery_date']:
             update_data['delivery_date'] = update_data['delivery_date'].replace(tzinfo=timezone.utc)
+        
+        # If date is being updated, check if it's crossing periods
+        if 'date' in update_data:
+            old_date = invoice.date
+            new_date = update_data['date']
+            stmt_settings = select(OrganizationSettings).where(
+                OrganizationSettings.organization_id == org_id
+            )
+            result_settings = await db.execute(stmt_settings)
+            org_settings = result_settings.scalars().first()
+            reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
+
+            def get_period(dt: datetime) -> str:
+                year = dt.year
+                month = dt.month
+                fiscal_year = f"{str(year)[-2:]}{str(year + 1 if month > 3 else year)[-2:]}"
+                if reset_period == VoucherCounterResetPeriod.MONTHLY:
+                    month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+                    return f"{fiscal_year}/{month_names[month - 1]}"
+                elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
+                    quarter = ((month - 1) // 3) + 1
+                    return f"{fiscal_year}/Q{quarter}"
+                else:
+                    return fiscal_year
+
+            old_period = get_period(old_date)
+            new_period = get_period(new_date)
+            if old_period != new_period:
+                # Regenerate voucher number if period changes to prevent wrong data/duplicates
+                update_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
+                    db, "PO", org_id, PurchaseOrder, voucher_date=update_data['date']
+                )
         
         for field, value in update_data.items():
             setattr(invoice, field, value)
@@ -555,54 +611,102 @@ async def update_purchase_order(
             invoice.discount_amount = total_discount
         
         await db.commit()
+        await db.refresh(invoice)  # Refresh for fresh data post-commit
+
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "PO", org_id, PurchaseOrder, invoice.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "PO", org_id, PurchaseOrder, invoice.date, invoice.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback update
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback update; log only
         
+        # Final query with full eager loading to prevent lazy loads
         stmt = select(PurchaseOrder).options(
             joinedload(PurchaseOrder.vendor),
-            joinedload(PurchaseOrder.items).joinedload(PurchaseOrderItem.product)
+            selectinload(PurchaseOrder.items).selectinload(PurchaseOrderItem.product)  # Nested eager for async safety
         ).where(
             PurchaseOrder.id == invoice_id,
             PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
-        invoice = result.unique().scalar_one_or_none()
+        invoice = result.unique().scalars().first()
         if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Purchase order not found"
             )
         
-        logger.info(f"Purchase order {invoice.voucher_number} updated by {current_user.email}")
-        return invoice
+        # Async-safe model_validate (with error handling)
+        try:
+            validated_invoice = PurchaseOrderInDB.model_validate(invoice)
+        except Exception as validate_err:
+            logger.error(f"Validation error post-load: {str(validate_err)}")
+            # Fallback to dict serialization if Pydantic fails on rels
+            validated_invoice = PurchaseOrderInDB.model_validate(invoice.__dict__)
         
+        logger.info(f"Purchase order {invoice.voucher_number} updated by {current_user.email}")
+        
+        # Convert to Pydantic model before returning
+        return validated_invoice
+        
+    except HTTPException as he:
+        await db.rollback()
+        raise he
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating purchase order: {e}")
+        logger.error(f"Error updating purchase order: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update purchase order"
+            detail=f"Failed to update purchase order: {str(e)}"
         )
 
 @router.delete("/{invoice_id}")
-async def delete_purchase_order(
+async def hard_delete_purchase_order(
     invoice_id: int,
+    remark: str = Body(..., embed=True),
     db: AsyncSession = Depends(get_db),
     auth: tuple = Depends(require_access("voucher", "delete"))
 ):
-    """Delete purchase order"""
+    """Hard delete purchase order if no dependent records exist"""
     current_user, org_id = auth
     
     try:
         stmt = select(PurchaseOrder).where(
             PurchaseOrder.id == invoice_id,
-            PurchaseOrder.organization_id == org_id
+            PurchaseOrder.organization_id == org_id,
+            PurchaseOrder.is_deleted == False
         )
         result = await db.execute(stmt)
-        invoice = result.scalar_one_or_none()
+        invoice = result.scalars().first()
         if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Purchase order not found"
+                detail="Purchase order not found or already deleted"
             )
+        
+        # Check for dependent GRNs
+        grn_stmt = select(GoodsReceiptNote).where(
+            GoodsReceiptNote.purchase_order_id == invoice_id,
+            GoodsReceiptNote.is_deleted == False
+        )
+        grn_result = await db.execute(grn_stmt)
+        if grn_result.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot hard delete purchase order with existing goods receipt notes. Use soft delete or remove dependents first."
+            )
+        
+        # Log deletion
+        logger.info(f"Hard deleting purchase order {invoice.voucher_number} by {current_user.email} with remark: {remark}")
         
         from sqlalchemy import delete
         stmt_delete_items = delete(PurchaseOrderItem).where(PurchaseOrderItem.purchase_order_id == invoice_id)
@@ -611,15 +715,61 @@ async def delete_purchase_order(
         await db.delete(invoice)
         await db.commit()
         
-        logger.info(f"Purchase order {invoice.voucher_number} deleted by {current_user.email}")
-        return {"message": "Purchase order deleted successfully"}
+        return {"message": "Purchase order hard deleted successfully"}
         
+    except HTTPException as he:
+        await db.rollback()
+        raise he
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error deleting purchase order: {e}")
+        logger.error(f"Error hard deleting purchase order: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete purchase order"
+            detail=f"Failed to hard delete purchase order: {str(e)}"
+        )
+
+@router.patch("/{invoice_id}/delete")
+async def soft_delete_purchase_order(
+    invoice_id: int,
+    remark: str = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+    auth: tuple = Depends(require_access("voucher", "delete"))
+):
+    """Soft delete purchase order - mark as deleted without removing record"""
+    current_user, org_id = auth
+    
+    try:
+        stmt = select(PurchaseOrder).where(
+            PurchaseOrder.id == invoice_id,
+            PurchaseOrder.organization_id == org_id,
+            PurchaseOrder.is_deleted == False
+        )
+        result = await db.execute(stmt)
+        invoice = result.scalars().first()
+        if not invoice:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Purchase order not found or already deleted"
+            )
+        
+        invoice.is_deleted = True
+        invoice.deletion_remark = remark
+        
+        await db.commit()
+        await db.refresh(invoice)
+        
+        logger.info(f"Purchase order {invoice.voucher_number} soft deleted by {current_user.email} with remark: {remark}")
+        return {"message": "Purchase order soft deleted successfully"}
+        
+    except HTTPException as he:
+        await db.rollback()
+        raise he
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error soft deleting purchase order: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to soft delete purchase order: {str(e)}"
         )
 
 @router.put("/{invoice_id}/tracking")
@@ -637,7 +787,7 @@ async def update_purchase_order_tracking(
             PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
-        po = result.scalar_one_or_none()
+        po = result.scalars().first()
         
         if not po:
             raise HTTPException(
@@ -688,7 +838,7 @@ async def get_purchase_order_tracking(
             PurchaseOrder.organization_id == org_id
         )
         result = await db.execute(stmt)
-        po = result.scalar_one_or_none()
+        po = result.scalars().first()
         
         if not po:
             raise HTTPException(
@@ -730,7 +880,7 @@ async def get_previous_discount(
             stmt = stmt.where(PurchaseOrder.vendor_id == vendor_id)
         
         result = await db.execute(stmt.limit(1))
-        last_item = result.scalar_one_or_none()
+        last_item = result.scalars().first()
         
         if not last_item:
             return {"discount_percentage": 0.0, "discount_amount": 0.0}

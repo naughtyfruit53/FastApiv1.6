@@ -22,6 +22,7 @@ import {
   TableRow,
   Autocomplete,
 } from "@mui/material";
+import { Controller } from "react-hook-form";
 import AddVendorModal from "../../../components/AddVendorModal";
 import AddProductModal from "../../../components/AddProductModal";
 import AddShippingAddressModal from "../../../components/AddShippingAddressModal";
@@ -60,6 +61,7 @@ const PurchaseOrderPage: React.FC = () => {
   const voucherStyles = getVoucherStyles();
   const queryClient = useQueryClient();
   const processedRef = useRef<Set<number>>(new Set());
+  const [currentNextNumber, setCurrentNextNumber] = useState<string>('');
 
   const {
     mode,
@@ -135,7 +137,37 @@ const PurchaseOrderPage: React.FC = () => {
     getAmountInWords,
     isViewMode,
     totalRoundOff,
+    conflictInfo,
+    setConflictInfo,
+    showConflictModal,
+    setShowConflictModal,
+    pendingDate,
+    setPendingDate,
+    handleChangeDateToSuggested,
+    handleProceedAnyway: originalProceedAnyway,
+    handleCancelConflict,
   } = useVoucherPage(config);
+
+  const handleProceedAnyway = () => {
+    if (conflictInfo && currentNextNumber) {
+      try {
+        const parts = currentNextNumber.split('/');
+        const sequenceStr = parts.pop() || '00000';
+        const wouldBeSequence = parseInt(sequenceStr, 10);
+        const lastSequence = wouldBeSequence - 1;
+        const laterCount = conflictInfo.later_voucher_count || 0;
+        const beforeCount = lastSequence - laterCount;
+        const newSequence = beforeCount + 1;
+        const base = parts.join('/');
+        const newNumber = `${base}/${newSequence.toString().padStart(5, '0')}`;
+        setValue('voucher_number', newNumber);
+        console.log('Calculated backdated number:', newNumber);
+      } catch (error) {
+        console.error('Error calculating backdated number:', error);
+      }
+    }
+    originalProceedAnyway();
+  };
 
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
   const [submitData, setSubmitData] = useState<any>(null);
@@ -478,18 +510,22 @@ const PurchaseOrderPage: React.FC = () => {
       const currentDate = watch('date');
       if (currentDate && mode === 'create') {
         try {
+          console.log('Fetching number for date:', currentDate);
           // Fetch new voucher number based on date
           const response = await api.get(
             `/purchase-orders/next-number`,
             { params: { voucher_date: currentDate } }
           );
+          setCurrentNextNumber(response.data);
           setValue('voucher_number', response.data);
+          console.log('Fetched number:', response.data);
           
           // Check for backdated conflicts
           const conflictResponse = await api.get(
             `/purchase-orders/check-backdated-conflict`,
             { params: { voucher_date: currentDate } }
           );
+          console.log('Conflict check:', conflictResponse.data);
           
           if (conflictResponse.data.has_conflict) {
             setConflictInfo(conflictResponse.data);
@@ -539,11 +575,6 @@ const PurchaseOrderPage: React.FC = () => {
 
   const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
   const [selectedVoucherForTracking, setSelectedVoucherForTracking] = useState<any>(null);
-  
-  // State for voucher date conflict detection
-  const [conflictInfo, setConflictInfo] = useState<any>(null);
-  const [showConflictModal, setShowConflictModal] = useState(false);
-  const [pendingDate, setPendingDate] = useState<string | null>(null);
 
   const [hasTrackingMap, setHasTrackingMap] = useState<Record<number, boolean>>({});
 
@@ -640,27 +671,6 @@ const PurchaseOrderPage: React.FC = () => {
       default:
         return '#ffffff';
     }
-  };
-
-  // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
-  };
-
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
-  };
-
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      setValue('date', '');
-    }
-    setPendingDate(null);
   };
 
   const indexContent = (
@@ -770,6 +780,8 @@ const PurchaseOrderPage: React.FC = () => {
                 '& .MuiInputBase-input': { textAlign: 'center' } 
               }} 
               InputLabelProps={{ shrink: true }} 
+              error={!!errors.date}
+              helperText={errors.date?.message as string}
             />
           </Grid>
           <Grid size={4}>
@@ -796,35 +808,41 @@ const PurchaseOrderPage: React.FC = () => {
               InputLabelProps={{ shrink: true }} 
             />
           </Grid>
-          <Grid size={6}>
-            <Autocomplete 
-              key={selectedVendorId || 'vendor-autocomplete'} 
-              size="small" 
-              options={enhancedVendorOptions} 
-              getOptionLabel={(option: any) => {
-                if (typeof option === 'number') return option.toString();
-                if (typeof option === 'string') return option;
-                return option?.name || "";
-              }} 
-              value={selectedVendor || (vendorList?.find((v: any) => v.id === selectedVendorId) || null)} 
-              onChange={(_, newValue) => { 
-                if (newValue?.id === null) setShowAddVendorModal(true); 
-                else {
-                  setValue("vendor_id", newValue?.id || null); 
-                  setSelectedVendor(newValue);
-                } 
-              }} 
-              renderInput={(params) => 
-                <TextField 
-                  {...params} 
-                  label="Vendor" 
-                  error={!!errors.vendor_id} 
-                  helperText={errors.vendor_id ? "Required" : ""} 
-                  sx={voucherFormStyles.field} 
-                  InputLabelProps={{ shrink: true }} 
+          <Grid size={4}>
+            <Controller
+              name="vendor_id"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Autocomplete 
+                  key={selectedVendorId || 'vendor-autocomplete'} 
+                  size="small" 
+                  options={enhancedVendorOptions} 
+                  getOptionLabel={(option: any) => {
+                    if (typeof option === 'number') return option.toString();
+                    if (typeof option === 'string') return option;
+                    return option?.name || "";
+                  }} 
+                  value={selectedVendor || (vendorList?.find((v: any) => v.id === field.value) || null)} 
+                  onChange={(_, newValue) => { 
+                    if (newValue?.id === null) setShowAddVendorModal(true); 
+                    else {
+                      field.onChange(newValue?.id || null);
+                      setSelectedVendor(newValue);
+                    }
+                  }} 
+                  renderInput={(params) => 
+                    <TextField 
+                      {...params} 
+                      label="Vendor" 
+                      error={!!fieldState.error} 
+                      helperText={fieldState.error?.message} 
+                      sx={voucherFormStyles.field} 
+                      InputLabelProps={{ shrink: true }} 
+                    />
+                  } 
+                  disabled={mode === "view"} 
                 />
-              } 
-              disabled={mode === "view"} 
+              )}
             />
           </Grid>
           <Grid size={2}>
@@ -897,6 +915,7 @@ const PurchaseOrderPage: React.FC = () => {
               showDescriptionCheckbox={mode !== "view"}
               showAdditionalChargesCheckbox={mode !== "view"}
               showDeliveryStatus={mode === "view" || mode === "edit"}
+              errors={errors}
             />
           </Grid>
           {additionalChargesEnabled && mode === 'view' && (

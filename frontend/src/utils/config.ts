@@ -29,9 +29,11 @@ export const getApiBaseUrl = (): string => {
     baseUrl = baseUrl.slice(0, -7);
   }
   
-  // REMOVED: Force 'localhost' instead of '127.0.0.1' - this was causing ERR_NAME_NOT_RESOLVED
-  // If localhost doesn't resolve, set NEXT_PUBLIC_API_URL to http://127.0.0.1:8000 in .env.local
-  // and restart the dev server.
+  // Force '127.0.0.1' instead of 'localhost' to avoid resolution issues
+  if (baseUrl.includes('localhost')) {
+    baseUrl = baseUrl.replace('localhost', '127.0.0.1');
+    console.warn('[Config] Replaced localhost with 127.0.0.1 to resolve connection issues');
+  }
   
   // Log for debugging
   if (typeof console !== 'undefined') {

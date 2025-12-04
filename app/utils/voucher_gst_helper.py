@@ -39,7 +39,7 @@ async def get_company_state_code_strict(
     org_result = await db.execute(
         select(Organization.state_code).where(Organization.id == org_id)
     )
-    company_state_code = org_result.scalar_one_or_none()
+    company_state_code = org_result.scalars().first()
     
     if not company_state_code:
         error_msg = (
@@ -85,7 +85,7 @@ async def get_customer_state_code_strict(
     customer_result = await db.execute(
         select(Customer.state_code).where(Customer.id == customer_id)
     )
-    customer_state_code = customer_result.scalar_one_or_none()
+    customer_state_code = customer_result.scalars().first()
     
     if not customer_state_code:
         error_msg = (
@@ -131,7 +131,7 @@ async def get_vendor_state_code_strict(
     vendor_result = await db.execute(
         select(Vendor.state_code).where(Vendor.id == vendor_id)
     )
-    vendor_state_code = vendor_result.scalar_one_or_none()
+    vendor_state_code = vendor_result.scalars().first()
     
     if not vendor_state_code:
         error_msg = (

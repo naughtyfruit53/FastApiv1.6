@@ -130,23 +130,27 @@ class PurchaseOrderInDB(VoucherInDBBase):
     terms_conditions: Optional[str]
     line_discount_type: Optional[str]
     total_discount_type: Optional[str]
-    total_discount: float
-    round_off: float = 0.0  # Added default to prevent validation errors on existing data
+
+    # ←←← FIXED: now Optional + validator handles legacy NULLs
+    total_discount: Optional[float] = 0.0
+    round_off: Optional[float] = 0.0
+
     additional_charges: Optional[Dict[str, float]] = None
     items: List[PurchaseOrderItemInDB]
     vendor: Optional[VendorMinimal] = None
-    grn_status: Optional[str] = None  # GRN status: "pending", "partial", "complete"
-    color_status: Optional[str] = None  # Color coding: "red", "yellow", "green"
-    transporter_name: Optional[str] = None  # Tracking information
+    grn_status: Optional[str] = None          # "pending", "partial", "complete"
+    color_status: Optional[str] = None
+    transporter_name: Optional[str] = None
     tracking_number: Optional[str] = None
     tracking_link: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
-    @field_validator('round_off', mode='before')
+    @field_validator('total_discount', 'round_off', mode='before')
     @classmethod
-    def handle_none_round_off(cls, v):
-        return 0.0 if v is None else v
+    def _coerce_none_to_zero(cls, v):
+        """Legacy rows may have NULL → treat as 0.0"""
+        return 0.0 if v is None else float(v)
 
 class PurchaseOrderAutoPopulateResponse(BaseModel):
     vendor_id: int

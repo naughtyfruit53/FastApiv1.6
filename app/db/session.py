@@ -9,6 +9,7 @@ from typing import Generator, Callable, Any, Optional, Type, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError, TimeoutError
+from sqlalchemy import text
 from app.core.database import AsyncSessionLocal, sync_engine  # Import sync_engine for sync session
 from app.core.logging import get_logger, log_database_operation
 import time
@@ -44,7 +45,8 @@ class SessionManager:
         # NEW: Set RLS session variable if org_id available
         org_id = TenantContext.get_organization_id()
         if org_id is not None:
-            await session.execute(f"SET app.current_organization_id = {org_id};")
+            # Use string interpolation for SET command value - PostgreSQL does not support bind params for SET
+            await session.execute(text(f"SET app.current_organization_id = {org_id}"))
             logger.debug(f"Set session var: app.current_organization_id = {org_id}")
         try:
             yield session
@@ -73,7 +75,8 @@ class SessionManager:
         # NEW: Set RLS session variable if org_id available
         org_id = TenantContext.get_organization_id()
         if org_id is not None:
-            await session.execute(f"SET app.current_organization_id = {org_id};")
+            # Use string interpolation for SET command value - PostgreSQL does not support bind params for SET
+            await session.execute(text(f"SET app.current_organization_id = {org_id}"))
             logger.debug(f"Set session var: app.current_organization_id = {org_id}")
         try:
             yield session
