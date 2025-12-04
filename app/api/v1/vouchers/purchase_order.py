@@ -189,14 +189,10 @@ async def create_purchase_order(
         if 'delivery_date' in invoice_data and invoice_data['delivery_date']:
             invoice_data['delivery_date'] = invoice_data['delivery_date'].replace(tzinfo=timezone.utc)
         
-        # Generate the proposed voucher number based on the entered date (what is shown to user)
-        if not voucher_date:
-            voucher_date = datetime.utcnow()
-        proposed_number = await VoucherNumberService.generate_voucher_number_async(
+        # NEVER allow manual voucher_number – always generate it
+        invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
             db, "PO", org_id, PurchaseOrder, voucher_date=voucher_date
         )
-        
-        invoice_data['voucher_number'] = proposed_number
         
         product_ids = [item.product_id for item in invoice.items]
         stmt = select(Product).where(
@@ -530,10 +526,10 @@ async def update_purchase_order(
                     detail="Cannot change voucher date across numbering periods"
                 )
             
-            # If date changed, regenerate voucher number based on new date
-            update_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "PO", org_id, PurchaseOrder, voucher_date=new_date
-            )
+            # DO NOT regenerate voucher number on date change within same period!
+            # Keep the original number — that's the whole point
+            # Only regenerate if crossing fiscal periods (which is blocked above)
+            pass
         
         for field, value in update_data.items():
             setattr(invoice, field, value)
