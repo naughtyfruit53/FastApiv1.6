@@ -68,6 +68,11 @@ const PaymentVoucher: React.FC = () => {
     refreshMasterData,
     getAmountInWords,
     isViewMode,
+    conflictInfo,
+    showConflictModal,
+    handleChangeDateToSuggested,
+    handleProceedAnyway,
+    handleCancelConflict,
   } = useVoucherPage(config);
 
   const handleVoucherClick = (voucher: any) => {
@@ -99,11 +104,6 @@ const PaymentVoucher: React.FC = () => {
 
   const [entityBalance, setEntityBalance] = useState<number | null>(null);
   const [voucherBalance, setVoucherBalance] = useState<number | null>(null);
-  
-  // State for voucher date conflict detection
-  const [conflictInfo, setConflictInfo] = useState<any>(null);
-  const [showConflictModal, setShowConflictModal] = useState(false);
-  const [pendingDate, setPendingDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedEntity) {
@@ -135,48 +135,6 @@ const PaymentVoucher: React.FC = () => {
     }
   }, [reference, referenceOptions]);
 
-  // Fetch voucher number when date changes and check for conflicts
-  useEffect(() => {
-    const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
-        try {
-          // Fetch new voucher number based on date
-          const response = await api.get(
-            `/payment-vouchers/next-number`,
-            { params: { voucher_date: currentDate } }
-          );
-          setValue('voucher_number', response.data);
-          
-          // Check for backdated conflicts
-          const conflictResponse = await api.get(
-            `/payment-vouchers/check-backdated-conflict`,
-            { params: { voucher_date: currentDate } }
-          );
-          
-          if (conflictResponse.data.has_conflict) {
-            setConflictInfo(conflictResponse.data);
-            setShowConflictModal(true);
-            setPendingDate(currentDate);
-          }
-        } catch (error) {
-          console.error('Error fetching voucher number:', error);
-        }
-      }
-    };
-    
-    fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
-
-  const handleSubmitFormMapped = (data: any) => {
-    if (data.entity) {
-      data.entity_id = data.entity.id;
-      data.entity_type = data.entity.type;
-      delete data.entity;
-    }
-    handleSubmitForm(data);  // Proceed with original submit
-  };
-
   // Grid spacing adjustments
   const firstRowGapPx = 24;   // 3 * 8px
   const secondRowGapPx = 8;   // 1 * 8px
@@ -196,7 +154,7 @@ const PaymentVoucher: React.FC = () => {
         <TableBody>
           {(sortedVouchers?.length === 0) ? (
             <TableRow>
-              <TableCell colSpan={5} align="center">No payment vouchers available</TableCell>
+              <TableCell colSpan= {5} align="center">No payment vouchers available</TableCell>
             </TableRow>
           ) : (
             sortedVouchers?.slice(0, 7).map((voucher: any) => (
@@ -238,6 +196,15 @@ const PaymentVoucher: React.FC = () => {
       </Table>
     </TableContainer>
   );
+
+  const handleSubmitFormMapped = (data: any) => {
+    if (data.entity) {
+      data.entity_id = data.entity.id;
+      data.entity_type = data.entity.type;
+      delete data.entity;
+    }
+    handleSubmitForm(data);  // Proceed with original submit
+  };
 
   const formContent = (
     <Box>
@@ -400,7 +367,6 @@ const PaymentVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               sx={{
-                ...financialVoucherStyles.notesField,
                 width: '100%',
                 '& .MuiInputBase-root': { height: '36px', padding: '0 8px' }
               }}
@@ -423,32 +389,9 @@ const PaymentVoucher: React.FC = () => {
     </Box>
   );
 
-  // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
-  };
-
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
-    // Keep the current date
-  };
-
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      // Revert to previous date or clear
-      setValue('date', '');
-    }
-    setPendingDate(null);
-  };
-
   if (isLoading) {
     return (
-      <ProtectedPage moduleKey="finance" action="write">
+      <ProtectedPage moduleKey="voucher" action="create">
         <Container>
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
             <CircularProgress />
@@ -459,10 +402,11 @@ const PaymentVoucher: React.FC = () => {
   }
 
   return (
-    <ProtectedPage moduleKey="finance" action="write">
+    <ProtectedPage moduleKey="voucher" action="create">
       <VoucherLayout
         voucherType="Payment Vouchers"
         voucherTitle="Payment Voucher"
+        indexContent={indexContent}
         indexContent={indexContent}
         formContent={formContent}
         onShowAll={handleModalOpen}
@@ -488,8 +432,8 @@ const PaymentVoucher: React.FC = () => {
         voucherType="Payment Voucher"
         contextMenu={contextMenu}
         onClose={handleContextMenuClose}
-        onEdit={(id) => { handleEdit(id); handleContextMenuClose(); }}
         onView={(id) => { handleView(id); handleContextMenuClose(); }}
+        onEdit={(id) => { handleEdit(id); handleContextMenuClose(); }}
         onDelete={(id) => { handleDelete(id); handleContextMenuClose(); }}
       />
       <VoucherDateConflictModal

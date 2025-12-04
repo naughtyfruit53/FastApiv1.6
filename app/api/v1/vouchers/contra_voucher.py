@@ -277,3 +277,4 @@ async def delete_contra_voucher(
         await db.rollback()
         logger.error(f"Error deleting contra voucher: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete contra voucher")
+    

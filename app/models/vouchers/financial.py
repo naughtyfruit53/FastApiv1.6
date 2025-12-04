@@ -112,6 +112,7 @@ class ContraVoucher(BaseVoucher):
     from_account = Column(String, nullable=False)
     to_account = Column(String, nullable=False)
     chart_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False, index=True)
+    is_deleted = Column(Boolean, default=False)  # Added is_deleted
     
     # Relationships
     chart_account = relationship("app.models.erp_models.ChartOfAccounts")
@@ -130,6 +131,7 @@ class JournalVoucher(BaseVoucher):
     
     entries = Column(Text, nullable=False)  # JSON string for entries
     chart_account_id = Column(Integer, ForeignKey("chart_of_accounts.id"), nullable=False, index=True)
+    is_deleted = Column(Boolean, default=False)  # Added is_deleted
     
     # Relationships
     chart_account = relationship("app.models.erp_models.ChartOfAccounts")
@@ -184,3 +186,4 @@ class NonSalesCreditNoteItem(SimpleVoucherItemBase):
     
     non_sales_credit_note_id = Column(Integer, ForeignKey("non_sales_credit_notes.id"), nullable=False)
     non_sales_credit_note = relationship("NonSalesCreditNote", back_populates="items")
+    

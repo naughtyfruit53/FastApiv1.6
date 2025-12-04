@@ -253,8 +253,8 @@ const JournalVoucher: React.FC = () => {
                 shrink: true,
               }}
               inputProps={{ style: { textAlign: "center" } }}
-              error={!!errors.date}
-              helperText={errors.date?.message as string}
+              error={!!errors?.date}
+              helperText={errors?.date?.message as string}
             />
           </Grid>
           <Grid size={12}>
@@ -279,8 +279,8 @@ const JournalVoucher: React.FC = () => {
               type="number"
               fullWidth
               disabled={isViewMode}
-              error={!!errors.debit_amount}
-              helperText={errors.debit_amount?.message as string}
+              error={!!errors?.debit_amount}
+              helperText={errors?.debit_amount?.message as string}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField,
@@ -310,8 +310,8 @@ const JournalVoucher: React.FC = () => {
               type="number"
               fullWidth
               disabled={isViewMode}
-              error={!!errors.credit_amount}
-              helperText={errors.credit_amount?.message as string}
+              error={!!errors?.credit_amount}
+              helperText={errors?.credit_amount?.message as string}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField,
@@ -349,8 +349,8 @@ const JournalVoucher: React.FC = () => {
               rows={3}
               fullWidth
               disabled={isViewMode}
-              error={!!errors.description}
-              helperText={errors.description?.message as string}
+              error={!!errors?.description}
+              helperText={errors?.description?.message as string}
               placeholder="Enter transaction description..."
             />
           </Grid>
@@ -459,7 +459,7 @@ const JournalVoucher: React.FC = () => {
 
     if (isLoading) {
     return (
-      <ProtectedPage moduleKey="finance" action="write">
+      <ProtectedPage moduleKey="voucher" action="create">
         <Container>
           <Box
             display="flex"
@@ -474,7 +474,7 @@ const JournalVoucher: React.FC = () => {
     );
   }
   return (
-    <ProtectedPage moduleKey="finance" action="write">
+    <ProtectedPage moduleKey="voucher" action="create">
       <VoucherLayout
         voucherType="Journal Vouchers"
         voucherTitle="Journal Voucher"

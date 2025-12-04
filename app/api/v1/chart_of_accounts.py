@@ -19,6 +19,7 @@ from app.schemas.master_data import (
 )
 from app.services.ledger_service import LedgerService
 from pydantic import ValidationError
+from app.api.v1.auth import get_current_active_user  # Added import for get_current_active_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -29,7 +30,8 @@ async def get_chart_of_accounts(
     per_page: int = Query(100, ge=1, le=1000),
     coa_filter: ChartOfAccountsFilter = Depends(),
     auth: tuple = Depends(require_access("chart_of_accounts", "read")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)  # Added current_user param
 ):
     """Get chart of accounts with filtering and pagination"""
     current_user, org_id = auth
@@ -461,7 +463,6 @@ async def get_expense_accounts(
         page=page,
         per_page=per_page,
         coa_filter=coa_filter,
-        current_user=current_user,
-        db=db,
-        org_id=org_id
+        auth=auth,
+        db=db
     )

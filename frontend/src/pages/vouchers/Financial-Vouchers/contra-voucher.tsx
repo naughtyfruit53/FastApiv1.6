@@ -276,8 +276,8 @@ const ContraVoucher: React.FC = () => {
                 shrink: true,
               }}
               inputProps={{ style: { textAlign: "center" } }}
-              error={!!errors.date}
-              helperText={errors.date?.message?.toString()}
+              error={!!errors?.date}
+              helperText={errors?.date?.message?.toString()}
             />
           </Grid>
           <Grid size={6}>
@@ -287,7 +287,7 @@ const ContraVoucher: React.FC = () => {
                 {...control.register("transfer_type")}
                 value={watch("transfer_type") || ""}
                 onChange={(e) => setValue("transfer_type", e.target.value)}
-                error={!!errors.transfer_type}
+                error={!!errors?.transfer_type}
                 required
               >
                 {transferTypes.map((type) => (
@@ -309,8 +309,8 @@ const ContraVoucher: React.FC = () => {
               type="number"
               fullWidth
               disabled={isViewMode}
-              error={!!errors.amount}
-              helperText={errors.amount?.message?.toString()}
+              error={!!errors?.amount}
+              helperText={errors?.amount?.message?.toString()}
               sx={{
                 ...voucherStyles.rateField,
                 ...voucherStyles.centerField,
@@ -334,7 +334,7 @@ const ContraVoucher: React.FC = () => {
                 {...control.register("from_account")}
                 value={watch("from_account") || ""}
                 onChange={(e) => setValue("from_account", e.target.value)}
-                error={!!errors.from_account}
+                error={!!errors?.from_account}
                 required
               >
                 {bankAccounts.map((account) => (
@@ -352,7 +352,7 @@ const ContraVoucher: React.FC = () => {
                 {...control.register("to_account")}
                 value={watch("to_account") || ""}
                 onChange={(e) => setValue("to_account", e.target.value)}
-                error={!!errors.to_account}
+                error={!!errors?.to_account}
                 required
               >
                 {bankAccounts.map((account) => (
@@ -369,8 +369,8 @@ const ContraVoucher: React.FC = () => {
               label="Reference"
               fullWidth
               disabled={isViewMode}
-              error={!!errors.reference}
-              helperText={errors.reference?.message?.toString()}
+              error={!!errors?.reference}
+              helperText={errors?.reference?.message?.toString()}
               placeholder="Enter reference number or details..."
             />
           </Grid>
@@ -382,8 +382,8 @@ const ContraVoucher: React.FC = () => {
               rows={3}
               fullWidth
               disabled={isViewMode}
-              error={!!errors.description}
-              helperText={errors.description?.message?.toString()}
+              error={!!errors?.description}
+              helperText={errors?.description?.message?.toString()}
               placeholder="Enter transaction description..."
             />
           </Grid>
@@ -487,7 +487,7 @@ const ContraVoucher: React.FC = () => {
 
     if (isLoading) {
     return (
-      <ProtectedPage moduleKey="finance" action="write">
+      <ProtectedPage moduleKey="voucher" action="create">
         <Container>
           <Box
             display="flex"
@@ -502,7 +502,7 @@ const ContraVoucher: React.FC = () => {
     );
   }
   return (
-    <ProtectedPage moduleKey="finance" action="write">
+    <ProtectedPage moduleKey="voucher" action="create">
       <VoucherLayout
         voucherType="Contra Vouchers"
         voucherTitle="Contra Voucher"

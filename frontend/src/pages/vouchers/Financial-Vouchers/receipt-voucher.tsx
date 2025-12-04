@@ -67,6 +67,11 @@ const ReceiptVoucher: React.FC = () => {
     refreshMasterData,
     getAmountInWords,
     isViewMode,
+    conflictInfo,
+    showConflictModal,
+    handleChangeDateToSuggested,
+    handleProceedAnyway,
+    handleCancelConflict,
   } = useVoucherPage(config);
 
   const handleVoucherClick = (voucher: any) => {
@@ -108,11 +113,6 @@ const ReceiptVoucher: React.FC = () => {
 
   const [entityBalance, setEntityBalance] = useState<number | null>(null);
   const [voucherBalance, setVoucherBalance] = useState<number | null>(null);
-  
-  // State for voucher date conflict detection
-  const [conflictInfo, setConflictInfo] = useState<any>(null);
-  const [showConflictModal, setShowConflictModal] = useState(false);
-  const [pendingDate, setPendingDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedEntity && selectedEntity.type && selectedEntity.id) {
@@ -143,39 +143,6 @@ const ReceiptVoucher: React.FC = () => {
       setVoucherBalance(null);
     }
   }, [reference, referenceOptions]);
-
-  // Fetch voucher number when date changes and check for conflicts
-  useEffect(() => {
-    const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
-        try {
-          // Fetch new voucher number based on date
-          const response = await api.get(
-            `/receipt-vouchers/next-number`,
-            { params: { voucher_date: currentDate } }
-          );
-          setValue('voucher_number', response.data);
-          
-          // Check for backdated conflicts
-          const conflictResponse = await api.get(
-            `/receipt-vouchers/check-backdated-conflict`,
-            { params: { voucher_date: currentDate } }
-          );
-          
-          if (conflictResponse.data.has_conflict) {
-            setConflictInfo(conflictResponse.data);
-            setShowConflictModal(true);
-            setPendingDate(currentDate);
-          }
-        } catch (error) {
-          console.error('Error fetching voucher number:', error);
-        }
-      }
-    };
-    
-    fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
 
   const handleSubmitFormMapped = (data: any) => {
     if (data.entity) {
@@ -217,7 +184,7 @@ const ReceiptVoucher: React.FC = () => {
         <TableBody>
           {(sortedVouchers?.length === 0) ? (
             <TableRow>
-              <TableCell colSpan= {5} align="center">No receipt vouchers available</TableCell>
+              <TableCell colSpan={5} align="center">No receipt vouchers available</TableCell>
             </TableRow>
           ) : (
             sortedVouchers?.slice(0, 7).map((voucher: any) => (
@@ -332,8 +299,8 @@ const ReceiptVoucher: React.FC = () => {
               type="number"
               fullWidth
               disabled={isViewMode}
-              error={!!errors.total_amount}
-              helperText={errors.total_amount?.message as string}
+              error={!!errors?.total_amount}
+              helperText={errors?.total_amount?.message as string}
               sx={{ ...financialVoucherStyles.field, ...voucherStyles.centerField }}
             />
           </Grid>
@@ -357,8 +324,8 @@ const ReceiptVoucher: React.FC = () => {
               disabled={isViewMode}
               fullWidth
               required
-              error={!!errors.entity}
-              helperText={errors.entity?.message as string}
+              error={!!errors?.entity}
+              helperText={errors?.entity?.message as string}
             />
           </Box>
 
@@ -402,7 +369,7 @@ const ReceiptVoucher: React.FC = () => {
 
         {/* THIRD ROW: Amount in Words (100% width) */}
         <Grid container spacing={1} sx={{ mt: 2 }}>
-          <Grid item xs= {12} sx={{ width: '100%' }}>
+          <Grid item xs={12} sx={{ width: '100%' }}>
             <TextField
               fullWidth
               label="Amount in Words"
@@ -416,7 +383,7 @@ const ReceiptVoucher: React.FC = () => {
 
         {/* FOURTH ROW: Notes (100% width) */}
         <Grid container spacing={1} sx={{ mt: 2 }}>
-          <Grid item xs= {12} sx={{ width: '100%' }}>
+          <Grid item xs={12} sx={{ width: '100%' }}>
             <TextField
               {...control.register('notes')}
               label="Notes"
@@ -425,7 +392,6 @@ const ReceiptVoucher: React.FC = () => {
               fullWidth
               disabled={isViewMode}
               sx={{
-                ...financialVoucherStyles.notesField,
                 width: '100%',
                 '& .MuiInputBase-root': { height: '36px', padding: '0 8px' }
               }}
@@ -437,32 +403,9 @@ const ReceiptVoucher: React.FC = () => {
   );
 
 
-  // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
-  };
-
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
-    // Keep the current date
-  };
-
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      // Revert to previous date or clear
-      setValue('date', '');
-    }
-    setPendingDate(null);
-  };
-
-    if (isLoading) {
+  if (isLoading) {
     return (
-      <ProtectedPage moduleKey="finance" action="write">
+      <ProtectedPage moduleKey="voucher" action="create">
         <Container>
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
             <CircularProgress />
@@ -473,7 +416,7 @@ const ReceiptVoucher: React.FC = () => {
   }
 
   return (
-    <ProtectedPage moduleKey="finance" action="write">
+    <ProtectedPage moduleKey="voucher" action="create">
       <VoucherLayout
         voucherType="Receipt Vouchers"
         voucherTitle="Receipt Voucher"

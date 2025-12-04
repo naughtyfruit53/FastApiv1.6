@@ -274,3 +274,4 @@ async def delete_expense_account(
         await db.rollback()
         logger.error(f"Error deleting expense account {account_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete expense account")
+    

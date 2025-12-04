@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from dateutil import parser as date_parser
 from app.core.database import get_db
-from app.core.enforcement import require_access, TenantEnforcement
+from app.core.enforcement import require_access
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.financial import PaymentVoucher
@@ -27,18 +27,24 @@ async def load_entity(db: AsyncSession, entity_id: int, entity_type: str) -> Opt
         stmt = select(Vendor).where(Vendor.id == entity_id)
         result = await db.execute(stmt)
         entity = result.scalar_one_or_none()
+        if not entity:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vendor not found")
         return {'id': entity.id, 'name': entity.name, 'type': 'Vendor'} if entity else None
     elif entity_type == 'Customer':
         stmt = select(Customer).where(Customer.id == entity_id)
         result = await db.execute(stmt)
         entity = result.scalar_one_or_none()
+        if not entity:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found")
         return {'id': entity.id, 'name': entity.name, 'type': 'Customer'} if entity else None
     elif entity_type == 'Employee':
         stmt = select(Employee).where(Employee.id == entity_id)
         result = await db.execute(stmt)
         entity = result.scalar_one_or_none()
+        if not entity:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
         return {'id': entity.id, 'name': entity.name, 'type': 'Employee'} if entity else None
-    return None
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid entity type")
 
 async def validate_chart_account(db: AsyncSession, chart_account_id: int, organization_id: int) -> ChartOfAccounts:
     """Validate that chart_account_id exists and belongs to organization"""
@@ -67,7 +73,7 @@ async def get_payment_vouchers(
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "read"))
+    auth: tuple = Depends(require_access("finance", "read"))
 ):
     """Get all payment vouchers with enhanced sorting and pagination"""
     current_user, org_id = auth
@@ -109,7 +115,7 @@ async def get_payment_vouchers(
 async def get_next_payment_voucher_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "read"))
+    auth: tuple = Depends(require_access("finance", "read"))
 ):
     """Get the next available payment voucher number for a given date"""
     current_user, org_id = auth
@@ -119,8 +125,8 @@ async def get_next_payment_voucher_number(
     if voucher_date:
         try:
             date_to_use = date_parser.parse(voucher_date)
-        except Exception:
-            pass
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
     
     return await VoucherNumberService.generate_voucher_number_async(
         db, "PMT", org_id, PaymentVoucher, voucher_date=date_to_use
@@ -130,7 +136,7 @@ async def get_next_payment_voucher_number(
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "read"))
+    auth: tuple = Depends(require_access("finance", "read"))
 ):
     """Check if creating a voucher with the given date would create conflicts"""
     current_user, org_id = auth
@@ -168,7 +174,7 @@ async def create_payment_voucher(
     background_tasks: BackgroundTasks,
     send_email: bool = False,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "create"))
+    auth: tuple = Depends(require_access("finance", "write"))
 ):
     """Create new payment voucher"""
     current_user, org_id = auth
@@ -246,7 +252,7 @@ async def create_payment_voucher(
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error creating payment voucher: {e}")
+        logger.error(f"Error creating payment voucher: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create payment voucher"
@@ -256,7 +262,7 @@ async def create_payment_voucher(
 async def get_payment_voucher(
     voucher_id: int,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "read"))
+    auth: tuple = Depends(require_access("finance", "read"))
 ):
     current_user, org_id = auth
     
@@ -288,7 +294,7 @@ async def update_payment_voucher(
     voucher_id: int,
     voucher_update: PaymentVoucherUpdate,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "update"))
+    auth: tuple = Depends(require_access("finance", "write"))
 ):
     current_user, org_id = auth
     
@@ -351,7 +357,7 @@ async def update_payment_voucher(
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating payment voucher: {e}")
+        logger.error(f"Error updating payment voucher: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update payment voucher"
@@ -361,7 +367,7 @@ async def update_payment_voucher(
 async def delete_payment_voucher(
     voucher_id: int,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "delete"))
+    auth: tuple = Depends(require_access("finance", "delete"))
 ):
     current_user, org_id = auth
     
@@ -386,7 +392,7 @@ async def delete_payment_voucher(
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error deleting payment voucher: {e}")
+        logger.error(f"Error deleting payment voucher: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete payment voucher"

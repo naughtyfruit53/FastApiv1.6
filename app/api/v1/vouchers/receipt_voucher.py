@@ -79,7 +79,7 @@ async def get_receipt_vouchers(
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "read"))
+    auth: tuple = Depends(require_access("finance", "read"))
 ):
     """Get all receipt vouchers with enhanced sorting and pagination"""
     current_user, org_id = auth
@@ -119,7 +119,7 @@ async def get_receipt_vouchers(
 async def get_next_receipt_voucher_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "read"))
+    auth: tuple = Depends(require_access("finance", "read"))
 ):
     """Get the next available receipt voucher number for a given date"""
     current_user, org_id = auth
@@ -129,18 +129,22 @@ async def get_next_receipt_voucher_number(
     if voucher_date:
         try:
             date_to_use = date_parser.parse(voucher_date)
-        except Exception:
-            pass
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
     
-    return await VoucherNumberService.generate_voucher_number_async(
-        db, "RCT", org_id, ReceiptVoucher, voucher_date=date_to_use
-    )
+    try:
+        return await VoucherNumberService.generate_voucher_number_async(
+            db, "RCT", org_id, ReceiptVoucher, voucher_date=date_to_use
+        )
+    except Exception as e:
+        logger.error(f"Error generating next number: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate next voucher number")
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "read"))
+    auth: tuple = Depends(require_access("finance", "read"))
 ):
     """Check if creating a voucher with the given date would create conflicts"""
     current_user, org_id = auth
@@ -168,7 +172,7 @@ async def check_backdated_conflict(
         return conflict_info
     except Exception as e:
         logger.error(f"Error checking backdated conflict: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format or internal error: {str(e)}")
 
 @router.post("", response_model=ReceiptVoucherInDB)
 async def create_receipt_voucher(
@@ -176,7 +180,7 @@ async def create_receipt_voucher(
     background_tasks: BackgroundTasks,
     send_email: bool = False,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "create"))
+    auth: tuple = Depends(require_access("finance", "write"))
 ):
     current_user, org_id = auth
     
@@ -251,14 +255,14 @@ async def create_receipt_voucher(
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error creating receipt voucher: {e}")
+        logger.error(f"Error creating receipt voucher: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create receipt voucher")
 
 @router.get("/{voucher_id}", response_model=ReceiptVoucherInDB)
 async def get_receipt_voucher(
     voucher_id: int,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "read"))
+    auth: tuple = Depends(require_access("finance", "read"))
 ):
     current_user, org_id = auth
     
@@ -287,7 +291,7 @@ async def update_receipt_voucher(
     voucher_id: int,
     voucher_update: ReceiptVoucherUpdate,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "update"))
+    auth: tuple = Depends(require_access("finance", "write"))
 ):
     current_user, org_id = auth
     
@@ -345,14 +349,14 @@ async def update_receipt_voucher(
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating receipt voucher: {e}")
+        logger.error(f"Error updating receipt voucher: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to update receipt voucher")
 
 @router.delete("/{voucher_id}")
 async def delete_receipt_voucher(
     voucher_id: int,
     db: AsyncSession = Depends(get_db),
-    auth: tuple = Depends(require_access("voucher", "delete"))
+    auth: tuple = Depends(require_access("finance", "delete"))
 ):
     current_user, org_id = auth
     
@@ -374,6 +378,6 @@ async def delete_receipt_voucher(
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error deleting receipt voucher: {e}")
+        logger.error(f"Error deleting receipt voucher: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to delete receipt voucher")
     

@@ -44,7 +44,7 @@ async def get_journal_vouchers(
     status: Optional[str] = Query(None, description="Optional filter by voucher status (e.g., 'draft', 'approved')"),
     sort: str = Query("desc", description="Sort order: 'asc' or 'desc' (default 'desc' for latest first)"),
     sortBy: str = Query("created_at", description="Field to sort by (default 'created_at')"),
-    auth: tuple = Depends(require_access("voucher", "read")),
+    auth: tuple = Depends(require_access("finance", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get all journal vouchers with enhanced sorting and pagination"""
@@ -85,7 +85,7 @@ async def get_journal_vouchers(
 @router.get("/next-number", response_model=str)
 async def get_next_journal_voucher_number(
     voucher_date: Optional[str] = Query(None, description="Optional voucher date (ISO format) to generate number for specific period"),
-    auth: tuple = Depends(require_access("voucher", "read")),
+    auth: tuple = Depends(require_access("finance", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """Get the next available journal voucher number for a given date"""
@@ -96,17 +96,21 @@ async def get_next_journal_voucher_number(
     if voucher_date:
         try:
             date_to_use = date_parser.parse(voucher_date)
-        except Exception:
-            pass
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
     
-    return await VoucherNumberService.generate_voucher_number_async(
-        db, "JNL", org_id, JournalVoucher, voucher_date=date_to_use
-    )
+    try:
+        return await VoucherNumberService.generate_voucher_number_async(
+            db, "JNL", org_id, JournalVoucher, voucher_date=date_to_use
+        )
+    except Exception as e:
+        logger.error(f"Error generating next number: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate next voucher number")
 
 @router.get("/check-backdated-conflict")
 async def check_backdated_conflict(
     voucher_date: str = Query(..., description="Voucher date (ISO format) to check for conflicts"),
-    auth: tuple = Depends(require_access("voucher", "read")),
+    auth: tuple = Depends(require_access("finance", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     """Check if creating a voucher with the given date would create conflicts"""
@@ -120,12 +124,12 @@ async def check_backdated_conflict(
         return conflict_info
     except Exception as e:
         logger.error(f"Error checking backdated conflict: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format or internal error: {str(e)}")
 
 @router.post("/", response_model=JournalVoucherInDB)
 async def create_journal_voucher(
     voucher: JournalVoucherCreate,
-    auth: tuple = Depends(require_access("voucher", "create")),
+    auth: tuple = Depends(require_access("finance", "write")),
     db: AsyncSession = Depends(get_db)
 ):
     current_user, org_id = auth
@@ -173,13 +177,13 @@ async def create_journal_voucher(
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error creating journal voucher: {e}")
+        logger.error(f"Error creating journal voucher: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create journal voucher")
 
 @router.get("/{voucher_id}", response_model=JournalVoucherInDB)
 async def get_journal_voucher(
     voucher_id: int,
-    auth: tuple = Depends(require_access("voucher", "read")),
+    auth: tuple = Depends(require_access("finance", "read")),
     db: AsyncSession = Depends(get_db)
 ):
     current_user, org_id = auth
@@ -207,7 +211,7 @@ async def get_journal_voucher(
 async def update_journal_voucher(
     voucher_id: int,
     voucher_update: JournalVoucherUpdate,
-    auth: tuple = Depends(require_access("voucher", "update")),
+    auth: tuple = Depends(require_access("finance", "write")),
     db: AsyncSession = Depends(get_db)
 ):
     current_user, org_id = auth
@@ -247,13 +251,13 @@ async def update_journal_voucher(
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating journal voucher: {e}")
+        logger.error(f"Error updating journal voucher: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to update journal voucher")
 
 @router.delete("/{voucher_id}")
 async def delete_journal_voucher(
     voucher_id: int,
-    auth: tuple = Depends(require_access("voucher", "delete")),
+    auth: tuple = Depends(require_access("finance", "delete")),
     db: AsyncSession = Depends(get_db)
 ):
     current_user, org_id = auth
@@ -276,5 +280,6 @@ async def delete_journal_voucher(
         
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error deleting journal voucher: {e}")
+        logger.error(f"Error deleting journal voucher: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to delete journal voucher")
+    

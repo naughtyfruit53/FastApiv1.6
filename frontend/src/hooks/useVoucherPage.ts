@@ -383,7 +383,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const { data: voucherList, isLoading: isLoadingList, refetch: refetchVoucherList } = useQuery({  
     queryKey: [config.voucherType, currentPage, pageSize],  
     queryFn: () => {  
-      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers', 'sales-orders'];  
+      const voucherTypesUnderVouchers = [];  // Set to empty to use direct /${type} for all vouchers, aligning with backend prefixes
       const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${config.voucherType}` : `/${config.voucherType}`;  
       console.log(`[useVoucherPage] Fetching vouchers from endpoint: ${endpoint}`);  
       return api.get(endpoint, {  
@@ -453,7 +453,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     const fetchVoucherNumber = async () => {
       if (date && mode === 'create') {
         try {
-          const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers', 'sales-orders'];  
+          const voucherTypesUnderVouchers = [];  // Consistent with list fetch
           const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${config.voucherType}/next-number` : `/${config.voucherType}/next-number`;
           const response = await api.get(
             endpoint,
@@ -483,7 +483,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   
   const createMutation = useMutation({  
     mutationFn: (data: any) => {  
-      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers', 'sales-orders'];  
+      const voucherTypesUnderVouchers = [];  
       const trimmedApiEndpoint = (config.apiEndpoint || config.voucherType).replace(/^\/+/, ''); // Strip leading slashes
       const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${trimmedApiEndpoint}` : `/${trimmedApiEndpoint}`;  
       console.log(`[useVoucherPage] Creating voucher at endpoint: ${endpoint}`);  
@@ -569,7 +569,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   
   const updateMutation = useMutation({  
     mutationFn: (data: any) => {  
-      const voucherTypesUnderVouchers = ['goods-receipt-notes', 'purchase-vouchers', 'sales-vouchers', 'payment-vouchers', 'receipt-vouchers', 'journal-vouchers', 'contra-vouchers', 'debit-notes', 'credit-notes', 'delivery-challans', 'quotations', 'proforma-invoices', 'purchase-returns', 'sales-returns', 'inter-department-vouchers', 'sales-orders'];  
+      const voucherTypesUnderVouchers = [];  
       const trimmedApiEndpoint = (config.apiEndpoint || config.voucherType).replace(/^\/+/, ''); // Strip leading slashes
       const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${trimmedApiEndpoint}` : `/${trimmedApiEndpoint}`;  
       console.log(`[useVoucherPage] Updating voucher at endpoint: ${endpoint}/${selectedId!}`);  
@@ -1075,7 +1075,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     reset,  
     setValue,  
     watch,  
-    errors,  
+    formState: { errors },  
     fields,  
     append,  
     remove,  
