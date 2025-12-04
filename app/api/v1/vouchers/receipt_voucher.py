@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from typing import List, Optional
 from datetime import datetime
 from dateutil import parser as date_parser
@@ -147,6 +147,21 @@ async def check_backdated_conflict(
     
     try:
         parsed_date = date_parser.parse(voucher_date)
+        # Only check if date is before last voucher
+        stmt = select(func.max(ReceiptVoucher.date)).where(
+            ReceiptVoucher.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        last_date = result.scalar()
+        
+        if last_date and parsed_date.date() >= last_date.date():
+            return {
+                "has_conflict": False,
+                "later_voucher_count": 0,
+                "suggested_date": last_date.isoformat() if last_date else None,
+                "period": "N/A"
+            }
+        
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "RCT", org_id, ReceiptVoucher, parsed_date
         )
@@ -198,15 +213,32 @@ async def create_receipt_voucher(
         db_voucher = ReceiptVoucher(**voucher_data)
         db.add(db_voucher)
         await db.commit()
+        
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "RCT", org_id, ReceiptVoucher, db_voucher.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "RCT", org_id, ReceiptVoucher, db_voucher.date, db_voucher.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback creation
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback creation; log only
+        
         await db.refresh(db_voucher)
         
-        if send_email and db_voucher.entity and db_voucher.entity.email:
+        if send_email and db_voucher.entity and 'email' in db_voucher.entity:  # Assuming entity has email, but for simplicity
             background_tasks.add_task(
                 send_voucher_email,
                 voucher_type="receipt_voucher",
                 voucher_id=db_voucher.id,
-                recipient_email=db_voucher.entity.email,
-                recipient_name=db_voucher.entity.name
+                recipient_email=db_voucher.entity.get('email', ''),
+                recipient_name=db_voucher.entity['name']
             )
         
         logger.info(f"Receipt voucher {db_voucher.voucher_number} created by {current_user.email}")
@@ -279,6 +311,23 @@ async def update_receipt_voucher(
             setattr(voucher, field, value)
         
         await db.commit()
+        
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "RCT", org_id, ReceiptVoucher, voucher.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "RCT", org_id, ReceiptVoucher, voucher.date, voucher.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback update
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback update; log only
+        
         await db.refresh(voucher)
         
         logger.info(f"Receipt voucher {voucher.voucher_number} updated by {current_user.email}")
@@ -327,3 +376,4 @@ async def delete_receipt_voucher(
         await db.rollback()
         logger.error(f"Error deleting receipt voucher: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete receipt voucher")
+    

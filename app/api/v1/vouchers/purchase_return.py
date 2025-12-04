@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime
@@ -92,6 +92,21 @@ async def check_backdated_conflict(
     
     try:
         parsed_date = date_parser.parse(voucher_date)
+        # Only check if date is before last voucher
+        stmt = select(func.max(PurchaseReturn.date)).where(
+            PurchaseReturn.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        last_date = result.scalar()
+        
+        if last_date and parsed_date.date() >= last_date.date():
+            return {
+                "has_conflict": False,
+                "later_voucher_count": 0,
+                "suggested_date": last_date.isoformat() if last_date else None,
+                "period": "N/A"
+            }
+        
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "PR", org_id, PurchaseReturn, parsed_date
         )
@@ -226,6 +241,22 @@ async def create_purchase_return(
         db_return.discount_amount = total_discount
         
         await db.commit()
+        
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "PR", org_id, PurchaseReturn, db_return.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "PR", org_id, PurchaseReturn, db_return.date, db_return.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback creation
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback creation; log only
         
         stmt = select(PurchaseReturn).options(
             joinedload(PurchaseReturn.vendor),
@@ -406,6 +437,22 @@ async def update_purchase_return(
         logger.debug(f"Before commit for purchase return {return_id}")
         await db.commit()
         logger.debug(f"After commit for purchase return {return_id}")
+        
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "PR", org_id, PurchaseReturn, return_data.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "PR", org_id, PurchaseReturn, return_data.date, return_data.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback update
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback update; log only
         
         stmt = select(PurchaseReturn).options(
             joinedload(PurchaseReturn.vendor),

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, exists
+from sqlalchemy import select, exists, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime
@@ -300,12 +300,21 @@ async def create_goods_receipt_note(
         
         await db.commit()
         
-        # Check if backdated and reindex if necessary
-        reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
-            db, "GRN", org_id, GoodsReceiptNote, db_invoice.date, db_invoice.id
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "GRN", org_id, GoodsReceiptNote, db_invoice.date
         )
-        if reindex_result['success'] and reindex_result['vouchers_reindexed'] > 0:
-            logger.info(f"Reindexed {reindex_result['vouchers_reindexed']} GRNs after backdated insert")
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "GRN", org_id, GoodsReceiptNote, db_invoice.date, db_invoice.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback creation
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback creation; log only
         
         stmt = select(GoodsReceiptNote).options(
             joinedload(GoodsReceiptNote.vendor),
@@ -491,6 +500,22 @@ async def update_goods_receipt_note(
         await db.commit()
         logger.debug(f"After commit for goods receipt note {invoice_id}")
         
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "GRN", org_id, GoodsReceiptNote, invoice.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "GRN", org_id, GoodsReceiptNote, invoice.date, invoice.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback update
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback update; log only
+        
         stmt = select(GoodsReceiptNote).options(
             joinedload(GoodsReceiptNote.vendor),
             joinedload(GoodsReceiptNote.purchase_order),
@@ -584,4 +609,4 @@ async def delete_goods_receipt_note(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete goods receipt note"
         )
-        
+    

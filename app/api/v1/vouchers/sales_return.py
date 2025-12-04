@@ -3,12 +3,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime
 from dateutil import parser as date_parser
-from io import BytesIO
 from app.core.database import get_db
 from app.core.enforcement import require_access, TenantEnforcement
 from app.api.v1.auth import get_current_active_user
@@ -96,6 +95,21 @@ async def check_backdated_conflict(
     
     try:
         parsed_date = date_parser.parse(voucher_date)
+        # Only check if date is before last voucher
+        stmt = select(func.max(SalesReturn.date)).where(
+            SalesReturn.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        last_date = result.scalar()
+        
+        if last_date and parsed_date.date() >= last_date.date():
+            return {
+                "has_conflict": False,
+                "later_voucher_count": 0,
+                "suggested_date": last_date.isoformat() if last_date else None,
+                "period": "N/A"
+            }
+        
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "SR", org_id, SalesReturn, parsed_date
         )
@@ -231,6 +245,22 @@ async def create_sales_return(
         db_invoice.discount_amount = total_discount
         
         await db.commit()
+        
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "SR", org_id, SalesReturn, db_invoice.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "SR", org_id, SalesReturn, db_invoice.date, db_invoice.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback creation
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback creation; log only
         
         # Re-query with joins to load relationships
         stmt = select(SalesReturn).options(
@@ -426,6 +456,22 @@ async def update_sales_return(
         await db.commit()
         logger.debug(f"After commit for sales return {invoice_id}")
         
+        # Check for backdated conflict and reindex if needed
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "SR", org_id, SalesReturn, invoice.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "SR", org_id, SalesReturn, invoice.date, invoice.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback update
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback update; log only
+        
         # Re-query with joins to load relationships
         stmt = select(SalesReturn).options(
             joinedload(SalesReturn.customer),
@@ -491,3 +537,4 @@ async def delete_sales_return(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete sales return"
         )
+    

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime
@@ -91,6 +91,21 @@ async def check_backdated_conflict(
     
     try:
         parsed_date = date_parser.parse(voucher_date)
+        # Only check if date is before last voucher
+        stmt = select(func.max(DeliveryChallan.date)).where(
+            DeliveryChallan.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        last_date = result.scalar()
+        
+        if last_date and parsed_date.date() >= last_date.date():
+            return {
+                "has_conflict": False,
+                "later_voucher_count": 0,
+                "suggested_date": last_date.isoformat() if last_date else None,
+                "period": "N/A"
+            }
+        
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "DC", org_id, DeliveryChallan, parsed_date
         )
@@ -151,7 +166,29 @@ async def create_delivery_challan(
             db.add(item)
         
         await db.commit()
-        await db.refresh(db_invoice)
+        
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "DC", org_id, DeliveryChallan, db_invoice.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "DC", org_id, DeliveryChallan, db_invoice.date, db_invoice.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback creation
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback creation; log only
+        
+        stmt = select(DeliveryChallan).options(
+            joinedload(DeliveryChallan.customer),
+            joinedload(DeliveryChallan.items).joinedload(DeliveryChallanItem.product)
+        ).where(DeliveryChallan.id == db_invoice.id)
+        result = await db.execute(stmt)
+        db_invoice = result.unique().scalar_one_or_none()
         
         if send_email and db_invoice.customer and db_invoice.customer.email:
             background_tasks.add_task(
@@ -239,7 +276,37 @@ async def update_delivery_challan(
         logger.debug(f"Before commit for delivery challan {invoice_id}")
         await db.commit()
         logger.debug(f"After commit for delivery challan {invoice_id}")
-        await db.refresh(invoice)
+        
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "DC", org_id, DeliveryChallan, invoice.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "DC", org_id, DeliveryChallan, invoice.date, invoice.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback update
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback update; log only
+        
+        stmt = select(DeliveryChallan).options(
+            joinedload(DeliveryChallan.customer),
+            joinedload(DeliveryChallan.items).joinedload(DeliveryChallanItem.product)
+        ).where(
+            DeliveryChallan.id == invoice_id,
+            DeliveryChallan.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        invoice = result.unique().scalar_one_or_none()
+        if not invoice:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Delivery challan not found"
+            )
         
         logger.info(f"Delivery challan {invoice.voucher_number} updated by {current_user.email}")
         return invoice
@@ -383,3 +450,4 @@ async def get_delivery_challan_tracking(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve tracking details"
         )
+    

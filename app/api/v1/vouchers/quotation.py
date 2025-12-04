@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, asc, desc, func
+from sqlalchemy import select, func, asc, desc
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from datetime import datetime
@@ -25,6 +25,7 @@ import re  # For filename sanitization
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["quotations"])
 
+@router.get("", response_model=List[QuotationInDB])
 @router.get("/", response_model=List[QuotationInDB])
 async def get_quotations(
     skip: int = Query(0, ge=0, description="Number of records to skip (for pagination)"),
@@ -95,6 +96,21 @@ async def check_backdated_conflict(
     
     try:
         parsed_date = date_parser.parse(voucher_date)
+        # Only check if date is before last voucher
+        stmt = select(func.max(Quotation.date)).where(
+            Quotation.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        last_date = result.scalar()
+        
+        if last_date and parsed_date.date() >= last_date.date():
+            return {
+                "has_conflict": False,
+                "later_voucher_count": 0,
+                "suggested_date": last_date.isoformat() if last_date else None,
+                "period": "N/A"
+            }
+        
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "QTN", org_id, Quotation, parsed_date
         )
@@ -141,7 +157,7 @@ async def create_quotation(
             latest_revision = result.scalar() or 0
             
             quotation_data['revision_number'] = latest_revision + 1
-            quotation_data['voucher_number'] = f"{parent.voucher_number} -rev {quotation_data['revision_number']}"
+            quotation_data['voucher_number'] = f"{parent.voucher_number} Rev {quotation_data['revision_number']}"
             quotation_data['parent_id'] = quotation.parent_id
         else:
             # Generate unique voucher number if not provided or blank
@@ -248,6 +264,22 @@ async def create_quotation(
         db_quotation.discount_amount = total_discount
         
         await db.commit()
+        
+        # Check for backdated conflict and reindex if necessary
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "QTN", org_id, Quotation, db_quotation.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "QTN", org_id, Quotation, db_quotation.date, db_quotation.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback creation
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback creation; log only
         
         # Re-query with joins to load relationships
         stmt = select(Quotation).options(
@@ -443,6 +475,22 @@ async def update_quotation(
         logger.debug(f"Before commit for quotation {quotation_id}")
         await db.commit()
         logger.debug(f"After commit for quotation {quotation_id}")
+        
+        # Check for backdated conflict and reindex if needed
+        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
+            db, "QTN", org_id, Quotation, quotation.date
+        )
+        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
+            try:
+                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                    db, "QTN", org_id, Quotation, quotation.date, quotation.id
+                )
+                if not reindex_result["success"]:
+                    logger.error(f"Reindex failed: {reindex_result['error']}")
+                    # Continue but log - don't rollback update
+            except Exception as e:
+                logger.error(f"Error during reindex: {str(e)}")
+                # Don't rollback update; log only
         
         # Re-query with joins to load relationships
         stmt = select(Quotation).options(
