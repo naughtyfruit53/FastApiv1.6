@@ -1,6 +1,6 @@
 // frontend/src/components/SortableTable.tsx
 // SortableTable component for requirement #3 - Table Sorting on Header Click
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -12,6 +12,7 @@ import {
   Paper,
   Box,
   Typography,
+  Tooltip,
 } from "@mui/material";
 import { visuallyHidden } from "@mui/utils";
 export type Order = "asc" | "desc";
@@ -109,16 +110,41 @@ interface SortableTableHeadProps<T> {
   orderBy: keyof T;
   onRequestSort: (_property: keyof T) => void;
   hasActions: boolean;
+  widths: string[];
+  setWidths: React.Dispatch<React.SetStateAction<string[]>>;
 }
 function SortableTableHead<T>(props: SortableTableHeadProps<T>) {
-  const { headCells, order, orderBy, onRequestSort, hasActions } = props;
+  const { headCells, order, orderBy, onRequestSort, hasActions, widths, setWidths } = props;
   const createSortHandler = (property: keyof T) => () => {
     onRequestSort(property);
   };
+
+  const handleMouseDown = (index: number) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = parseInt(widths[index], 10) || 150;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const diffX = e.clientX - startX;
+      const newWidth = Math.max(50, startWidth + diffX); // Minimum width 50px
+      const newWidths = [...widths];
+      newWidths[index] = `${newWidth}px`;
+      setWidths(newWidths);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
   return (
     <TableHead>
       <TableRow>
-        {headCells.map((headCell) => (
+        {headCells.map((headCell, index) => (
           <TableCell
             key={String(headCell.id)}
             align={headCell.align || "center"}
@@ -126,8 +152,25 @@ function SortableTableHead<T>(props: SortableTableHeadProps<T>) {
             sortDirection={orderBy === headCell.id ? order : false}
             sx={{
               fontWeight: "bold",
-              width: headCell.width,
+              width: widths[index],
               backgroundColor: "grey.50",
+              padding: '4px 8px',
+              fontSize: '0.875rem',
+              position: 'relative',
+              '& .resizer': {
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                height: '100%',
+                width: '5px',
+                background: 'rgba(0, 0, 0, 0.2)',
+                cursor: 'col-resize',
+                userSelect: 'none',
+                touchAction: 'none',
+              },
+              '& .resizer:hover': {
+                background: 'blue',
+              },
             }}
           >
             {headCell.sortable !== false ? (
@@ -148,14 +191,42 @@ function SortableTableHead<T>(props: SortableTableHeadProps<T>) {
             ) : (
               headCell.label
             )}
+            <Box 
+              className="resizer" 
+              onMouseDown={handleMouseDown(index)}
+            />
           </TableCell>
         ))}
         {hasActions && (
           <TableCell
             align="center"
-            sx={{ fontWeight: "bold", backgroundColor: "grey.50" }}
+            sx={{ 
+              fontWeight: "bold", 
+              backgroundColor: "grey.50",
+              width: widths[headCells.length],
+              padding: '4px 8px',
+              fontSize: '0.875rem',
+              position: 'relative',
+              '& .resizer': {
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                height: '100%',
+                width: '5px',
+                background: 'rgba(0, 0, 0, 0.2)',
+                cursor: 'col-resize',
+                userSelect: 'none',
+                touchAction: 'none',
+              },
+              '& .resizer:hover': {
+                background: 'blue',
+              },
+            }}
           >
-            Actions
+            <Box 
+              className="resizer" 
+              onMouseDown={handleMouseDown(headCells.length)}
+            />
           </TableCell>
         )}
       </TableRow>
@@ -181,6 +252,11 @@ function SortableTable<T>({
   const [orderBy, setOrderBy] = useState<keyof T>(
     defaultOrderBy || headCells[0]?.id,
   );
+  const [widths, setWidths] = useState<string[]>(
+    headCells.map(headCell => headCell.width?.toString() || 'auto')
+      .concat(actions ? ['auto'] : [])
+  );
+
   const handleRequestSort = (property: keyof T) => {
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
@@ -209,11 +285,12 @@ function SortableTable<T>({
           </Typography>
         </Box>
       )}
-      <TableContainer sx={{ maxHeight }}>
+      <TableContainer sx={{ maxHeight, overflowX: 'hidden' }}>
         <Table
           stickyHeader={stickyHeader}
           size={dense ? "small" : "medium"}
           aria-label="sortable table"
+          sx={{ tableLayout: 'fixed', width: '100%' }}
         >
           <SortableTableHead
             headCells={headCells}
@@ -221,6 +298,8 @@ function SortableTable<T>({
             orderBy={orderBy}
             onRequestSort={handleRequestSort}
             hasActions={hasActions}
+            widths={widths}
+            setWidths={setWidths}
           />
           <TableBody>
             {sortedData.length === 0 ? (
@@ -247,21 +326,45 @@ function SortableTable<T>({
                       : {},
                   }}
                 >
-                  {headCells.map((headCell) => (
-                    <TableCell
-                      key={String(headCell.id)}
-                      align={
-                        headCell.align || "center"
-                      }
-                      padding={headCell.disablePadding ? "none" : "normal"}
-                    >
-                      {headCell.render
-                        ? headCell.render(row[headCell.id], row)
-                        : String(row[headCell.id] ?? "")}
-                    </TableCell>
-                  ))}
+                  {headCells.map((headCell, colIndex) => {
+                    const cellValue = headCell.render
+                      ? headCell.render(row[headCell.id], row)
+                      : String(row[headCell.id] ?? "");
+                    return (
+                      <Tooltip title={cellValue} key={String(headCell.id)}>
+                        <TableCell
+                          align={headCell.align || "center"}
+                          padding={headCell.disablePadding ? "none" : "normal"}
+                          sx={{
+                            padding: '4px 8px',
+                            fontSize: '0.75rem',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            width: widths[colIndex],
+                          }}
+                        >
+                          {cellValue}
+                        </TableCell>
+                      </Tooltip>
+                    );
+                  })}
                   {hasActions && (
-                    <TableCell align="center">{actions!(row)}</TableCell>
+                    <Tooltip title="Actions">
+                      <TableCell 
+                        align="center"
+                        sx={{
+                          padding: '4px 8px',
+                          fontSize: '0.75rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          width: widths[headCells.length],
+                        }}
+                      >
+                        {actions!(row)}
+                      </TableCell>
+                    </Tooltip>
                   )}
                 </TableRow>
               ))

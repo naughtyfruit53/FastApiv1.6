@@ -1,7 +1,7 @@
 # app/services/voucher_service.py
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, delete
+from sqlalchemy import select, desc, delete, func
 from typing import Type, Union, Any, Optional
 from datetime import datetime
 from decimal import Decimal
@@ -244,14 +244,16 @@ class VoucherNumberService:
         
         if period_segment:
             search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
+            base_number = f"{full_prefix}/{fiscal_year}/{period_segment}"
         else:
             search_pattern = f"{full_prefix}/{fiscal_year}/%"
+            base_number = f"{full_prefix}/{fiscal_year}"
         
-        # Find vouchers in the same period with dates after the proposed date
+        # Find vouchers in the same period with dates after the proposed date (date-only comparison)
         stmt = select(model).where(
             model.organization_id == organization_id,
             model.voucher_number.like(search_pattern),
-            model.date > voucher_date,
+            func.date(model.date) > voucher_date.date(),
             model.is_deleted == False  # Only non-deleted
         ).order_by(model.date.desc())
         
@@ -365,7 +367,7 @@ class VoucherNumberService:
             stmt = select(model).where(
                 model.organization_id == organization_id,
                 model.voucher_number.like(search_pattern),
-                model.date >= new_voucher_date,
+                func.date(model.date) >= new_voucher_date.date(),
                 model.id != new_voucher_id,  # Exclude the new one (already correct)
                 model.is_deleted == False
             ).order_by(model.date.asc(), model.id.asc())  # Chronological ASC

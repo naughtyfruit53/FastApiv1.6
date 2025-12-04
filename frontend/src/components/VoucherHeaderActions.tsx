@@ -5,6 +5,7 @@ import { Box, Button } from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
+  Cancel as CancelIcon,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import VoucherPDFButton from "./VoucherPDFButton";
@@ -58,6 +59,10 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
     router.push(`${voucherRoute}?mode=create`);
   };
 
+  const handleCancelFallback = () => {
+    router.push(`${voucherRoute}?mode=create`);
+  };
+
   // Map voucher type to PDF generation type
   const getPDFVoucherType = (voucherType: string): string => {
     const lowerType = voucherType.toLowerCase();
@@ -93,6 +98,15 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
           >
             Edit {voucherType.toLowerCase()}
           </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<CancelIcon />}
+            onClick={onCancel ? onCancel : handleCancelFallback}
+            sx={{ fontSize: 12, textTransform: "uppercase" }}
+          >
+            Cancel
+          </Button>
           {showPDFButton && currentId && (
             <VoucherPDFButton
               voucherType={pdfVoucherType as any}
@@ -124,18 +138,29 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
           >
             Save
           </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<CancelIcon />}
+            onClick={onCancel ? onCancel : handleCancelFallback}
+            sx={{ fontSize: 12, textTransform: "uppercase" }}
+          >
+            Cancel
+          </Button>
         </>
       )}
       {mode === "create" && (
-        <Button
-          form="voucherForm"
-          type="submit"
-          variant="contained"
-          color="primary"
-          sx={{ fontSize: 12, textTransform: "uppercase" }}
-        >
-          Save
-        </Button>
+        <>
+          <Button
+            form="voucherForm"
+            type="submit"
+            variant="contained"
+            color="primary"
+            sx={{ fontSize: 12, textTransform: "uppercase" }}
+          >
+            Save
+          </Button>
+        </>
       )}
       {mode === "revise" && (
         <>
@@ -156,6 +181,15 @@ const VoucherHeaderActions: React.FC<VoucherHeaderActionsProps> = ({
             sx={{ fontSize: 12, textTransform: "uppercase" }}
           >
             Save Revision
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<CancelIcon />}
+            onClick={onCancel ? onCancel : handleCancelFallback}
+            sx={{ fontSize: 12, textTransform: "uppercase" }}
+          >
+            Cancel
           </Button>
         </>
       )}

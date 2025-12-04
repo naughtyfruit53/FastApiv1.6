@@ -465,7 +465,7 @@ async def generate_purchase_order_pdf(
         logger.error(f"Error generating PDF for purchase order {invoice_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate PDF")
 
-@router.put("/{invoice_id}", response_model=PurchaseOrderInDB)
+@router.patch("/{invoice_id}", response_model=PurchaseOrderInDB)
 async def update_purchase_order(
     invoice_id: int,
     invoice_update: PurchaseOrderUpdate,

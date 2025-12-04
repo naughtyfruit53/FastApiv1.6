@@ -52,6 +52,7 @@ import { useEntityBalance, getBalanceDisplayText } from "../../../hooks/useEntit
 import { formatCurrency } from "../../../utils/currencyUtils";
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
+import SortableTable, { HeadCell } from "../../../components/SortableTable";
 const PurchaseOrderPage: React.FC = () => {
   console.count('Render: PurchaseOrderPage');
   const { company, isLoading: companyLoading, error: companyError } = useCompany();
@@ -673,64 +674,83 @@ const PurchaseOrderPage: React.FC = () => {
     }
   };
 
+  const voucherHeadCells: HeadCell<any>[] = [
+    {
+      id: 'voucher_number',
+      label: 'Voucher No.',
+      numeric: false,
+      align: 'center',
+      sortable: true,
+      width: '15%',
+    },
+    {
+      id: 'date',
+      label: 'Date',
+      numeric: false,
+      align: 'center',
+      sortable: true,
+      width: '20%',
+      render: (value) => {
+        const dateStr = value ? value.split('T')[0] : '';
+        return dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A';
+      },
+    },
+    {
+      id: 'vendor_id',
+      label: 'Vendor',
+      numeric: false,
+      align: 'center',
+      sortable: true,
+      width: '35%',
+      render: (value, row) => vendorList?.find((v: any) => v.id === row.vendor_id)?.name || "N/A",
+    },
+    {
+      id: 'total_amount',
+      label: 'Total Amount',
+      numeric: true,
+      align: 'center',
+      sortable: true,
+      width: '20%',
+      render: (value) => formatCurrency(Math.round(value) || 0),
+    },
+  ];
+
   const indexContent = (
-    <TableContainer sx={{ maxHeight: 400 }}>
-      <Table stickyHeader size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Voucher No.</TableCell>
-            <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Date</TableCell>
-            <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Vendor</TableCell>
-            <TableCell align="center" sx={{ fontSize: 15, fontWeight: "bold", p: 1 }}>Total Amount</TableCell>
-            <TableCell align="right" sx={{ fontSize: 15, fontWeight: "bold", p: 0, width: 40 }}></TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {latestVouchers.length === 0 ? (
-            <TableRow><TableCell colSpan={5} align="center">No purchase orders available</TableCell></TableRow>
-          ) : (
-            latestVouchers.slice(0, 7).map((voucher: any) => {
-              const colorStatus = getPOColorStatus(voucher);
-              const colorCode = getColorCode(colorStatus);
-              const dateStr = voucher.date ? voucher.date.split('T')[0] : '';
-              const displayDate = dateStr ? new Date(dateStr).toLocaleDateString('en-GB') : 'N/A';
-              return (
-                <TableRow 
-                  key={voucher.id} 
-                  hover 
-                  onContextMenu={(e) => { e.preventDefault(); handleContextMenu(e, voucher); }} 
-                  sx={{ 
-                    cursor: "pointer",
-                    backgroundColor: colorCode
-                  }}
-                >
-                  <TableCell 
-                    align="center" sx={{ fontSize: 12, p: 1 }} onClick={() => handleViewWithData(voucher)}>{voucher.voucher_number}</TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{displayDate}</TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || "N/A"}</TableCell>
-                  <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{formatCurrency(Math.round(voucher.total_amount) || 0)}</TableCell>
-                  <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
-                    <VoucherContextMenu
-                      voucher={voucher}
-                      voucherType="Purchase Order"
-                      onView={handleViewWithData}
-                      onEdit={handleEditWithData}
-                      onDelete={handleDelete}
-                      onPrint={handleGeneratePDF}
-                      onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
-                      onCreateGRN={handleCreateGRN}
-                      onEditTracking={handleEditTracking}
-                      showKebab={true}
-                      onClose={() => {}}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <SortableTable
+      data={latestVouchers.slice(0, 7)}
+      headCells={voucherHeadCells}
+      defaultOrderBy="voucher_number"
+      defaultOrder="asc"
+      stickyHeader={true}
+      maxHeight={400}
+      dense={true}
+      emptyMessage="No purchase orders available"
+      actions={(voucher) => (
+        <VoucherContextMenu
+          voucher={voucher}
+          voucherType="Purchase Order"
+          onView={handleViewWithData}
+          onEdit={handleEditWithData}
+          onDelete={handleDelete}
+          onPrint={handleGeneratePDF}
+          onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
+          onCreateGRN={handleCreateGRN}
+          onEditTracking={handleEditTracking}
+          showKebab={true}
+          onClose={() => {}}
+        />
+      )}
+      rowSx={(voucher) => {
+        const colorStatus = getPOColorStatus(voucher);
+        const colorCode = getColorCode(colorStatus);
+        return {
+          cursor: 'pointer',
+          backgroundColor: colorCode,
+          '&:hover': { backgroundColor: `${colorCode} !important` },
+        };
+      }}
+      onRowClick={(voucher) => handleViewWithData(voucher)}
+    />
   );
 
   const formHeader = (
