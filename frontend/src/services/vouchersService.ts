@@ -7,12 +7,12 @@ export const voucherService = {
     type: string,
     params?: Record<string, any>,
   ): Promise<any> => {
-    const endpoint = `/${type}`;
+    const endpoint = `${type}`;
     const response = await api.get(endpoint, { params });
     return response.data;
   },
   getVoucherById: async (type: string, id: number): Promise<any> => {
-    const endpoint = `/${type}/${id}`;
+    const endpoint = `${type}/${id}`;
     const response = await api.get(endpoint);
     return response.data;
   },
@@ -21,7 +21,7 @@ export const voucherService = {
     data: Record<string, any>,
     sendEmail: boolean = false,
   ): Promise<any> => {
-    const endpoint = `/${type}`;
+    const endpoint = `${type}`;
     const response = await api.post(endpoint, data, {
       params: { send_email: sendEmail },
     });
@@ -32,7 +32,7 @@ export const voucherService = {
     id: number,
     data: Record<string, any>,
   ): Promise<any> => {
-    const endpoint = `/${type}/${id}`;
+    const endpoint = `${type}/${id}`;
     const response = await api.patch(endpoint, data);
     return response.data;
   },
@@ -41,7 +41,7 @@ export const voucherService = {
     id: number,
     data: Record<string, any>,
   ): Promise<any> => {
-    const endpoint = `/${type}/${id}/revision`;
+    const endpoint = `${type}/${id}/revision`;
     const response = await api.post(endpoint, data);
     return response.data;
   },

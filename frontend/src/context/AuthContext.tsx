@@ -125,7 +125,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
           modules = ['dashboard', 'finance', 'reports'];
           submodules = {
             dashboard: ['view'],
-            dashboard: ['view'],
             finance: ['view', 'create', 'edit', 'delete', 'viewReports', 'manageBanks'],
             reports: ['viewFinancial'],
           };
@@ -284,7 +283,18 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       if (!accessToken) {
         throw new Error("No token found");
       }
-      const userData = await authService.getCurrentUser();
+      
+      // NEW: Add 10s timeout to getCurrentUser
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('User fetch timeout')), 10000)
+      );
+      
+      // Race the API call with timeout
+      const userData = await Promise.race([
+        timeoutPromise,
+        authService.getCurrentUser()
+      ]) as any;
+      
       // Defensive: org ID should never be leaked between users
       const newUser = {
         id: userData.id,
@@ -299,7 +309,6 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
       // Set fallback permissions immediately to unblock UI
       const fallback = computeRoleBasedPermissions(newUser);
       setUserPermissions(fallback);
-      setPermissionsLoading(false);
      
       // Check org context for non-super-admins
       if (!userData.is_super_admin && !userData.organization_id) {
@@ -325,6 +334,15 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
         setTimeout(() => debouncedFetchUser(retryCount + 1), retryDelay);
         return;
       }
+      // NEW: Set empty permissions on error
+      setUserPermissions({
+        role: 'user',
+        roles: [],
+        permissions: [],
+        modules: [],
+        submodules: {},
+      });
+      
       // Improved error handling: Don't clear storage on connection/network errors
       if (error.response) {
         const status = error.response.status;
@@ -358,6 +376,7 @@ export function AuthProvider({ children }: { children: ReactNode }): any {
     } finally {
       isFetching.current = false;
       setLoading(false); // Ensure loading is set to false in finally
+      setPermissionsLoading(false); // NEW: Ensure permissionsLoading always sets to false, even on error
     }
   }, 300);  // Debounce 300ms
 

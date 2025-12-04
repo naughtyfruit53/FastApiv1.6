@@ -213,7 +213,16 @@ export const rbacService = {
       return cached.data;
     }
     try {
-      const response = await api.get(`/rbac/users/${userId}/permissions`);
+      // NEW: Add 10s timeout to getUserPermissions
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Permissions fetch timeout')), 10000)
+      );
+      
+      const response = await Promise.race([
+        timeoutPromise,
+        api.get(`/rbac/users/${userId}/permissions`)
+      ]) as any;
+      
       // Cache the result
       permissionsCache[userId] = {
         data: response.data,
@@ -222,7 +231,12 @@ export const rbacService = {
       return response.data;
     } catch (error: any) {
       console.error("Failed to fetch user permissions:", error);
-      throw error;
+      // NEW: Fallback to empty permissions on error/timeout
+      return {
+        permissions: [],
+        modules: [],
+        submodules: {},
+      };
     }
   },
   // Bulk Operations

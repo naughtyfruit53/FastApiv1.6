@@ -7,6 +7,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 10000, // NEW: Global 10s timeout to prevent indefinite hangs on API calls
 });
 
 // Request interceptor to force HTTPS in production

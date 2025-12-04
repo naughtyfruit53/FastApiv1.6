@@ -62,6 +62,9 @@ export function usePermissionCheck() {
     token ?? undefined
   );
 
+  // NEW: If any context is null, treat as loading
+  const contextsLoading = orgContext === null || authContext === null;
+
   // ============================================================================
   // Layer 1: Tenant Checks
   // ============================================================================
@@ -294,8 +297,8 @@ export function usePermissionCheck() {
   // ============================================================================
 
   const isLoading = useMemo(() => {
-    return entitlementsLoading || (authContext?.loading ?? true) || (authContext?.permissionsLoading ?? false);
-  }, [entitlementsLoading, authContext?.loading, authContext?.permissionsLoading]);
+    return contextsLoading || entitlementsLoading || (authContext?.loading ?? true) || (authContext?.permissionsLoading ?? false);  // NEW: Include contextsLoading
+  }, [contextsLoading, entitlementsLoading, authContext?.loading, authContext?.permissionsLoading]);
 
   const isReady = useMemo(() => {
     // For super_admin, ready even without tenant context

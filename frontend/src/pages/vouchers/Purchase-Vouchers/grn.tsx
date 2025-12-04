@@ -167,7 +167,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     queryKey: ['grn-for-po', po_id],
     queryFn: () => {
       if (!po_id) return null;
-      return api.get('/vouchers/goods-receipt-notes/for-po/${po_id}').then(res => res.data);  // FIXED PATH
+      return api.get(`/vouchers/goods-receipt-notes/for-po/${po_id}`).then(res => res.data);  // FIXED: Use backticks for interpolation
     },
     enabled: !!po_id && isOrgContextReady,
   });

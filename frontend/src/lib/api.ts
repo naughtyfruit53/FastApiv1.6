@@ -3,7 +3,10 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import axiosRetry from 'axios-retry';
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, IS_SUPER_ADMIN_KEY, LEGACY_TOKEN_KEY } from '../constants/auth';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+import { getApiUrl } from '../utils/config';  // Import centralized config
+
+const API_BASE_URL = getApiUrl();  // Use centralized getApiUrl() for full /api/v1 path
+
 /**
  * Helper function to get access token with backward compatibility
  * Checks for new key first, then falls back to legacy key
@@ -107,6 +110,9 @@ const waitForAuthIfNeeded = async (config: any) => {
     "/organizations/recent-activities",
     "/rbac/permissions",  // Add more to skip wait
     "/rbac/roles",
+    "/purchase-orders",
+    "/vouchers/purchase-vouchers",
+    "/vouchers/goods-receipt-notes",
   ];
   const isPublicEndpoint = publicEndpoints.some((endpoint) =>
     config.url?.includes(endpoint),
@@ -142,7 +148,7 @@ axiosRetry(refreshAxios, {
   },
 });
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api/v1`,
+  baseURL: API_BASE_URL,  // Now uses full /api/v1
   headers: {
     "Content-Type": "application/json",
   },
@@ -218,7 +224,7 @@ api.interceptors.response.use(
           if (!refreshToken) {
             throw new Error("No refresh token available");
           }
-          const response = await refreshAxios.post('/api/v1/auth/refresh-token', {
+          const response = await refreshAxios.post('/auth/refresh-token', {
             refresh_token: refreshToken
           });
           const refreshData = response.data;
