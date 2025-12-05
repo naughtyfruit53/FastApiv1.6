@@ -32,8 +32,8 @@ import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 
 export const useVoucherPage = (config: VoucherPageConfig) => {  
-  const router = useRouter();  
-  const { id, mode: queryMode } = router.query;  
+  const useRouterInstance = useRouter();  
+  const { id, mode: queryMode } = useRouterInstance.query;  
   const { isOrgContextReady } = useAuth();  
   const { company } = useCompany();  
   const queryClient = useQueryClient();  
@@ -341,45 +341,6 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     company?.state_code,  
   ]);  
   
-  const { computedItems, totalAmount, totalSubtotal, totalGst, totalCgst, totalSgst, totalIgst, totalDiscount, totalTaxable, gstBreakdown, totalRoundOff } = useMemo(() => {  
-    if (config.hasItems === false || !itemsWatch) {  
-      return {  
-        computedItems: [],  
-        totalAmount: watch("total_amount") || 0,  
-        totalSubtotal: 0,  
-        totalGst: 0,  
-        totalCgst: 0,  
-        totalSgst: 0,  
-        totalIgst: 0,  
-        totalDiscount: 0,  
-        totalTaxable: 0,  
-        gstBreakdown: {},  
-        totalRoundOff: 0,  
-      };  
-    }  
-    const formattedItems = itemsWatch.map((item: any) => ({  
-      ...item,  
-      unit_price: enhancedRateUtils.parseRate(String(item.unit_price || 0)),  
-    }));  
-    return calculateVoucherTotals(  
-      formattedItems,  
-      isIntrastate,  
-      lineDiscountEnabled ? lineDiscountType : null,  
-      totalDiscountEnabled ? totalDiscountType : null,  
-      totalDiscountWatch,  
-    );  
-  }, [  
-    itemsWatch,  
-    config.hasItems,  
-    watch,  
-    isIntrastate,  
-    lineDiscountEnabled,  
-    lineDiscountType,  
-    totalDiscountEnabled,  
-    totalDiscountType,  
-    totalDiscountWatch,  
-  ]);  
-  
   const { data: voucherList, isLoading: isLoadingList, refetch: refetchVoucherList } = useQuery({  
     queryKey: [config.voucherType, currentPage, pageSize],  
     queryFn: () => {  
@@ -436,8 +397,8 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   });
   
   // Use the hook's nextVoucherNumber
-  const nextVoucherNumber = hookNextVoucherNumber;
-  const isNextNumberLoading = false; // Since the hook handles it, we can derive if needed
+  const nextVoucherNumber = hookNextVoucherNumber || 'Loading...';
+  const isNextNumberLoading = !hookNextVoucherNumber && mode === 'create';
   
   // NEW: Fetch next revision number for revise mode
   const { data: nextRevisionNumber, isLoading: isNextRevisionLoading } = useQuery({
@@ -474,6 +435,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
           }
         } catch (error) {
           console.error('Error fetching voucher number:', error);
+          setValue('voucher_number', 'Error loading number');
         }
       }
     };
@@ -519,7 +481,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       );  
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });  
       await refetchVoucherList();  
-      router.push({ query: { mode: "create" } }, undefined, { shallow: true });  
+      useRouterInstance.push({ query: { mode: "create" } }, undefined, { shallow: true });  
       setMode("create");  
       await refreshVoucherNumber();  
       reset({  
@@ -553,7 +515,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       );  
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });  
       await refetchVoucherList();  
-      router.push({ query: { mode: "create" } }, undefined, { shallow: true });  
+      useRouterInstance.push({ query: { mode: "create" } }, undefined, { shallow: true });  
       setMode("create");  
       await refreshVoucherNumber();  
       reset({  
@@ -595,14 +557,14 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   
   const handleCreate = () => {  
     setReferenceDocument(null);  
-    router.push({ query: { mode: "create" } }, undefined, { shallow: true });  
+    useRouterInstance.push({ query: { mode: "create" } }, undefined, { shallow: true });  
     setMode("create");  
     setSelectedId(null);  
     reset(defaultValues);  
   };  
   
   const handleEdit = (voucherId: number) => {  
-    router.push({ query: { id: voucherId, mode: "edit" } }, undefined, {  
+    useRouterInstance.push({ query: { id: voucherId, mode: "edit" } }, undefined, {  
       shallow: true,  
     });  
     setMode("edit");  
@@ -610,7 +572,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   };  
   
   const handleRevise = (voucherId: number) => {  
-    router.push({ query: { id: voucherId, mode: "revise" } }, undefined, {  
+    useRouterInstance.push({ query: { id: voucherId, mode: "revise" } }, undefined, {  
       shallow: true,  
     });  
     setMode("revise");  
@@ -618,7 +580,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   };  
   
   const handleView = (voucherId: number) => {  
-    router.push({ query: { id: voucherId, mode: "view" } }, undefined, {  
+    useRouterInstance.push({ query: { id: voucherId, mode: "view" } }, undefined, {  
       shallow: true,  
     });  
     setMode("view");  
@@ -988,15 +950,15 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   ]);  
   
   useEffect(() => {  
-    const newMode = (router.query.mode as  
+    const newMode = (useRouterInstance.query.mode as  
       | "create"  
       | "edit"  
       | "view"  
       | "revise") || "create";  
-    const newId = router.query.id ? Number(router.query.id) : null;  
+    const newId = useRouterInstance.query.id ? Number(useRouterInstance.query.id) : null;  
     setMode(newMode);  
     setSelectedId(newId);  
-  }, [router.query.mode, router.query.id]);  
+  }, [useRouterInstance.query.mode, useRouterInstance.query.id]);  
   
   // NEW: Set voucher_number in revise mode using nextRevisionNumber
   useEffect(() => {
@@ -1015,6 +977,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   };
 
   const handleProceedAnyway = () => {
+    if (conflictInfo?.intended_number) {
+      setValue('voucher_number', conflictInfo.intended_number);
+    }
     setShowConflictModal(false);
   };
 
@@ -1025,6 +990,45 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }
     setPendingDate(null);
   };
+  
+  const { computedItems, totalAmount, totalSubtotal, totalGst, totalCgst, totalSgst, totalIgst, totalDiscount, totalTaxable, gstBreakdown, totalRoundOff } = useMemo(() => {  
+    if (config.hasItems === false || !itemsWatch) {  
+      return {  
+        computedItems: [],  
+        totalAmount: watch("total_amount") || 0,  
+        totalSubtotal: 0,  
+        totalGst: 0,  
+        totalCgst: 0,  
+        totalSgst: 0,  
+        totalIgst: 0,  
+        totalDiscount: 0,  
+        totalTaxable: 0,  
+        gstBreakdown: {},  
+        totalRoundOff: 0,  
+      };  
+    }  
+    const formattedItems = itemsWatch.map((item: any) => ({  
+      ...item,  
+      unit_price: enhancedRateUtils.parseRate(String(item.unit_price || 0)),  
+    }));  
+    return calculateVoucherTotals(  
+      formattedItems,  
+      isIntrastate,  
+      lineDiscountEnabled ? lineDiscountType : null,  
+      totalDiscountEnabled ? totalDiscountType : null,  
+      totalDiscountWatch,  
+    );  
+  }, [  
+    itemsWatch,  
+    config.hasItems,  
+    watch,  
+    isIntrastate,  
+    lineDiscountEnabled,  
+    lineDiscountType,  
+    totalDiscountEnabled,  
+    totalDiscountType,  
+    totalDiscountWatch,  
+  ]);  
   
   return {  
     mode,  
@@ -1075,7 +1079,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     reset,  
     setValue,  
     watch,  
-    formState: { errors },  
+    errors,  
     fields,  
     append,  
     remove,  
@@ -1140,6 +1144,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     discountDialogFor,  
     nextRevisionNumber,  // ADDED
     isNextRevisionLoading,  // ADDED
+    isNextNumberLoading,    // ADDED
     conflictInfo,
     setConflictInfo,  // FIXED: Added setter
     showConflictModal,

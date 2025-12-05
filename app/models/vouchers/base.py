@@ -1,6 +1,6 @@
 # app/models/vouchers/base.py
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, declared_attr
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -24,6 +24,7 @@ class BaseVoucher(Base):
     notes = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    is_deleted = Column(Boolean, default=False)
 
     @declared_attr
     def created_by(cls):
@@ -67,3 +68,4 @@ class SimpleVoucherItemBase(Base):
     @declared_attr
     def product(cls):
         return relationship("Product")
+    

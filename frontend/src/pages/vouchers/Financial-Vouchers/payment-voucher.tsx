@@ -274,8 +274,8 @@ const PaymentVoucher: React.FC = () => {
               type="number"
               fullWidth
               disabled={isViewMode}
-              error={!!errors.total_amount}
-              helperText={errors.total_amount?.message as string}
+              error={!!errors?.total_amount}
+              helperText={errors?.total_amount?.message as string}
               sx={{ ...financialVoucherStyles.field, ...voucherStyles.centerField }}
             />
           </Grid>
@@ -299,8 +299,8 @@ const PaymentVoucher: React.FC = () => {
               disabled={isViewMode}
               fullWidth
               required
-              error={!!errors.entity}
-              helperText={errors.entity?.message as string}
+              error={!!errors?.entity}
+              helperText={errors?.entity?.message as string}
             />
           </Box>
 

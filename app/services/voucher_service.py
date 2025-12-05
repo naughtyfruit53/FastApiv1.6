@@ -59,8 +59,7 @@ class VoucherNumberService:
         
         period_segment = ""
         if reset_period == VoucherCounterResetPeriod.MONTHLY:
-            month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
-                          'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+            month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
             period_segment = month_names[current_month - 1]
         elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
             quarter = ((current_month - 1) // 3) + 1
@@ -213,6 +212,7 @@ class VoucherNumberService:
                 - later_voucher_count: int
                 - suggested_date: datetime of the last voucher in the period
                 - period: str
+                - intended_number: str (e.g., 'OES-PO/2526/DEC/00002')
         """
         logger.debug(f"check_backdated_voucher_conflict called with organization_id: {organization_id} (type: {type(organization_id)})")
         current_year = voucher_date.year
@@ -270,12 +270,24 @@ class VoucherNumberService:
         result = await db.execute(stmt)
         last_voucher = result.scalars().first()
         
+        # Calculate intended sequence: count of vouchers <= date +1
+        count_stmt = select(func.count(model.id)).where(
+            model.organization_id == organization_id,
+            model.voucher_number.like(search_pattern),
+            func.date(model.date) <= voucher_date.date(),
+            model.is_deleted == False
+        )
+        count_result = await db.execute(count_stmt)
+        intended_sequence = count_result.scalar() + 1
+        intended_number = f"{base_number}/{str(intended_sequence).zfill(5)}"
+        
         return {
             "has_conflict": len(later_vouchers) > 0,
             "later_vouchers": later_vouchers,
             "later_voucher_count": len(later_vouchers),
             "suggested_date": last_voucher.date if last_voucher else voucher_date,
-            "period": period_segment if period_segment else "ANNUAL"
+            "period": period_segment if period_segment else "ANNUAL",
+            "intended_number": intended_number
         }
     
     @staticmethod
@@ -288,21 +300,21 @@ class VoucherNumberService:
         new_voucher_id: int
     ) -> dict:
         """
-        Reindex voucher numbers after inserting a backdated voucher.
+        Reindex voucher numbers after inserting a backdated voucher by fully renumbering all vouchers in the period chronologically.
         
         This function:
-        1. Finds all vouchers with dates >= new_voucher_date (affected only)
-        2. Sorts them by date ASC (chronological)
-        3. Starts from current max sequence in period (preserves existing, fills gaps)
-        4. Reassigns one-by-one with unique checks
+        1. Finds all non-deleted vouchers in the period (including the new one)
+        2. Sorts them by date ASC, then id ASC
+        3. Reassign sequential numbers starting from 00001
+        4. Updates only those whose numbers change
         
         Args:
             db: Database session
             prefix: Voucher type prefix (e.g., "PO", "SO")
             organization_id: Organization ID
             model: SQLAlchemy model class
-            new_voucher_date: Date of the newly inserted voucher
-            new_voucher_id: ID of the newly inserted voucher (exclude from renumber)
+            new_voucher_date: Date of the newly inserted voucher (used for period calculation)
+            new_voucher_id: ID of the newly inserted voucher (included in renumbering)
         
         Returns:
             dict with:
@@ -310,7 +322,7 @@ class VoucherNumberService:
                 - vouchers_reindexed: int
                 - old_to_new_mapping: dict mapping old voucher numbers to new ones
         """
-        logger.info(f"Starting targeted voucher reindexing for {prefix} in org {organization_id} (affected: date >= {new_voucher_date})")
+        logger.info(f"Starting full chronological reindexing for {prefix} in org {organization_id} for period of date {new_voucher_date}")
         
         try:
             current_year = new_voucher_date.year
@@ -347,72 +359,52 @@ class VoucherNumberService:
                 search_pattern = f"{full_prefix}/{fiscal_year}/%"
                 base_number = f"{full_prefix}/{fiscal_year}"
             
-            # Get CURRENT MAX SEQUENCE in full period (to start from, preserving existing)
-            max_stmt = select(model).where(
-                model.organization_id == organization_id,
-                model.voucher_number.like(search_pattern),
-                model.is_deleted == False
-            ).order_by(desc(model.voucher_number)).limit(1)
-            max_result = await db.execute(max_stmt)
-            max_voucher = max_result.scalars().first()
-            start_sequence = 1
-            if max_voucher:
-                max_num = max_voucher.voucher_number.split(' Rev ')[0].split('/')[-1]
-                if max_num.isdigit():
-                    start_sequence = int(max_num) + 1  # Start after max to fill gaps
-            
-            logger.debug(f"Period max seq: {start_sequence - 1 if max_voucher else 0}; starting reindex at {start_sequence}")
-            
-            # Get only affected vouchers (date >= new, exclude new ID itself)
+            # Get ALL non-deleted vouchers in the period, sorted chronologically
             stmt = select(model).where(
                 model.organization_id == organization_id,
                 model.voucher_number.like(search_pattern),
-                func.date(model.date) >= new_voucher_date.date(),
-                model.id != new_voucher_id,  # Exclude the new one (already correct)
                 model.is_deleted == False
-            ).order_by(model.date.asc(), model.id.asc())  # Chronological ASC
+            ).order_by(model.date.asc(), model.id.asc())
             
             result = await db.execute(stmt)
-            affected_vouchers = result.scalars().all()
+            all_vouchers = result.scalars().all()
             
-            if not affected_vouchers:
-                logger.info(f"No affected vouchers to reindex for {prefix} in org {organization_id}")
+            if not all_vouchers:
+                logger.info(f"No vouchers to reindex for {prefix} in org {organization_id}")
                 return {
                     "success": True,
                     "vouchers_reindexed": 0,
                     "old_to_new_mapping": {}
                 }
             
-            # Reindex one-by-one: Assign next unique seq starting from current max
+            # Reassign sequential numbers starting from 00001
             old_to_new_mapping = {}
-            current_seq = start_sequence  # Use max-based start
+            current_seq = 1
             
-            for voucher in affected_vouchers:
+            for voucher in all_vouchers:
                 old_number = voucher.voucher_number
-                proposed_number = f"{base_number}/{current_seq:05d}"
+                proposed_number = f"{base_number}/{str(current_seq).zfill(5)}"
                 
-                # Existence check loop (safe, like generate_number)
-                while True:
+                if old_number != proposed_number:
+                    # Check if proposed exists (safety, though shouldn't since renumbering all)
                     check_stmt = select(model).where(
                         model.voucher_number == proposed_number,
                         model.organization_id == organization_id
                     )
                     check_result = await db.execute(check_stmt)
-                    if not check_result.scalars().first():
-                        break
-                    current_seq += 1
-                    proposed_number = f"{base_number}/{current_seq:05d}"
-                
-                if old_number != proposed_number:
+                    if check_result.scalars().first():
+                        logger.warning(f"Proposed number {proposed_number} exists, skipping update for {old_number}")
+                        continue
+                    
                     old_to_new_mapping[old_number] = proposed_number
                     voucher.voucher_number = proposed_number
-                    logger.info(f"Reindexed affected voucher {old_number} (ID {voucher.id}, date {voucher.date}) -> {proposed_number} (seq {current_seq})")
+                    logger.info(f"Reindexed voucher ID {voucher.id} (date {voucher.date}) from {old_number} to {proposed_number}")
                 
-                current_seq += 1  # Next seq
+                current_seq += 1
             
             await db.commit()
             
-            logger.info(f"Reindexed {len(old_to_new_mapping)} affected vouchers for {prefix} in org {organization_id}; new max seq: {current_seq - 1}")
+            logger.info(f"Reindexed {len(old_to_new_mapping)} vouchers for {prefix} in org {organization_id}; total in period: {len(all_vouchers)}")
             
             return {
                 "success": True,
@@ -658,7 +650,7 @@ class VoucherSearchService:
             select(PurchaseOrder), PurchaseOrder, organization_id
         ).join(PurchaseOrderItem).where(
             PurchaseOrder.status == "confirmed",
-            PurchaseOrderItem.pending_quantity > 0
+            PurchaseOrder.purchase_order_item.pending_quantity > 0
         )
         
         if vendor_id:
@@ -687,4 +679,3 @@ class VoucherSearchService:
         stmt = stmt.distinct()
         result = await db.execute(stmt)
         return result.scalars().all()
-    

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, exists
+from sqlalchemy import select, exists, func
 from sqlalchemy.orm import joinedload, selectinload  # Added selectinload for nested eager
 from typing import List, Optional
 from io import BytesIO
@@ -189,7 +189,7 @@ async def create_purchase_order(
         if 'delivery_date' in invoice_data and invoice_data['delivery_date']:
             invoice_data['delivery_date'] = invoice_data['delivery_date'].replace(tzinfo=timezone.utc)
         
-        # NEVER allow manual voucher_number – always generate it
+        # Always generate high number for insert to avoid duplicate
         invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
             db, "PO", org_id, PurchaseOrder, voucher_date=voucher_date
         )
@@ -298,21 +298,59 @@ async def create_purchase_order(
         await db.commit()
         await db.refresh(db_invoice)  # Refresh for fresh data post-commit
 
-        # Check for backdated conflict and reindex if necessary
-        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "PO", org_id, PurchaseOrder, db_invoice.date
+        # Calculate search_pattern for the period
+        current_year = db_invoice.date.year
+        current_month = db_invoice.date.month
+        
+        stmt_settings = select(OrganizationSettings).where(
+            OrganizationSettings.organization_id == org_id
         )
-        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
-            try:
-                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
-                    db, "PO", org_id, PurchaseOrder, db_invoice.date, db_invoice.id
-                )
-                if not reindex_result["success"]:
-                    logger.error(f"Reindex failed: {reindex_result['error']}")
-                    # Continue but log - don't rollback creation
-            except Exception as e:
-                logger.error(f"Error during reindex: {str(e)}")
-                # Don't rollback creation; log only
+        result_settings = await db.execute(stmt_settings)
+        org_settings = result_settings.scalars().first()
+        
+        full_prefix = "PO"
+        if org_settings and org_settings.voucher_prefix_enabled and org_settings.voucher_prefix:
+            full_prefix = f"{org_settings.voucher_prefix}-{full_prefix}"
+        
+        fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
+        
+        reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
+        
+        period_segment = ""
+        if reset_period == VoucherCounterResetPeriod.MONTHLY:
+            month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+                          'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+            period_segment = month_names[current_month - 1]
+        elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
+            quarter = ((current_month - 1) // 3) + 1
+            period_segment = f"Q{quarter}"
+        
+        if period_segment:
+            search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
+        else:
+            search_pattern = f"{full_prefix}/{fiscal_year}/%"
+        
+        # Check if backdated: if new date < max date in period (excluding this)
+        max_date_stmt = select(func.max(PurchaseOrder.date)).where(
+            PurchaseOrder.organization_id == org_id,
+            PurchaseOrder.voucher_number.like(search_pattern),
+            PurchaseOrder.id != db_invoice.id,
+            PurchaseOrder.is_deleted == False
+        )
+        result = await db.execute(max_date_stmt)
+        max_date = result.scalar()
+        
+        if max_date and db_invoice.date < max_date:
+            logger.info(f"Detected backdated insert for PO {db_invoice.voucher_number} - triggering reindex")
+            reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                db, "PO", org_id, PurchaseOrder, db_invoice.date, db_invoice.id
+            )
+            if not reindex_result["success"]:
+                logger.error(f"Reindex failed after backdated insert: {reindex_result['error']}")
+                # Don't raise - continue with high number
+            else:
+                await db.refresh(db_invoice)
+                logger.info(f"Reindex successful - new number: {db_invoice.voucher_number}")
         
         # Final query with full eager loading to prevent lazy loads
         stmt = select(PurchaseOrder).options(
@@ -630,6 +668,9 @@ async def update_purchase_order(
                 if not reindex_result["success"]:
                     logger.error(f"Reindex failed: {reindex_result['error']}")
                     # Continue but log - don't rollback update
+                else:
+                    # Refresh after reindex
+                    await db.refresh(invoice)
             except Exception as e:
                 logger.error(f"Error during reindex: {str(e)}")
                 # Don't rollback update; log only

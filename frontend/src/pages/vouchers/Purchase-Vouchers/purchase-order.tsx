@@ -112,7 +112,7 @@ const PurchaseOrderPage: React.FC = () => {
     nextVoucherNumber,
     sortedVouchers,
     latestVouchers,
-    computedItems,
+    computedItems: baseComputedItems,
     totalAmount,
     totalSubtotal,
     totalCgst,
@@ -147,26 +147,11 @@ const PurchaseOrderPage: React.FC = () => {
     handleChangeDateToSuggested,
     handleProceedAnyway: originalProceedAnyway,
     handleCancelConflict,
+    isNextNumberLoading,
   } = useVoucherPage(config);
 
   const handleProceedAnyway = () => {
-    if (conflictInfo && currentNextNumber) {
-      try {
-        const parts = currentNextNumber.split('/');
-        const sequenceStr = parts.pop() || '00000';
-        const wouldBeSequence = parseInt(sequenceStr, 10);
-        const lastSequence = wouldBeSequence - 1;
-        const laterCount = conflictInfo.later_voucher_count || 0;
-        const beforeCount = lastSequence - laterCount;
-        const newSequence = beforeCount + 1;
-        const base = parts.join('/');
-        const newNumber = `${base}/${newSequence.toString().padStart(5, '0')}`;
-        setValue('voucher_number', newNumber);
-        console.log('Calculated backdated number:', newNumber);
-      } catch (error) {
-        console.error('Error calculating backdated number:', error);
-      }
-    }
+    // Removed custom number calculation - backend handles high insert then reindex
     originalProceedAnyway();
   };
 
@@ -505,42 +490,7 @@ const PurchaseOrderPage: React.FC = () => {
     }
   }, [voucherData, mode, reset, setValue, isIntrastate]);
 
-  // Fetch voucher number when date changes and check for conflicts
-  useEffect(() => {
-    const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
-        try {
-          console.log('Fetching number for date:', currentDate);
-          // Fetch new voucher number based on date
-          const response = await api.get(
-            `/purchase-orders/next-number`,
-            { params: { voucher_date: currentDate } }
-          );
-          setCurrentNextNumber(response.data);
-          setValue('voucher_number', response.data);
-          console.log('Fetched number:', response.data);
-          
-          // Check for backdated conflicts
-          const conflictResponse = await api.get(
-            `/purchase-orders/check-backdated-conflict`,
-            { params: { voucher_date: currentDate } }
-          );
-          console.log('Conflict check:', conflictResponse.data);
-          
-          if (conflictResponse.data.has_conflict) {
-            setConflictInfo(conflictResponse.data);
-            setShowConflictModal(true);
-            setPendingDate(currentDate);
-          }
-        } catch (error) {
-          console.error('Error fetching voucher number:', error);
-        }
-      }
-    };
-    
-    fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
+  // UseEffect for date change remains, but no custom number set in proceed
 
   const onSubmit = async (data: any) => {
     if (totalRoundOff !== 0) {
@@ -774,7 +724,7 @@ const PurchaseOrderPage: React.FC = () => {
     <Box>
       {gstError && <Alert severity="error" sx={{ mb: 2 }}>{gstError}</Alert>}
       <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherFormStyles.formContainer}>
-        <Grid container spacing={1}>
+        <Grid container spacing= {1}>
           <Grid size={4}>
             <TextField 
               fullWidth 
@@ -786,6 +736,7 @@ const PurchaseOrderPage: React.FC = () => {
                 '& .MuiInputBase-input': { textAlign: 'center', fontWeight: 'bold' } 
               }} 
               InputLabelProps={{ shrink: true }} 
+              value={isNextNumberLoading ? 'Loading...' : watch('voucher_number')}
             />
           </Grid>
           <Grid size={4}>
@@ -1021,7 +972,7 @@ const PurchaseOrderPage: React.FC = () => {
     </Box>
   );
 
-  if (isLoading || companyLoading) {
+  if (isLoading || companyLoading || isNextNumberLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />

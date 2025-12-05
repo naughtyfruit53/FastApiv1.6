@@ -133,7 +133,7 @@ async def init_default_permissions(background_tasks: BackgroundTasks):
     async with AsyncSessionLocal() as db:
         try:
             rbac = RBACService(db)
-            await rbac.initialize_default_default_permissions()
+            await rbac.initialize_initialize_default_permissions()
             logger.info("Default permissions initialized")
         except Exception as e:
             logger.error(f"Error initializing default permissions: {str(e)}")
@@ -400,7 +400,7 @@ app.add_middleware(HTTPSRedirectMiddleware)
 # 3) CORS
 origins = [
     "https://naughtyfruit.in",
-    "https://www.naughtyfruit.in",
+    "https://naughtyfruit.in",
     "http://localhost:3000",
     "http://localhost",
     "http://127.0.0.1:3000",
@@ -556,6 +556,13 @@ def include_minimal_routers():
         logger.error(f"Failed to import customers router: {str(e)}")
 
     try:
+        from app.api.v1.vouchers.payment_voucher import router as payment_voucher_router
+
+        routers.append((payment_voucher_router, "/api/v1/payment-vouchers", ["payment-vouchers"]))
+    except Exception as e:
+        logger.error(f"Failed to import payment_voucher router: {str(e)}")
+
+    try:
         from app.api.v1 import inventory as v1_inventory
 
         routers.append((v1_inventory.router, "/api/v1/inventory", ["inventory"]))
@@ -680,4 +687,3 @@ if __name__ == "__main__":
         proxy_headers=True,
         forwarded_allow_ips="*",
     )
-    
