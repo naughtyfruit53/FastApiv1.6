@@ -1,7 +1,7 @@
 # app/services/voucher_service.py
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, delete, func
+from sqlalchemy import select, desc, delete, func, text
 from typing import Type, Union, Any, Optional
 from datetime import datetime
 from decimal import Decimal
@@ -377,28 +377,23 @@ class VoucherNumberService:
                     "old_to_new_mapping": {}
                 }
             
+            # Temp prefix to free numbers - use unique per id
+            for voucher in all_vouchers:
+                voucher.voucher_number = f"TEMP-{voucher.id}-{voucher.voucher_number}"
+            
+            await db.flush()  # Flush temps before assign
+            
             # Reassign sequential numbers starting from 00001
             old_to_new_mapping = {}
             current_seq = 1
             
             for voucher in all_vouchers:
-                old_number = voucher.voucher_number
+                old_number = voucher.voucher_number.replace(f"TEMP-{voucher.id}-", '')  # Restore for mapping
                 proposed_number = f"{base_number}/{str(current_seq).zfill(5)}"
                 
-                if old_number != proposed_number:
-                    # Check if proposed exists (safety, though shouldn't since renumbering all)
-                    check_stmt = select(model).where(
-                        model.voucher_number == proposed_number,
-                        model.organization_id == organization_id
-                    )
-                    check_result = await db.execute(check_stmt)
-                    if check_result.scalars().first():
-                        logger.warning(f"Proposed number {proposed_number} exists, skipping update for {old_number}")
-                        continue
-                    
-                    old_to_new_mapping[old_number] = proposed_number
-                    voucher.voucher_number = proposed_number
-                    logger.info(f"Reindexed voucher ID {voucher.id} (date {voucher.date}) from {old_number} to {proposed_number}")
+                old_to_new_mapping[old_number] = proposed_number
+                voucher.voucher_number = proposed_number
+                logger.info(f"Reindexed voucher ID {voucher.id} (date {voucher.date}) from {old_number} to {proposed_number}")
                 
                 current_seq += 1
             
@@ -650,7 +645,7 @@ class VoucherSearchService:
             select(PurchaseOrder), PurchaseOrder, organization_id
         ).join(PurchaseOrderItem).where(
             PurchaseOrder.status == "confirmed",
-            PurchaseOrder.purchase_order_item.pending_quantity > 0
+            PurchaseOrderItem.pending_quantity > 0
         )
         
         if vendor_id:
@@ -679,3 +674,4 @@ class VoucherSearchService:
         stmt = stmt.distinct()
         result = await db.execute(stmt)
         return result.scalars().all()
+    
