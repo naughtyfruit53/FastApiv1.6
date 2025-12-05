@@ -283,9 +283,9 @@ class VoucherNumberService:
         
         return {
             "has_conflict": len(later_vouchers) > 0,
-            "later_vouchers": later_vouchers,
+            "later_vouchers": [{'id': v.id, 'voucher_number': v.voucher_number, 'date': v.date.isoformat() if v.date else None} for v in later_vouchers],
             "later_voucher_count": len(later_vouchers),
-            "suggested_date": last_voucher.date if last_voucher else voucher_date,
+            "suggested_date": last_voucher.date.isoformat() if last_voucher and last_voucher.date else voucher_date.isoformat(),
             "period": period_segment if period_segment else "ANNUAL",
             "intended_number": intended_number
         }
@@ -606,7 +606,7 @@ class VoucherSearchService:
     @staticmethod
     async def search_vendors_for_dropdown(db: AsyncSession, search_term: str, organization_id: int, limit: int = 10):
         """Search vendors for dropdown with organization filtering"""
-        from app.models.base import Vendor
+        from app.models.customer_models import Vendor  # Changed to customer_models
         from app.core.tenant import TenantQueryFilter
         
         stmt = TenantQueryFilter.apply_organization_filter(
@@ -622,7 +622,7 @@ class VoucherSearchService:
     @staticmethod
     async def search_products_for_dropdown(db: AsyncSession, search_term: str, organization_id: int, limit: int = 10):
         """Search products for dropdown with organization filtering"""
-        from app.models.base import Product
+        from app.models.product_models import Product
         from app.core.tenant import TenantQueryFilter
         
         stmt = TenantQueryFilter.apply_organization_filter(

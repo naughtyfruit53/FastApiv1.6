@@ -1,5 +1,6 @@
 // frontend/src/pages/vouchers/Purchase-Vouchers/grn.tsx
 import React, { useMemo, useState, useEffect } from 'react';
+import { Controller } from "react-hook-form";
 import {
   Box,
   TextField,
@@ -32,7 +33,7 @@ import VoucherLayout from "../../../components/VoucherLayout";
 import VoucherHeaderActions from "../../../components/VoucherHeaderActions";
 import VoucherListModal from "../../../components/VoucherListModal";
 import VoucherDateConflictModal from "../../../components/VoucherDateConflictModal";
-import api from '../../../lib/api';
+import api from "../../../lib/api";
 import { useVoucherPage } from "../../../hooks/useVoucherPage";
 import { getVoucherConfig, getVoucherStyles } from "../../../utils/voucherUtils";
 import { voucherService } from "../../../services/vouchersService";
@@ -42,6 +43,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
 import { green, yellow, red, orange, blue, grey } from '@mui/material/colors';
+import { handleDuplicate } from "../../../utils/voucherHandlers";
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
 const GoodsReceiptNotePage: React.FC = () => {
@@ -110,7 +112,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     handleCreate,
     handleEdit,
     handleView,
-    handleSubmitForm: _handleSubmitForm,
     handleContextMenu,
     handleCloseContextMenu,
     handleSearch,
@@ -121,6 +122,13 @@ const GoodsReceiptNotePage: React.FC = () => {
     refreshMasterData,
     getAmountInWords,
     isViewMode,
+    conflictInfo,
+    showConflictModal,
+    pendingDate,
+    handleChangeDateToSuggested,
+    handleProceedAnyway,
+    handleCancelConflict,
+    isNextNumberLoading,
   } = useVoucherPage(config);
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
@@ -149,11 +157,6 @@ const GoodsReceiptNotePage: React.FC = () => {
   const [qcModalOpen, setQcModalOpen] = useState(false);
   const [selectedQcItem, setSelectedQcItem] = useState<any | null>(null);
   
-  // State for voucher date conflict detection
-  const [conflictInfo, setConflictInfo] = useState<any>(null);
-  const [showConflictModal, setShowConflictModal] = useState(false);
-  const [pendingDate, setPendingDate] = useState<string | null>(null);
-
   const { data: poData } = useQuery({
     queryKey: ['purchase-order', po_id],
     queryFn: () => {
@@ -309,7 +312,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           const validationErrors = invalidProducts.map((p: any) => `Product ID ${p.id}: ${p.error}`).join(', ');
           setErrorMessage(
             `Some items are missing product names: ${missingNameItems.join(', ')}. ` +
-            (validationErrors ? `Validation errors: ${validationErrors}. ` : '') +
+            `Validation errors: ${validationErrors}. ` +
             `Please edit the product records to add valid names.`
           );
         } else {
@@ -345,9 +348,20 @@ const GoodsReceiptNotePage: React.FC = () => {
     refreshMasterData(); // Refresh product list after editing
   };
 
+  const handleDuplicateLocal = (id: number) => {
+    handleDuplicate(id, voucherList, reset, setMode, "Goods Receipt Note");
+  };
+
+  const handleEmail = (voucher: any) => {
+    // Implement email logic here if needed
+    console.log('Email voucher:', voucher);
+    toast.info('Email functionality not implemented yet');
+  };
+
   const onSubmit = async (data: any) => {
+    console.log('Mutation starting');
     if (errorMessage) {
-      alert('Cannot submit GRN due to missing product names. Please resolve the errors by editing the product records.');
+      toast.error('Cannot submit GRN due to missing product names. Please resolve the errors by editing the product records.');
       return;
     }
     try {
@@ -369,7 +383,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       }, null, 2));
       if (config.hasItems !== false) {
         if (data.items.some((item: any) => !item.product_name || item.product_name === 'Product Not Found')) {
-          alert('Cannot submit GRN with missing or invalid product names.');
+          toast.error('Cannot submit GRN with missing or invalid product names.');
           return;
         }
         data.total_amount = data.items.reduce((sum: number, item: any) => sum + (item.accepted_quantity * item.unit_price), 0);
@@ -414,7 +428,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       }
     } catch (error) {
       console.error("Error saving voucher:", error);
-      alert('Failed to save goods receipt note. Please try again.');
+      toast.error('Failed to save goods receipt note. Please try again.');
     }
   };
 
@@ -425,7 +439,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       const accepted = watch(`items.${index}.accepted_quantity`) || 0;
       const rejected = watch(`items.${index}.rejected_quantity`) || 0;
       if (accepted + rejected > received) {
-        alert(`For item ${index + 1}, accepted + rejected cannot exceed received quantity.`);
+        toast.error(`For item ${index + 1}, accepted + rejected cannot exceed received quantity.`);
         valid = false;
       }
     });
@@ -433,12 +447,18 @@ const GoodsReceiptNotePage: React.FC = () => {
   };
 
   const handleFormSubmit = (data: any) => {
+    console.log('Form submitted with data:', data);
+    console.log('Errors:', errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please fix form errors before submitting.');
+      return;
+    }
     if (errorMessage) {
-      alert('Cannot submit GRN due to missing product names. Please resolve the errors by editing the product records.');
+      toast.error('Cannot submit GRN due to missing product names. Please resolve the errors by editing the product records.');
       return;
     }
     if (validateQuantities()) {
-      _handleSubmitForm(data);
+      onSubmit(data);
     }
   };
 
@@ -499,62 +519,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     }
   }, [voucherData, mode, reset, setValue, append, remove]);
 
-  // Fetch voucher number when date changes and check for conflicts
-  useEffect(() => {
-    const fetchVoucherNumber = async () => {
-      const currentDate = watch('date');
-      if (currentDate && mode === 'create') {
-        try {
-          // Fetch new voucher number based on date
-          const response = await api.get(
-            `/vouchers/goods-receipt-notes/next-number`,  // FIXED PATH
-            { params: { voucher_date: currentDate } }
-          );
-          setValue('voucher_number', response.data);
-          
-          // Check for backdated conflicts
-          const conflictResponse = await api.get(
-            `/vouchers/goods-receipt-notes/check-backdated-conflict`,  // FIXED PATH
-            { params: { voucher_date: currentDate } }
-          );
-          
-          if (conflictResponse.data.has_conflict) {
-            setConflictInfo(conflictResponse.data);
-            setShowConflictModal(true);
-            setPendingDate(currentDate);
-          }
-        } catch (error) {
-          console.error('Error fetching voucher number:', error);
-        }
-      }
-    };
-    
-    fetchVoucherNumber();
-  }, [watch('date'), mode, setValue]);
-
-  // Conflict modal handlers
-  const handleChangeDateToSuggested = () => {
-    if (conflictInfo?.suggested_date) {
-      setValue('date', conflictInfo.suggested_date.split('T')[0]);
-      setShowConflictModal(false);
-      setPendingDate(null);
-    }
-  };
-
-  const handleProceedAnyway = () => {
-    setShowConflictModal(false);
-    // Keep the current date
-  };
-
-  const handleCancelConflict = () => {
-    setShowConflictModal(false);
-    if (pendingDate) {
-      // Revert to previous date or clear
-      setValue('date', '');
-    }
-    setPendingDate(null);
-  };
-
   // Handlers for new menu options
   const handleCreatePurchaseVoucher = (grn: any) => {
     console.log('[handleCreatePurchaseVoucher] Creating PV for GRN:', grn.id);  // Debug log
@@ -577,6 +541,13 @@ const GoodsReceiptNotePage: React.FC = () => {
   };
 
   const colors = { green, yellow, red, orange, blue, pending: grey };
+
+  const getColorSx = (voucher: any) => {
+    console.log(`GRN ${voucher.voucher_number} color_status: ${voucher.color_status}`);
+    const appliedColor = voucher.color_status ? colors[voucher.color_status][300] : 'inherit';
+    console.log('Applying bgcolor:', appliedColor);
+    return { bgcolor: appliedColor };
+  };
 
   const indexContent = (
     <>
@@ -669,7 +640,7 @@ const GoodsReceiptNotePage: React.FC = () => {
           {errorMessage}
         </Alert>
       )}
-      <form id="voucherForm" onSubmit={handleSubmit(onSubmit)} style={voucherStyles.formContainer}>
+      <form id="voucherForm" onSubmit={handleSubmit(handleFormSubmit)} style={voucherStyles.formContainer}>
         <Grid container spacing= {0.5}>
           <Grid size={6}>
             <TextField
@@ -684,16 +655,22 @@ const GoodsReceiptNotePage: React.FC = () => {
             />
           </Grid>
           <Grid size={6}>
-            <TextField
-              fullWidth
-              label="Date"
-              type="date"
-              {...control.register('date')}
-              disabled={mode === 'view'}
-              InputLabelProps={{ shrink: true, style: { fontSize: 12, display: 'block', visibility: 'visible' } }}
-              inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
-              size="small"
-              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+            <Controller
+              name="date"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  fullWidth
+                  label="Date"
+                  type="date"
+                  {...field}
+                  disabled={mode === 'view'}
+                  InputLabelProps={{ shrink: true, style: { fontSize: 12, display: 'block', visibility: 'visible' } }}
+                  inputProps={{ style: { fontSize: 14, textAlign: 'center' } }}
+                  size="small"
+                  sx={{ '& .MuiInputBase-root': { height: 27 } }}
+                />
+              )}
             />
           </Grid>
           <Grid size={6}>
@@ -1032,7 +1009,11 @@ const GoodsReceiptNotePage: React.FC = () => {
             onView={handleView}
             onDelete={handleDelete}
             onGeneratePDF={handleGeneratePDF}
+            onDuplicate={handleDuplicateLocal}
+            onCreatePurchaseVoucher={handleCreatePurchaseVoucher}
+            onCreateRejectionNote={handleCreateRejectionNote}
             customerList={vendorList}
+            rowSx={getColorSx}
           />
         }
       />
@@ -1105,6 +1086,7 @@ const GoodsReceiptNotePage: React.FC = () => {
       />
       <VoucherContextMenu
         contextMenu={contextMenu}
+        voucher={null}
         voucherType="Goods Receipt Note"
         onView={handleView}
         onEdit={handleEdit}

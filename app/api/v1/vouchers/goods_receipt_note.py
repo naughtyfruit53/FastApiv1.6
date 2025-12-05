@@ -3,9 +3,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, exists, func
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from typing import List, Optional
-from datetime import datetime
+from datetime import timezone, datetime
 from dateutil import parser as date_parser
 from app.core.database import get_db
 from app.core.enforcement import require_access, TenantEnforcement
@@ -15,6 +15,7 @@ from app.models.vouchers.purchase import GoodsReceiptNote, GoodsReceiptNoteItem,
 from app.schemas.vouchers import GRNCreate, GRNInDB, GRNUpdate
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
+from app.models.organization_settings import OrganizationSettings, VoucherCounterResetPeriod
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ async def get_goods_receipt_notes(
         stmt = select(GoodsReceiptNote).options(
             joinedload(GoodsReceiptNote.vendor),
             joinedload(GoodsReceiptNote.purchase_order),
-            joinedload(GoodsReceiptNote.items).joinedload(GoodsReceiptNoteItem.product)
+            selectinload(GoodsReceiptNote.items).selectinload(GoodsReceiptNoteItem.product)
         ).where(
             GoodsReceiptNote.organization_id == org_id
         )
@@ -104,7 +105,7 @@ async def get_goods_receipt_notes(
             # Add debug log for color_status
             logger.debug(f"GRN {grn.voucher_number} - has_rejection: {has_rejection}, is_full_rejection: {is_full_rejection}, has_pv: {has_pv}, has_pr: {has_pr}, color_status: {color_status}")
             
-        return invoices
+        return [GRNInDB.model_validate(grn) for grn in invoices]
     except Exception as e:
         logger.error(f"Error in get_goods_receipt_notes: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -141,21 +142,6 @@ async def check_backdated_conflict(
     
     try:
         parsed_date = date_parser.parse(voucher_date)
-        # Only check if date is before last voucher
-        stmt = select(func.max(GoodsReceiptNote.date)).where(
-            GoodsReceiptNote.organization_id == org_id
-        )
-        result = await db.execute(stmt)
-        last_date = result.scalar()
-        
-        if last_date and parsed_date.date() >= last_date.date():
-            return {
-                "has_conflict": False,
-                "later_voucher_count": 0,
-                "suggested_date": last_date.isoformat() if last_date else None,
-                "period": "N/A"
-            }
-        
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "GRN", org_id, GoodsReceiptNote, parsed_date
         )
@@ -188,7 +174,7 @@ async def get_grn_for_purchase_order(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No GRN found for this Purchase Order"
         )
-    return grn
+    return GRNInDB.model_validate(grn)
 
 @router.post("", response_model=GRNInDB, include_in_schema=False)
 @router.post("/", response_model=GRNInDB)
@@ -210,25 +196,16 @@ async def create_goods_receipt_note(
         # Get the voucher date for numbering
         voucher_date = None
         if 'date' in invoice_data and invoice_data['date']:
-            voucher_date = invoice_data['date'] if hasattr(invoice_data['date'], 'year') else None
+            invoice_data['date'] = invoice_data['date'].replace(tzinfo=timezone.utc)
+            voucher_date = invoice_data['date']
         elif 'grn_date' in invoice_data and invoice_data['grn_date']:
-            voucher_date = invoice_data['grn_date'] if hasattr(invoice_data['grn_date'], 'year') else None
+            invoice_data['grn_date'] = invoice_data['grn_date'].replace(tzinfo=timezone.utc)
+            voucher_date = invoice_data['grn_date']
         
-        if not invoice_data.get('voucher_number') or invoice_data['voucher_number'] == '':
-            invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                db, "GRN", org_id, GoodsReceiptNote, voucher_date=voucher_date
-            )
-        else:
-            stmt = select(GoodsReceiptNote).where(
-                GoodsReceiptNote.organization_id == org_id,
-                GoodsReceiptNote.voucher_number == invoice_data['voucher_number']
-            )
-            result = await db.execute(stmt)
-            existing = result.scalar_one_or_none()
-            if existing:
-                invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
-                    db, "GRN", org_id, GoodsReceiptNote, voucher_date=voucher_date
-                )
+        # Always generate high number for insert to avoid duplicate
+        invoice_data['voucher_number'] = await VoucherNumberService.generate_voucher_number_async(
+            db, "GRN", org_id, GoodsReceiptNote, voucher_date=voucher_date
+        )
         
         db_invoice = GoodsReceiptNote(**invoice_data)
         db.add(db_invoice)
@@ -299,30 +276,78 @@ async def create_goods_receipt_note(
         db_invoice.total_amount = total_amount
         
         await db.commit()
+        await db.refresh(db_invoice)  # Refresh for fresh data post-commit
+
+        # Calculate search_pattern for the period
+        current_year = db_invoice.date.year
+        current_month = db_invoice.date.month
         
-        # Check for backdated conflict and reindex if necessary
-        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "GRN", org_id, GoodsReceiptNote, db_invoice.date
+        stmt_settings = select(OrganizationSettings).where(
+            OrganizationSettings.organization_id == org_id
         )
-        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
-            try:
-                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
-                    db, "GRN", org_id, GoodsReceiptNote, db_invoice.date, db_invoice.id
-                )
-                if not reindex_result["success"]:
-                    logger.error(f"Reindex failed: {reindex_result['error']}")
-                    # Continue but log - don't rollback creation
-            except Exception as e:
-                logger.error(f"Error during reindex: {str(e)}")
-                # Don't rollback creation; log only
+        result_settings = await db.execute(stmt_settings)
+        org_settings = result_settings.scalars().first()
         
+        full_prefix = "GRN"
+        if org_settings and org_settings.voucher_prefix_enabled and org_settings.voucher_prefix:
+            full_prefix = f"{org_settings.voucher_prefix}-{full_prefix}"
+        
+        fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
+        
+        reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
+        
+        period_segment = ""
+        if reset_period == VoucherCounterResetPeriod.MONTHLY:
+            month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+                          'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+            period_segment = month_names[current_month - 1]
+        elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
+            quarter = ((current_month - 1) // 3) + 1
+            period_segment = f"Q{quarter}"
+        
+        if period_segment:
+            search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
+        else:
+            search_pattern = f"{full_prefix}/{fiscal_year}/%"
+        
+        # Check if backdated: if new date < max date in period (excluding this)
+        max_date_stmt = select(func.max(GoodsReceiptNote.date)).where(
+            GoodsReceiptNote.organization_id == org_id,
+            GoodsReceiptNote.voucher_number.like(search_pattern),
+            GoodsReceiptNote.id != db_invoice.id,
+            GoodsReceiptNote.is_deleted == False
+        )
+        result = await db.execute(max_date_stmt)
+        max_date = result.scalar()
+        
+        if max_date and db_invoice.date < max_date:
+            logger.info(f"Detected backdated insert for GRN {db_invoice.voucher_number} - triggering reindex")
+            reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                db, "GRN", org_id, GoodsReceiptNote, db_invoice.date, db_invoice.id
+            )
+            if not reindex_result["success"]:
+                logger.error(f"Reindex failed after backdated insert: {reindex_result['error']}")
+                # Don't raise - continue with high number
+            else:
+                await db.refresh(db_invoice)
+                logger.info(f"Reindex successful - new number: {db_invoice.voucher_number}")
+        
+        # Final query with full eager loading to prevent lazy loads
         stmt = select(GoodsReceiptNote).options(
             joinedload(GoodsReceiptNote.vendor),
             joinedload(GoodsReceiptNote.purchase_order),
-            joinedload(GoodsReceiptNote.items).joinedload(GoodsReceiptNoteItem.product)
+            selectinload(GoodsReceiptNote.items).selectinload(GoodsReceiptNoteItem.product)  # Nested eager for async safety
         ).where(GoodsReceiptNote.id == db_invoice.id)
         result = await db.execute(stmt)
-        db_invoice = result.unique().scalar_one_or_none()
+        db_invoice = result.unique().scalars().first()
+        
+        # Async-safe model_validate (with error handling)
+        try:
+            validated_invoice = GRNInDB.model_validate(db_invoice)
+        except Exception as validate_err:
+            logger.error(f"Validation error post-load: {str(validate_err)}")
+            # Fallback to dict serialization if Pydantic fails on rels
+            validated_invoice = GRNInDB.model_validate(db_invoice.__dict__)
         
         if send_email and db_invoice.vendor and db_invoice.vendor.email:
             background_tasks.add_task(
@@ -334,8 +359,13 @@ async def create_goods_receipt_note(
             )
         
         logger.info(f"Goods receipt note {db_invoice.voucher_number} created by {current_user.email}")
-        return db_invoice
         
+        # Convert to Pydantic model before returning (ensures data access while session is open)
+        return validated_invoice
+        
+    except HTTPException as he:
+        await db.rollback()
+        raise he
     except Exception as e:
         await db.rollback()
         logger.error(f"Error creating goods receipt note: {e}")
@@ -368,7 +398,7 @@ async def get_goods_receipt_note(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Goods receipt note not found"
         )
-    return invoice
+    return GRNInDB.model_validate(invoice)
 
 @router.put("/{invoice_id}", response_model=GRNInDB)
 async def update_goods_receipt_note(
@@ -394,6 +424,49 @@ async def update_goods_receipt_note(
             )
         
         update_data = invoice_update.dict(exclude_unset=True, exclude={'items'})
+        
+        if 'date' in update_data and update_data['date']:
+            update_data['date'] = update_data['date'].replace(tzinfo=timezone.utc)
+        if 'grn_date' in update_data and update_data['grn_date']:
+            update_data['grn_date'] = update_data['grn_date'].replace(tzinfo=timezone.utc)
+        
+        # If date is being updated, check if it's crossing periods
+        if 'date' in update_data:
+            old_date = invoice.date
+            new_date = update_data['date']
+            stmt_settings = select(OrganizationSettings).where(
+                OrganizationSettings.organization_id == org_id
+            )
+            result_settings = await db.execute(stmt_settings)
+            org_settings = result_settings.scalars().first()
+            reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
+
+            def get_period(dt: datetime) -> str:
+                year = dt.year
+                month = dt.month
+                fiscal_year = f"{str(year)[-2:]}{str(year + 1 if month > 3 else year)[-2:]}"
+                if reset_period == VoucherCounterResetPeriod.MONTHLY:
+                    month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+                    return f"{fiscal_year}/{month_names[month - 1]}"
+                elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
+                    quarter = ((month - 1) // 3) + 1
+                    return f"{fiscal_year}/Q{quarter}"
+                else:
+                    return fiscal_year
+
+            old_period = get_period(old_date)
+            new_period = get_period(new_date)
+            if old_period != new_period:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot change voucher date across numbering periods"
+                )
+            
+            # DO NOT regenerate voucher number on date change within same period!
+            # Keep the original number — that's the whole point
+            # Only regenerate if crossing fiscal periods (which is blocked above)
+            pass
+        
         for field, value in update_data.items():
             setattr(invoice, field, value)
         
@@ -499,7 +572,8 @@ async def update_goods_receipt_note(
         logger.debug(f"Before commit for goods receipt note {invoice_id}")
         await db.commit()
         logger.debug(f"After commit for goods receipt note {invoice_id}")
-        
+        await db.refresh(invoice)  # Refresh for fresh data post-commit
+
         # Check for backdated conflict and reindex if necessary
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "GRN", org_id, GoodsReceiptNote, invoice.date
@@ -512,29 +586,45 @@ async def update_goods_receipt_note(
                 if not reindex_result["success"]:
                     logger.error(f"Reindex failed: {reindex_result['error']}")
                     # Continue but log - don't rollback update
+                else:
+                    await db.refresh(invoice)
             except Exception as e:
                 logger.error(f"Error during reindex: {str(e)}")
                 # Don't rollback update; log only
         
+        # Final query with full eager loading to prevent lazy loads
         stmt = select(GoodsReceiptNote).options(
             joinedload(GoodsReceiptNote.vendor),
             joinedload(GoodsReceiptNote.purchase_order),
-            joinedload(GoodsReceiptNote.items).joinedload(GoodsReceiptNoteItem.product)
+            selectinload(GoodsReceiptNote.items).selectinload(GoodsReceiptNoteItem.product)  # Nested eager for async safety
         ).where(
             GoodsReceiptNote.id == invoice_id,
             GoodsReceiptNote.organization_id == org_id
         )
         result = await db.execute(stmt)
-        invoice = result.unique().scalar_one_or_none()
+        invoice = result.unique().scalars().first()
         if not invoice:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Goods receipt note not found"
             )
         
-        logger.info(f"Goods receipt note {invoice.voucher_number} updated by {current_user.email}")
-        return invoice
+        # Async-safe model_validate (with error handling)
+        try:
+            validated_invoice = GRNInDB.model_validate(invoice)
+        except Exception as validate_err:
+            logger.error(f"Validation error post-load: {str(validate_err)}")
+            # Fallback to dict serialization if Pydantic fails on rels
+            validated_invoice = GRNInDB.model_validate(invoice.__dict__)
         
+        logger.info(f"Goods receipt note {invoice.voucher_number} updated by {current_user.email}")
+        
+        # Convert to Pydantic model before returning
+        return validated_invoice
+        
+    except HTTPException as he:
+        await db.rollback()
+        raise he
     except Exception as e:
         await db.rollback()
         logger.error(f"Error updating goods receipt note {invoice_id}: {str(e)}")

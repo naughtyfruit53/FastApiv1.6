@@ -144,7 +144,7 @@ class PurchaseOrderInDB(VoucherInDBBase):
     tracking_number: Optional[str] = None
     tracking_link: Optional[str] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra='allow')
 
     @field_validator('total_discount', 'round_off', mode='before')
     @classmethod

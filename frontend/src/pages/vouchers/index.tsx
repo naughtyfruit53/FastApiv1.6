@@ -8,12 +8,6 @@ import {
   CardContent,
   Container,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Typography,
   Chip,
   Grid,
@@ -31,6 +25,10 @@ import VoucherContextMenu from '../../components/VoucherContextMenu';
 import VoucherListModal from '../../components/VoucherListModal';
 import { useCompany } from '../../context/CompanyContext'; // Added import
 import { ProtectedPage } from '../../components/ProtectedPage';
+import SortableTable, { HeadCell, Order } from '../../components/SortableTable';
+import ExportPrintToolbar from '../../components/ExportPrintToolbar';
+import { pdfService } from '../../services/pdfService';
+import jsPDF from 'jspdf';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -290,6 +288,68 @@ const VoucherManagement: React.FC = () => {
     },
   ];
 
+  const getHeadCells = (type: string): HeadCell<any>[] => [
+    {
+      id: 'index',
+      label: 'Index',
+      numeric: false,
+      sortable: true,
+      width: '50px',
+      render: (_, row, index) => index + 1,
+    },
+    {
+      id: 'voucher_number',
+      label: 'Voucher #',
+      numeric: false,
+      sortable: true,
+      width: '150px',
+    },
+    {
+      id: 'date',
+      label: 'Date',
+      numeric: false,
+      sortable: true,
+      width: '120px',
+      render: (value) => new Date(value).toLocaleDateString(),
+    },
+    {
+      id: 'entity',
+      label: type === 'Purchase' ? 'Vendor' : type === 'Sales' ? 'Customer' : 'Type',
+      numeric: false,
+      sortable: true,
+      width: '200px',
+      render: (_, row) => row.vendor?.name || row.customer?.name || row.type || 'N/A',
+    },
+    {
+      id: 'total_amount',
+      label: 'Amount',
+      numeric: true,
+      sortable: true,
+      width: '120px',
+      render: (value) => value > 0 ? `₹${value.toLocaleString()}` : '-',
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      numeric: false,
+      sortable: true,
+      width: '100px',
+      render: (value) => (
+        <Chip
+          label={value}
+          color={
+            value === 'approved' || value === 'confirmed' || value === 'processed'
+              ? 'success'
+              : value === 'pending'
+              ? 'warning'
+              : 'default'
+          }
+          size="small"
+        />
+      ),
+    },
+  ];
+
   const renderVoucherTable = (vouchers: any[], type: string, isLoading: boolean = false) => {
     if (isLoading) {
       return <Typography>Loading {type} vouchers...</Typography>;
@@ -298,73 +358,41 @@ const VoucherManagement: React.FC = () => {
       return <Typography>No {type} vouchers found.</Typography>;
     }
     const latestVouchers = vouchers.slice(0, 5);
+    const headCells = getHeadCells(type);
     return (
       <Box>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Index</TableCell>
-                <TableCell>Voucher #</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>{type === 'Purchase' ? 'Vendor' : type === 'Sales' ? 'Customer' : 'Type'}</TableCell>
-                <TableCell>Amount</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {latestVouchers.map((voucher, index) => (
-                <TableRow 
-                  key={voucher.id}
-                  onContextMenu={(e) => handleContextMenu(e, voucher, type)}
-                  sx={{ 
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                    },
-                  }}
-                >
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>{voucher.voucher_number}</TableCell>
-                  <TableCell>{new Date(voucher.date).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    {voucher.vendor?.name || voucher.customer?.name || voucher.type || 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    {voucher.total_amount > 0 ? `₹${voucher.total_amount.toLocaleString()}` : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={voucher.status}
-                      color={
-                        voucher.status === 'approved' || voucher.status === 'confirmed' || voucher.status === 'processed'
-                          ? 'success'
-                          : voucher.status === 'pending'
-                          ? 'warning'
-                          : 'default'
-                      }
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <VoucherContextMenu
-                      voucher={voucher}
-                      voucherType={type}
-                      onView={(id) => handleViewVoucher(type, id)}
-                      onEdit={(id) => handleEditVoucher(type, id)}
-                      onDelete={(id) => handleDeleteVoucher(type, id)}
-                      onPrint={(id) => handlePrintVoucher(type, id)}
-                      onEmail={(id) => handleEmailVoucher(type, id)}
-                      showKebab={true}
-                      open={false}
-                      onClose={() => {}}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <ExportPrintToolbar
+          showExcel={false}
+          showCSV={false}
+          showPrint={false}
+          onExportPDF={() => handleExportPDF(vouchers, type)}
+        />
+        <SortableTable
+          data={latestVouchers}
+          headCells={headCells}
+          defaultOrderBy="date"
+          defaultOrder="desc"
+          title={`Latest ${type} Vouchers`}
+          onRowClick={(row) => handleViewVoucher(type, row.id)}
+          onRowContextMenu={(e, row) => handleContextMenu(e, row, type)} // NEW: Pass handler for right-click on row
+          actions={(row) => (
+            <VoucherContextMenu
+              voucher={row}
+              voucherType={type}
+              onView={(id) => handleViewVoucher(type, id)}
+              onEdit={(id) => handleEditVoucher(type, id)}
+              onDelete={(id) => handleDeleteVoucher(type, id)}
+              onPrint={(id) => handlePrintVoucher(type, id)}
+              onEmail={(id) => handleEmailVoucher(type, id)}
+              showKebab={true}
+              open={false}
+              onClose={() => {}}
+            />
+          )}
+          maxHeight={400}
+          dense={true}
+          stickyHeader={true}
+        />
         {vouchers.length > 5 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
             <Button
@@ -378,6 +406,44 @@ const VoucherManagement: React.FC = () => {
         )}
       </Box>
     );
+  };
+
+  const handleExportPDF = async (vouchers: any[], type: string) => {
+    try {
+      const doc = new jsPDF();
+      let yPosition = 10;
+      doc.setFontSize(16);
+      doc.text(`${type} Vouchers Report`, 105, yPosition, { align: 'center' });
+      yPosition += 15;
+
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 10, yPosition);
+      doc.text(`Total Vouchers: ${vouchers.length}`, 150, yPosition);
+      yPosition += 10;
+
+      const tableData = vouchers.map((voucher, index) => [
+        index + 1,
+        voucher.voucher_number,
+        new Date(voucher.date).toLocaleDateString(),
+        voucher.vendor?.name || voucher.customer?.name || voucher.type || 'N/A',
+        `₹${voucher.total_amount.toLocaleString()}`,
+        voucher.status,
+      ]);
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Index', 'Voucher #', 'Date', 'Entity', 'Amount', 'Status']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [22, 160, 133] },
+        margin: { top: 10 },
+      });
+
+      doc.save(`${type.toLowerCase()}-vouchers-report.pdf`);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Failed to export PDF');
+    }
   };
 
   if (companyLoading) {

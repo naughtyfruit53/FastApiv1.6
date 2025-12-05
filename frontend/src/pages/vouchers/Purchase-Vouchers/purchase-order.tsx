@@ -530,8 +530,8 @@ const PurchaseOrderPage: React.FC = () => {
   const [hasTrackingMap, setHasTrackingMap] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
-    if (latestVouchers && latestVouchers.length > 0) {
-      const missingVouchers = latestVouchers.filter(v => !(v.id in hasTrackingMap));
+    if (voucherList && voucherList.length > 0) { // Changed to voucherList to cover all
+      const missingVouchers = voucherList.filter(v => !(v.id in hasTrackingMap));
       if (missingVouchers.length > 0) {
         Promise.all(
           missingVouchers.map(v =>
@@ -549,7 +549,7 @@ const PurchaseOrderPage: React.FC = () => {
         });
       }
     }
-  }, [latestVouchers]);
+  }, [voucherList]); // Changed dependency to voucherList
 
   const handleEditTracking = (voucher: any) => {
     console.log('[PurchaseOrderPage] Opening tracking for PO:', voucher.id);
@@ -1012,7 +1012,17 @@ const PurchaseOrderPage: React.FC = () => {
               onView={handleViewWithData}
               onDelete={handleDelete}
               onGeneratePDF={handleGeneratePDF}
+              onDuplicate={(id) => handleDuplicate(id, voucherList, reset, setMode, "Purchase Order")}
+              onCreateGRN={handleCreateGRN}
+              onEditTracking={handleEditTracking}
               vendorList={vendorList}
+              rowSx={(voucher) => {
+                const colorStatus = getPOColorStatus(voucher);
+                const colorCode = getColorCode(colorStatus);
+                return {
+                  backgroundColor: colorCode,
+                };
+              }}
             />
           }
         />

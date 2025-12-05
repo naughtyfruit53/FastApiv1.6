@@ -33,6 +33,8 @@ interface SortableTableProps<T> {
   defaultOrderBy?: keyof T;
   defaultOrder?: Order;
   onRowClick?: (_row: T) => void;
+  onRowContextMenu?: (event: React.MouseEvent, row: T) => void; // NEW: Prop for right-click context menu on row
+  onRequestSort?: (_property: keyof T) => void;
   dense?: boolean;
   stickyHeader?: boolean;
   maxHeight?: string | number;
@@ -41,7 +43,7 @@ interface SortableTableProps<T> {
   actions?: (_row: T) => React.ReactNode;
   rowSx?: (_row: T) => object;
 }
-function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
+export function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   const aVal = a[orderBy];
   const bVal = b[orderBy];
   // Handle null/undefined values
@@ -82,7 +84,7 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
     sensitivity: "base",
   });
 }
-function getComparator<T>(
+export function getComparator<T>(
   order: Order,
   orderBy: keyof T,
 ): (_a: T, _b: T) => number {
@@ -90,7 +92,7 @@ function getComparator<T>(
     ? (_a, _b) => descendingComparator(_a, _b, orderBy)
     : (_a, _b) => -descendingComparator(_a, _b, orderBy);
 }
-function stableSort<T>(
+export function stableSort<T>(
   array: readonly T[],
   comparator: (_a: T, _b: T) => number,
 ) {
@@ -240,6 +242,8 @@ function SortableTable<T>({
   defaultOrderBy,
   defaultOrder = "asc",
   onRowClick,
+  onRowContextMenu, // NEW: Added to props
+  onRequestSort,
   dense = false,
   stickyHeader = false,
   maxHeight,
@@ -257,11 +261,15 @@ function SortableTable<T>({
       .concat(actions ? ['auto'] : [])
   );
 
-  const handleRequestSort = (property: keyof T) => {
+  const handleRequestSortInternal = (property: keyof T) => {
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
+    if (onRequestSort) {
+      onRequestSort(property);
+    }
   };
+
   const sortedData = useMemo(() => {
     if (!data?.length) {
       return [];
@@ -296,7 +304,7 @@ function SortableTable<T>({
             headCells={headCells}
             order={order}
             orderBy={orderBy}
-            onRequestSort={handleRequestSort}
+            onRequestSort={handleRequestSortInternal}
             hasActions={hasActions}
             widths={widths}
             setWidths={setWidths}
@@ -317,6 +325,7 @@ function SortableTable<T>({
                 <TableRow
                   hover={Boolean(onRowClick)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  onContextMenu={onRowContextMenu ? (e) => onRowContextMenu(e, row) : undefined} // NEW: Attached to TableRow for right-click
                   key={index}
                   sx={{
                     cursor: onRowClick ? "pointer" : "default",
@@ -350,21 +359,19 @@ function SortableTable<T>({
                     );
                   })}
                   {hasActions && (
-                    <Tooltip title="Actions">
-                      <TableCell 
-                        align="center"
-                        sx={{
-                          padding: '4px 8px',
-                          fontSize: '0.75rem',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          width: widths[headCells.length],
-                        }}
-                      >
-                        {actions!(row)}
-                      </TableCell>
-                    </Tooltip>
+                    <TableCell 
+                      align="center"
+                      sx={{
+                        padding: '4px 8px',
+                        fontSize: '0.75rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        width: widths[headCells.length],
+                      }}
+                    >
+                      {actions!(row)}
+                    </TableCell>
                   )}
                 </TableRow>
               ))

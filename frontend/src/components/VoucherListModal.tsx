@@ -5,12 +5,6 @@ import {
   Modal,
   Box,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   TextField,
   Button,
@@ -20,6 +14,10 @@ import {
 } from "@mui/material";
 import { Close, Search } from "@mui/icons-material";
 import VoucherContextMenu from "./VoucherContextMenu";
+import SortableTable, { HeadCell, Order, getComparator, stableSort } from "./SortableTable";
+import ExportPrintToolbar from "./ExportPrintToolbar";
+import autoTable from "jspdf-autotable";
+import jsPDF from "jspdf";
 interface VoucherListModalProps {
   open: boolean;
   onClose: () => void;
@@ -30,8 +28,17 @@ interface VoucherListModalProps {
   onView?: (id: number) => void;
   onDelete?: (id: number) => void;
   onGeneratePDF?: (voucher: any) => void;
+  onDuplicate?: (voucher: any) => void;
+  onCreateDispatch?: (voucher: any) => void;
+  onRevise?: (voucher: any) => void;
+  onCreateGRN?: (voucher: any) => void;
+  onEditTracking?: (voucher: any) => void;
+  onCreatePurchaseVoucher?: (voucher: any) => void;
+  onCreateRejectionNote?: (voucher: any) => void;
+  onChangeStatus?: (voucher: any) => void;
   customerList?: any[];
   vendorList?: any[];
+  rowSx?: (row: any) => object;  // NEW: For color coding
 }
 const VoucherListModal: React.FC<VoucherListModalProps> = ({
   open,
@@ -43,8 +50,17 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
   onView,
   onDelete,
   onGeneratePDF,
+  onDuplicate,
+  onCreateDispatch,
+  onRevise,
+  onCreateGRN,
+  onEditTracking,
+  onCreatePurchaseVoucher,
+  onCreateRejectionNote,
+  onChangeStatus,
   customerList = [],
   vendorList = [],
+  rowSx,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -54,6 +70,8 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
     mouseY: number;
     voucher: any;
   } | null>(null);
+  const [order, setOrder] = useState<Order>("desc");
+  const [orderBy, setOrderBy] = useState<keyof any>("date");
   const getEntityName = (voucher: any) => {
     if (voucher.customer_id && customerList.length > 0) {
       return (
@@ -84,6 +102,12 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
       toDate === "" || new Date(voucher.date) <= new Date(toDate);
     return matchesSearch && matchesFromDate && matchesToDate;
   });
+  const sortedFilteredVouchers = stableSort(filteredVouchers, getComparator(order, orderBy));
+  const handleRequestSort = (property: keyof any) => {
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+  };
   const handleContextMenu = (event: React.MouseEvent, voucher: any) => {
     event.preventDefault();
     setContextMenu(
@@ -95,19 +119,83 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
   const handleCloseContextMenu = () => {
     setContextMenu(null);
   };
-  const handleVoucherClick = (voucher: any, event: React.MouseEvent) => {
-    // Don't trigger if right-click (context menu)
-    if (event.button === 2) {
-      return;
-    }
-    onView?.(voucher.id);
-    onClose(); // Close modal after selection
-  };
   const formatDate = (dateString: string) => {
     if (!dateString) {
       return "N/A";
     }
     return new Date(dateString).toLocaleDateString();
+  };
+  const headCells: HeadCell<any>[] = [
+    {
+      id: "voucher_number",
+      label: "Voucher No.",
+      numeric: false,
+      sortable: true,
+      width: "150px",
+    },
+    {
+      id: "date",
+      label: "Date",
+      numeric: false,
+      sortable: true,
+      width: "120px",
+      render: (value) => formatDate(value),
+    },
+    {
+      id: "entity",
+      label: "Customer",
+      numeric: false,
+      sortable: true,
+      width: "200px",
+      render: (_, row) => getEntityName(row),
+    },
+    {
+      id: "total_amount",
+      label: "Amount",
+      numeric: true,
+      sortable: true,
+      width: "120px",
+      render: (value) => `Rs.${value?.toLocaleString() || "0"}`,
+    },
+  ];
+  const handleExportPDF = async () => {
+    try {
+      const doc = new jsPDF();
+      let yPosition = 10;
+      doc.setFontSize(16);
+      doc.text(`All ${voucherType} Report`, 105, yPosition, { align: "center" });
+      yPosition += 15;
+
+      doc.setFontSize(10);
+      doc.text(
+        `Generated on: ${new Date().toLocaleDateString()}`,
+        10,
+        yPosition
+      );
+      doc.text(`Total Vouchers: ${filteredVouchers.length}`, 150, yPosition);
+      yPosition += 10;
+
+      const tableData = sortedFilteredVouchers.map((voucher) => [
+        voucher.voucher_number,
+        formatDate(voucher.date),
+        getEntityName(voucher),
+        `Rs.${voucher.total_amount?.toLocaleString() || "0"}`,
+      ]);
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [["Voucher No.", "Date", "Customer", "Amount"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: { fillColor: [22, 160, 133] },
+        margin: { top: 10 },
+      });
+
+      doc.save(`all-${voucherType.toLowerCase()}-report.pdf`);
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      alert("Failed to export PDF");
+    }
   };
   const modalStyle = {
     position: "absolute" as const,
@@ -186,110 +274,67 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
                   setToDate("");
                 }}
                 fullWidth
-                sx={{ height: "56px" }}
               >
                 Clear
               </Button>
             </Grid>
           </Grid>
-          {/* Results Summary */}
-          <Box sx={{ mb: 2 }}>
+          {/* Results Summary and Export in same row */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Chip
               label={`${filteredVouchers.length} of ${vouchers.length} vouchers`}
               color="primary"
               variant="outlined"
             />
+            <Box sx={{ width: { xs: 'auto', md: '168px' } }}> {/* Approximate width for md:2 grid column */}
+              <ExportPrintToolbar
+                showExcel={false}
+                showCSV={false}
+                showPrint={false}
+                onExportPDF={handleExportPDF}
+              />
+            </Box>
           </Box>
           {/* Voucher Table */}
-          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell
-                    align="center"
-                    sx={{ fontSize: 15, fontWeight: "bold" }}
-                  >
-                    Voucher No.
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontSize: 15, fontWeight: "bold" }}
-                  >
-                    Date
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontSize: 15, fontWeight: "bold" }}
-                  >
-                    Customer
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontSize: 15, fontWeight: "bold" }}
-                  >
-                    Amount
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredVouchers.map((voucher) => {
-                  // Determine color coding for purchase orders
-                  const getColorStatus = () => {
-                    if (voucher.color_status) {
-                      return voucher.color_status;
-                    }
-                    return null;
-                  };
-                  
-                  const colorStatus = getColorStatus();
-                  const borderColor = colorStatus === 'green' ? '#4caf50' : 
-                                     colorStatus === 'yellow' ? '#ff9800' : 
-                                     colorStatus === 'red' ? '#f44336' : 
-                                     'transparent';
-                  
-                  return (
-                  <TableRow
-                    key={voucher.id}
-                    hover
-                    onClick={(e) => handleVoucherClick(voucher, e)}
-                    onContextMenu={(e) => handleContextMenu(e, voucher)}
-                    sx={{
-                      cursor: "pointer",
-                      borderLeft: colorStatus ? `4px solid ${borderColor}` : 'none',
-                      "&:hover": {
-                        backgroundColor: "action.hover",
-                      },
-                    }}
-                  >
-                    <TableCell align="center">
-                      <Typography variant="body2" fontWeight="medium">
-                        {voucher.voucher_number}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      {formatDate(voucher.date)}
-                    </TableCell>
-                    <TableCell align="center">
-                      {getEntityName(voucher)}
-                    </TableCell>
-                    <TableCell align="center">
-                      ₹{voucher.total_amount?.toLocaleString() || "0"}
-                    </TableCell>
-                  </TableRow>
-                  );
-                })}
-                {filteredVouchers.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      <Typography color="text.secondary">
-                        No vouchers found matching your criteria
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <SortableTable
+            data={sortedFilteredVouchers}
+            headCells={headCells}
+            defaultOrderBy="date"
+            defaultOrder="desc"
+            title={`All ${voucherType}`}
+            onRowClick={(row) => { onView?.(row.id); onClose(); }} // NEW: Close modal after left-click view
+            onRowContextMenu={handleContextMenu} // NEW: Pass handler for right-click on row
+            actions={(row) => (
+              <VoucherContextMenu
+                voucher={row}
+                voucherType={voucherType}
+                onView={onView || (() => {})}
+                onEdit={onEdit || (() => {})}
+                onDelete={onDelete || (() => {})}
+                onPrint={
+                  onGeneratePDF
+                    ? () => onGeneratePDF(row)
+                    : undefined
+                }
+                onDuplicate={onDuplicate}
+                onCreateDispatch={onCreateDispatch}
+                onRevise={onRevise}
+                onCreateGRN={onCreateGRN}
+                onEditTracking={onEditTracking}
+                onCreatePurchaseVoucher={onCreatePurchaseVoucher}
+                onCreateRejectionNote={onCreateRejectionNote}
+                onChangeStatus={onChangeStatus}
+                open={false}
+                onClose={() => {}}
+                showKebab={true}
+              />
+            )}
+            maxHeight={400}
+            dense={true}
+            stickyHeader={true}
+            onRequestSort={handleRequestSort}
+            rowSx={rowSx}
+          />
         </Box>
       </Modal>
       {/* Context Menu */}
@@ -303,6 +348,14 @@ const VoucherListModal: React.FC<VoucherListModalProps> = ({
           onPrint={
             onGeneratePDF ? () => onGeneratePDF(contextMenu.voucher) : undefined
           }
+          onDuplicate={onDuplicate}
+          onCreateDispatch={onCreateDispatch}
+          onRevise={onRevise}
+          onCreateGRN={onCreateGRN}
+          onEditTracking={onEditTracking}
+          onCreatePurchaseVoucher={onCreatePurchaseVoucher}
+          onCreateRejectionNote={onCreateRejectionNote}
+          onChangeStatus={onChangeStatus}
           open={true}
           onClose={handleCloseContextMenu}
           anchorReference="anchorPosition"

@@ -4,19 +4,20 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import List, Optional
-from datetime import datetime
+from datetime import timezone, datetime
 from dateutil import parser as date_parser
 from app.core.database import get_db
 from app.core.enforcement import require_access, TenantEnforcement
 from app.api.v1.auth import get_current_active_user
 from app.models import User
 from app.models.vouchers.financial import ReceiptVoucher
-from app.models.erp_models import ChartOfAccounts
+from app.models.erp_models import ChartOfAccounts  # Assuming ChartOfAccounts is in erp_models.py
 from app.schemas.vouchers import ReceiptVoucherCreate, ReceiptVoucherInDB, ReceiptVoucherUpdate
 from app.services.system_email_service import send_voucher_email
 from app.services.voucher_service import VoucherNumberService
+from app.models.organization_settings import OrganizationSettings, VoucherCounterResetPeriod
 import logging
-from sqlalchemy.sql import text  # Added import for text
+from sqlalchemy.sql import text  # Kept for text queries
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["receipt-vouchers"])
@@ -113,6 +114,7 @@ async def get_receipt_vouchers(
         result_chart = await db.execute(stmt_chart)
         chart_account = result_chart.scalar_one_or_none()
         voucher.chart_account = chart_account
+    
     return vouchers
 
 @router.get("/next-number", response_model=str)
@@ -151,21 +153,6 @@ async def check_backdated_conflict(
     
     try:
         parsed_date = date_parser.parse(voucher_date)
-        # Only check if date is before last voucher
-        stmt = select(func.max(ReceiptVoucher.date)).where(
-            ReceiptVoucher.organization_id == org_id
-        )
-        result = await db.execute(stmt)
-        last_date = result.scalar()
-        
-        if last_date and parsed_date.date() >= last_date.date():
-            return {
-                "has_conflict": False,
-                "later_voucher_count": 0,
-                "suggested_date": last_date.isoformat() if last_date else None,
-                "period": "N/A"
-            }
-        
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "RCT", org_id, ReceiptVoucher, parsed_date
         )
@@ -195,7 +182,8 @@ async def create_receipt_voucher(
         # Get the voucher date for numbering
         voucher_date = None
         if 'date' in voucher_data and voucher_data['date']:
-            voucher_date = voucher_data['date'] if hasattr(voucher_data['date'], 'year') else None
+            voucher_data['date'] = voucher_data['date'].replace(tzinfo=timezone.utc)
+            voucher_date = voucher_data['date']
         
         # Generate unique voucher number if not provided or blank
         if not voucher_data.get('voucher_number') or voucher_data['voucher_number'] == '':
@@ -217,42 +205,99 @@ async def create_receipt_voucher(
         db_voucher = ReceiptVoucher(**voucher_data)
         db.add(db_voucher)
         await db.commit()
+        await db.refresh(db_voucher)  # Refresh for fresh data post-commit
+
+        # Calculate search_pattern for the period
+        current_year = db_voucher.date.year
+        current_month = db_voucher.date.month
         
-        # Check for backdated conflict and reindex if necessary
-        conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
-            db, "RCT", org_id, ReceiptVoucher, db_voucher.date
+        stmt_settings = select(OrganizationSettings).where(
+            OrganizationSettings.organization_id == org_id
         )
-        if conflict_info["has_conflict"] and conflict_info["later_voucher_count"] > 0:  # Skip if no vouchers to reindex
-            try:
-                reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
-                    db, "RCT", org_id, ReceiptVoucher, db_voucher.date, db_voucher.id
-                )
-                if not reindex_result["success"]:
-                    logger.error(f"Reindex failed: {reindex_result['error']}")
-                    # Continue but log - don't rollback creation
-            except Exception as e:
-                logger.error(f"Error during reindex: {str(e)}")
-                # Don't rollback creation; log only
+        result_settings = await db.execute(stmt_settings)
+        org_settings = result_settings.scalars().first()
         
-        await db.refresh(db_voucher)
+        full_prefix = "RCT"
+        if org_settings and org_settings.voucher_prefix_enabled and org_settings.voucher_prefix:
+            full_prefix = f"{org_settings.voucher_prefix}-{full_prefix}"
         
-        if send_email and db_voucher.entity and 'email' in db_voucher.entity:  # Assuming entity has email, but for simplicity
+        fiscal_year = f"{str(current_year)[-2:]}{str(current_year + 1 if current_month > 3 else current_year)[-2:]}"
+        
+        reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
+        
+        period_segment = ""
+        if reset_period == VoucherCounterResetPeriod.MONTHLY:
+            month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+                          'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+            period_segment = month_names[current_month - 1]
+        elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
+            quarter = ((current_month - 1) // 3) + 1
+            period_segment = f"Q{quarter}"
+        
+        if period_segment:
+            search_pattern = f"{full_prefix}/{fiscal_year}/{period_segment}/%"
+        else:
+            search_pattern = f"{full_prefix}/{fiscal_year}/%"
+        
+        # Check if backdated: if new date < max date in period (excluding this)
+        max_date_stmt = select(func.max(ReceiptVoucher.date)).where(
+            ReceiptVoucher.organization_id == org_id,
+            ReceiptVoucher.voucher_number.like(search_pattern),
+            ReceiptVoucher.id != db_voucher.id,
+            ReceiptVoucher.is_deleted == False
+        )
+        result = await db.execute(max_date_stmt)
+        max_date = result.scalar()
+        
+        if max_date and db_voucher.date < max_date:
+            logger.info(f"Detected backdated insert for RCT {db_voucher.voucher_number} - triggering reindex")
+            reindex_result = await VoucherNumberService.reindex_vouchers_after_backdated_insert(
+                db, "RCT", org_id, ReceiptVoucher, db_voucher.date, db_voucher.id
+            )
+            if not reindex_result["success"]:
+                logger.error(f"Reindex failed after backdated insert: {reindex_result['error']}")
+                # Don't raise - continue with high number
+            else:
+                await db.refresh(db_voucher)
+                logger.info(f"Reindex successful - new number: {db_voucher.voucher_number}")
+        
+        # Final query with full eager loading to prevent lazy loads
+        stmt = select(ReceiptVoucher).where(
+            ReceiptVoucher.id == db_voucher.id
+        )
+        result = await db.execute(stmt)
+        db_voucher = result.unique().scalars().first()
+        
+        # Async-safe model_validate (with error handling)
+        try:
+            validated_voucher = ReceiptVoucherInDB.model_validate(db_voucher)
+        except Exception as validate_err:
+            logger.error(f"Validation error post-load: {str(validate_err)}")
+            # Fallback to dict serialization if Pydantic fails on rels
+            validated_voucher = ReceiptVoucherInDB.model_validate(db_voucher.__dict__)
+        
+        await add_entity_name(validated_voucher, db)
+        
+        # Add chart account details
+        validated_voucher.chart_account = chart_account
+        
+        if send_email and validated_voucher.entity and 'email' in validated_voucher.entity:  # Assuming entity has email, but for simplicity
             background_tasks.add_task(
                 send_voucher_email,
                 voucher_type="receipt_voucher",
-                voucher_id=db_voucher.id,
-                recipient_email=db_voucher.entity.get('email', ''),
-                recipient_name=db_voucher.entity['name']
+                voucher_id=validated_voucher.id,
+                recipient_email=validated_voucher.entity.get('email', ''),
+                recipient_name=validated_voucher.entity['name']
             )
         
-        logger.info(f"Receipt voucher {db_voucher.voucher_number} created by {current_user.email}")
-        await add_entity_name(db_voucher, db)
+        logger.info(f"Receipt voucher {validated_voucher.voucher_number} created by {current_user.email}")
         
-        # Add chart account details
-        db_voucher.chart_account = chart_account
+        # Convert to Pydantic model before returning (ensures data access while session is open)
+        return validated_voucher
         
-        return db_voucher
-        
+    except HTTPException as he:
+        await db.rollback()
+        raise he
     except Exception as e:
         await db.rollback()
         logger.error(f"Error creating receipt voucher: {str(e)}")
@@ -311,11 +356,54 @@ async def update_receipt_voucher(
         if 'chart_account_id' in update_data:
             await validate_chart_account(db, update_data['chart_account_id'], org_id)
         
+        if 'date' in update_data and update_data['date']:
+            update_data['date'] = update_data['date'].replace(tzinfo=timezone.utc)
+        
+        # If date is being updated, check if it's crossing periods
+        if 'date' in update_data:
+            old_date = voucher.date
+            new_date = update_data['date']
+            stmt_settings = select(OrganizationSettings).where(
+                OrganizationSettings.organization_id == org_id
+            )
+            result_settings = await db.execute(stmt_settings)
+            org_settings = result_settings.scalars().first()
+            reset_period = org_settings.voucher_counter_reset_period if org_settings else VoucherCounterResetPeriod.ANNUALLY
+
+            def get_period(dt: datetime) -> str:
+                year = dt.year
+                month = dt.month
+                fiscal_year = f"{str(year)[-2:]}{str(year + 1 if month > 3 else year)[-2:]}"
+                if reset_period == VoucherCounterResetPeriod.MONTHLY:
+                    month_names = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+                    return f"{fiscal_year}/{month_names[month - 1]}"
+                elif reset_period == VoucherCounterResetPeriod.QUARTERLY:
+                    quarter = ((month - 1) // 3) + 1
+                    return f"{fiscal_year}/Q{quarter}"
+                else:
+                    return fiscal_year
+
+            old_period = get_period(old_date)
+            new_period = get_period(new_date)
+            if old_period != new_period:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot change voucher date across numbering periods"
+                )
+            
+            # DO NOT regenerate voucher number on date change within same period!
+            # Keep the original number — that's the whole point
+            # Only regenerate if crossing fiscal periods (which is blocked above)
+            pass
+        
         for field, value in update_data.items():
             setattr(voucher, field, value)
         
+        logger.debug(f"Before commit for receipt voucher {voucher_id}")
         await db.commit()
-        
+        logger.debug(f"After commit for receipt voucher {voucher_id}")
+        await db.refresh(voucher)  # Refresh for fresh data post-commit
+
         # Check for backdated conflict and reindex if necessary
         conflict_info = await VoucherNumberService.check_backdated_voucher_conflict(
             db, "RCT", org_id, ReceiptVoucher, voucher.date
@@ -328,25 +416,51 @@ async def update_receipt_voucher(
                 if not reindex_result["success"]:
                     logger.error(f"Reindex failed: {reindex_result['error']}")
                     # Continue but log - don't rollback update
+                else:
+                    await db.refresh(voucher)
             except Exception as e:
                 logger.error(f"Error during reindex: {str(e)}")
                 # Don't rollback update; log only
         
-        await db.refresh(voucher)
+        # Final query with full eager loading to prevent lazy loads
+        stmt = select(ReceiptVoucher).where(
+            ReceiptVoucher.id == voucher_id,
+            ReceiptVoucher.organization_id == org_id
+        )
+        result = await db.execute(stmt)
+        voucher = result.unique().scalars().first()
+        if not voucher:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Receipt voucher not found"
+            )
         
-        logger.info(f"Receipt voucher {voucher.voucher_number} updated by {current_user.email}")
-        await add_entity_name(voucher, db)
+        # Async-safe model_validate (with error handling)
+        try:
+            validated_voucher = ReceiptVoucherInDB.model_validate(voucher)
+        except Exception as validate_err:
+            logger.error(f"Validation error post-load: {str(validate_err)}")
+            # Fallback to dict serialization if Pydantic fails on rels
+            validated_voucher = ReceiptVoucherInDB.model_validate(voucher.__dict__)
+        
+        await add_entity_name(validated_voucher, db)
         
         # Load chart account details
         stmt_chart = select(ChartOfAccounts).where(
-            ChartOfAccounts.id == voucher.chart_account_id
+            ChartOfAccounts.id == validated_voucher.chart_account_id
         )
         result_chart = await db.execute(stmt_chart)
         chart_account = result_chart.scalar_one_or_none()
-        voucher.chart_account = chart_account
+        validated_voucher.chart_account = chart_account
         
-        return voucher
+        logger.info(f"Receipt voucher {validated_voucher.voucher_number} updated by {current_user.email}")
         
+        # Convert to Pydantic model before returning
+        return validated_voucher
+        
+    except HTTPException as he:
+        await db.rollback()
+        raise he
     except Exception as e:
         await db.rollback()
         logger.error(f"Error updating receipt voucher: {str(e)}")

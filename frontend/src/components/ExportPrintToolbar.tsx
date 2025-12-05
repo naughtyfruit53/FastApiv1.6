@@ -9,12 +9,13 @@ import {
   Tooltip,
   CircularProgress,
 } from "@mui/material";
-import { Download, Print, TableChart, Description } from "@mui/icons-material";
+import { Download, Print, TableChart, Description, PictureAsPdf } from "@mui/icons-material";
 import { saveAs } from "file-saver";
 interface ExportPrintToolbarProps {
   onExportExcel?: () => Promise<Blob | void>;
   onExportCSV?: () => Promise<Blob | void>;
   onPrint?: () => void;
+  onExportPDF?: () => void;
   showExcel?: boolean;
   showCSV?: boolean;
   showPrint?: boolean;
@@ -26,6 +27,7 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
   onExportExcel,
   onExportCSV,
   onPrint,
+  onExportPDF,
   showExcel = true,
   showCSV = true,
   showPrint = true,
@@ -79,6 +81,12 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
       handleExportClose();
     }
   };
+  const handlePDFExport = () => {
+    if (onExportPDF) {
+      onExportPDF();
+    }
+    handleExportClose();
+  };
   const handlePrint = () => {
     if (onPrint) {
       onPrint();
@@ -88,7 +96,7 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
     }
   };
   const hasExportOptions =
-    (showExcel && onExportExcel) || (showCSV && onExportCSV);
+    (showExcel && onExportExcel) || (showCSV && onExportCSV) || onExportPDF;
   return (
     <Box sx={{ display: "flex", gap: 1 }}>
       {hasExportOptions && (
@@ -132,6 +140,12 @@ const ExportPrintToolbar: React.FC<ExportPrintToolbarProps> = ({
               <MenuItem onClick={handleCSVExport} disabled={isExporting}>
                 <Description sx={{ mr: 1 }} fontSize="small" />
                 Export to CSV
+              </MenuItem>
+            )}
+            {onExportPDF && (
+              <MenuItem onClick={handlePDFExport} disabled={isExporting}>
+                <PictureAsPdf sx={{ mr: 1 }} fontSize="small" />
+                Export to PDF
               </MenuItem>
             )}
           </Menu>
