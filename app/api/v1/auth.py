@@ -62,11 +62,14 @@ async def login(
     if user:
         user = await db.merge(user)
 
+    is_otp_login = False  # ADDED: Flag for OTP login
+
     # Check if password is 6-digit OTP (for admin reset flow)
     if len(password) == 6 and password.isdigit():
         otp_service = OTPService(db)
         otp_valid, message = await otp_service.verify_otp(email, password, "admin_password_reset")
         if otp_valid:
+            is_otp_login = True  # ADDED: Set flag
             # OTP valid - force password change on success
             user.force_password_reset = True
             user.must_change_password = True
@@ -80,31 +83,32 @@ async def login(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    if not user or not verify_password(password, user.hashed_password):
-        logger.info(f"[LOGIN:FAILED] Email: {email}")
-        await create_audit_log(
-            db=db,
-            entity_type="security_events",
-            entity_id=user.id if user else None,
-            action="LOGIN:FAILED",
-            user_id=user.id if user else None,
-            changes={
-                "event_type": "LOGIN",
-                "action": "FAILED",
-                "user_email": email,
-                "success": "FAILURE",
-                "error_message": "Invalid credentials",
-                "ip_address": request.client.host if request else "unknown",
-                "user_agent": request.headers.get("user-agent", "unknown") if request else "unknown"
-            },
-            ip_address=request.client.host if request else "unknown",
-            user_agent=request.headers.get("user-agent", "unknown") if request else "unknown"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    if not is_otp_login:  # ADDED: Only check password if not OTP login
+        if not user or not verify_password(password, user.hashed_password):
+            logger.info(f"[LOGIN:FAILED] Email: {email}")
+            await create_audit_log(
+                db=db,
+                entity_type="security_events",
+                entity_id=user.id if user else None,
+                action="LOGIN:FAILED",
+                user_id=user.id if user else None,
+                changes={
+                    "event_type": "LOGIN",
+                    "action": "FAILED",
+                    "user_email": email,
+                    "success": "FAILURE",
+                    "error_message": "Invalid credentials",
+                    "ip_address": request.client.host if request else "unknown",
+                    "user_agent": request.headers.get("user-agent", "unknown") if request else "unknown"
+                },
+                ip_address=request.client.host if request else "unknown",
+                user_agent=request.headers.get("user-agent", "unknown") if request else "unknown"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     if isinstance(user, PlatformUser):
         user_type = "platform"
