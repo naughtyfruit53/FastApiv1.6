@@ -29,6 +29,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import rbacService from '../services/rbacService';
+import axios from 'axios';
 
 interface PermissionContextType {
   /** User's all permissions */
@@ -54,6 +55,14 @@ interface PermissionContextType {
   
   /** Check if user is super admin (bypasses all permission checks) */
   isSuperAdmin: boolean;
+  
+  /** Permission format configuration from backend */
+  permissionFormat: {
+    primaryFormat: string;
+    compatibility: boolean;
+    legacyFormats: string[];
+    hierarchyEnabled: boolean;
+  } | null;
 }
 
 const PermissionContext = createContext<PermissionContextType>({
@@ -65,7 +74,48 @@ const PermissionContext = createContext<PermissionContextType>({
   error: null,
   refreshPermissions: async () => {},
   isSuperAdmin: false,
+  permissionFormat: null,
 });
+
+// Permission hierarchy mapping (mirrors backend)
+const PERMISSION_HIERARCHY: Record<string, string[]> = {
+  "master_data.read": [
+    "vendors.read",
+    "products.read",
+    "inventory.read",
+  ],
+  "master_data.write": [
+    "vendors.create",
+    "vendors.update",
+    "products.write",
+    "products.update",
+    "inventory.write",
+    "inventory.update",
+  ],
+  "master_data.delete": [
+    "vendors.delete",
+    "products.delete",
+    "inventory.delete",
+  ],
+  "crm.admin": [
+    "crm.settings",
+    "crm.commission.read",
+    "crm.commission.create",
+    "crm.commission.update",
+    "crm.commission.delete",
+  ],
+  "platform.super_admin": [
+    "platform.admin",
+    "platform.factory_reset",
+  ],
+  "platform.admin": [
+    "organizations.manage",
+    "organizations.view",
+    "organizations.create",
+    "organizations.delete",
+    "audit.view_all",
+  ],
+};
 
 interface PermissionProviderProps {
   children: React.ReactNode;
@@ -77,6 +127,58 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [permissionFormat, setPermissionFormat] = useState<{
+    primaryFormat: string;
+    compatibility: boolean;
+    legacyFormats: string[];
+    hierarchyEnabled: boolean;
+  } | null>(null);
+
+  /**
+   * Load permission format configuration from backend
+   */
+  const loadPermissionFormat = useCallback(async () => {
+    try {
+      const response = await axios.get('/api/v1/system/permission-format');
+      setPermissionFormat({
+        primaryFormat: response.data.primary_format,
+        compatibility: response.data.compatibility,
+        legacyFormats: response.data.legacy_formats || [],
+        hierarchyEnabled: response.data.hierarchy_enabled || false,
+      });
+    } catch (err) {
+      console.warn('Could not load permission format configuration, using defaults:', err);
+      // Default to dotted format with compatibility
+      setPermissionFormat({
+        primaryFormat: 'dotted',
+        compatibility: true,
+        legacyFormats: ['underscore', 'colon'],
+        hierarchyEnabled: true,
+      });
+    }
+  }, []);
+
+  /**
+   * Check if user has permission considering hierarchy
+   * @param permission - Permission to check
+   * @param userPermissions - List of user's permissions
+   * @returns true if user has the permission directly or through hierarchy
+   */
+  const checkWithHierarchy = useCallback((permission: string, userPermissions: string[]): boolean => {
+    // Direct match
+    if (userPermissions.includes(permission)) {
+      return true;
+    }
+
+    // Check hierarchy - if user has a parent permission, they have all child permissions
+    for (const [parentPerm, childPerms] of Object.entries(PERMISSION_HIERARCHY)) {
+      if (userPermissions.includes(parentPerm) && childPerms.includes(permission)) {
+        return true;
+      }
+    }
+
+    return false;
+  }, []);
 
   /**
    * Load permissions from backend
@@ -91,6 +193,11 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     try {
       setLoading(true);
       setError(null);
+      
+      // Load permission format if not already loaded
+      if (!permissionFormat) {
+        await loadPermissionFormat();
+      }
       
       // Call backend endpoint to get current user's permissions
       const response = await rbacService.getUserPermissions(user.id);
@@ -110,19 +217,51 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, permissionFormat, loadPermissionFormat]);
 
   /**
    * Load permissions on mount and when user changes
    */
   useEffect(() => {
+    loadPermissionFormat();
+  }, [loadPermissionFormat]);
+
+  useEffect(() => {
     loadPermissions();
   }, [loadPermissions]);
 
   /**
+   * Compatibility shim to map legacy permission formats to dotted format
+   * TODO: Remove after full migration (target: Q2 2026) - Issue #TBD
+   * @param module - Module name
+   * @param action - Action name
+   * @returns Array of permission strings to check (dotted + legacy if compatibility enabled)
+   */
+  const getPermissionVariants = useCallback((module: string, action: string): string[] => {
+    const variants: string[] = [];
+    
+    // Primary format: dotted
+    const permDot = `${module}.${action}`;
+    variants.push(permDot);
+    
+    // Add legacy formats if compatibility is enabled
+    if (permissionFormat?.compatibility) {
+      if (permissionFormat.legacyFormats.includes('underscore')) {
+        variants.push(`${module}_${action}`);
+      }
+      if (permissionFormat.legacyFormats.includes('colon')) {
+        variants.push(`${module}:${action}`);
+      }
+    }
+    
+    return variants;
+  }, [permissionFormat]);
+
+  /**
    * Check if user has a specific permission
-   * STRICT ENFORCEMENT: No bypass for super admins
-   * @param module - Module name (e.g., 'naughty', 'inventory', 'admin')
+   * Supports dotted format (primary) and legacy formats (compatibility)
+   * Includes hierarchy logic when enabled
+   * @param module - Module name (e.g., 'inventory', 'admin')
    * @param action - Action name (e.g., 'read', 'create', 'update', 'delete')
    * @returns true if user has the explicit permission
    */
@@ -130,19 +269,26 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     if (isSuperAdmin) {
       return true;
     }
-    const permUnderscore = `${module}_${action}`;
-    const permColon = `${module}:${action}`;
-    const permDot = `${module}.${action}`;  // NEW: Added dot format to match backend convention
-    const hasPerm = permissions.includes(permUnderscore) || 
-                    permissions.includes(permColon) || 
-                    permissions.includes(permDot);
     
-    return hasPerm;
-  }, [permissions, isSuperAdmin]);
+    // Get all permission variants to check
+    const variants = getPermissionVariants(module, action);
+    
+    // Check direct match for any variant
+    const hasDirectMatch = variants.some(variant => permissions.includes(variant));
+    if (hasDirectMatch) {
+      return true;
+    }
+    
+    // Check hierarchy if enabled
+    if (permissionFormat?.hierarchyEnabled) {
+      return variants.some(variant => checkWithHierarchy(variant, permissions));
+    }
+    
+    return false;
+  }, [permissions, isSuperAdmin, permissionFormat, getPermissionVariants, checkWithHierarchy]);
 
   /**
    * Check if user has any of the specified permissions
-   * STRICT ENFORCEMENT: No bypass for super admins
    * @param permissionList - Array of permission strings (e.g., ['voucher.read', 'voucher.create'])
    * @returns true if user has at least one of the explicit permissions
    */
@@ -151,15 +297,19 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
       return true;
     }
     return permissionList.some(permission => {
-      // Support both formats in list
-      const [module, action] = permission.split(/[_:.]/); // NEW: Added dot (.) to splitter regex
-      return hasPermission(module, action);
+      // Support both dotted format and module.action split
+      const [module, action] = permission.split(/[.]/);
+      if (module && action) {
+        return hasPermission(module, action);
+      }
+      // Fallback: check direct permission string
+      return permissions.includes(permission) || 
+             (permissionFormat?.hierarchyEnabled && checkWithHierarchy(permission, permissions));
     });
-  }, [hasPermission, isSuperAdmin]);
+  }, [hasPermission, isSuperAdmin, permissions, permissionFormat, checkWithHierarchy]);
 
   /**
    * Check if user has all of the specified permissions
-   * STRICT ENFORCEMENT: No bypass for super admins
    * @param permissionList - Array of permission strings
    * @returns true if user has all of the explicit permissions
    */
@@ -168,10 +318,16 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
       return true;
     }
     return permissionList.every(permission => {
-      const [module, action] = permission.split(/[_:.]/); // NEW: Added dot (.) to splitter regex
-      return hasPermission(module, action);
+      // Support both dotted format and module.action split
+      const [module, action] = permission.split(/[.]/);
+      if (module && action) {
+        return hasPermission(module, action);
+      }
+      // Fallback: check direct permission string
+      return permissions.includes(permission) || 
+             (permissionFormat?.hierarchyEnabled && checkWithHierarchy(permission, permissions));
     });
-  }, [hasPermission, isSuperAdmin]);
+  }, [hasPermission, isSuperAdmin, permissions, permissionFormat, checkWithHierarchy]);
 
   /**
    * Manually refresh permissions
@@ -190,6 +346,7 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     error,
     refreshPermissions,
     isSuperAdmin,
+    permissionFormat,
   };
 
   return (
