@@ -45,7 +45,7 @@ import {
   DISPATCH_ITEM_STATUSES,
   DispatchOrderStatus,
 } from "../../types/dispatch.types";
-import { apiClient } from "../../services/api/client";
+import apiClient from "../../services/api/client"; // Fixed to default import (removed {})
 
 interface Courier {
   name: string;

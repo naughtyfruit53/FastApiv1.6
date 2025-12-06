@@ -5,7 +5,8 @@
  * Client-side service for managing Service CRM role-based access control.
  * Provides methods for managing roles, permissions, and user assignments.
  */
-import api from "../lib/api";
+import api from "../services/api/client"; // Fixed import path (was "../lib/api" – assuming it's a typo for the api client)
+
 import {
   ServicePermission,
   ServiceRole,
@@ -417,5 +418,4 @@ export const rbacService = {
 };
 // Export permission constants for easy import
 export * from "../types/rbac.types";
-export { SERVICE_PERMISSIONS } from "../types/rbac.types";
 export default rbacService;

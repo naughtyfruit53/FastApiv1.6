@@ -16,7 +16,7 @@ import {
   Switch,
   FormControlLabel,
 } from "@mui/material";
-import { apiClient } from "@/services/api/client"; // Import the configured apiClient
+import apiClient from "@/services/api/client"; // Fixed to default import (removed {})
 import AddEditAccountModal from "./AddEditAccountModal"; // Use the existing AddEditAccountModal
 
 interface ChartAccount {

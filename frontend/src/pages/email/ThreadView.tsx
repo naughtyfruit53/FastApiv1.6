@@ -37,7 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as emailService from '../../services/emailService';
-import { apiClient as api } from '../../services/api/client';
+import api from '../../services/api/client'; // Fixed to default import (removed {} and as api, but kept alias as api)
 import { ProtectedPage } from '../../components/ProtectedPage';
 
 interface ThreadViewProps {
@@ -194,7 +194,7 @@ const ThreadView: React.FC<ThreadViewProps> = ({
               <Avatar sx={{ mr: 2, width: 32, height: 32 }}>
                 {(email.from_name || email.from_address).charAt(0).toUpperCase()}
               </Avatar>
-              <Box sx={{ flex: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                 <Typography variant="body2" fontWeight={email.status === 'unread' ? 'bold' : 'normal'}>
                   {email.from_name || email.from_address}
                 </Typography>

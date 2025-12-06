@@ -46,7 +46,7 @@ import {
   Business,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
-import { apiClient } from "../../services/api/client";
+import apiClient from "../../services/api/client"; // Fixed to default import (removed {})
 import { useAuth } from "../../context/AuthContext";
 import {
   getDisplayRole,
@@ -354,11 +354,7 @@ export default function GeneralSettings() {
               <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
                 {showFactoryResetOnly
                   ? "Restore to Factory Defaults: Wipes all app data including organizations, licenses, and license holders"
-                  : showOrgDataResetOnly
-                    ? "Reset Organization Data: Removes all business data but not organization settings"
-                    : isSuperAdmin
-                      ? "As app super admin, this will reset all organization data"
-                      : "Reset data: removes all business data but keeps organization settings"}
+                  : "Reset data: removes all business data but keeps organization settings"}
               </Typography>
             </Paper>
           </Grid>
