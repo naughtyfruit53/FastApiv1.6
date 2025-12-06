@@ -22,6 +22,7 @@ import {
   DialogActions,
   Button,
   IconButton,
+  InputAdornment,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import AddVendorModal from '../../../components/AddVendorModal';
@@ -170,7 +171,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     queryKey: ['grn-for-po', po_id],
     queryFn: () => {
       if (!po_id) return null;
-      return api.get(`/vouchers/goods-receipt-notes/for-po/${po_id}`).then(res => res.data);  // FIXED: Use backticks for interpolation
+      return api.get(`/goods-receipt-notes/for-po/${po_id}`).then(res => res.data);  // FIXED: Use backticks for interpolation
     },
     enabled: !!po_id && isOrgContextReady,
   });
@@ -238,6 +239,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     }
     return options;
   }, [selectedVoucherType, purchaseOrdersData, purchaseVouchersData, fullyReceivedPoIds]);
+
   const { data: selectedVoucherData, isLoading: isVoucherDataLoading } = useQuery({
     queryKey: [selectedVoucherType, selectedVoucherId],
     queryFn: () => {
@@ -621,26 +623,26 @@ const GoodsReceiptNotePage: React.FC = () => {
 
   const formContent = (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold', textAlign: 'left', flex: 1, pl: 1 }}>
-          {config.voucherTitle} - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
-        </Typography>
-        <VoucherHeaderActions
-          mode={mode}
-          voucherType={config.voucherTitle}
-          voucherRoute="/vouchers/Purchase-Vouchers/grn"
-          currentId={mode === 'create' ? null : voucherData?.id}
-          onEdit={() => handleEdit(voucherData?.id)}
-          onCreate={handleCreate}
-          onCancel={handleCancel}
-        />
-      </Box>
-      {errorMessage && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMessage}
-        </Alert>
-      )}
       <form id="voucherForm" onSubmit={handleSubmit(handleFormSubmit)} style={voucherStyles.formContainer}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h5" sx={{ fontSize: 20, fontWeight: 'bold', textAlign: 'left', flex: 1, pl: 1 }}>
+            {config.voucherTitle} - {mode === 'create' ? 'Create' : mode === 'edit' ? 'Edit' : 'View'}
+          </Typography>
+          <VoucherHeaderActions
+            mode={mode}
+            voucherType={config.voucherTitle}
+            voucherRoute="/vouchers/Purchase-Vouchers/grn"
+            currentId={mode === 'create' ? null : voucherData?.id}
+            onEdit={() => handleEdit(voucherData?.id)}
+            onCreate={handleCreate}
+            onCancel={handleCancel}
+          />
+        </Box>
+        {errorMessage && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {errorMessage}
+          </Alert>
+        )}
         <Grid container spacing= {0.5}>
           <Grid size={6}>
             <TextField
@@ -850,13 +852,13 @@ const GoodsReceiptNotePage: React.FC = () => {
                               disabled
                               size="small"
                               sx={{ width: 100 }}
-                              inputProps={{ style: { textAlign: 'center' } }}
                               InputProps={{
-                                endAdornment: watch(`items.${index}.unit`) && (
-                                  <span style={{ fontSize: '12px', color: '#666' }}>
-                                    {watch(`items.${index}.unit`)}
-                                  </span>
-                                )
+                                inputProps: { min: 0, step: 0.01 },
+                                endAdornment: (
+                                  <InputAdornment position="end">
+                                    {watch(`items.${index}.unit`) || ""}
+                                  </InputAdornment>
+                                ),
                               }}
                             />
                           </TableCell>
@@ -867,13 +869,13 @@ const GoodsReceiptNotePage: React.FC = () => {
                               disabled={mode === 'view'}
                               size="small"
                               sx={{ width: 100 }}
-                              inputProps={{ style: { textAlign: 'center' } }}
                               InputProps={{
-                                endAdornment: watch(`items.${index}.unit`) && (
-                                  <span style={{ fontSize: '12px', color: '#666' }}>
-                                    {watch(`items.${index}.unit`)}
-                                  </span>
-                                )
+                                inputProps: { min: 0, step: 0.01 },
+                                endAdornment: (
+                                  <InputAdornment position="end">
+                                    {watch(`items.${index}.unit`) || ""}
+                                  </InputAdornment>
+                                ),
                               }}
                             />
                           </TableCell>
@@ -884,13 +886,13 @@ const GoodsReceiptNotePage: React.FC = () => {
                               disabled={mode === 'view'}
                               size="small"
                               sx={{ width: 100 }}
-                              inputProps={{ style: { textAlign: 'center' } }}
                               InputProps={{
-                                endAdornment: watch(`items.${index}.unit`) && (
-                                  <span style={{ fontSize: '12px', color: '#666' }}>
-                                    {watch(`items.${index}.unit`)}
-                                  </span>
-                                )
+                                inputProps: { min: 0, step: 0.01 },
+                                endAdornment: (
+                                  <InputAdornment position="end">
+                                    {watch(`items.${index}.unit`) || ""}
+                                  </InputAdornment>
+                                ),
                               }}
                             />
                           </TableCell>
@@ -901,13 +903,13 @@ const GoodsReceiptNotePage: React.FC = () => {
                               disabled={mode === 'view'}
                               size="small"
                               sx={{ width: 100 }}
-                              inputProps={{ style: { textAlign: 'center' } }}
                               InputProps={{
-                                endAdornment: watch(`items.${index}.unit`) && (
-                                  <span style={{ fontSize: '12px', color: '#666' }}>
-                                    {watch(`items.${index}.unit`)}
-                                  </span>
-                                )
+                                inputProps: { min: 0, step: 0.01 },
+                                endAdornment: (
+                                  <InputAdornment position="end">
+                                    {watch(`items.${index}.unit`) || ""}
+                                  </InputAdornment>
+                                ),
                               }}
                             />
                           </TableCell>
