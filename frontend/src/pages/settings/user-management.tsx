@@ -43,7 +43,7 @@ import {
   Settings,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { organizationService } from "../../services/organizationService";
+import { userService } from "../../services/organizationService";
 import adminService from "../../services/adminService";  // Import admin service for super admin
 import { useAuth } from "../../context/AuthContext";
 import { getDisplayRole, canManageUsers, canResetPasswords } from "../../types/user.types";
@@ -115,7 +115,7 @@ const UserManagement: React.FC = () => {
         return adminService.getAllUsers();  // Assume adminService.getAllUsers() fetches all platform users
       } else if (currentOrgId) {
         // Org admin: fetch org users
-        return organizationService.getOrganizationUsers(currentOrgId);
+        return userService.getOrganizationUsers();
       } else {
         throw new Error("Invalid user context");
       }
@@ -129,7 +129,7 @@ const UserManagement: React.FC = () => {
       if (isSuperAdmin && !currentOrgId) {
         return adminService.createUser(userData);  // Assume adminService.createUser for platform users
       } else {
-        return organizationService.createUserInOrganization(currentOrgId!, userData);
+        return userService.createUser(userData);
       }
     },
     onSuccess: () => {
@@ -144,7 +144,7 @@ const UserManagement: React.FC = () => {
       if (isSuperAdmin && !currentOrgId) {
         return adminService.updateUser(userId, userData);  // Assume adminService.updateUser
       } else {
-        return organizationService.updateUserInOrganization(currentOrgId!, userId, userData);
+        return userService.updateUser(userId, userData);
       }
     },
     onSuccess: () => {
@@ -175,13 +175,13 @@ const UserManagement: React.FC = () => {
         // Org admin actions
         switch (action) {
           case "delete":
-            return organizationService.deleteUserFromOrganization(currentOrgId!, userId);
+            return userService.deleteUser(userId);
           case "activate":
-            return organizationService.updateUserInOrganization(currentOrgId!, userId, { is_active: true });
+            return userService.toggleUserStatus(userId, true);
           case "deactivate":
-            return organizationService.updateUserInOrganization(currentOrgId!, userId, { is_active: false });
+            return userService.toggleUserStatus(userId, false);
           case "reset":
-            return organizationService.resetUserPassword(currentOrgId!, userId);
+            return userService.resetUserPassword(userId);
           default:
             throw new Error("Invalid action");
         }
