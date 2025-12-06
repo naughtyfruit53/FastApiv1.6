@@ -30,6 +30,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useAuth } from './AuthContext';
 import rbacService from '../services/rbacService';
 import axios from 'axios';
+import { PERMISSION_HIERARCHY } from '../constants/rbac';
 
 interface PermissionContextType {
   /** User's all permissions */
@@ -76,46 +77,6 @@ const PermissionContext = createContext<PermissionContextType>({
   isSuperAdmin: false,
   permissionFormat: null,
 });
-
-// Permission hierarchy mapping (mirrors backend)
-const PERMISSION_HIERARCHY: Record<string, string[]> = {
-  "master_data.read": [
-    "vendors.read",
-    "products.read",
-    "inventory.read",
-  ],
-  "master_data.write": [
-    "vendors.create",
-    "vendors.update",
-    "products.write",
-    "products.update",
-    "inventory.write",
-    "inventory.update",
-  ],
-  "master_data.delete": [
-    "vendors.delete",
-    "products.delete",
-    "inventory.delete",
-  ],
-  "crm.admin": [
-    "crm.settings",
-    "crm.commission.read",
-    "crm.commission.create",
-    "crm.commission.update",
-    "crm.commission.delete",
-  ],
-  "platform.super_admin": [
-    "platform.admin",
-    "platform.factory_reset",
-  ],
-  "platform.admin": [
-    "organizations.manage",
-    "organizations.view",
-    "organizations.create",
-    "organizations.delete",
-    "audit.view_all",
-  ],
-};
 
 interface PermissionProviderProps {
   children: React.ReactNode;
@@ -232,7 +193,8 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
 
   /**
    * Compatibility shim to map legacy permission formats to dotted format
-   * TODO: Remove after full migration (target: Q2 2026) - Issue #TBD
+   * TODO: Remove after full migration (target: Q2 2026) - Track via GitHub Issue
+   * Monitor: /api/v1/system/permission-format migration_status field
    * @param module - Module name
    * @param action - Action name
    * @returns Array of permission strings to check (dotted + legacy if compatibility enabled)

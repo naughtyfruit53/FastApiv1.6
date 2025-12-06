@@ -39,7 +39,11 @@
 
 /* Mobile Form Enhancements */
 @media (max-width: 768px) {
-  /* Make all form inputs full width on mobile */
+  /* Make all form inputs full width on mobile
+   * Font size set to 16px to prevent zoom on iOS Safari
+   * Reference: iOS auto-zooms on inputs with font-size < 16px
+   * https://stackoverflow.com/questions/2989263/disable-auto-zoom-in-input-text-tag-safari-on-iphone
+   */
   input[type="text"],
   input[type="email"],
   input[type="password"],
