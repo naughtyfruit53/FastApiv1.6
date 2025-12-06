@@ -25,9 +25,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
-import AddVendorModal from '../../../components/AddVendorModal';
 import AddProductModal from '../../../components/AddProductModal';
-import AddShippingAddressModal from '../../../components/AddShippingAddressModal';
 import InwardMaterialQCModal from '../../../components/InwardMaterialQCModal';
 import VoucherContextMenu from "../../../components/VoucherContextMenu";
 import VoucherLayout from "../../../components/VoucherLayout";
@@ -47,34 +45,22 @@ import { green, yellow, red, orange, blue, grey } from '@mui/material/colors';
 import { handleDuplicate } from "../../../utils/voucherHandlers";
 
 import { ProtectedPage } from '../../../components/ProtectedPage';
+
 const GoodsReceiptNotePage: React.FC = () => {
   const { isOrgContextReady } = useAuth();
   const router = useRouter();
-  const { po_id } = router.query;
+  const { po_id, grn_id, mode: queryMode } = router.query;
   const config = getVoucherConfig('grn');
   const voucherStyles = getVoucherStyles();
   const {
     mode,
     setMode,
     isLoading,
-    showAddVendorModal,
-    setShowAddVendorModal,
     showAddProductModal,
     setShowAddProductModal,
-    showShippingModal,
-    setShowShippingModal,
-    addVendorLoading,
-    setAddVendorLoading,
     addProductLoading,
     setAddProductLoading,
-    addShippingLoading,
-    setAddShippingLoading,
-    addingItemIndex,
-    setAddingItemIndex,
-    showFullModal,
     contextMenu,
-    useDifferentShipping,
-    setUseDifferentShipping,
     searchTerm,
     setSearchTerm,
     fromDate,
@@ -98,7 +84,6 @@ const GoodsReceiptNotePage: React.FC = () => {
     remove,
     reset,
     voucherList,
-    vendorList,
     productList,
     voucherData,
     nextVoucherNumber,
@@ -130,27 +115,13 @@ const GoodsReceiptNotePage: React.FC = () => {
     handleProceedAnyway,
     handleCancelConflict,
     isNextNumberLoading,
+    selectedId,
+    setSelectedId,
   } = useVoucherPage(config);
   const [showVoucherListModal, setShowVoucherListModal] = useState(false);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editProductId, setEditProductId] = useState<number | null>(null);
-  const selectedVendorId = watch('vendor_id');
-  const selectedVendor = vendorList?.find((v: any) => v.id === selectedVendorId);
-  const vendorValue = useMemo(() => {
-    return selectedVendor || null;
-  }, [selectedVendor]);
-  
-  const enhancedVendorOptions = useMemo(() => {
-    const sortedVendors = [...(vendorList || [])].sort((a, b) => 
-      (a.name || '').localeCompare(b.name || '')
-    );
-    // Always show "Add New Vendor..." at the top
-    return [
-      { id: null, name: 'Add New Vendor...' },
-      ...sortedVendors
-    ];
-  }, [vendorList]);
   const [selectedVoucherType, setSelectedVoucherType] = useState<'purchase-voucher' | 'purchase-order' | null>(null);
   const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(null);
   const [grnCompleteDialogOpen, setGrnCompleteDialogOpen] = useState(false);
@@ -171,7 +142,7 @@ const GoodsReceiptNotePage: React.FC = () => {
     queryKey: ['grn-for-po', po_id],
     queryFn: () => {
       if (!po_id) return null;
-      return api.get(`/goods-receipt-notes/for-po/${po_id}`).then(res => res.data);  // FIXED: Use backticks for interpolation
+      return api.get(`/goods-receipt-notes/for-po/${po_id}`).then(res => res.data);
     },
     enabled: !!po_id && isOrgContextReady,
   });
@@ -191,33 +162,31 @@ const GoodsReceiptNotePage: React.FC = () => {
       setSelectedVoucherType('purchase-order');
       setSelectedVoucherId(Number(po_id));
       setMode('create');
+    } else if (grn_id) {
+      setMode('view');
+      setSelectedId(Number(grn_id));
     }
-  }, [po_id, setSelectedVoucherType, setSelectedVoucherId, setMode]);
+  }, [po_id, grn_id, setSelectedVoucherType, setSelectedVoucherId, setMode, setSelectedId]);
 
   useEffect(() => {
     if (poData && poData.grn_status === 'complete' && existingGrnData) {
       setGrnCompleteDialogOpen(true);
-      setExistingGrnId(existingGrnData.id);
+      setExistingGrnId(existingGrnData?.id || null);
     }
   }, [poData, existingGrnData]);
 
-  const { data: purchaseOrdersData, refetch: refetchOrders } = useQuery({
+  const { data: purchaseOrdersData } = useQuery({
     queryKey: ['purchase-orders'],
     queryFn: () => api.get('/purchase-orders').then(res => res.data),
     enabled: isOrgContextReady,
   });
-  const { data: purchaseVouchersData, refetch: refetchVouchers } = useQuery({
+
+  const { data: purchaseVouchersData } = useQuery({
     queryKey: ['purchase-vouchers'],
-    queryFn: () => api.get('/vouchers/purchase-vouchers').then(res => res.data),  // FIXED PATH
+    queryFn: () => api.get('/purchase-vouchers').then(res => res.data),
     enabled: isOrgContextReady,
   });
-  const { data: grns } = useQuery({
-    queryKey: ['goods-receipt-notes'],
-    queryFn: () => api.get('/vouchers/goods-receipt-notes').then(res => res.data),  // FIXED PATH
-    enabled: isOrgContextReady,
-  });
-  const currentGrnId = mode === 'edit' ? voucherData?.id : null;
-  
+
   // Filter out POs that are fully received (grn_status === 'complete')
   const fullyReceivedPoIds = useMemo(() => {
     if (!purchaseOrdersData) return new Set();
@@ -227,12 +196,11 @@ const GoodsReceiptNotePage: React.FC = () => {
         .map((po: any) => po.id)
     );
   }, [purchaseOrdersData]);
-  
+
   const voucherOptions = useMemo(() => {
     let options = [];
     if (selectedVoucherType === 'purchase-order') {
       options = purchaseOrdersData || [];
-      // Only filter out POs that are fully received, not those with partial GRNs
       return options.filter((option: any) => !fullyReceivedPoIds.has(option.id));
     } else if (selectedVoucherType === 'purchase-voucher') {
       options = purchaseVouchersData || [];
@@ -243,12 +211,12 @@ const GoodsReceiptNotePage: React.FC = () => {
   const { data: selectedVoucherData, isLoading: isVoucherDataLoading } = useQuery({
     queryKey: [selectedVoucherType, selectedVoucherId],
     queryFn: () => {
-      if (!selectedVoucherType || !selectedVoucherId) {return null;}
-      const endpoint = selectedVoucherType === 'purchase-order' ? '/purchase-orders' : '/vouchers/purchase-vouchers';  // FIXED PATH
+      if (!selectedVoucherType || !selectedVoucherId) return null;
+      const endpoint = selectedVoucherType === 'purchase-order' ? '/purchase-orders' : '/purchase-vouchers';
       return api.get(`${endpoint}/${selectedVoucherId}`).then(res => res.data);
     },
     enabled: !!selectedVoucherType && !!selectedVoucherId && !grnCompleteDialogOpen,
-    cacheTime: 0, // Disable caching to avoid stale data
+    cacheTime: 0,
   });
 
   useEffect(() => {
@@ -261,7 +229,6 @@ const GoodsReceiptNotePage: React.FC = () => {
 
   useEffect(() => {
     if (mode !== 'create') return;
-    // Clear fields when no PO is selected
     if (!selectedVoucherId || !selectedVoucherData) {
       remove();
       setErrorMessage(null);
@@ -407,7 +374,6 @@ const GoodsReceiptNotePage: React.FC = () => {
       if (mode === 'create') {
         response = await createMutation.mutateAsync(data);
         
-        // Show toast notification with link to the created GRN
         toast.success(
           <div>
             GRN created successfully!{' '}
@@ -588,7 +554,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                     <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>
                       {voucher.date ? new Date(voucher.date).toLocaleDateString() : 'N/A'}
                     </TableCell>
-                    <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{vendorList?.find((v: any) => v.id === voucher.vendor_id)?.name || 'N/A'}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: 12, p: 1 }}>{voucher.vendor?.name || 'N/A'}</TableCell>
                     <TableCell align="right" sx={{ fontSize: 12, p: 0 }}>
                       <VoucherContextMenu
                         voucher={voucher}
@@ -747,45 +713,16 @@ const GoodsReceiptNotePage: React.FC = () => {
             )}
           </Grid>
           <Grid size={6}>
-            {!!selectedVoucherId ? (
-              <TextField
-                fullWidth
-                label="Vendor"
-                value={selectedVoucherData?.vendor?.name || selectedVendor?.name || ''}
-                disabled
-                InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                inputProps={{ style: { fontSize: 14 } }}
-                size="small"
-                sx={{ '& .MuiInputBase-root': { height: 27 } }}
-              />
-            ) : (
-              <Autocomplete
-                size="small"
-                options={enhancedVendorOptions}
-                getOptionLabel={(option: any) => option?.name || ''}
-                value={vendorValue}
-                onChange={(_, newValue) => {
-                  if (newValue?.id === null) {
-                    setShowAddVendorModal(true);
-                  } else {
-                    setValue('vendor_id', newValue?.id || null);
-                  }
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Vendor"
-                    error={!!errors.vendor_id}
-                    helperText={errors.vendor_id ? 'Required' : ''}
-                    InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
-                    inputProps={{ ...params.inputProps, style: { fontSize: 14 } }}
-                    size="small"
-                    sx={{ '& .MuiInputBase-root': { height: 27 } }}
-                  />
-                )}
-                disabled={mode === 'view'}
-              />
-            )}
+            <TextField
+              fullWidth
+              label="Vendor"
+              value={selectedVoucherData?.vendor?.name || voucherData?.vendor?.name || ''}
+              disabled
+              InputLabelProps={{ shrink: true, style: { fontSize: 12 } }}
+              inputProps={{ style: { fontSize: 14 } }}
+              size="small"
+              sx={{ '& .MuiInputBase-root': { height: 27 } }}
+            />
           </Grid>
           <Grid size={8}>
             <TextField
@@ -818,10 +755,10 @@ const GoodsReceiptNotePage: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell sx={voucherStyles.grnTableColumns.productName}>Product</TableCell>
-                      <TableCell sx={voucherStyles.grnTableColumns.orderQty}>Order Qty</TableCell>
-                      <TableCell sx={voucherStyles.grnTableColumns.receivedQty}>Received Qty</TableCell>
-                      <TableCell sx={voucherStyles.grnTableColumns.acceptedQty}>Accepted Qty</TableCell>
-                      <TableCell sx={voucherStyles.grnTableColumns.rejectedQty}>Rejected Qty</TableCell>
+                      <TableCell sx={{ ...voucherStyles.grnTableColumns.orderQty, minWidth: "100px" }}>Order Qty</TableCell>
+                      <TableCell sx={{ ...voucherStyles.grnTableColumns.receivedQty, minWidth: "100px" }}>Received Qty</TableCell>
+                      <TableCell sx={{ ...voucherStyles.grnTableColumns.acceptedQty, minWidth: "100px" }}>Accepted Qty</TableCell>
+                      <TableCell sx={{ ...voucherStyles.grnTableColumns.rejectedQty, minWidth: "100px" }}>Rejected Qty</TableCell>
                       <TableCell sx={{ width: 50 }}>Edit</TableCell>
                     </TableRow>
                   </TableHead>
@@ -851,7 +788,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                               value={watch(`items.${index}.ordered_quantity`) || 0}
                               disabled
                               size="small"
-                              sx={{ width: 100 }}
+                              sx={{ width: 120 }}
                               InputProps={{
                                 inputProps: { min: 0, step: 0.01 },
                                 endAdornment: (
@@ -868,7 +805,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                               {...control.register(`items.${index}.received_quantity`, { valueAsNumber: true })}
                               disabled={mode === 'view'}
                               size="small"
-                              sx={{ width: 100 }}
+                              sx={{ width: 120 }}
                               InputProps={{
                                 inputProps: { min: 0, step: 0.01 },
                                 endAdornment: (
@@ -885,7 +822,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                               {...control.register(`items.${index}.accepted_quantity`, { valueAsNumber: true })}
                               disabled={mode === 'view'}
                               size="small"
-                              sx={{ width: 100 }}
+                              sx={{ width: 120 }}
                               InputProps={{
                                 inputProps: { min: 0, step: 0.01 },
                                 endAdornment: (
@@ -902,7 +839,7 @@ const GoodsReceiptNotePage: React.FC = () => {
                               {...control.register(`items.${index}.rejected_quantity`, { valueAsNumber: true })}
                               disabled={mode === 'view'}
                               size="small"
-                              sx={{ width: 100 }}
+                              sx={{ width: 120 }}
                               InputProps={{
                                 inputProps: { min: 0, step: 0.01 },
                                 endAdornment: (
@@ -1014,17 +951,9 @@ const GoodsReceiptNotePage: React.FC = () => {
             onDuplicate={handleDuplicateLocal}
             onCreatePurchaseVoucher={handleCreatePurchaseVoucher}
             onCreateRejectionNote={handleCreateRejectionNote}
-            customerList={vendorList}
             rowSx={getColorSx}
           />
         }
-      />
-      <AddVendorModal 
-        open={showAddVendorModal}
-        onClose={() => setShowAddVendorModal(false)}
-        onVendorAdded={refreshMasterData}
-        loading={addVendorLoading}
-        setLoading={setAddVendorLoading}
       />
       <AddProductModal 
         open={showAddProductModal}
@@ -1033,12 +962,6 @@ const GoodsReceiptNotePage: React.FC = () => {
         loading={addProductLoading}
         setLoading={setAddProductLoading}
         productId={editProductId}
-      />
-      <AddShippingAddressModal 
-        open={showShippingModal}
-        onClose={() => setShowShippingModal(false)}
-        loading={addShippingLoading}
-        setLoading={setAddShippingLoading}
       />
       <InwardMaterialQCModal
         open={qcModalOpen}

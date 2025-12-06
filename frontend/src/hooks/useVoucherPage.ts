@@ -1,171 +1,171 @@
-// frontend/src/hooks/useVoucherPage.ts
-import { useState, useCallback, useEffect, useMemo } from "react";
-import { useRouter } from "next/router";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { voucherService } from "../services/vouchersService";
-import {
-  getVendors,
-  getProducts,
-  getCustomers,
-  getEmployees,
-} from "../services/masterService";
-import { useAuth } from "../context/AuthContext";
-import { useCompany } from "../context/CompanyContext";
-import {
-  calculateVoucherTotals,
-  getDefaultVoucherValues,
-  voucherListUtils,
-  enhancedRateUtils,
-  VOUCHER_PAGINATION_DEFAULTS,
-  getAmountInWords,
-} from "../utils/voucherUtils";
-import { showErrorToast, showSuccessToast, handleVoucherError } from "../utils/errorHandling";
-import { SUCCESS_MESSAGES, getDynamicMessage } from "../constants/messages";
-import {
-  generateStandalonePDF,
-} from "../utils/pdfUtils";
-import { VoucherPageConfig } from "../types/voucher.types";
-import api from "../lib/api";
+// frontend/src/hooks/useVoucherPage.ts  
+import { useState, useCallback, useEffect, useMemo } from "react";  
+import { useRouter } from "next/router";  
+import { useForm, useFieldArray, useWatch, Controller } from "react-hook-form";  
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";  
+import { voucherService } from "../services/vouchersService";  
+import {  
+  getVendors,  
+  getProducts,  
+  getCustomers,  
+  getEmployees,  
+} from "../services/masterService";  
+import { useAuth } from "../context/AuthContext";  
+import { useCompany } from "../context/CompanyContext";  
+import {  
+  calculateVoucherTotals,  
+  getDefaultVoucherValues,  
+  voucherListUtils,  
+  enhancedRateUtils,  
+  VOUCHER_PAGINATION_DEFAULTS,  
+  getAmountInWords,  
+} from "../utils/voucherUtils";  
+import { showErrorToast, showSuccessToast, handleVoucherError } from "../utils/errorHandling";  
+import { SUCCESS_MESSAGES, getDynamicMessage } from "../constants/messages";  
+import {  
+  generateStandalonePDF,  
+} from "../utils/pdfUtils";  
+import { VoucherPageConfig } from "../types/voucher.types";  
+import api from "../lib/api";  
 import { useVoucherNumbering, getVoucherApiEndpoint } from "./useVoucherNumbering";
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-export const useVoucherPage = (config: VoucherPageConfig) => {
-  const useRouterInstance = useRouter();
-  const { id, mode: queryMode } = useRouterInstance.query;
-  const { isOrgContextReady } = useAuth();
-  const { company } = useCompany();
-  const queryClient = useQueryClient();
-  console.log(
-    "[useVoucherPage] Enhanced hook initialized for:",
-    config.voucherType,
-  );
-  console.log("[useVoucherPage] config.endpoint:", config.endpoint);
-  console.log("[useVoucherPage] isOrgContextReady:", isOrgContextReady);
-  const [mode, setMode] = useState<"create" | "edit" | "view" | "revise">(
-    (queryMode as "create" | "edit" | "view" | "revise") || "create",
-  );
-  const [selectedId, setSelectedId] = useState<number | null>(
-    id ? Number(id) : null,
-  );
-  const [showAddVendorModal, setShowAddVendorModal] = useState(false);
-  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
-  const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [showShippingModal, setShowShippingModal] = useState(false);
-  const [showFullModal, setShowFullModal] = useState(false);
-  const [addVendorLoading, setAddVendorLoading] = useState(false);
-  const [addCustomerLoading, setAddCustomerLoading] = useState(false);
-  const [addProductLoading, setAddProductLoading] = useState(false);
-  const [addShippingLoading, setAddShippingLoading] = useState(false);
-  const [addingItemIndex, setAddingItemIndex] = useState(-1);
-  const [contextMenu, setContextMenu] = useState<{
-    mouseX: number;
-    mouseY: number;
-    voucher: any;
-  } | null>(null);
-  const [useDifferentShipping, setUseDifferentShipping] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(VOUCHER_PAGINATION_DEFAULTS.pageSize);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [filteredVouchers, setFilteredVouchers] = useState<any[]>([]);
-  const [selectedReferenceType, setSelectedReferenceType] = useState<
-    string | null
-  >(null);
-  const [selectedReferenceId, setSelectedReferenceId] = useState<number | null>(
-    null,
-  );
-  const [referenceDocument, setReferenceDocument] = useState<any>(null);
-  const [lineDiscountEnabled, setLineDiscountEnabled] = useState(false);
-  const [lineDiscountType, setLineDiscountType] = useState<
-    "percentage" | "amount" | null
-  >(null);
-  const [totalDiscountEnabled, setTotalDiscountEnabled] = useState(false);
-  const [totalDiscountType, setTotalDiscountType] = useState<
-    "percentage" | "amount" | null
-  >(null);
-  const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
-  const [discountDialogFor, setDiscountDialogFor] = useState<
-    "line" | "total" | null
-  >(null);
-  const [deleteRemarkDialogOpen, setDeleteRemarkDialogOpen] = useState(false);  // NEW: For delete remark
-  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);  // NEW
-  const [deleteRemark, setDeleteRemark] = useState("");  // NEW
+export const useVoucherPage = (config: VoucherPageConfig) => {  
+  const useRouterInstance = useRouter();  
+  const { id, mode: queryMode } = useRouterInstance.query;  
+  const { isOrgContextReady } = useAuth();  
+  const { company } = useCompany();  
+  const queryClient = useQueryClient();  
+  console.log(  
+    "[useVoucherPage] Enhanced hook initialized for:",  
+    config.voucherType,  
+  );  
+  console.log("[useVoucherPage] config.endpoint:", config.endpoint);  
+  console.log("[useVoucherPage] isOrgContextReady:", isOrgContextReady);  
+  const [mode, setMode] = useState<"create" | "edit" | "view" | "revise">(  
+    (queryMode as "create" | "edit" | "view" | "revise") || "create",  
+  );  
+  const [selectedId, setSelectedId] = useState<number | null>(  
+    id ? Number(id) : null,  
+  );  
+  const [showAddVendorModal, setShowAddVendorModal] = useState(false);  
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);  
+  const [showAddProductModal, setShowAddProductModal] = useState(false);  
+  const [showShippingModal, setShowShippingModal] = useState(false);  
+  const [showFullModal, setShowFullModal] = useState(false);  
+  const [addVendorLoading, setAddVendorLoading] = useState(false);  
+  const [addCustomerLoading, setAddCustomerLoading] = useState(false);  
+  const [addProductLoading, setAddProductLoading] = useState(false);  
+  const [addShippingLoading, setAddShippingLoading] = useState(false);  
+  const [addingItemIndex, setAddingItemIndex] = useState(-1);  
+  const [contextMenu, setContextMenu] = useState<{  
+    mouseX: number;  
+    mouseY: number;  
+    voucher: any;  
+  } | null>(null);  
+  const [useDifferentShipping, setUseDifferentShipping] = useState(false);  
+  const [currentPage, setCurrentPage] = useState(1);  
+  const [pageSize] = useState(VOUCHER_PAGINATION_DEFAULTS.pageSize);  
+  const [searchTerm, setSearchTerm] = useState("");  
+  const [fromDate, setFromDate] = useState("");  
+  const [toDate, setToDate] = useState("");  
+  const [filteredVouchers, setFilteredVouchers] = useState<any[]>([]);  
+  const [selectedReferenceType, setSelectedReferenceType] = useState<  
+    string | null  
+  >(null);  
+  const [selectedReferenceId, setSelectedReferenceId] = useState<number | null>(  
+    null,  
+  );  
+  const [referenceDocument, setReferenceDocument] = useState<any>(null);  
+  const [lineDiscountEnabled, setLineDiscountEnabled] = useState(false);  
+  const [lineDiscountType, setLineDiscountType] = useState<  
+    "percentage" | "amount" | null  
+  >(null);  
+  const [totalDiscountEnabled, setTotalDiscountEnabled] = useState(false);  
+  const [totalDiscountType, setTotalDiscountType] = useState<  
+    "percentage" | "amount" | null  
+  >(null);  
+  const [discountDialogOpen, setDiscountDialogOpen] = useState(false);  
+  const [discountDialogFor, setDiscountDialogFor] = useState<  
+    "line" | "total" | null  
+  >(null);  
+  const [deleteRemarkDialogOpen, setDeleteRemarkDialogOpen] = useState(false);  // NEW: For delete remark  
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);  // NEW  
+  const [deleteRemark, setDeleteRemark] = useState("");  // NEW  
   const [conflictInfo, setConflictInfo] = useState<any>(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [pendingDate, setPendingDate] = useState<string | null>(null);
 
-  useEffect(() => {
-    const savedLineType = localStorage.getItem("voucherLineDiscountType");
-    if (savedLineType)
-      setLineDiscountType(savedLineType as "percentage" | "amount");
-    const savedTotalType = localStorage.getItem("voucherTotalDiscountType");
-    if (savedTotalType)
-      setTotalDiscountType(savedTotalType as "percentage" | "amount");
-  }, []);
-
-  useEffect(() => {
-    if (lineDiscountType)
-      localStorage.setItem("voucherLineDiscountType", lineDiscountType);
-  }, [lineDiscountType]);
-
-  useEffect(() => {
-    if (totalDiscountType)
-      localStorage.setItem("voucherTotalDiscountType", totalDiscountType);
-  }, [totalDiscountType]);
-
-  const handleToggleLineDiscount = (enabled: boolean) => {
-    if (enabled) {
-      if (!lineDiscountType) {
-        setDiscountDialogFor("line");
-        setDiscountDialogOpen(true);
-        return;
-      }
-    } else {
-      setLineDiscountType(null);
-      localStorage.removeItem("voucherLineDiscountType");
-    }
-    setLineDiscountEnabled(enabled);
-  };
-
-  const handleToggleTotalDiscount = (enabled: boolean) => {
-    if (enabled) {
-      if (!totalDiscountType) {
-        setDiscountDialogFor("total");
-        setDiscountDialogOpen(true);
-        return;
-      }
-    } else {
-      setTotalDiscountType(null);
-      localStorage.removeItem("voucherTotalDiscountType");
-    }
-    setTotalDiscountEnabled(enabled);
-  };
-
-  const handleDiscountTypeSelect = (type: "percentage" | "amount") => {
-    if (discountDialogFor === "line") {
-      setLineDiscountType(type);
-      setLineDiscountEnabled(true);
-    } else {
-      setTotalDiscountType(type);
-      setTotalDiscountEnabled(true);
-    }
-    setDiscountDialogOpen(false);
-    setDiscountDialogFor(null);
-  };
-
-  const handleDiscountDialogClose = () => {
-    setDiscountDialogOpen(false);
-    setDiscountDialogFor(null);
-    if (discountDialogFor === "line") {
-      setLineDiscountEnabled(false);
-    } else if (discountDialogFor === "total") {
-      setTotalDiscountEnabled(false);
-    }
-  };
-
+  useEffect(() => {  
+    const savedLineType = localStorage.getItem("voucherLineDiscountType");  
+    if (savedLineType)  
+      setLineDiscountType(savedLineType as "percentage" | "amount");  
+    const savedTotalType = localStorage.getItem("voucherTotalDiscountType");  
+    if (savedTotalType)  
+      setTotalDiscountType(savedTotalType as "percentage" | "amount");  
+  }, []);  
+  
+  useEffect(() => {  
+    if (lineDiscountType)  
+      localStorage.setItem("voucherLineDiscountType", lineDiscountType);  
+  }, [lineDiscountType]);  
+  
+  useEffect(() => {  
+    if (totalDiscountType)  
+      localStorage.setItem("voucherTotalDiscountType", totalDiscountType);  
+  }, [totalDiscountType]);  
+  
+  const handleToggleLineDiscount = (enabled: boolean) => {  
+    if (enabled) {  
+      if (!lineDiscountType) {  
+        setDiscountDialogFor("line");  
+        setDiscountDialogOpen(true);  
+        return;  
+      }  
+    } else {  
+      setLineDiscountType(null);  
+      localStorage.removeItem("voucherLineDiscountType");  
+    }  
+    setLineDiscountEnabled(enabled);  
+  };  
+  
+  const handleToggleTotalDiscount = (enabled: boolean) => {  
+    if (enabled) {  
+      if (!totalDiscountType) {  
+        setDiscountDialogFor("total");  
+        setDiscountDialogOpen(true);  
+        return;  
+      }  
+    } else {  
+      setTotalDiscountType(null);  
+      localStorage.removeItem("voucherTotalDiscountType");  
+    }  
+    setTotalDiscountEnabled(enabled);  
+  };  
+  
+  const handleDiscountTypeSelect = (type: "percentage" | "amount") => {  
+    if (discountDialogFor === "line") {  
+      setLineDiscountType(type);  
+      setLineDiscountEnabled(true);  
+    } else {  
+      setTotalDiscountType(type);  
+      setTotalDiscountEnabled(true);  
+    }  
+    setDiscountDialogOpen(false);  
+    setDiscountDialogFor(null);  
+  };  
+  
+  const handleDiscountDialogClose = () => {  
+    setDiscountDialogOpen(false);  
+    setDiscountDialogFor(null);  
+    if (discountDialogFor === "line") {  
+      setLineDiscountEnabled(false);  
+    } else if (discountDialogFor === "total") {  
+      setTotalDiscountEnabled(false);  
+    }  
+  };  
+  
   const schema = useMemo(() => {
     const baseSchema = {
       date: yup.string().required('Date is required'),
@@ -376,7 +376,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const { data: voucherList, isLoading: isLoadingList, refetch: refetchVoucherList } = useQuery({
     queryKey: [config.voucherType, currentPage, pageSize],
     queryFn: () => {
-      const voucherTypesUnderVouchers = [];  // Set to empty to use direct /${type} for all vouchers, aligning with backend prefixes
+      const voucherTypesUnderVouchers = [];
       const endpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${config.voucherType}` : `/${config.voucherType}`;
       console.log(`[useVoucherPage] Fetching vouchers from endpoint: ${endpoint}`);
       return api.get(endpoint, {
@@ -453,13 +453,13 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
             { params: { voucher_date: date } }
           );
           setValue('voucher_number', response.data);
-
+          
           const conflictEndpoint = voucherTypesUnderVouchers.includes(config.voucherType) ? `/vouchers/${config.voucherType}/check-backdated-conflict` : `/${config.voucherType}/check-backdated-conflict`;
           const conflictResponse = await api.get(
             conflictEndpoint,
             { params: { voucher_date: date } }
           );
-
+          
           if (conflictResponse.data.has_conflict) {
             setConflictInfo(conflictResponse.data);
             setShowConflictModal(true);
@@ -471,7 +471,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
         }
       }
     };
-
+    
     fetchVoucherNumber();
   }, [date, mode, config.voucherType, setValue]);
 
@@ -490,9 +490,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       console.log("[useVoucherPage] Voucher created successfully:", newVoucher);
       if (newVoucher.reference_id && newVoucher.reference_type) {
         try {
-          const referenceConfig = getVoucherConfig(
-            newVoucher.reference_type as any
-          );
+          const referenceConfig = getVoucherConfig(newVoucher.reference_type as any);
           await api.patch(
             `${referenceConfig.endpoint}/${newVoucher.reference_id}`,
             { used: true },
@@ -515,7 +513,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
       );
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });
       await refetchVoucherList();
-      await useRouterInstance.push({ query: { mode: "create" } }, undefined, { shallow: true });
+      useRouterInstance.push({ query: { mode: "create" } }, undefined, { shallow: true });
       setMode("create");
       await refreshVoucherNumber();
       reset({
@@ -594,6 +592,11 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     useRouterInstance.push({ query: { mode: "create" } }, undefined, { shallow: true });
     setMode("create");
     setSelectedId(null);
+    setSelectedReferenceType(null);
+    setSelectedReferenceId(null);
+    setValue('vendor_id', null);
+    setValue('reference_voucher_number', '');
+    remove();
     reset(defaultValues);
   };
 
@@ -793,7 +796,7 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   const handleConfirmDelete = async () => {
     if (pendingDeleteId && deleteRemark) {
       try {
-        await api.patch(`${config.apiEndpoint || config.voucherType}/${pendingDeleteId}`, {
+        await api.patch(`${config.endpoint}/${pendingDeleteId}`, {
           is_deleted: true,
           deletion_remark: deleteRemark
         });
@@ -970,6 +973,9 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
   useEffect(() => {
     if (createMutation.isSuccess || updateMutation.isSuccess) {
       queryClient.invalidateQueries({ queryKey: [config.voucherType] });
+      queryClient.invalidateQueries({
+        queryKey: [config.voucherType, selectedId],
+      });
       refetchVoucherList();
       setTimeout(() => {
         refetchVoucherList();
@@ -1024,158 +1030,159 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     }
     setPendingDate(null);
   };
-
-  const { computedItems, totalAmount, totalSubtotal, totalGst, totalCgst, totalSgst, totalIgst, totalDiscount, totalTaxable, gstBreakdown, totalRoundOff } = useMemo(() => {
-    if (config.hasItems === false || !itemsWatch) {
-      return {
-        computedItems: [],
-        totalAmount: watch("total_amount") || 0,
-        totalSubtotal: 0,
-        totalGst: 0,
-        totalCgst: 0,
-        totalSgst: 0,
-        totalIgst: 0,
-        totalDiscount: 0,
-        totalTaxable: 0,
-        gstBreakdown: {},
-        totalRoundOff: 0,
-      };
-    }
-    const formattedItems = itemsWatch.map((item: any) => ({
-      ...item,
-      unit_price: enhancedRateUtils.parseRate(String(item.unit_price || 0)),
-    }));
-    return calculateVoucherTotals(
-      formattedItems,
-      isIntrastate,
-      lineDiscountEnabled ? lineDiscountType : null,
-      totalDiscountEnabled ? totalDiscountType : null,
-      totalDiscountWatch,
-    );
-  }, [
-    itemsWatch,
-    config.hasItems,
-    watch,
-    isIntrastate,
-    lineDiscountEnabled,
-    lineDiscountType,
-    totalDiscountEnabled,
-    totalDiscountType,
-    totalDiscountWatch,
-  ]);
-
-  return {
-    mode,
-    setMode,
-    selectedId,
-    isLoading,
-    showAddVendorModal,
-    setShowAddVendorModal,
-    showAddCustomerModal,
-    setShowAddCustomerModal,
-    showAddProductModal,
-    setShowAddProductModal,
-    showShippingModal,
-    setShowShippingModal,
-    showFullModal,
-    addVendorLoading,
-    setAddVendorLoading,
-    addCustomerLoading,
-    setAddCustomerLoading,
-    addProductLoading,
-    setAddProductLoading,
-    addShippingLoading,
-    setAddShippingLoading,
-    addingItemIndex,
-    setAddingItemIndex,
-    contextMenu,
-    selectedReferenceType,
-    setSelectedReferenceType,
-    selectedReferenceId,
-    setSelectedReferenceId,
-    useDifferentShipping,
-    setUseDifferentShipping,
-    searchTerm,
-    setSearchTerm,
-    fromDate,
-    setFromDate,
-    toDate,
-    setToDate,
-    filteredVouchers,
-    currentPage,
-    pageSize,
-    paginationData,
-    handlePageChange,
-    referenceDocument,
-    handleReferenceSelected,
-    control,
-    handleSubmit,
-    reset,
-    setValue,
-    watch,
-    errors,
-    fields,
-    append,
-    remove,
-    voucherList,
-    vendorList,
-    customerList,
-    employeeList,
-    productList,
-    voucherData,
-    nextVoucherNumber,
-    sortedVouchers,
-    latestVouchers,
-    computedItems,
-    totalAmount,
-    totalSubtotal,
-    totalGst,
-    totalCgst,
-    totalSgst,
-    totalIgst,
-    totalDiscount,
-    totalTaxable,
-    gstBreakup: gstBreakdown,
-    isIntrastate,
-    totalRoundOff,
-    createMutation,
-    updateMutation,
-    reviseMutation,
-    handleCreate,
-    handleEdit,
-    handleRevise,
-    handleView,
-    handleSubmitForm,
-    handleContextMenu,
-    handleCloseContextMenu,
-    handleSearch,
-    handleModalOpen,
-    handleModalClose,
-    handleGeneratePDF,
-    handleDelete,
-    deleteRemarkDialogOpen,  // NEW
-    setDeleteRemarkDialogOpen,  // NEW
-    deleteRemark,  // NEW
-    setDeleteRemark,  // NEW
-    handleConfirmDelete,  // NEW
-    handleAddCustomer,
-    handleAddVendor,
-    handleAddProduct,
-    handleAddShipping,
-    refreshMasterData,
-    getAmountInWords,
-    isViewMode: mode === "view",
-    enhancedRateUtils,
-    lineDiscountEnabled,
-    lineDiscountType,
-    totalDiscountEnabled,
-    totalDiscountType,
-    handleToggleLineDiscount,
-    handleToggleTotalDiscount,
-    discountDialogOpen,
-    handleDiscountDialogClose,
-    handleDiscountTypeSelect,
-    discountDialogFor,
+  
+  const { computedItems, totalAmount, totalSubtotal, totalGst, totalCgst, totalSgst, totalIgst, totalDiscount, totalTaxable, gstBreakdown, totalRoundOff } = useMemo(() => {  
+    if (config.hasItems === false || !itemsWatch) {  
+      return {  
+        computedItems: [],  
+        totalAmount: watch("total_amount") || 0,  
+        totalSubtotal: 0,  
+        totalGst: 0,  
+        totalCgst: 0,  
+        totalSgst: 0,  
+        totalIgst: 0,  
+        totalDiscount: 0,  
+        totalTaxable: 0,  
+        gstBreakdown: {},  
+        totalRoundOff: 0,  
+      };  
+    }  
+    const formattedItems = itemsWatch.map((item: any) => ({  
+      ...item,  
+      unit_price: enhancedRateUtils.parseRate(String(item.unit_price || 0)),  
+    }));  
+    return calculateVoucherTotals(  
+      formattedItems,  
+      isIntrastate,  
+      lineDiscountEnabled ? lineDiscountType : null,  
+      totalDiscountEnabled ? totalDiscountType : null,  
+      totalDiscountWatch,  
+    );  
+  }, [  
+    itemsWatch,  
+    config.hasItems,  
+    watch,  
+    isIntrastate,  
+    lineDiscountEnabled,  
+    lineDiscountType,  
+    totalDiscountEnabled,  
+    totalDiscountType,  
+    totalDiscountWatch,  
+  ]);  
+  
+  return {  
+    mode,  
+    setMode,  
+    selectedId,  
+    setSelectedId,  
+    isLoading,  
+    showAddVendorModal,  
+    setShowAddVendorModal,  
+    showAddCustomerModal,  
+    setShowAddCustomerModal,  
+    showAddProductModal,  
+    setShowAddProductModal,  
+    showShippingModal,  
+    setShowShippingModal,  
+    showFullModal,  
+    addVendorLoading,  
+    setAddVendorLoading,  
+    addCustomerLoading,  
+    setAddCustomerLoading,  
+    addProductLoading,  
+    setAddProductLoading,  
+    addShippingLoading,  
+    setAddShippingLoading,  
+    addingItemIndex,  
+    setAddingItemIndex,  
+    contextMenu,  
+    selectedReferenceType,  
+    setSelectedReferenceType,  
+    selectedReferenceId,  
+    setSelectedReferenceId,  
+    useDifferentShipping,  
+    setUseDifferentShipping,  
+    searchTerm,  
+    setSearchTerm,  
+    fromDate,  
+    setFromDate,  
+    toDate,  
+    setToDate,  
+    filteredVouchers,  
+    currentPage,  
+    pageSize,  
+    paginationData,  
+    handlePageChange,  
+    referenceDocument,  
+    handleReferenceSelected,  
+    control,  
+    handleSubmit,  
+    reset,  
+    setValue,  
+    watch,  
+    errors,  
+    fields,  
+    append,  
+    remove,  
+    voucherList,  
+    vendorList,  
+    customerList,  
+    employeeList,  
+    productList,  
+    voucherData,  
+    nextVoucherNumber,  
+    sortedVouchers,  
+    latestVouchers,  
+    computedItems,  
+    totalAmount,  
+    totalSubtotal,  
+    totalGst,  
+    totalCgst,  
+    totalSgst,  
+    totalIgst,  
+    totalDiscount,  
+    totalTaxable,  
+    gstBreakup: gstBreakdown,  
+    isIntrastate,  
+    totalRoundOff,  
+    createMutation,  
+    updateMutation,  
+    reviseMutation,  
+    handleCreate,  
+    handleEdit,  
+    handleRevise,  
+    handleView,  
+    handleSubmitForm,  
+    handleContextMenu,  
+    handleCloseContextMenu,  
+    handleSearch,  
+    handleModalOpen,  
+    handleModalClose,  
+    handleGeneratePDF,  
+    handleDelete,  
+    deleteRemarkDialogOpen,  // NEW  
+    setDeleteRemarkDialogOpen,  // NEW  
+    deleteRemark,  // NEW  
+    setDeleteRemark,  // NEW  
+    handleConfirmDelete,  // NEW  
+    handleAddCustomer,  
+    handleAddVendor,  
+    handleAddProduct,  
+    handleAddShipping,  
+    refreshMasterData,  
+    getAmountInWords,  
+    isViewMode: mode === "view",  
+    enhancedRateUtils,  
+    lineDiscountEnabled,  
+    lineDiscountType,  
+    totalDiscountEnabled,  
+    totalDiscountType,  
+    handleToggleLineDiscount,  
+    handleToggleTotalDiscount,  
+    discountDialogOpen,  
+    handleDiscountDialogClose,  
+    handleDiscountTypeSelect,  
+    discountDialogFor,  
     nextRevisionNumber,  // ADDED
     isNextRevisionLoading,  // ADDED
     isNextNumberLoading,    // ADDED
@@ -1189,5 +1196,5 @@ export const useVoucherPage = (config: VoucherPageConfig) => {
     handleProceedAnyway,
     handleCancelConflict,
     refreshVoucherNumber,  // ADDED for post-save refresh
-  };
-};
+  };  
+};  
