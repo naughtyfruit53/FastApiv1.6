@@ -21,6 +21,62 @@ jobs:
         working-directory: ./frontend
         run: npm run lint:check
 
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+      - name: Run frontend unit tests
+        working-directory: ./frontend
+        run: npm test -- --coverage --testPathPattern="(PermissionContext|MobileNavigation|usePermissionCheck)" --passWithNoTests
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-test-coverage
+          path: frontend/coverage
+          retention-days: 30
+
+  permission-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+      - name: Run permission smoke tests
+        working-directory: ./frontend
+        run: npm test -- --testPathPattern="(menuAccess|PermissionContext\.hierarchy)" --passWithNoTests
+      - name: Upload permission test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: permission-test-results
+          path: frontend/test-results
+          retention-days: 30
+
+  mobile-navigation-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+      - name: Run mobile navigation tests
+        working-directory: ./frontend
+        run: npm test -- --testPathPattern="mobile/MobileNavigation" --passWithNoTests
+
   linkage-validation:
     runs-on: ubuntu-latest
     steps:

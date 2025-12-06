@@ -320,4 +320,70 @@ export interface PermissionCheck {
   hasPermission: boolean;
   reason?: string;
   enforcementLevel: EnforcementLevel;
+  isLoading?: boolean;
+}
+
+// ============================================================================
+// PERMISSION HIERARCHY (mirrors backend)
+// ============================================================================
+
+/**
+ * Permission hierarchy mapping
+ * Parent permissions grant all child permissions
+ */
+export const PERMISSION_HIERARCHY: Record<string, string[]> = {
+  "master_data.read": [
+    "vendors.read",
+    "products.read",
+    "inventory.read",
+  ],
+  "master_data.write": [
+    "vendors.create",
+    "vendors.update",
+    "products.write",
+    "products.update",
+    "inventory.write",
+    "inventory.update",
+  ],
+  "master_data.delete": [
+    "vendors.delete",
+    "products.delete",
+    "inventory.delete",
+  ],
+  "crm.admin": [
+    "crm.settings",
+    "crm.commission.read",
+    "crm.commission.create",
+    "crm.commission.update",
+    "crm.commission.delete",
+  ],
+  "platform.super_admin": [
+    "platform.admin",
+    "platform.factory_reset",
+  ],
+  "platform.admin": [
+    "organizations.manage",
+    "organizations.view",
+    "organizations.create",
+    "organizations.delete",
+    "audit.view_all",
+  ],
+};
+
+/**
+ * Check if permission is granted through hierarchy
+ * @param permission - Permission to check
+ * @param userPermissions - User's direct permissions
+ * @returns true if user has the permission through hierarchy
+ */
+export function hasPermissionThroughHierarchy(
+  permission: string,
+  userPermissions: string[]
+): boolean {
+  for (const [parentPerm, childPerms] of Object.entries(PERMISSION_HIERARCHY)) {
+    if (userPermissions.includes(parentPerm) && childPerms.includes(permission)) {
+      return true;
+    }
+  }
+  return false;
 }
