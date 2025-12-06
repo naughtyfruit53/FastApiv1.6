@@ -43,6 +43,7 @@ import {
   Block,
   Settings,
 } from "@mui/icons-material";
+import Link from "next/link"; // ADDED: Import Next.js Link
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userService } from "../../services/organizationService";
 import adminService from "../../services/adminService";  // Import admin service for super admin
@@ -531,14 +532,15 @@ const UserManagement: React.FC = () => {
                       >
                         <Edit />
                       </IconButton>
-                      <IconButton
-                        size="small"
-                        color="secondary"
-                        onClick={() => router.push(`/settings/user-permissions/${user.id}`)}
-                        title="Manage Permissions"
-                      >
-                        <Settings />
-                      </IconButton>
+                      <Link href={`/settings/user-permissions/${user.id}`} passHref>
+                        <IconButton
+                          size="small"
+                          color="secondary"
+                          title="Manage Permissions"
+                        >
+                          <Settings />
+                        </IconButton>
+                      </Link>
                       {canReset && (
                         <IconButton
                           size="small"
@@ -601,18 +603,15 @@ const UserManagement: React.FC = () => {
           <DialogTitle>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="h6">Edit User</Typography>
-              <Button
-                size="small"
-                startIcon={<Settings />}
-                onClick={() => {
-                  setEditDialogOpen(false);
-                  if (selectedUser) {
-                    router.push(`/settings/user-permissions/${selectedUser.id}`);
-                  }
-                }}
-              >
-                Manage Permissions
-              </Button>
+              <Link href={`/settings/user-permissions/${selectedUser?.id}`} passHref>
+                <Button
+                  size="small"
+                  startIcon={<Settings />}
+                  disabled={!selectedUser} // ADDED: Disable if no selectedUser
+                >
+                  Manage Permissions
+                </Button>
+              </Link>
             </Box>
           </DialogTitle>
           <DialogContent>

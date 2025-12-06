@@ -78,6 +78,22 @@ export const organizationService = {
       throw new Error(error.userMessage || "Failed to reset organization data");
     }
   },
+  getOrganizationUsers: async (params?: any) => {
+    try {
+      const response = await api.get("/users/", { params });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get organization users");
+    }
+  },
+  getUserById: async (id: number) => {  // NEW: Added getUserById
+    try {
+      const response = await api.get(`/users/${id}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.userMessage || "Failed to get user by ID");
+    }
+  },
 };
 export const voucherService = {
   // Generic function for CRUD

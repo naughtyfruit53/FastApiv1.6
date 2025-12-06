@@ -336,6 +336,9 @@ class EntitlementService:
             else:
                 enabled_modules[upper_key] = False
 
+        # NEW: Always enable 'USERS' module
+        enabled_modules['USERS'] = True
+
         # Update organization
         org.enabled_modules = enabled_modules
         await self.db.commit()
@@ -400,6 +403,7 @@ class EntitlementService:
             'BOM': 'MANUFACTURING',
             'FINANCE': 'ERP',
             'LEDGER': 'FINANCE',
+            'USERS': 'ADMIN',  # NEW: Added users mapping to admin
         }
 
         migrated = False
@@ -462,6 +466,14 @@ class EntitlementService:
                 submodules=submodules
             )
 
+        # NEW: Always include 'users' as enabled
+        entitlements['users'] = AppModuleEntitlement(
+            module_key='users',
+            status='enabled',
+            trial_expires_at=None,
+            submodules={}
+        )
+
         return AppEntitlementsResponse(
             org_id=org_id,
             entitlements=entitlements
@@ -482,6 +494,11 @@ class EntitlementService:
         normalized_submodule_key = submodule_key.lower() if submodule_key else None
         
         logger.debug(f"Checking entitlement for org {org_id}, module: {normalized_module_key}, submodule: {normalized_submodule_key}")
+        
+        # NEW: Always grant access for 'users' module
+        if normalized_module_key == 'users':
+            logger.debug(f"Granting access to 'users' module for org {org_id}")
+            return True, 'enabled', None
         
         # NEW: Bypass for RBAC-only modules
         if is_rbac_only_module(normalized_module_key):
@@ -542,7 +559,7 @@ class EntitlementService:
 
         if not org_ent or org_ent.status == 'disabled':
             logger.info(f"Module {normalized_module_key} disabled for org {org_id}")
-            return False, 'disabled', f"Module '{module_key}' is disabled for this organization"
+            return False, 'disabled', f"Module '{module_key}' is not enabled for your organization"
 
         if org_ent.status == 'trial':
             if org_ent.trial_expires_at and org_ent.trial_expires_at < datetime.utcnow():
@@ -691,6 +708,9 @@ class EntitlementService:
         for key in available:
             upper_key = key.upper()
             synced[upper_key] = current_enabled.get(upper_key, False)
+        
+        # NEW: Always enable 'USERS'
+        synced['USERS'] = True
         
         # Update organization
         await self.db.execute(
@@ -1051,7 +1071,7 @@ class EntitlementService:
                 continue
             
             # Determine initial status
-            if module_key_lower in ALWAYS_ON_MODULES:
+            if module_key_lower in ALWAYS_ON_MODULES or module_key_lower == 'users':  # NEW: Always enable 'users'
                 # Always-on modules are always enabled
                 status = ModuleStatusEnum.ENABLED
                 logger.info(f"  ✓ {module.module_key}: Enabled (always-on)")

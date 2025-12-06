@@ -95,6 +95,13 @@ const LoginPage = () => {
         }
         
         if (returnUrl) {
+          // NEW: Interpolate dynamic params if needed (e.g., for /settings/user-permissions/[userId])
+          if (returnUrl.includes('[userId]')) {
+            // Replace with actual userId from loginResponse or context
+            const actualUserId = loginResponse?.user?.id || '1';  // Example: Use user ID from response, fallback to '1'
+            returnUrl = returnUrl.replace('[userId]', actualUserId.toString());
+            console.log("[Login] Interpolated returnUrl:", returnUrl);
+          }
           console.log("[Login] Redirecting to valid returnUrl:", returnUrl);
           router.push(returnUrl);
         } else {

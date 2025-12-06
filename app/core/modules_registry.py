@@ -69,7 +69,7 @@ class ModuleName(str, Enum):
     GST = "gst"  # Added GST as a module
     
     # New module for user management
-    USER = "user"
+    USER = "users"  # CHANGED: to "users" to match permissions and frontend
     
     # NEW: Added ledger module to fix "Module not found" error
     LEDGER = "ledger"
@@ -438,7 +438,7 @@ MODULE_SUBMODULES: Dict[str, List[str]] = {
     ModuleName.GST.value: ["search", "verify"],  # Added GST module with submodules for search functionality
     
     # New for user management
-    ModuleName.USER.value: ["create", "read", "update", "delete"],
+    ModuleName.USER.value: ["create", "read", "update", "delete", "manage"],  # ADDED: "manage" action
     
     # NEW: Added submodules for ledger module
     ModuleName.LEDGER.value: [
@@ -517,6 +517,8 @@ def get_default_enabled_modules() -> Dict[str, bool]:
     defaults['SETTINGS'] = True
     # NEW: Explicitly enable LEDGER by default
     defaults['LEDGER'] = True
+    # NEW: Explicitly enable USER by default
+    defaults['USERS'] = True  # CHANGED: to USERS
     return defaults
 
 

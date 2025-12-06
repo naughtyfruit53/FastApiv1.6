@@ -30,7 +30,7 @@ import {
   Check,
   Close,
 } from "@mui/icons-material";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router"; // CHANGED: Import useRouter from next/router for Pages Router
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { organizationService } from "../../../services/organizationService";
 import { useAuth } from "../../../context/AuthContext";
@@ -73,27 +73,39 @@ function TabPanel(props: TabPanelProps) {
 
 const UserPermissionsPage: React.FC = () => {
   const router = useRouter();
+  const userIdNum = parseInt(router.query.userId as string || '0', 10); // CHANGED: Use router.query.userId
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
   const [selectedSubmodules, setSelectedSubmodules] = useState<Record<string, Set<string>>>({});
 
-  // Get userId from URL
-  const userId = typeof window !== 'undefined' 
-    ? parseInt(window.location.pathname.split('/').pop() || '0')
-    : 0;
+  // ADDED: Handle invalid userId
+  if (isNaN(userIdNum) || userIdNum <= 0) {
+    return (
+      <ProtectedPage moduleKey="users" action="manage"> {/* CHANGED: Updated moduleKey and action */}
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Alert severity="error">Invalid user ID</Alert>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => router.push("/settings/user-management")}
+            sx={{ mt: 2 }}
+          >
+            Back to User Management
+          </Button>
+        </Container>
+      </ProtectedPage>
+    );
+  }
 
   // Fetch user details
   const { data: user, isLoading: userLoading } = useQuery<User>({
-    queryKey: ["user", userId],
+    queryKey: ["user", userIdNum],
     queryFn: async () => {
-      const users = await organizationService.getOrganizationUsers(currentUser?.organization_id!);
-      const foundUser = users.find((u: User) => u.id === userId);
-      if (!foundUser) throw new Error("User not found");
-      return foundUser;
+      const response = await organizationService.getUserById(userIdNum);  // CHANGED: Use getUserById
+      return response;
     },
-    enabled: !!currentUser?.organization_id && userId > 0,
+    enabled: !!currentUser?.organization_id && userIdNum > 0,
   });
 
   // Initialize selected modules when user data loads
@@ -139,7 +151,7 @@ const UserPermissionsPage: React.FC = () => {
   const handleSave = async () => {
     // TODO: Implement save logic to backend
     console.log("Saving permissions:", {
-      userId,
+      userId: userIdNum,
       modules: Array.from(selectedModules),
       submodules: Object.fromEntries(
         Object.entries(selectedSubmodules).map(([k, v]) => [k, Array.from(v)])
@@ -154,7 +166,7 @@ const UserPermissionsPage: React.FC = () => {
 
   if (userLoading) {
     return (
-      <ProtectedPage moduleKey="admin" action="write">
+      <ProtectedPage moduleKey="users" action="manage"> {/* CHANGED: Updated moduleKey and action */}
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
           <CircularProgress />
@@ -166,21 +178,23 @@ const UserPermissionsPage: React.FC = () => {
 
   if (!user) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="error">User not found</Alert>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={handleCancel}
-          sx={{ mt: 2 }}
-        >
-          Back to User Management
-        </Button>
-      </Container>
+      <ProtectedPage moduleKey="users" action="manage"> {/* CHANGED: Updated moduleKey and action */}
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+          <Alert severity="error">User not found</Alert>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={handleCancel}
+            sx={{ mt: 2 }}
+          >
+            Back to User Management
+          </Button>
+        </Container>
+      </ProtectedPage>
     );
   }
 
   return (
-    <ProtectedPage moduleKey="admin" action="write">
+    <ProtectedPage moduleKey="users" action="manage"> {/* CHANGED: Updated moduleKey and action */}
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Breadcrumbs */}
       <Breadcrumbs sx={{ mb: 2 }}>

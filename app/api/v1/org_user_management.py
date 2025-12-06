@@ -63,6 +63,41 @@ class UserPermissionsResponse(BaseModel):
 
 
 # Endpoints
+@router.get("/users", response_model=List[UserInDB])
+async def get_organization_users(
+    auth: tuple = Depends(require_access("user", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    current_user, org_id = auth
+    
+    result = await db.execute(
+        select(User).where(User.organization_id == org_id)
+    )
+    users = result.scalars().all()
+    
+    return users
+
+@router.get("/users/{user_id}", response_model=UserInDB)
+async def get_user_by_id(
+    user_id: int,
+    auth: tuple = Depends(require_access("user", "read")),
+    db: AsyncSession = Depends(get_db)
+):
+    current_user, org_id = auth
+    
+    result = await db.execute(
+        select(User).where(
+            User.id == user_id,
+            User.organization_id == org_id
+        )
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return user
+
 @router.post("/users", response_model=UserInDB)
 async def create_org_user(
     user_data: OrgUserCreateRequest,
