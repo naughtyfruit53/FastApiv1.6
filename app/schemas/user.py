@@ -376,7 +376,6 @@ class AdminPasswordResetRequest(BaseModel):
 class AdminPasswordResetResponse(BaseModel):
     message: str
     target_email: str
-    new_password: Optional[str] = None  # CHANGED: Made optional
     email_sent: bool
     email_error: Optional[str] = None
     must_change_password: bool = True

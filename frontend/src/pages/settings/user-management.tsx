@@ -28,6 +28,7 @@ import {
   Alert,
   CircularProgress,
   Divider,
+  Snackbar,  // ADDED: For toast
 } from "@mui/material";
 import {
   Add,
@@ -91,6 +92,8 @@ const UserManagement: React.FC = () => {
       reports: false,
     },
   });
+  const [snackbarOpen, setSnackbarOpen] = useState(false);  // ADDED: For toast
+  const [snackbarMessage, setSnackbarMessage] = useState("");  // ADDED: For toast
 
   // Permission checks
   const canManage = canManageUsers(user);
@@ -187,11 +190,15 @@ const UserManagement: React.FC = () => {
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["users", currentOrgId] });
       setActionDialogOpen(false);
       setSelectedUser(null);
       setActionType(null);
+      if (actionType === "reset") {  // ADDED: Show toast on reset success
+        setSnackbarMessage(data.message || "OTP sent to user email");
+        setSnackbarOpen(true);
+      }
     },
     onError: (error) => {
       console.error("Action failed:", error);
@@ -306,6 +313,13 @@ const UserManagement: React.FC = () => {
 
   const confirmAction = () => {
     if (selectedUser && actionType) {
+      if (actionType === "reset") {  // ADDED: Validate email before reset
+        if (!selectedUser.email || !selectedUser.email.includes("@")) {
+          setSnackbarMessage("Invalid email address");
+          setSnackbarOpen(true);
+          return;
+        }
+      }
       userActionMutation.mutate({
         userId: selectedUser.id,
         userEmail: selectedUser.email,  // CHANGED: Pass email for reset
@@ -345,6 +359,10 @@ const UserManagement: React.FC = () => {
         icon={isActive ? <CheckCircle /> : <Block />}
       />
     );
+  };
+
+  const handleSnackbarClose = () => {  // ADDED: Close handler
+    setSnackbarOpen(false);
   };
 
   return (
@@ -784,6 +802,17 @@ const UserManagement: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+        {/* ADDED: Snackbar for toast */}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={6000}
+          onClose={handleSnackbarClose}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        >
+          <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: "100%" }}>
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
       </Container>
     </ProtectedPage>
   );
