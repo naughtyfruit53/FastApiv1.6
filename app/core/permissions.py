@@ -138,7 +138,10 @@ class Permission:
     VOUCHER_DELETE = "voucher.delete"
 
 
-# TODO: Remove after full migration (target: Q1 2026)
+# TODO: Remove after full migration (target: Q1 2026) - Issue #TBD
+# DEPRECATION: This backward compatibility layer will be removed in Q1 2026
+# Track migration progress via /api/v1/system/permission-format endpoint
+# When migration_status changes to "complete", schedule removal
 # Backward compatibility mapping for legacy permission formats
 LEGACY_PERMISSION_MAP = {
     # Underscore format -> Dotted format

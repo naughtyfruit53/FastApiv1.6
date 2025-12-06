@@ -30,6 +30,9 @@ class PermissionSeeder:
         """
         Get all permissions in dotted format.
         
+        Note: This list is maintained manually to match Permission class constants.
+        Future improvement: Generate this dynamically from Permission class reflection.
+        
         Returns:
             List of (permission_key, display_name, description) tuples
         """

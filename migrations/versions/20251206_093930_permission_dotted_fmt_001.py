@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # revision identifiers, used by Alembic.
 revision = 'permission_dotted_fmt_001'
-down_revision = None  # Update this to point to the latest migration
+down_revision = 'bb1de77828d1'  # Points to initial_migration
 branch_labels = None
 depends_on = None
 
