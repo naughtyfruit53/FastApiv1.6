@@ -125,6 +125,18 @@ class Permission:
     MANUFACTURING_UPDATE = "manufacturing.update"
     MANUFACTURING_DELETE = "manufacturing.delete"
 
+    # NEW: Vendors permissions (specific for ERP master data)
+    VENDORS_READ = "vendors.read"
+    VENDORS_CREATE = "vendors.create"
+    VENDORS_UPDATE = "vendors.update"
+    VENDORS_DELETE = "vendors.delete"
+
+    # NEW: Voucher permissions (specific for ERP vouchers)
+    VOUCHER_READ = "voucher.read"
+    VOUCHER_CREATE = "voucher.create"
+    VOUCHER_UPDATE = "voucher.update"
+    VOUCHER_DELETE = "voucher.delete"
+
 
 class PermissionChecker:
     """Service for checking user permissions"""
@@ -171,6 +183,15 @@ class PermissionChecker:
             Permission.MANUFACTURING_WRITE,
             Permission.MANUFACTURING_UPDATE,
             Permission.MANUFACTURING_DELETE,
+            # NEW: Add vendors and voucher permissions for super_admin
+            Permission.VENDORS_READ,
+            Permission.VENDORS_CREATE,
+            Permission.VENDORS_UPDATE,
+            Permission.VENDORS_DELETE,
+            Permission.VOUCHER_READ,
+            Permission.VOUCHER_CREATE,
+            Permission.VOUCHER_UPDATE,
+            Permission.VOUCHER_DELETE,
             # Note: App Super Admins don't have ACCESS_ORG_SETTINGS (per requirements)
         ],
         'org_admin': [
@@ -204,6 +225,15 @@ class PermissionChecker:
             Permission.MANUFACTURING_WRITE,
             Permission.MANUFACTURING_UPDATE,
             Permission.MANUFACTURING_DELETE,
+            # NEW: Add vendors and voucher permissions for org_admin
+            Permission.VENDORS_READ,
+            Permission.VENDORS_CREATE,
+            Permission.VENDORS_UPDATE,
+            Permission.VENDORS_DELETE,
+            Permission.VOUCHER_READ,
+            Permission.VOUCHER_CREATE,
+            Permission.VOUCHER_UPDATE,
+            Permission.VOUCHER_DELETE,
         ],
         'management': [
             Permission.MANAGE_USERS,
@@ -236,6 +266,15 @@ class PermissionChecker:
             Permission.MANUFACTURING_WRITE,
             Permission.MANUFACTURING_UPDATE,
             Permission.MANUFACTURING_DELETE,
+            # NEW: Add vendors and voucher permissions for management
+            Permission.VENDORS_READ,
+            Permission.VENDORS_CREATE,
+            Permission.VENDORS_UPDATE,
+            Permission.VENDORS_DELETE,
+            Permission.VOUCHER_READ,
+            Permission.VOUCHER_CREATE,
+            Permission.VOUCHER_UPDATE,
+            Permission.VOUCHER_DELETE,
         ],
         'manager': [
             Permission.VIEW_USERS,  # Can view users (their executives)
@@ -250,6 +289,9 @@ class PermissionChecker:
             Permission.MASTER_DATA_READ,
             # NEW: Add read-only for manufacturing
             Permission.MANUFACTURING_READ,
+            # NEW: Add vendors and voucher read permissions for manager
+            Permission.VENDORS_READ,
+            Permission.VOUCHER_READ,
         ],
         'executive': [
             Permission.RESET_OWN_PASSWORD,
