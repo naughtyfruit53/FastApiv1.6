@@ -14,128 +14,241 @@ logger = logging.getLogger(__name__)
 
 
 class Permission:
-    """Permission constants"""
+    """Permission constants - standardized to dotted format (module.action)"""
     
-    # User management permissions
-    MANAGE_USERS = "manage_users"
-    VIEW_USERS = "view_users"
-    CREATE_USERS = "create_users"
-    DELETE_USERS = "delete_users"
+    # User management permissions (dotted format)
+    MANAGE_USERS = "users.manage"
+    VIEW_USERS = "users.view"
+    CREATE_USERS = "users.create"
+    DELETE_USERS = "users.delete"
     
     # Password management permissions
-    RESET_OWN_PASSWORD = "reset_own_password"
-    RESET_ORG_PASSWORDS = "reset_org_passwords"
-    RESET_ANY_PASSWORD = "reset_any_password"
+    RESET_OWN_PASSWORD = "password.reset_own"
+    RESET_ORG_PASSWORDS = "password.reset_org"
+    RESET_ANY_PASSWORD = "password.reset_any"
     
     # Data management permissions
-    RESET_OWN_DATA = "reset_own_data"
-    RESET_ORG_DATA = "reset_org_data"
-    RESET_ANY_DATA = "reset_any_data"
+    RESET_OWN_DATA = "data.reset_own"
+    RESET_ORG_DATA = "data.reset_org"
+    RESET_ANY_DATA = "data.reset_any"
     
     # Organization management permissions
-    MANAGE_ORGANIZATIONS = "manage_organizations"
-    VIEW_ORGANIZATIONS = "view_organizations"
-    CREATE_ORGANIZATIONS = "create_organizations"
-    DELETE_ORGANIZATIONS = "delete_organizations"
+    MANAGE_ORGANIZATIONS = "organizations.manage"
+    VIEW_ORGANIZATIONS = "organizations.view"
+    CREATE_ORGANIZATIONS = "organizations.create"
+    DELETE_ORGANIZATIONS = "organizations.delete"
     
     # Platform administration permissions
-    PLATFORM_ADMIN = "platform_admin"
-    SUPER_ADMIN = "super_admin"
+    PLATFORM_ADMIN = "platform.admin"
+    SUPER_ADMIN = "platform.super_admin"
     
     # Audit permissions
-    VIEW_AUDIT_LOGS = "view_audit_logs"
-    VIEW_ALL_AUDIT_LOGS = "view_all_audit_logs"
+    VIEW_AUDIT_LOGS = "audit.view"
+    VIEW_ALL_AUDIT_LOGS = "audit.view_all"
     
     # Factory reset permission (App Super Admin only)
-    FACTORY_RESET = "factory_reset"
+    FACTORY_RESET = "platform.factory_reset"
     
     # Organization settings access
-    ACCESS_ORG_SETTINGS = "access_org_settings"
+    ACCESS_ORG_SETTINGS = "settings.access"
     
     # Service CRM Module Permissions - CRUD operations per module
     # Service Management Permissions
-    SERVICE_CREATE = "service_create"
-    SERVICE_READ = "service_read"
-    SERVICE_UPDATE = "service_update"
-    SERVICE_DELETE = "service_delete"
+    SERVICE_CREATE = "service.create"
+    SERVICE_READ = "service.read"
+    SERVICE_UPDATE = "service.update"
+    SERVICE_DELETE = "service.delete"
     
     # Technician Management Permissions
-    TECHNICIAN_CREATE = "technician_create"
-    TECHNICIAN_READ = "technician_read"
-    TECHNICIAN_UPDATE = "technician_update"
-    TECHNICIAN_DELETE = "technician_delete"
+    TECHNICIAN_CREATE = "technician.create"
+    TECHNICIAN_READ = "technician.read"
+    TECHNICIAN_UPDATE = "technician.update"
+    TECHNICIAN_DELETE = "technician.delete"
     
     # Appointment Management Permissions
-    APPOINTMENT_CREATE = "appointment_create"
-    APPOINTMENT_READ = "appointment_read"
-    APPOINTMENT_UPDATE = "appointment_update"
-    APPOINTMENT_DELETE = "appointment_delete"
+    APPOINTMENT_CREATE = "appointment.create"
+    APPOINTMENT_READ = "appointment.read"
+    APPOINTMENT_UPDATE = "appointment.update"
+    APPOINTMENT_DELETE = "appointment.delete"
     
     # Customer Service Permissions
-    CUSTOMER_SERVICE_CREATE = "customer_service_create"
-    CUSTOMER_SERVICE_READ = "customer_service_read"
-    CUSTOMER_SERVICE_UPDATE = "customer_service_update"
-    CUSTOMER_SERVICE_DELETE = "customer_service_delete"
+    CUSTOMER_SERVICE_CREATE = "customer_service.create"
+    CUSTOMER_SERVICE_READ = "customer_service.read"
+    CUSTOMER_SERVICE_UPDATE = "customer_service.update"
+    CUSTOMER_SERVICE_DELETE = "customer_service.delete"
     
     # Work Order Permissions
-    WORK_ORDER_CREATE = "work_order_create"
-    WORK_ORDER_READ = "work_order_read"
-    WORK_ORDER_UPDATE = "work_order_update"
-    WORK_ORDER_DELETE = "work_order_delete"
+    WORK_ORDER_CREATE = "work_order.create"
+    WORK_ORDER_READ = "work_order.read"
+    WORK_ORDER_UPDATE = "work_order.update"
+    WORK_ORDER_DELETE = "work_order.delete"
     
     # Service Reports Permissions
-    SERVICE_REPORTS_READ = "service_reports_read"
-    SERVICE_REPORTS_EXPORT = "service_reports_export"
+    SERVICE_REPORTS_READ = "service_reports.read"
+    SERVICE_REPORTS_EXPORT = "service_reports.export"
     
     # CRM Admin Permissions
-    CRM_ADMIN = "crm_admin"
-    CRM_SETTINGS = "crm_settings"
+    CRM_ADMIN = "crm.admin"
+    CRM_SETTINGS = "crm.settings"
     
     # Voucher management permissions
-    VIEW_VOUCHERS = "view_vouchers"
-    MANAGE_VOUCHERS = "manage_vouchers"
+    VIEW_VOUCHERS = "vouchers.view"
+    MANAGE_VOUCHERS = "vouchers.manage"
     
     # Commission Permissions
-    CRM_COMMISSION_READ = "crm_commission_read"
-    CRM_COMMISSION_CREATE = "crm_commission_create"
-    CRM_COMMISSION_UPDATE = "crm_commission_update"
-    CRM_COMMISSION_DELETE = "crm_commission_delete"
+    CRM_COMMISSION_READ = "crm.commission.read"
+    CRM_COMMISSION_CREATE = "crm.commission.create"
+    CRM_COMMISSION_UPDATE = "crm.commission.update"
+    CRM_COMMISSION_DELETE = "crm.commission.delete"
 
-    # NEW: Inventory permissions
+    # Inventory permissions
     INVENTORY_READ = "inventory.read"
     INVENTORY_WRITE = "inventory.write"
     INVENTORY_UPDATE = "inventory.update"
     INVENTORY_DELETE = "inventory.delete"
 
-    # NEW: Products permissions
+    # Products permissions
     PRODUCTS_READ = "products.read"
     PRODUCTS_WRITE = "products.write"
     PRODUCTS_UPDATE = "products.update"
     PRODUCTS_DELETE = "products.delete"
 
-    # NEW: Master Data permissions
+    # Master Data permissions
     MASTER_DATA_READ = "master_data.read"
     MASTER_DATA_WRITE = "master_data.write"
     MASTER_DATA_UPDATE = "master_data.update"
     MASTER_DATA_DELETE = "master_data.delete"
 
-    # NEW: Manufacturing permissions
+    # Manufacturing permissions
     MANUFACTURING_READ = "manufacturing.read"
     MANUFACTURING_WRITE = "manufacturing.write"
     MANUFACTURING_UPDATE = "manufacturing.update"
     MANUFACTURING_DELETE = "manufacturing.delete"
 
-    # NEW: Vendors permissions (specific for ERP master data)
+    # Vendors permissions (specific for ERP master data)
     VENDORS_READ = "vendors.read"
     VENDORS_CREATE = "vendors.create"
     VENDORS_UPDATE = "vendors.update"
     VENDORS_DELETE = "vendors.delete"
 
-    # NEW: Voucher permissions (specific for ERP vouchers)
+    # Voucher permissions (specific for ERP vouchers)
     VOUCHER_READ = "voucher.read"
     VOUCHER_CREATE = "voucher.create"
     VOUCHER_UPDATE = "voucher.update"
     VOUCHER_DELETE = "voucher.delete"
+
+
+# TODO: Remove after full migration (target: Q1 2026) - Issue #TBD
+# DEPRECATION: This backward compatibility layer will be removed in Q1 2026
+# Track migration progress via /api/v1/system/permission-format endpoint
+# When migration_status changes to "complete", schedule removal
+# Backward compatibility mapping for legacy permission formats
+LEGACY_PERMISSION_MAP = {
+    # Underscore format -> Dotted format
+    "manage_users": "users.manage",
+    "view_users": "users.view",
+    "create_users": "users.create",
+    "delete_users": "users.delete",
+    "reset_own_password": "password.reset_own",
+    "reset_org_passwords": "password.reset_org",
+    "reset_any_password": "password.reset_any",
+    "reset_own_data": "data.reset_own",
+    "reset_org_data": "data.reset_org",
+    "reset_any_data": "data.reset_any",
+    "manage_organizations": "organizations.manage",
+    "view_organizations": "organizations.view",
+    "create_organizations": "organizations.create",
+    "delete_organizations": "organizations.delete",
+    "platform_admin": "platform.admin",
+    "super_admin": "platform.super_admin",
+    "view_audit_logs": "audit.view",
+    "view_all_audit_logs": "audit.view_all",
+    "factory_reset": "platform.factory_reset",
+    "access_org_settings": "settings.access",
+    "service_create": "service.create",
+    "service_read": "service.read",
+    "service_update": "service.update",
+    "service_delete": "service.delete",
+    "technician_create": "technician.create",
+    "technician_read": "technician.read",
+    "technician_update": "technician.update",
+    "technician_delete": "technician.delete",
+    "appointment_create": "appointment.create",
+    "appointment_read": "appointment.read",
+    "appointment_update": "appointment.update",
+    "appointment_delete": "appointment.delete",
+    "customer_service_create": "customer_service.create",
+    "customer_service_read": "customer_service.read",
+    "customer_service_update": "customer_service.update",
+    "customer_service_delete": "customer_service.delete",
+    "work_order_create": "work_order.create",
+    "work_order_read": "work_order.read",
+    "work_order_update": "work_order.update",
+    "work_order_delete": "work_order.delete",
+    "service_reports_read": "service_reports.read",
+    "service_reports_export": "service_reports.export",
+    "crm_admin": "crm.admin",
+    "crm_settings": "crm.settings",
+    "view_vouchers": "vouchers.view",
+    "manage_vouchers": "vouchers.manage",
+    "crm_commission_read": "crm.commission.read",
+    "crm_commission_create": "crm.commission.create",
+    "crm_commission_update": "crm.commission.update",
+    "crm_commission_delete": "crm.commission.delete",
+    # Colon format -> Dotted format
+    "mail:dashboard:read": "mail.dashboard.read",
+    "mail:accounts:read": "mail.accounts.read",
+    "mail:accounts:create": "mail.accounts.create",
+    "mail:accounts:update": "mail.accounts.update",
+    "mail:accounts:delete": "mail.accounts.delete",
+    "mail:emails:read": "mail.emails.read",
+    "mail:emails:compose": "mail.emails.compose",
+    "mail:emails:update": "mail.emails.update",
+    "mail:emails:sync": "mail.emails.sync",
+    "mail:templates:read": "mail.templates.read",
+    "mail:templates:create": "mail.templates.create",
+}
+
+# Permission hierarchy: parent -> children
+# Parent permissions grant all child permissions
+PERMISSION_HIERARCHY = {
+    "master_data.read": [
+        "vendors.read",
+        "products.read",
+        "inventory.read",
+    ],
+    "master_data.write": [
+        "vendors.create",
+        "vendors.update",
+        "products.write",
+        "products.update",
+        "inventory.write",
+        "inventory.update",
+    ],
+    "master_data.delete": [
+        "vendors.delete",
+        "products.delete",
+        "inventory.delete",
+    ],
+    "crm.admin": [
+        "crm.settings",
+        "crm.commission.read",
+        "crm.commission.create",
+        "crm.commission.update",
+        "crm.commission.delete",
+    ],
+    "platform.super_admin": [
+        "platform.admin",
+        "platform.factory_reset",
+    ],
+    "platform.admin": [
+        "organizations.manage",
+        "organizations.view",
+        "organizations.create",
+        "organizations.delete",
+        "audit.view_all",
+    ],
+}
 
 
 class PermissionChecker:
@@ -333,18 +446,81 @@ class PermissionChecker:
     }
     
     @staticmethod
+    def normalize_permission(permission: str) -> str:
+        """
+        Normalize permission to dotted format with backward compatibility.
+        
+        Args:
+            permission: Permission string in any format (underscore, colon, or dotted)
+            
+        Returns:
+            Normalized permission string in dotted format
+        """
+        # Return as-is if already in dotted format or unknown
+        if permission in LEGACY_PERMISSION_MAP:
+            normalized = LEGACY_PERMISSION_MAP[permission]
+            logger.debug(f"Normalized legacy permission '{permission}' to '{normalized}'")
+            return normalized
+        return permission
+    
+    @staticmethod
+    def get_implied_permissions(permission: str) -> List[str]:
+        """
+        Get all permissions implied by a parent permission through hierarchy.
+        
+        Args:
+            permission: Parent permission
+            
+        Returns:
+            List of child permissions granted by the parent
+        """
+        return PERMISSION_HIERARCHY.get(permission, [])
+    
+    @staticmethod
     def has_permission(user: Union[User, UserInDB], permission: str) -> bool:
+        """
+        Check if user has permission with backward compatibility and hierarchy support.
+        
+        Args:
+            user: User to check
+            permission: Permission to check (accepts legacy and dotted formats)
+            
+        Returns:
+            True if user has permission (directly or through hierarchy)
+        """
         role = user.role.lower() if hasattr(user, 'role') else None
         is_super_admin = getattr(user, 'is_super_admin', False)
+        user_id = getattr(user, 'id', 'unknown')
+        
+        # Super admins have all permissions
         if is_super_admin or role == 'super_admin':
+            logger.info(f"Permission '{permission}' granted to super_admin user {user_id}")
             return True
         
+        # Normalize permission to dotted format
+        normalized_permission = PermissionChecker.normalize_permission(permission)
+        
+        # Get user's role permissions
         user_permissions = PermissionChecker.ROLE_PERMISSIONS.get(role, [])
-        return permission in user_permissions
+        
+        # Check direct permission
+        if normalized_permission in user_permissions:
+            logger.info(f"Permission '{normalized_permission}' granted to user {user_id} (role: {role})")
+            return True
+        
+        # Check if user has a parent permission that grants this one
+        for user_perm in user_permissions:
+            implied = PermissionChecker.get_implied_permissions(user_perm)
+            if normalized_permission in implied:
+                logger.info(f"Permission '{normalized_permission}' granted to user {user_id} via parent permission '{user_perm}'")
+                return True
+        
+        logger.warning(f"Permission '{normalized_permission}' denied for user {user_id} (role: {role})")
+        return False
     
     @staticmethod
     def has_platform_permission(platform_user: Union[User, PlatformUser, UserInDB, PlatformUserInDB], permission: str) -> bool:
-        """Check platform-specific permissions, handling both ORM and Pydantic models"""
+        """Check platform-specific permissions with backward compatibility, handling both ORM and Pydantic models"""
         # Extract attributes consistently for both ORM and Pydantic
         role = platform_user.role.lower() if hasattr(platform_user, 'role') else ''
         is_super_admin = getattr(platform_user, 'is_super_admin', False)
@@ -352,7 +528,10 @@ class PermissionChecker:
         email = getattr(platform_user, 'email', 'None')
         organization_id = getattr(platform_user, 'organization_id', 'None')
         
-        logger.info(f"Permission check for {permission}: id={user_id}, email={email}, role={role}, is_super_admin={is_super_admin}, organization_id={organization_id}")
+        # Normalize permission
+        normalized_permission = PermissionChecker.normalize_permission(permission)
+        
+        logger.info(f"Permission check for {normalized_permission}: id={user_id}, email={email}, role={role}, is_super_admin={is_super_admin}, organization_id={organization_id}")
 
         # Use attribute check instead of type name for robustness
         if hasattr(platform_user, 'organization_id') and platform_user.organization_id is not None:
@@ -361,7 +540,7 @@ class PermissionChecker:
                 logger.info("Permission granted: Organization user is super admin")
                 return True
             # Fallback to regular permission check
-            granted = PermissionChecker.has_permission(platform_user, permission)
+            granted = PermissionChecker.has_permission(platform_user, normalized_permission)
             logger.info(f"Regular permission check result: {granted}")
             return granted
         
@@ -371,9 +550,21 @@ class PermissionChecker:
                 logger.info("Permission granted: Platform user is super admin")
                 return True
             platform_permissions = PermissionChecker.PLATFORM_ROLE_PERMISSIONS.get(role, [])
-            granted = permission in platform_permissions
-            logger.info(f"Platform permission check result: {granted}, permissions: {platform_permissions}")
-            return granted
+            
+            # Check direct permission
+            if normalized_permission in platform_permissions:
+                logger.info(f"Platform permission check result: True")
+                return True
+            
+            # Check hierarchy
+            for user_perm in platform_permissions:
+                implied = PermissionChecker.get_implied_permissions(user_perm)
+                if normalized_permission in implied:
+                    logger.info(f"Platform permission granted via parent permission '{user_perm}'")
+                    return True
+            
+            logger.info(f"Platform permission check result: False, permissions: {platform_permissions}")
+            return False
     
     @staticmethod
     def require_permission(
