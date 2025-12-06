@@ -1,0 +1,450 @@
+/* Enhanced Mobile Utilities and Responsive Breakpoints */
+
+/* Additional Responsive Breakpoints */
+:root {
+  --breakpoint-xs: 320px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* Responsive Container Queries */
+@media (max-width: 640px) {
+  .responsive-stack {
+    flex-direction: column !important;
+  }
+  
+  .responsive-full-width {
+    width: 100% !important;
+  }
+  
+  .responsive-hide-sm {
+    display: none !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  .responsive-hide-md {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .responsive-hide-lg {
+    display: none !important;
+  }
+}
+
+/* Mobile Form Enhancements */
+@media (max-width: 768px) {
+  /* Make all form inputs full width on mobile */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea {
+    width: 100%;
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+  
+  /* MUI specific overrides */
+  .MuiTextField-root,
+  .MuiSelect-root,
+  .MuiAutocomplete-root {
+    width: 100%;
+  }
+  
+  .MuiInputBase-input {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+}
+
+/* Mobile Table Responsive */
+@media (max-width: 768px) {
+  /* Convert tables to card-style layout on mobile */
+  .table-responsive {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Hide table headers on mobile for card-style tables */
+  .mobile-card-table thead {
+    display: none;
+  }
+  
+  .mobile-card-table tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    padding: var(--mobile-space-3);
+    background: var(--bg-surface);
+  }
+  
+  .mobile-card-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--mobile-space-2) 0;
+    border-bottom: 1px solid var(--border-primary);
+  }
+  
+  .mobile-card-table tbody td:last-child {
+    border-bottom: none;
+  }
+  
+  .mobile-card-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: var(--mobile-text-sm);
+  }
+  
+  /* DataGrid responsive */
+  .MuiDataGrid-root {
+    font-size: 14px !important;
+  }
+  
+  .MuiDataGrid-columnHeader {
+    font-size: 13px !important;
+  }
+  
+  .MuiDataGrid-cell {
+    font-size: 14px !important;
+    padding: 8px !important;
+  }
+}
+
+/* Mobile Modal Improvements */
+@media (max-width: 768px) {
+  .MuiDialog-paper {
+    margin: var(--mobile-space-4);
+    max-height: calc(100vh - var(--mobile-space-8));
+    width: calc(100% - var(--mobile-space-8)) !important;
+    max-width: none !important;
+  }
+  
+  .MuiDialog-paperFullScreen {
+    margin: 0;
+    max-height: 100vh;
+    width: 100% !important;
+    border-radius: 0;
+  }
+  
+  /* Bottom sheet style for mobile modals */
+  .mobile-bottom-sheet .MuiDialog-paper {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 90vh;
+  }
+}
+
+/* Mobile Menu Improvements */
+@media (max-width: 768px) {
+  /* Hamburger menu spacing */
+  .mobile-hamburger {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Drawer improvements */
+  .MuiDrawer-paper {
+    width: 85% !important;
+    max-width: 320px;
+  }
+  
+  /* Menu items touch-friendly */
+  .MuiMenuItem-root,
+  .MuiListItem-root {
+    min-height: 48px !important;
+    padding: 12px 16px !important;
+  }
+  
+  .MuiListItemButton-root {
+    min-height: 48px !important;
+  }
+  
+  /* Nested menu indentation */
+  .mobile-menu-nested {
+    padding-left: 32px !important;
+  }
+  
+  .mobile-menu-nested-2 {
+    padding-left: 48px !important;
+  }
+}
+
+/* Mobile Navigation Bottom Bar */
+@media (max-width: 768px) {
+  .mobile-bottom-nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-primary);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom); /* iOS safe area */
+  }
+  
+  .mobile-nav-item-bottom {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+    padding: 8px;
+  }
+  
+  .mobile-nav-item-bottom.active {
+    color: var(--primary-600);
+  }
+  
+  .mobile-nav-item-bottom:active {
+    background: var(--gray-50);
+  }
+  
+  .mobile-nav-icon-bottom {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .mobile-nav-label-bottom {
+    font-size: 11px;
+    font-weight: 500;
+  }
+}
+
+/* Safe Area for iOS */
+@supports (padding: max(0px)) {
+  .mobile-layout,
+  .mobile-header,
+  .mobile-content,
+  .mobile-bottom-nav {
+    padding-left: max(var(--mobile-space-4), env(safe-area-inset-left));
+    padding-right: max(var(--mobile-space-4), env(safe-area-inset-right));
+  }
+  
+  .mobile-bottom-nav-bar {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Touch Gestures */
+.mobile-swipeable {
+  touch-action: pan-y;
+}
+
+.mobile-scrollable {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Loading States */
+.mobile-skeleton {
+  background: linear-gradient(90deg, var(--gray-200) 25%, var(--gray-100) 50%, var(--gray-200) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Accessibility Enhancements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .mobile-btn,
+  .mobile-input,
+  .mobile-card {
+    border-width: 2px;
+  }
+}
+
+/* Dark Mode Mobile Adjustments */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mobile-overlay-bg: rgba(0, 0, 0, 0.7);
+  }
+  
+  .mobile-card,
+  .mobile-modal-content {
+    background: var(--gray-900);
+  }
+  
+  .mobile-input {
+    background: var(--gray-800);
+    color: var(--gray-100);
+  }
+}
+
+/* Print Styles */
+@media print {
+  .mobile-header,
+  .mobile-bottom-nav,
+  .mobile-bottom-nav-bar,
+  .mobile-fab {
+    display: none !important;
+  }
+  
+  .mobile-content {
+    padding-bottom: 0 !important;
+  }
+}
+
+/* Floating Action Button */
+.mobile-fab {
+  position: fixed;
+  bottom: calc(60px + var(--mobile-space-4));
+  right: var(--mobile-space-4);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary-600);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  z-index: 999;
+  transition: all 0.2s ease;
+}
+
+.mobile-fab:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Snackbar/Toast Mobile */
+@media (max-width: 768px) {
+  .MuiSnackbar-root {
+    bottom: calc(60px + 16px) !important;
+    left: 16px !important;
+    right: 16px !important;
+  }
+  
+  .MuiSnackbarContent-root {
+    width: 100%;
+  }
+}
+
+/* Chip/Badge Mobile */
+@media (max-width: 768px) {
+  .MuiChip-root {
+    height: 28px;
+    font-size: 13px;
+  }
+  
+  .MuiChip-label {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+
+/* Avatar Mobile */
+@media (max-width: 768px) {
+  .MuiAvatar-root {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .MuiAvatar-root.large {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* Accordion Mobile */
+@media (max-width: 768px) {
+  .MuiAccordionSummary-root {
+    min-height: 56px !important;
+  }
+  
+  .MuiAccordionDetails-root {
+    padding: 16px;
+  }
+}
+
+/* Tabs Mobile */
+@media (max-width: 768px) {
+  .MuiTabs-root {
+    min-height: 48px;
+  }
+  
+  .MuiTab-root {
+    min-height: 48px;
+    min-width: 90px;
+    font-size: 14px;
+  }
+  
+  .MuiTabs-scrollButtons {
+    width: 32px;
+  }
+}
+
+/* Stepper Mobile */
+@media (max-width: 768px) {
+  .MuiStepper-root {
+    padding: var(--mobile-space-3);
+  }
+  
+  .MuiStepLabel-label {
+    font-size: 13px;
+  }
+  
+  /* Vertical stepper for mobile */
+  .mobile-stepper-vertical .MuiStepper-root {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Speed Dial Mobile */
+@media (max-width: 768px) {
+  .MuiSpeedDial-root {
+    bottom: calc(60px + 16px) !important;
+    right: 16px !important;
+  }
+}
