@@ -644,5 +644,17 @@ def register_subrouters():
     except Exception as e:
         logger.error(f"Failed to import/include audit_log_router: {str(e)}\n{traceback.format_exc()}")
 
+    # System Information API at /api/v1/system (permission format detection and feature flags)
+    try:
+        from .system import router as system_router
+        logger.debug("Imported system_router")
+        api_v1_router.include_router(system_router)
+        system_routes = [f"{', '.join(sorted(route.methods)) if route.methods else 'ALL'} {route.path}" for route in system_router.routes if isinstance(route, APIRoute)]
+        logger.debug(f"Registered system endpoints: {len(system_routes)} routes")
+        for route_path in system_routes:
+            logger.debug(f"  {route_path}")
+    except Exception as e:
+        logger.error(f"Failed to import/include system_router: {str(e)}\n{traceback.format_exc()}")
+
 
 register_subrouters()
