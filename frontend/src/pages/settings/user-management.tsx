@@ -156,7 +156,7 @@ const UserManagement: React.FC = () => {
   });
 
   const userActionMutation = useMutation({
-    mutationFn: ({ userId, action }: { userId: number; action: string }) => {
+    mutationFn: ({ userId, userEmail, action }: { userId: number; userEmail: string; action: string }) => {  // CHANGED: Add userEmail
       if (isSuperAdmin && !currentOrgId) {
         // Super admin actions on platform users
         switch (action) {
@@ -167,7 +167,7 @@ const UserManagement: React.FC = () => {
           case "deactivate":
             return adminService.updateUser(userId, { is_active: false });
           case "reset":
-            return adminService.resetUserPassword(userId);
+            return adminService.resetUserPassword(userEmail);  // CHANGED: Use email
           default:
             throw new Error("Invalid action");
         }
@@ -181,7 +181,7 @@ const UserManagement: React.FC = () => {
           case "deactivate":
             return userService.toggleUserStatus(userId, false);
           case "reset":
-            return userService.resetUserPassword(userId);
+            return userService.resetUserPassword(userEmail);  // CHANGED: Use email
           default:
             throw new Error("Invalid action");
         }
@@ -308,6 +308,7 @@ const UserManagement: React.FC = () => {
     if (selectedUser && actionType) {
       userActionMutation.mutate({
         userId: selectedUser.id,
+        userEmail: selectedUser.email,  // CHANGED: Pass email for reset
         action: actionType,
       });
     }

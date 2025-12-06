@@ -351,13 +351,11 @@ class PasswordResetResponse(BaseModel):
 class EmailSendResponse(BaseModel):
     id: int
     to_email: str
-    subject: str
     email_type: str
     provider_used: str
     status: str
-    created_at: datetime
-    sent_at: Optional[datetime] = None
-    error_message: Optional[str] = None
+    email_error: Optional[str] = None
+    retry_count: int = 0
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -378,7 +376,7 @@ class AdminPasswordResetRequest(BaseModel):
 class AdminPasswordResetResponse(BaseModel):
     message: str
     target_email: str
-    new_password: str  # New password to display
+    new_password: Optional[str] = None  # CHANGED: Made optional
     email_sent: bool
     email_error: Optional[str] = None
     must_change_password: bool = True
@@ -496,3 +494,4 @@ class PlatformToken(BaseModel):
     token_type: str
     user_role: str
     user_type: str = "platform"  # Distinguish from organization users
+    

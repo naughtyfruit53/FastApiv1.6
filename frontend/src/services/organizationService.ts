@@ -770,9 +770,9 @@ export const userService = {
       throw new Error(error.userMessage || "Failed to delete user");
     }
   },
-  resetUserPassword: async (userId: number) => {
+  resetUserPassword: async (email: string) => {  // CHANGED: Take email, call /password/admin-reset with body
     try {
-      const response = await api.post(`/auth/reset/${userId}/password`);
+      const response = await api.post("/password/admin-reset", { user_email: email });
       return response.data;
     } catch (error: any) {
       throw new Error(error.userMessage || "Failed to reset user password");

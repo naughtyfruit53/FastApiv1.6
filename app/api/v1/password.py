@@ -25,6 +25,7 @@ from app.services.user_service import UserService
 from app.services.otp_service import OTPService
 from app.services.system_email_service import system_email_service
 from .user import get_current_active_user, get_current_super_admin
+from .auth import get_current_org_admin_user  # ADDED: Import for org_admin check
 from app.core.logging import get_logger, log_password_change, log_security_event  # Corrected import
 import secrets
 import string
@@ -356,7 +357,7 @@ async def reset_password(
 async def admin_reset_password(
     reset_data: AdminPasswordResetRequest = Body(...),
     request: Request = None,
-    current_user: User = Depends(get_current_super_admin),
+    current_user: User = Depends(get_current_org_admin_user),  # CHANGED: Allow org_admin
     db: AsyncSession = Depends(get_db)
 ):
     """Admin password reset endpoint"""
@@ -417,3 +418,4 @@ async def admin_reset_password(
             status_code=500,
             detail="Error during admin password reset"
         )
+    
